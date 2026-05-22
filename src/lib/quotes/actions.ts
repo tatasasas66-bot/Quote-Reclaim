@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { generateRecoveryPlan } from "@/lib/ai/generate-recovery-plan";
 import { validateMessage } from "@/lib/ai/validate-message";
+import { normalizePhone } from "@/lib/messaging/phone";
 import { getMessagingService } from "@/lib/messaging/service";
 import type { SmsResult } from "@/lib/messaging/types";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
@@ -493,6 +494,12 @@ export async function sendReminderManualAction(
     return { ok: false, error: "Client has opted out of messages" };
   }
 
+  // Normalize to E.164 so outbound + inbound webhook attribution match.
+  const normalizedPhone = normalizePhone(quote.client_phone);
+  if (!normalizedPhone) {
+    return { ok: false, error: "Phone number is not a valid format" };
+  }
+
   // Atomic claim — prevents double send even under concurrent requests.
   const { data: claimed, error: claimError } = await serviceClient.rpc(
     "claim_reminder_manual",
@@ -513,7 +520,7 @@ export async function sendReminderManualAction(
   try {
     const provider = getMessagingService();
     smsResult = await provider.send({
-      to: quote.client_phone,
+      to: normalizedPhone,
       body: reminder.message_text,
     });
   } catch (err) {
@@ -530,7 +537,7 @@ export async function sendReminderManualAction(
     quote_id: quote.id,
     reminder_id: reminderId,
     channel: "sms",
-    recipient: quote.client_phone,
+    recipient: normalizedPhone,
     message_text: reminder.message_text,
     status: smsResult.ok ? "sent" : "failed",
     provider_msg_id: smsResult.ok ? smsResult.providerMessageId : null,
