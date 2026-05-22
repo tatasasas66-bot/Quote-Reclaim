@@ -1,0 +1,73 @@
+import { z } from "zod";
+
+const TRADE_PATTERN = /^[A-Za-z][A-Za-z0-9 \-/&]*$/;
+const STATE_PATTERN = /^[A-Z]{2}$/;
+
+const optionalText = (max: number) =>
+  z
+    .string()
+    .trim()
+    .max(max)
+    .optional()
+    .transform((v) => (v && v.length > 0 ? v : ""));
+
+const optionalEmail = z
+  .string()
+  .trim()
+  .max(200)
+  .optional()
+  .transform((v) => (v && v.length > 0 ? v.toLowerCase() : ""))
+  .refine((v) => v === "" || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v), {
+    message: "Enter a valid email address",
+  });
+
+const optionalPhone = z
+  .string()
+  .trim()
+  .max(40)
+  .optional()
+  .transform((v) => (v && v.length > 0 ? v : ""));
+
+const optionalState = z
+  .string()
+  .trim()
+  .max(2)
+  .optional()
+  .transform((v) => (v ? v.toUpperCase() : ""))
+  .refine((v) => v === "" || STATE_PATTERN.test(v), {
+    message: "Use a 2-letter state code (e.g. CA)",
+  });
+
+export const quoteInputSchema = z
+  .object({
+    client_name: z.string().trim().min(1, "Client name is required").max(120),
+    trade: z
+      .string()
+      .trim()
+      .min(2, "Trade must be at least 2 characters")
+      .max(80)
+      .regex(TRADE_PATTERN, "Letters, numbers, spaces, and -/& only"),
+    estimate_amount: z
+      .number({ invalid_type_error: "Enter a number" })
+      .positive("Estimate must be greater than zero")
+      .max(10_000_000, "Estimate is too large"),
+    days_silent: z
+      .number({ invalid_type_error: "Enter a number" })
+      .int("Days must be a whole number")
+      .min(0)
+      .max(365, "More than a year is unlikely"),
+    client_email: optionalEmail,
+    client_phone: optionalPhone,
+    city: optionalText(80),
+    state: optionalState,
+    job_description: optionalText(2000),
+  })
+  .refine((v) => v.client_email !== "" || v.client_phone !== "", {
+    message: "Email or phone is required so reminders can be sent",
+    path: ["client_email"],
+  });
+
+export type QuoteInput = z.infer<typeof quoteInputSchema>;
+
+export const quoteUpdateSchema = quoteInputSchema;
+export type QuoteUpdate = z.infer<typeof quoteUpdateSchema>;
