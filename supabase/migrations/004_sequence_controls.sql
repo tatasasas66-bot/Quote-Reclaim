@@ -1,0 +1,15 @@
+-- 004_sequence_controls.sql
+-- Sequence pause/resume + auto-pause-on-reply controls.
+--
+-- This migration is intentionally empty. The blueprint slots sequence
+-- controls into a dedicated migration so the work is easy to find, but the
+-- actual changes were folded into 001_core_schema.sql for atomicity:
+--
+--   * reminders.paused_at column
+--   * idx_reminders_due partial index excludes paused rows
+--   * claim_due_reminders() RPC skips reminders for quotes that have any
+--     outbound_messages row with status = 'replied' (auto-pause on reply)
+--   * toggle_sequence_pause() RPC (manual pause / resume)
+--
+-- Leave this file present so migration numbering stays aligned with the
+-- documentation; future sequence-control changes should land here.
