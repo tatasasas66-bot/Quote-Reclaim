@@ -1,19 +1,38 @@
-import type { User } from "@supabase/supabase-js";
+import type { SupabaseClient, User } from "@supabase/supabase-js";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 
 type RequireUserResult =
-  | { user: User; supabase: ReturnType<typeof createServerSupabaseClient> }
-  | { user: null; supabase: ReturnType<typeof createServerSupabaseClient> };
+  | { user: User; supabase: SupabaseClient }
+  | { user: null; supabase: SupabaseClient | null };
 
 /**
  * Returns the authenticated Supabase user for the current request, or
- * `{ user: null, supabase }` when no session is present.
+ * `{ user: null, supabase }` when there is no session.
  *
- * API route handlers should turn `user === null` into a `401 Unauthorized`
- * response. Server Components should redirect to `/sign-in`.
+ * Resilient to a missing Supabase configuration: if the server client
+ * cannot be constructed (e.g., env vars unset in dev), we treat the
+ * caller as anonymous rather than crashing the route. Auth-gated routes
+ * should redirect to `/sign-in` when `user === null`, which is the same
+ * UX whether the cause is a real lack of session or a misconfigured env.
+ *
+ * Production deployments must still set the Supabase env vars; otherwise
+ * no user can ever sign in. The middleware health-check and a launch-gate
+ * test catch the misconfigured-in-prod case.
  */
 export async function requireUser(): Promise<RequireUserResult> {
-  const supabase = createServerSupabaseClient();
+  let supabase: SupabaseClient;
+  try {
+    supabase = createServerSupabaseClient();
+  } catch (err) {
+    if (process.env.NODE_ENV !== "production") {
+      console.warn(
+        "requireUser: Supabase not configured; treating request as anonymous.",
+        err,
+      );
+    }
+    return { user: null, supabase: null };
+  }
+
   const { data, error } = await supabase.auth.getUser();
   if (error || !data.user) {
     return { user: null, supabase };
@@ -23,8 +42,7 @@ export async function requireUser(): Promise<RequireUserResult> {
 
 /**
  * Convenience helper for API routes that should always reject anonymous
- * requests with a 401. Returns `null` when the caller is authenticated; the
- * caller can then proceed to read `user`.
+ * requests with a 401.
  */
 export async function unauthorizedResponseIfMissing(): Promise<Response | null> {
   const { user } = await requireUser();
