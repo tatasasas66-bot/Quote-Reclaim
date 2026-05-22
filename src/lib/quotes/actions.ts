@@ -540,6 +540,14 @@ export async function sendReminderManualAction(
   });
 
   if (!smsResult.ok) {
+    // Release the atomic claim so the user can retry once the underlying
+    // issue is resolved. Twilio returns an error response only when the
+    // message was NOT queued for delivery, so this is safe.
+    await serviceClient
+      .from("reminders")
+      .update({ claimed_by: null, claimed_at: null })
+      .eq("id", reminderId)
+      .eq("user_id", userId);
     return { ok: false, error: `Send failed: ${smsResult.error}` };
   }
 

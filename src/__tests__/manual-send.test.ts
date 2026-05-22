@@ -98,6 +98,15 @@ describe("sendReminderManualAction", () => {
     expect(slice).toMatch(/revalidatePath\(`\/quotes\/\$\{quote\.id\}`\)/);
   });
 
+  it("releases the claim on send failure so retry is possible", () => {
+    const slice = actions.slice(actions.indexOf("sendReminderManualAction"));
+    // After smsResult.ok === false, claimed_by/claimed_at must be cleared
+    // before returning the error, otherwise the reminder is permanently stuck.
+    expect(slice).toMatch(
+      /!smsResult\.ok[\s\S]*?claimed_by:\s*null[\s\S]*?claimed_at:\s*null[\s\S]*?Send failed/,
+    );
+  });
+
   it("does not import Twilio or Resend directly", () => {
     expect(actions).not.toMatch(/from\s+["']twilio["']/);
     expect(actions).not.toMatch(/from\s+["']resend["']/);
