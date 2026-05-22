@@ -39,11 +39,11 @@ describe("Recovery Plan UI: /quotes/[id]", () => {
     expect(detailPage).not.toMatch(/Send Now/);
   });
 
-  it("renders 'Send early' as a disabled control", () => {
-    expect(detailPage).toContain("Send early");
-    // Disabled + aria-disabled OR a sendEarlyDisabled flag forced to true.
-    expect(detailPage).toMatch(/sendEarlyDisabled\s*=\s*true/);
-    expect(detailPage).toMatch(/disabled=\{sendEarlyDisabled[^}]*\}/);
+  it("renders 'Send early' as a conditionally disabled control", () => {
+    // Phase 7+: Send early is rendered via SendEarlyButton, disabled computed from state.
+    expect(detailPage).toContain("SendEarlyButton");
+    expect(detailPage).toContain("sendEarlyDisabled");
+    expect(detailPage).toMatch(/disabled=\{sendEarlyDisabled\}/);
   });
 
   it("renders the framework name per reminder", () => {

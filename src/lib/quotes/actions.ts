@@ -4,6 +4,8 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { generateRecoveryPlan } from "@/lib/ai/generate-recovery-plan";
 import { validateMessage } from "@/lib/ai/validate-message";
+import { getMessagingService } from "@/lib/messaging/service";
+import type { SmsResult } from "@/lib/messaging/types";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { createServiceSupabaseClient } from "@/lib/supabase/service";
 import { quoteInputSchema, quoteUpdateSchema } from "./schema";
@@ -421,5 +423,132 @@ export async function resumeSequenceAction(
   if (rpcResult?.error) return { ok: false, error: rpcResult.error };
 
   revalidatePath(`/quotes/${id}`);
+  return { ok: true };
+}
+
+type ReminderForSend = {
+  id: string;
+  user_id: string;
+  quote_id: string;
+  sent: boolean;
+  paused_at: string | null;
+  message_text: string;
+  message_type: string;
+};
+
+type QuoteForSend = {
+  id: string;
+  user_id: string;
+  outcome: string;
+  client_phone: string | null;
+  client_opted_out: boolean;
+};
+
+export async function sendReminderManualAction(
+  reminderId: string,
+): Promise<ActionResult> {
+  const userClient = createServerSupabaseClient();
+  const { data: userData } = await userClient.auth.getUser();
+  if (!userData.user) return { ok: false, error: "Not signed in" };
+
+  const userId = userData.user.id;
+  const serviceClient = createServiceSupabaseClient();
+
+  const { data: reminderData, error: reminderError } = await serviceClient
+    .from("reminders")
+    .select("id, user_id, quote_id, sent, paused_at, message_text, message_type")
+    .eq("id", reminderId)
+    .eq("user_id", userId)
+    .maybeSingle();
+
+  if (reminderError || !reminderData) {
+    return { ok: false, error: "Reminder not found" };
+  }
+
+  const reminder = reminderData as ReminderForSend;
+
+  if (reminder.sent) return { ok: false, error: "Already sent" };
+  if (reminder.paused_at) return { ok: false, error: "Sequence is paused" };
+
+  const { data: quoteData, error: quoteError } = await serviceClient
+    .from("quotes")
+    .select("id, user_id, outcome, client_phone, client_opted_out")
+    .eq("id", reminder.quote_id)
+    .eq("user_id", userId)
+    .maybeSingle();
+
+  if (quoteError || !quoteData) {
+    return { ok: false, error: "Quote not found" };
+  }
+
+  const quote = quoteData as QuoteForSend;
+
+  if (quote.outcome !== "pending") {
+    return { ok: false, error: "Quote is no longer active" };
+  }
+  if (!quote.client_phone) {
+    return { ok: false, error: "No phone number saved for this client" };
+  }
+  if (quote.client_opted_out) {
+    return { ok: false, error: "Client has opted out of messages" };
+  }
+
+  // Atomic claim — prevents double send even under concurrent requests.
+  const { data: claimed, error: claimError } = await serviceClient.rpc(
+    "claim_reminder_manual",
+    { p_reminder_id: reminderId, p_user_id: userId },
+  );
+
+  if (claimError) {
+    return { ok: false, error: `Could not claim reminder: ${claimError.message}` };
+  }
+  if (!claimed) {
+    return {
+      ok: false,
+      error: "Send already in progress — check if it was sent recently",
+    };
+  }
+
+  let smsResult: SmsResult;
+  try {
+    const provider = getMessagingService();
+    smsResult = await provider.send({
+      to: quote.client_phone,
+      body: reminder.message_text,
+    });
+  } catch (err) {
+    smsResult = {
+      ok: false,
+      error: err instanceof Error ? err.message : "Messaging service unavailable",
+    };
+  }
+
+  const now = new Date().toISOString();
+
+  await serviceClient.from("outbound_messages").insert({
+    user_id: userId,
+    quote_id: quote.id,
+    reminder_id: reminderId,
+    channel: "sms",
+    recipient: quote.client_phone,
+    message_text: reminder.message_text,
+    status: smsResult.ok ? "sent" : "failed",
+    provider_msg_id: smsResult.ok ? smsResult.providerMessageId : null,
+    failure_reason: smsResult.ok ? null : smsResult.error,
+    sent_at: smsResult.ok ? now : null,
+    idempotency_key: `manual:${reminderId}:${userId}`,
+  });
+
+  if (!smsResult.ok) {
+    return { ok: false, error: `Send failed: ${smsResult.error}` };
+  }
+
+  await serviceClient
+    .from("reminders")
+    .update({ sent: true, sent_at: now })
+    .eq("id", reminderId)
+    .eq("user_id", userId);
+
+  revalidatePath(`/quotes/${quote.id}`);
   return { ok: true };
 }

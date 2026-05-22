@@ -5,6 +5,7 @@ import { Badge, Button, Logo } from "@/components/ui";
 import {
   CopyButton,
   QuoteActions,
+  SendEarlyButton,
   type RecoveryStatus,
 } from "@/components/quotes";
 import { requireUser } from "@/lib/auth/require-user";
@@ -91,6 +92,7 @@ export default async function QuoteDetailPage({
         reminders={reminders}
         status={status}
         nextDate={next}
+        hasPhone={Boolean(quote.client_phone)}
       />
     </main>
   );
@@ -206,10 +208,12 @@ function RecoveryPlanSection({
   reminders,
   status,
   nextDate,
+  hasPhone,
 }: {
   reminders: ReminderRow[];
   status: RecoveryStatus;
   nextDate: Date | null;
+  hasPhone: boolean;
 }) {
   return (
     <section className="space-y-3">
@@ -239,6 +243,7 @@ function RecoveryPlanSection({
               key={r.id}
               reminder={r}
               recoveryStatus={status}
+              hasPhone={hasPhone}
             />
           ))}
         </ol>
@@ -250,9 +255,11 @@ function RecoveryPlanSection({
 function ReminderCard({
   reminder: r,
   recoveryStatus,
+  hasPhone,
 }: {
   reminder: ReminderRow;
   recoveryStatus: RecoveryStatus;
+  hasPhone: boolean;
 }) {
   const sendDate = new Date(r.send_at);
   const isPast = sendDate.getTime() < Date.now();
@@ -274,7 +281,11 @@ function ReminderCard({
   const dayLabel =
     CADENCE_DAYS[r.followup_number as 1 | 2 | 3] ?? r.followup_number;
 
-  const sendEarlyDisabled = true; // Messaging not yet implemented.
+  const sendEarlyDisabled =
+    r.sent ||
+    r.paused_at !== null ||
+    recoveryStatus !== "running" ||
+    !hasPhone;
 
   return (
     <li className="space-y-3 rounded-xl border border-line-subtle bg-surface-2 p-4">
@@ -298,16 +309,7 @@ function ReminderCard({
         </p>
         <div className="flex items-center gap-1">
           <CopyButton text={r.message_text} />
-          <Button
-            type="button"
-            size="sm"
-            variant="ghost"
-            disabled={sendEarlyDisabled || r.sent || recoveryStatus === "won"}
-            title="Send early is available once messaging is enabled in a later phase"
-            aria-disabled="true"
-          >
-            Send early
-          </Button>
+          <SendEarlyButton reminderId={r.id} disabled={sendEarlyDisabled} />
         </div>
       </div>
     </li>
