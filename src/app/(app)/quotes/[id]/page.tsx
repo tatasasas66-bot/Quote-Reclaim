@@ -2,11 +2,16 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { Badge, Button, Logo } from "@/components/ui";
-import { QuoteActions } from "@/components/quotes";
+import {
+  CopyButton,
+  QuoteActions,
+  type RecoveryStatus,
+} from "@/components/quotes";
 import { requireUser } from "@/lib/auth/require-user";
 import {
   getQuoteById,
   listRemindersForQuote,
+  type QuoteRow,
   type ReminderRow,
 } from "@/lib/quotes/repo";
 import { formatCurrency } from "@/lib/utils/currency";
@@ -15,6 +20,38 @@ export const metadata: Metadata = { title: "Quote – Quote Reclaim" };
 export const dynamic = "force-dynamic";
 
 type Params = { id: string };
+
+const MONTHLY_PRICE_USD = 79;
+const CADENCE_DAYS: Record<1 | 2 | 3, number> = { 1: 1, 2: 3, 3: 7 };
+
+function computeStatus(
+  quote: QuoteRow,
+  reminders: ReminderRow[],
+): RecoveryStatus {
+  if (quote.outcome === "won") return "won";
+  if (quote.outcome === "closed") return "closed";
+  const unsent = reminders.filter((r) => !r.sent);
+  if (unsent.length === 0) return "running";
+  const allPaused = unsent.every((r) => r.paused_at !== null);
+  return allPaused ? "paused" : "running";
+}
+
+function nextSendAt(reminders: ReminderRow[]): Date | null {
+  const candidates = reminders
+    .filter((r) => !r.sent && !r.paused_at)
+    .map((r) => new Date(r.send_at))
+    .sort((a, b) => a.getTime() - b.getTime());
+  return candidates[0] ?? null;
+}
+
+function formatSendDate(date: Date): string {
+  return date.toLocaleString("en-US", {
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  });
+}
 
 export default async function QuoteDetailPage({
   params,
@@ -31,11 +68,8 @@ export default async function QuoteDetailPage({
 
   if (!quote) notFound();
 
-  const isPending = quote.outcome === "pending";
-  const isWon = quote.outcome === "won";
-
-  const outcomeVariant = isWon ? "success" : isPending ? "warning" : "neutral";
-  const outcomeLabel = isWon ? "Won" : isPending ? "Pending" : "Closed";
+  const status = computeStatus(quote, reminders);
+  const next = status === "running" ? nextSendAt(reminders) : null;
 
   return (
     <main className="mx-auto flex min-h-screen max-w-2xl flex-col gap-8 px-6 py-8">
@@ -49,67 +83,83 @@ export default async function QuoteDetailPage({
         </Link>
       </header>
 
-      <section className="space-y-4 rounded-xl border border-line-subtle bg-surface-2 p-6">
-        <div className="flex items-start justify-between gap-4">
-          <div>
-            <h1 className="text-2xl font-bold text-ink-strong">
-              {quote.client_name}
-            </h1>
-            <p className="mt-1 text-sm text-ink-muted">
-              {quote.trade}
-              {quote.city ? ` · ${quote.city}` : ""}
-              {quote.state ? `, ${quote.state}` : ""}
-            </p>
-          </div>
-          <Badge variant={outcomeVariant}>{outcomeLabel}</Badge>
-        </div>
+      <QuoteSummary quote={quote} status={status} />
 
-        <dl className="grid grid-cols-2 gap-4 sm:grid-cols-3">
-          <Field label="Estimate" value={formatCurrency(quote.estimate_amount)} />
-          <Field label="Days silent" value={String(quote.days_silent)} />
-          {quote.client_email ? (
-            <Field label="Email" value={quote.client_email} />
-          ) : null}
-          {quote.client_phone ? (
-            <Field label="Phone" value={quote.client_phone} />
-          ) : null}
-          {quote.job_description ? (
-            <div className="col-span-full">
-              <Field label="Description" value={quote.job_description} />
-            </div>
-          ) : null}
-        </dl>
+      {status === "won" ? <WinCelebration quote={quote} /> : null}
 
-        {isPending ? (
-          <div className="flex flex-wrap items-center gap-3 border-t border-line-subtle pt-4">
-            <QuoteActions quoteId={quote.id} />
-            <Link href={`/quotes/${quote.id}/edit`}>
-              <Button variant="secondary" size="sm">
-                Edit
-              </Button>
-            </Link>
-          </div>
-        ) : null}
-        {isWon ? (
-          <p className="border-t border-line-subtle pt-4 text-sm text-success">
-            Won on {new Date(quote.won_at!).toLocaleDateString()}
-          </p>
-        ) : null}
-      </section>
-
-      <section className="space-y-3">
-        <h2 className="text-lg font-semibold text-ink-strong">Recovery plan</h2>
-        {reminders.length === 0 ? (
-          <p className="text-sm text-ink-muted">No recovery plan generated.</p>
-        ) : (
-          <ol className="space-y-3">
-            {reminders.map((r) => (
-              <ReminderCard key={r.id} reminder={r} />
-            ))}
-          </ol>
-        )}
-      </section>
+      <RecoveryPlanSection
+        reminders={reminders}
+        status={status}
+        nextDate={next}
+      />
     </main>
+  );
+}
+
+function QuoteSummary({
+  quote,
+  status,
+}: {
+  quote: QuoteRow;
+  status: RecoveryStatus;
+}) {
+  const badge = (() => {
+    switch (status) {
+      case "won":
+        return { variant: "success" as const, label: "Won" };
+      case "closed":
+        return { variant: "neutral" as const, label: "Closed" };
+      case "paused":
+        return { variant: "warning" as const, label: "Recovery paused" };
+      case "running":
+      default:
+        return { variant: "brand" as const, label: "Recovery running" };
+    }
+  })();
+
+  return (
+    <section className="space-y-4 rounded-xl border border-line-subtle bg-surface-2 p-6">
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold text-ink-strong">
+            {quote.client_name}
+          </h1>
+          <p className="mt-1 text-sm text-ink-muted">
+            {quote.trade}
+            {quote.city ? ` · ${quote.city}` : ""}
+            {quote.state ? `, ${quote.state}` : ""}
+          </p>
+        </div>
+        <Badge variant={badge.variant}>{badge.label}</Badge>
+      </div>
+
+      <dl className="grid grid-cols-2 gap-4 sm:grid-cols-3">
+        <Field label="Estimate" value={formatCurrency(quote.estimate_amount)} />
+        <Field label="Days silent" value={String(quote.days_silent)} />
+        {quote.client_email ? (
+          <Field label="Email" value={quote.client_email} />
+        ) : null}
+        {quote.client_phone ? (
+          <Field label="Phone" value={quote.client_phone} />
+        ) : null}
+        {quote.job_description ? (
+          <div className="col-span-full">
+            <Field label="Description" value={quote.job_description} />
+          </div>
+        ) : null}
+      </dl>
+
+      {status === "running" || status === "paused" ? (
+        <div className="flex flex-wrap items-center gap-3 border-t border-line-subtle pt-4">
+          <QuoteActions quoteId={quote.id} status={status} />
+          <Link href={`/quotes/${quote.id}/edit`}>
+            <Button variant="ghost" size="sm">
+              Edit quote
+            </Button>
+          </Link>
+        </div>
+      ) : null}
+    </section>
   );
 }
 
@@ -124,42 +174,142 @@ function Field({ label, value }: { label: string; value: string }) {
   );
 }
 
-function ReminderCard({ reminder: r }: { reminder: ReminderRow }) {
-  const sendDate = new Date(r.send_at);
-  const isPast = sendDate < new Date();
+function WinCelebration({ quote }: { quote: QuoteRow }) {
+  const amount = quote.estimate_amount;
+  const months = Math.floor(amount / MONTHLY_PRICE_USD);
+  return (
+    <section
+      role="status"
+      aria-live="polite"
+      className="rounded-xl border border-success/40 bg-success/10 p-6"
+    >
+      <p className="text-xs font-semibold uppercase tracking-widest text-success">
+        Quote recovered
+      </p>
+      <p className="mt-2 text-3xl font-bold text-ink-strong">
+        +{formatCurrency(amount)} recovered
+      </p>
+      {months >= 1 ? (
+        <p className="mt-2 text-sm text-ink">
+          This one job pays for Quote Reclaim for{" "}
+          <span className="font-semibold text-ink-strong">
+            {months} {months === 1 ? "month" : "months"}
+          </span>
+          .
+        </p>
+      ) : null}
+    </section>
+  );
+}
 
-  let statusVariant: "success" | "warning" | "neutral" | "danger" = "neutral";
+function RecoveryPlanSection({
+  reminders,
+  status,
+  nextDate,
+}: {
+  reminders: ReminderRow[];
+  status: RecoveryStatus;
+  nextDate: Date | null;
+}) {
+  return (
+    <section className="space-y-3">
+      <div className="flex items-baseline justify-between gap-3">
+        <h2 className="text-lg font-semibold text-ink-strong">Recovery plan</h2>
+        {status === "running" && nextDate ? (
+          <p className="text-xs text-ink-muted">
+            Next follow-up sends {formatSendDate(nextDate)}
+          </p>
+        ) : null}
+      </div>
+
+      {(status === "running" || status === "paused") && reminders.length > 0 ? (
+        <p className="text-sm text-ink-muted">
+          {status === "running"
+            ? "We'll send these on schedule. You can pause, copy, or send early later. Quote Reclaim does the chasing — you step in when they reply or the job comes back."
+            : "Recovery is paused. Future reminders won't send until you resume."}
+        </p>
+      ) : null}
+
+      {reminders.length === 0 ? (
+        <p className="text-sm text-ink-muted">No recovery plan generated.</p>
+      ) : (
+        <ol className="space-y-3">
+          {reminders.map((r) => (
+            <ReminderCard
+              key={r.id}
+              reminder={r}
+              recoveryStatus={status}
+            />
+          ))}
+        </ol>
+      )}
+    </section>
+  );
+}
+
+function ReminderCard({
+  reminder: r,
+  recoveryStatus,
+}: {
+  reminder: ReminderRow;
+  recoveryStatus: RecoveryStatus;
+}) {
+  const sendDate = new Date(r.send_at);
+  const isPast = sendDate.getTime() < Date.now();
+
+  let statusVariant: "success" | "warning" | "neutral" | "danger" | "brand" =
+    "neutral";
   let statusLabel = "Scheduled";
   if (r.sent) {
     statusVariant = "success";
     statusLabel = "Sent";
   } else if (r.paused_at) {
-    statusVariant = "neutral";
+    statusVariant = "warning";
     statusLabel = "Paused";
   } else if (isPast) {
-    statusVariant = "warning";
+    statusVariant = "brand";
     statusLabel = "Due";
   }
 
+  const dayLabel =
+    CADENCE_DAYS[r.followup_number as 1 | 2 | 3] ?? r.followup_number;
+
+  const sendEarlyDisabled = true; // Messaging not yet implemented.
+
   return (
-    <li className="rounded-xl border border-line-subtle bg-surface-2 p-4">
-      <div className="flex items-center justify-between gap-4">
-        <span className="text-xs font-bold uppercase tracking-widest text-brand">
-          Follow-up {r.followup_number} · Day{" "}
-          {r.followup_number === 1 ? 1 : r.followup_number === 2 ? 3 : 7}
-        </span>
+    <li className="space-y-3 rounded-xl border border-line-subtle bg-surface-2 p-4">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div className="space-y-0.5">
+          <span className="text-xs font-bold uppercase tracking-widest text-brand">
+            Follow-up {r.followup_number} · Day {dayLabel}
+          </span>
+          <p className="text-xs text-ink-muted">
+            {r.framework_used ?? "—"}
+          </p>
+        </div>
         <Badge variant={statusVariant}>{statusLabel}</Badge>
       </div>
-      <p className="mt-2 text-sm text-ink">{r.message_text}</p>
-      <p className="mt-2 text-xs text-ink-muted">
-        Scheduled{" "}
-        {sendDate.toLocaleDateString("en-US", {
-          month: "short",
-          day: "numeric",
-          year: "numeric",
-        })}{" "}
-        · {r.message_type.toUpperCase()}
-      </p>
+
+      <p className="text-sm text-ink">{r.message_text}</p>
+
+      <div className="flex flex-wrap items-center justify-between gap-2 border-t border-line-subtle pt-3">
+        <p className="text-xs text-ink-muted">
+          Scheduled {formatSendDate(sendDate)} · {r.message_type.toUpperCase()}
+        </p>
+        <div className="flex items-center gap-1">
+          <CopyButton text={r.message_text} />
+          <Button
+            type="button"
+            size="sm"
+            variant="ghost"
+            disabled={sendEarlyDisabled || r.sent || recoveryStatus === "won"}
+            title="Send early is available once messaging is enabled in a later phase"
+            aria-disabled="true"
+          >
+            Send early
+          </Button>
+        </div>
+      </div>
     </li>
   );
 }

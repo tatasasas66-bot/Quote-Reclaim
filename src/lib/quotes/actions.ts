@@ -14,6 +14,8 @@ export type ActionResult =
 
 type RawForm = Record<string, FormDataEntryValue>;
 
+const CADENCE_DAYS: Record<1 | 2 | 3, number> = { 1: 1, 2: 3, 3: 7 };
+
 function readForm(formData: FormData): RawForm {
   return Object.fromEntries(formData.entries());
 }
@@ -48,7 +50,121 @@ function firstNameOf(fullName: string): string {
   return first.replace(/[.,]/g, "");
 }
 
-const CADENCE_DAYS: Record<1 | 2 | 3, number> = { 1: 1, 2: 3, 3: 7 };
+function sendAtFromBase(quoteSentAt: string, daysAfter: number): string {
+  const d = new Date(quoteSentAt);
+  d.setUTCDate(d.getUTCDate() + daysAfter);
+  return d.toISOString();
+}
+
+type ReminderShape = {
+  id: string;
+  followup_number: number;
+  sent: boolean;
+  paused_at: string | null;
+  message_text: string;
+  send_at: string;
+};
+
+type RecoveryInput = {
+  firstName: string;
+  trade: string;
+  estimateAmount: number;
+  jobDescription: string | null;
+  city: string | null;
+  state: string | null;
+};
+
+/**
+ * Phase 6 schedule reconciliation. Called after a quote is updated.
+ *
+ * Rules:
+ *   - If any reminder is already sent: preserve sent rows verbatim and only
+ *     update unsent rows' send_at to match the new quote_sent_at.
+ *   - If no reminders are sent yet: regenerate messages and send_at via
+ *     generateRecoveryPlan() and update existing rows by followup_number.
+ *   - If no reminders exist at all (legacy quote): insert the 3 fresh rows.
+ *   - The (quote_id, followup_number) unique index in the DB enforces the
+ *     3-row maximum and prevents duplication on update.
+ */
+async function reconcileReminders(params: {
+  serviceClient: ReturnType<typeof createServiceSupabaseClient>;
+  userId: string;
+  quoteId: string;
+  newQuoteSentAt: string;
+  recovery: RecoveryInput;
+  channel: "sms" | "email";
+}): Promise<void> {
+  const { serviceClient, userId, quoteId, newQuoteSentAt, recovery, channel } =
+    params;
+
+  const { data, error } = await serviceClient
+    .from("reminders")
+    .select("id, followup_number, sent, paused_at, message_text, send_at")
+    .eq("quote_id", quoteId)
+    .eq("user_id", userId)
+    .order("followup_number");
+
+  if (error) return;
+  const existing: ReminderShape[] = (data ?? []) as ReminderShape[];
+
+  const anySent = existing.some((r) => r.sent);
+
+  if (anySent) {
+    for (const r of existing.filter((x) => !x.sent)) {
+      const fn = r.followup_number as 1 | 2 | 3;
+      if (!CADENCE_DAYS[fn]) continue;
+      const sendAt = sendAtFromBase(newQuoteSentAt, CADENCE_DAYS[fn]);
+      await serviceClient
+        .from("reminders")
+        .update({ send_at: sendAt })
+        .eq("id", r.id);
+    }
+    return;
+  }
+
+  // No reminders sent — regenerate message text + schedule.
+  const plan = await generateRecoveryPlan(recovery);
+  const valid = plan.filter(
+    (m) =>
+      validateMessage(m.message, {
+        firstName: recovery.firstName,
+        trade: recovery.trade,
+      }).ok,
+  );
+  if (valid.length !== 3) return;
+
+  if (existing.length === 0) {
+    const rows = valid.map((m) => ({
+      user_id: userId,
+      quote_id: quoteId,
+      followup_number: m.followup_number,
+      message_type: channel,
+      message_text: m.message,
+      framework_used: m.framework,
+      cta_type: m.cta_type,
+      send_at: sendAtFromBase(newQuoteSentAt, CADENCE_DAYS[m.followup_number]),
+    }));
+    await serviceClient.from("reminders").insert(rows);
+    return;
+  }
+
+  for (const m of valid) {
+    const target = existing.find(
+      (r) => r.followup_number === m.followup_number,
+    );
+    if (!target) continue;
+    await serviceClient
+      .from("reminders")
+      .update({
+        message_text: m.message,
+        framework_used: m.framework,
+        cta_type: m.cta_type,
+        message_type: channel,
+        send_at: sendAtFromBase(newQuoteSentAt, CADENCE_DAYS[m.followup_number]),
+      })
+      .eq("id", target.id);
+  }
+}
 
 export async function createQuoteAction(
   _prev: ActionResult | null,
@@ -130,29 +246,20 @@ export async function createQuoteAction(
     state: input.state || null,
   });
 
-  // Final gate: never store a message that fails validation, regardless of
-  // its self-reported source/score. This protects against future regressions
-  // in the generator.
   const reminderRows = plan
     .filter((m) =>
       validateMessage(m.message, { firstName, trade: input.trade }).ok,
     )
-    .map((m) => {
-      const sendAt = new Date(quoteSentAt);
-      sendAt.setUTCDate(
-        sendAt.getUTCDate() + CADENCE_DAYS[m.followup_number],
-      );
-      return {
-        user_id: userData.user.id,
-        quote_id: quoteId,
-        followup_number: m.followup_number,
-        message_type: channel,
-        message_text: m.message,
-        framework_used: m.framework,
-        cta_type: m.cta_type,
-        send_at: sendAt.toISOString(),
-      };
-    });
+    .map((m) => ({
+      user_id: userData.user.id,
+      quote_id: quoteId,
+      followup_number: m.followup_number,
+      message_type: channel,
+      message_text: m.message,
+      framework_used: m.framework,
+      cta_type: m.cta_type,
+      send_at: sendAtFromBase(quoteSentAt, CADENCE_DAYS[m.followup_number]),
+    }));
 
   if (reminderRows.length === 3) {
     await serviceClient.from("reminders").insert(reminderRows);
@@ -180,6 +287,7 @@ export async function updateQuoteAction(
     };
   }
   const input = parsed.data;
+  const newQuoteSentAt = quoteSentAtFromDaysSilent(input.days_silent);
 
   const updateResult = await userClient
     .from("quotes")
@@ -190,7 +298,7 @@ export async function updateQuoteAction(
       estimate_amount: input.estimate_amount,
       job_description: input.job_description || null,
       days_silent: input.days_silent,
-      quote_sent_at: quoteSentAtFromDaysSilent(input.days_silent),
+      quote_sent_at: newQuoteSentAt,
       client_name: input.client_name,
       client_email: input.client_email || null,
       client_phone: input.client_phone || null,
@@ -209,6 +317,24 @@ export async function updateQuoteAction(
   if (!updateResult.data) {
     return { ok: false, error: "Quote not found" };
   }
+
+  // Phase 6: keep the reminder schedule consistent with the new quote_sent_at.
+  const serviceClient = createServiceSupabaseClient();
+  await reconcileReminders({
+    serviceClient,
+    userId: userData.user.id,
+    quoteId: id,
+    newQuoteSentAt,
+    channel: input.client_phone ? "sms" : "email",
+    recovery: {
+      firstName: firstNameOf(input.client_name),
+      trade: input.trade,
+      estimateAmount: input.estimate_amount,
+      jobDescription: input.job_description || null,
+      city: input.city || null,
+      state: input.state || null,
+    },
+  });
 
   revalidatePath("/dashboard");
   revalidatePath(`/quotes/${id}`);
@@ -252,6 +378,48 @@ export async function closeQuoteAction(id: string): Promise<ActionResult> {
   if (!result.data) return { ok: false, error: "Quote not found or already resolved" };
 
   revalidatePath("/dashboard");
+  revalidatePath(`/quotes/${id}`);
+  return { ok: true };
+}
+
+export async function pauseSequenceAction(
+  id: string,
+): Promise<ActionResult> {
+  const userClient = createServerSupabaseClient();
+  const { data: userData } = await userClient.auth.getUser();
+  if (!userData.user) return { ok: false, error: "Not signed in" };
+
+  const serviceClient = createServiceSupabaseClient();
+  const { data, error } = await serviceClient.rpc("toggle_sequence_pause", {
+    p_quote_id: id,
+    p_user_id: userData.user.id,
+    p_paused: true,
+  });
+  if (error) return { ok: false, error: `Pause failed: ${error.message}` };
+  const rpcResult = data as { error?: string } | null;
+  if (rpcResult?.error) return { ok: false, error: rpcResult.error };
+
+  revalidatePath(`/quotes/${id}`);
+  return { ok: true };
+}
+
+export async function resumeSequenceAction(
+  id: string,
+): Promise<ActionResult> {
+  const userClient = createServerSupabaseClient();
+  const { data: userData } = await userClient.auth.getUser();
+  if (!userData.user) return { ok: false, error: "Not signed in" };
+
+  const serviceClient = createServiceSupabaseClient();
+  const { data, error } = await serviceClient.rpc("toggle_sequence_pause", {
+    p_quote_id: id,
+    p_user_id: userData.user.id,
+    p_paused: false,
+  });
+  if (error) return { ok: false, error: `Resume failed: ${error.message}` };
+  const rpcResult = data as { error?: string } | null;
+  if (rpcResult?.error) return { ok: false, error: rpcResult.error };
+
   revalidatePath(`/quotes/${id}`);
   return { ok: true };
 }
