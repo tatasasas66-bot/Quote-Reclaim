@@ -2,6 +2,8 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { generateRecoveryPlan } from "@/lib/ai/generate-recovery-plan";
+import { validateMessage } from "@/lib/ai/validate-message";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { createServiceSupabaseClient } from "@/lib/supabase/service";
 import { quoteInputSchema, quoteUpdateSchema } from "./schema";
@@ -41,71 +43,12 @@ function quoteSentAtFromDaysSilent(daysSilent: number): string {
   return d.toISOString();
 }
 
-const usd = new Intl.NumberFormat("en-US", {
-  style: "currency",
-  currency: "USD",
-  maximumFractionDigits: 0,
-});
-
-function buildReminders(params: {
-  userId: string;
-  quoteId: string;
-  quoteSentAt: string;
-  clientName: string;
-  trade: string;
-  estimateAmount: number;
-  channel: "sms" | "email";
-}) {
-  const { userId, quoteId, quoteSentAt, clientName, trade, estimateAmount, channel } =
-    params;
-  const base = new Date(quoteSentAt);
-  const amount = usd.format(estimateAmount);
-
-  const steps: Array<{
-    followup_number: 1 | 2 | 3;
-    daysAfter: number;
-    framework_used: string;
-    cta_type: string;
-    message_text: string;
-  }> = [
-    {
-      followup_number: 1,
-      daysAfter: 1,
-      framework_used: "direct",
-      cta_type: "question",
-      message_text: `Hi ${clientName}, just following up on the ${trade} estimate I sent over. Any questions or adjustments needed? Happy to help.`,
-    },
-    {
-      followup_number: 2,
-      daysAfter: 3,
-      framework_used: "value",
-      cta_type: "offer",
-      message_text: `Hi ${clientName}, checking back on the ${trade} quote for ${amount}. I can work with your schedule — would this week or next work for you?`,
-    },
-    {
-      followup_number: 3,
-      daysAfter: 7,
-      framework_used: "final",
-      cta_type: "close",
-      message_text: `Hi ${clientName}, one final follow-up on the ${trade} estimate. If the timing isn't right, no problem — I'll keep your quote on file whenever you're ready.`,
-    },
-  ];
-
-  return steps.map(({ followup_number, daysAfter, framework_used, cta_type, message_text }) => {
-    const sendAt = new Date(base);
-    sendAt.setUTCDate(sendAt.getUTCDate() + daysAfter);
-    return {
-      user_id: userId,
-      quote_id: quoteId,
-      followup_number,
-      message_type: channel,
-      message_text,
-      framework_used,
-      cta_type,
-      send_at: sendAt.toISOString(),
-    };
-  });
+function firstNameOf(fullName: string): string {
+  const first = fullName.trim().split(/\s+/)[0] ?? "";
+  return first.replace(/[.,]/g, "");
 }
+
+const CADENCE_DAYS: Record<1 | 2 | 3, number> = { 1: 1, 2: 3, 3: 7 };
 
 export async function createQuoteAction(
   _prev: ActionResult | null,
@@ -132,7 +75,9 @@ export async function createQuoteAction(
   if (gate.error) {
     return { ok: false, error: `Usage check failed: ${gate.error.message}` };
   }
-  const gateResult = gate.data as { allowed: boolean; silent_quote_value?: number } | null;
+  const gateResult = gate.data as
+    | { allowed: boolean; silent_quote_value?: number }
+    | null;
   if (!gateResult || !gateResult.allowed) {
     const silent = Number(gateResult?.silent_quote_value ?? 0);
     const silentLabel = silent.toLocaleString("en-US", {
@@ -165,24 +110,53 @@ export async function createQuoteAction(
     .single();
 
   if (insertResult.error) {
-    return { ok: false, error: `Could not save quote: ${insertResult.error.message}` };
+    return {
+      ok: false,
+      error: `Could not save quote: ${insertResult.error.message}`,
+    };
   }
 
   const quoteId = insertResult.data.id;
   const channel: "sms" | "email" = input.client_phone ? "sms" : "email";
   const quoteSentAt = quoteSentAtFromDaysSilent(input.days_silent);
+  const firstName = firstNameOf(input.client_name);
 
-  await serviceClient.from("reminders").insert(
-    buildReminders({
-      userId: userData.user.id,
-      quoteId,
-      quoteSentAt,
-      clientName: input.client_name,
-      trade: input.trade,
-      estimateAmount: input.estimate_amount,
-      channel,
-    }),
-  );
+  const plan = await generateRecoveryPlan({
+    firstName,
+    trade: input.trade,
+    estimateAmount: input.estimate_amount,
+    jobDescription: input.job_description || null,
+    city: input.city || null,
+    state: input.state || null,
+  });
+
+  // Final gate: never store a message that fails validation, regardless of
+  // its self-reported source/score. This protects against future regressions
+  // in the generator.
+  const reminderRows = plan
+    .filter((m) =>
+      validateMessage(m.message, { firstName, trade: input.trade }).ok,
+    )
+    .map((m) => {
+      const sendAt = new Date(quoteSentAt);
+      sendAt.setUTCDate(
+        sendAt.getUTCDate() + CADENCE_DAYS[m.followup_number],
+      );
+      return {
+        user_id: userData.user.id,
+        quote_id: quoteId,
+        followup_number: m.followup_number,
+        message_type: channel,
+        message_text: m.message,
+        framework_used: m.framework,
+        cta_type: m.cta_type,
+        send_at: sendAt.toISOString(),
+      };
+    });
+
+  if (reminderRows.length === 3) {
+    await serviceClient.from("reminders").insert(reminderRows);
+  }
 
   revalidatePath("/dashboard");
   redirect(`/quotes/${quoteId}`);
@@ -227,7 +201,10 @@ export async function updateQuoteAction(
     .maybeSingle();
 
   if (updateResult.error) {
-    return { ok: false, error: `Could not update quote: ${updateResult.error.message}` };
+    return {
+      ok: false,
+      error: `Could not update quote: ${updateResult.error.message}`,
+    };
   }
   if (!updateResult.data) {
     return { ok: false, error: "Quote not found" };

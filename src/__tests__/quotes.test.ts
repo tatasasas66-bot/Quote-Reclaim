@@ -110,9 +110,27 @@ describe("createQuoteAction invariants", () => {
     expect(source).not.toMatch(/serviceClient\s*\.from\("quotes"\)\s*\.insert/);
   });
 
-  it("inserts 3 reminders via service client after quote creation", () => {
+  it("generates reminders via generateRecoveryPlan (not hard-coded templates)", () => {
+    expect(source).toContain("generateRecoveryPlan");
     expect(source).toContain('from("reminders")');
-    expect(source).toContain("buildReminders");
+    expect(source).not.toContain("buildReminders");
+  });
+
+  it("final-stages every message through validateMessage before insert", () => {
+    expect(source).toContain("validateMessage");
+  });
+
+  it("does not import Twilio or Resend (Phase 5 is generation only)", () => {
+    expect(source).not.toMatch(/from\s+["']twilio["']/);
+    expect(source).not.toMatch(/from\s+["']resend["']/);
+  });
+
+  it("does not contain banned phrases as template literals", () => {
+    expect(source).not.toMatch(/just following up/i);
+    expect(source).not.toMatch(/checking back/i);
+    expect(source).not.toMatch(/one final follow-up/i);
+    expect(source).not.toMatch(/happy to help/i);
+    expect(source).not.toMatch(/on file/i);
   });
 
   it("uses service client for mark_quote_won RPC", () => {
