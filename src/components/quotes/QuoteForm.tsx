@@ -3,8 +3,11 @@
 import * as React from "react";
 import { useFormState, useFormStatus } from "react-dom";
 import { Button, Input } from "@/components/ui";
+import { VoiceButton } from "@/components/voice/VoiceButton";
 import type { ActionResult } from "@/lib/quotes/actions";
 import type { QuoteRow } from "@/lib/quotes/repo";
+import type { VoiceParseResult } from "@/lib/voice/types";
+import { TRADES } from "@/lib/quotes/schema";
 
 type FormAction = (
   prev: ActionResult | null,
@@ -22,6 +25,7 @@ export function QuoteForm({ mode, initial, action }: Props) {
     action,
     null,
   );
+  const [prefill, setPrefill] = React.useState<VoiceParseResult | null>(null);
 
   const isError = state && state.ok === false;
   const fieldError = (key: string): string | undefined => {
@@ -30,8 +34,15 @@ export function QuoteForm({ mode, initial, action }: Props) {
   };
   const topLevelError = isError && !state.fieldErrors ? state.error : null;
 
+  const initialTrade = initial?.trade ?? "";
+  const tradeValue = prefill?.trade ?? initialTrade;
+
   return (
     <form action={formAction} className="space-y-4" noValidate>
+      {mode === "create" ? (
+        <VoiceButton onParsed={(result) => setPrefill(result)} />
+      ) : null}
+
       {topLevelError ? (
         <div
           role="alert"
@@ -46,18 +57,15 @@ export function QuoteForm({ mode, initial, action }: Props) {
         label="Client name"
         name="client_name"
         required
-        defaultValue={initial?.client_name ?? ""}
+        defaultValue={prefill?.client_name ?? initial?.client_name ?? ""}
+        key={`client_name-${prefill?._key ?? "initial"}`}
         error={fieldError("client_name")}
         autoComplete="off"
       />
-      <Input
-        label="Trade"
-        name="trade"
-        required
-        defaultValue={initial?.trade ?? ""}
-        placeholder="Roofing, HVAC, electrical…"
+      <TradeSelect
+        defaultValue={tradeValue}
+        key={`trade-${prefill?._key ?? "initial"}`}
         error={fieldError("trade")}
-        autoComplete="off"
       />
       <div className="grid gap-4 sm:grid-cols-2">
         <Input
@@ -68,7 +76,12 @@ export function QuoteForm({ mode, initial, action }: Props) {
           min="1"
           step="0.01"
           required
-          defaultValue={initial?.estimate_amount?.toString() ?? ""}
+          defaultValue={
+            prefill?.estimate_amount?.toString() ??
+            initial?.estimate_amount?.toString() ??
+            ""
+          }
+          key={`estimate_amount-${prefill?._key ?? "initial"}`}
           error={fieldError("estimate_amount")}
         />
         <Input
@@ -79,7 +92,11 @@ export function QuoteForm({ mode, initial, action }: Props) {
           min="0"
           step="1"
           required
-          defaultValue={(initial?.days_silent ?? 0).toString()}
+          defaultValue={
+            prefill?.days_silent?.toString() ??
+            (initial?.days_silent ?? 0).toString()
+          }
+          key={`days_silent-${prefill?._key ?? "initial"}`}
           hint="0 = sent today"
           error={fieldError("days_silent")}
         />
@@ -100,7 +117,8 @@ export function QuoteForm({ mode, initial, action }: Props) {
           name="client_phone"
           type="tel"
           inputMode="tel"
-          defaultValue={initial?.client_phone ?? ""}
+          defaultValue={prefill?.client_phone ?? initial?.client_phone ?? ""}
+          key={`client_phone-${prefill?._key ?? "initial"}`}
           error={fieldError("client_phone")}
           autoComplete="off"
         />
@@ -109,7 +127,8 @@ export function QuoteForm({ mode, initial, action }: Props) {
         <Input
           label="City"
           name="city"
-          defaultValue={initial?.city ?? ""}
+          defaultValue={prefill?.city ?? initial?.city ?? ""}
+          key={`city-${prefill?._key ?? "initial"}`}
           error={fieldError("city")}
           autoComplete="off"
         />
@@ -117,7 +136,8 @@ export function QuoteForm({ mode, initial, action }: Props) {
           label="State"
           name="state"
           maxLength={2}
-          defaultValue={initial?.state ?? ""}
+          defaultValue={prefill?.state ?? initial?.state ?? ""}
+          key={`state-${prefill?._key ?? "initial"}`}
           placeholder="CA"
           error={fieldError("state")}
           autoComplete="off"
@@ -126,13 +146,60 @@ export function QuoteForm({ mode, initial, action }: Props) {
       <Input
         label="Job description (optional)"
         name="job_description"
-        defaultValue={initial?.job_description ?? ""}
+        defaultValue={prefill?.job_description ?? initial?.job_description ?? ""}
+        key={`job_description-${prefill?._key ?? "initial"}`}
         error={fieldError("job_description")}
         autoComplete="off"
       />
 
       <SubmitButton mode={mode} />
+      <p className="text-center text-xs text-ink-muted">
+        {mode === "create"
+          ? "We'll send these follow-ups on schedule (Day 1, 3, 7). You can pause, copy, or send early anytime."
+          : "Saving updates the existing recovery plan."}
+      </p>
     </form>
+  );
+}
+
+type TradeSelectProps = {
+  defaultValue?: string;
+  error?: string;
+};
+
+function TradeSelect({ defaultValue, error }: TradeSelectProps) {
+  const id = React.useId();
+  return (
+    <div className="flex flex-col gap-1.5">
+      <label htmlFor={id} className="text-sm font-medium text-ink">
+        Trade <span aria-hidden="true" className="text-brand">*</span>
+      </label>
+      <select
+        id={id}
+        name="trade"
+        required
+        defaultValue={defaultValue ?? ""}
+        aria-invalid={error ? true : undefined}
+        className={
+          "h-11 rounded-lg border border-line-subtle bg-surface-2 px-3 text-base text-ink-strong focus:border-brand focus:outline-none focus:ring-2 focus:ring-focus/40 disabled:cursor-not-allowed disabled:opacity-50" +
+          (error ? " border-danger focus:border-danger focus:ring-danger/30" : "")
+        }
+      >
+        <option value="" disabled>
+          Choose a trade
+        </option>
+        {TRADES.map((t) => (
+          <option key={t} value={t}>
+            {t}
+          </option>
+        ))}
+      </select>
+      {error ? (
+        <p className="text-xs text-danger" role="alert">
+          {error}
+        </p>
+      ) : null}
+    </div>
   );
 }
 
@@ -145,7 +212,7 @@ function SubmitButton({ mode }: { mode: "create" | "edit" }) {
           ? "Saving…"
           : "Updating…"
         : mode === "create"
-          ? "Save quote"
+          ? "Approve & Schedule Recovery"
           : "Save changes"}
     </Button>
   );

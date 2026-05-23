@@ -4,11 +4,13 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { generateRecoveryPlan } from "@/lib/ai/generate-recovery-plan";
 import { validateMessage } from "@/lib/ai/validate-message";
+import { emitRecoveryEvent } from "@/lib/intelligence/event-emitter";
 import { normalizePhone } from "@/lib/messaging/phone";
 import { getMessagingService } from "@/lib/messaging/service";
 import type { SmsResult } from "@/lib/messaging/types";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { createServiceSupabaseClient } from "@/lib/supabase/service";
+import { titleCaseName } from "@/lib/utils/title-case";
 import { quoteInputSchema, quoteUpdateSchema } from "./schema";
 
 export type ActionResult =
@@ -210,6 +212,8 @@ export async function createQuoteAction(
     };
   }
 
+  const normalizedClientName = titleCaseName(input.client_name);
+
   const insertResult = await userClient
     .from("quotes")
     .insert({
@@ -221,7 +225,7 @@ export async function createQuoteAction(
       job_description: input.job_description || null,
       days_silent: input.days_silent,
       quote_sent_at: quoteSentAtFromDaysSilent(input.days_silent),
-      client_name: input.client_name,
+      client_name: normalizedClientName,
       client_email: input.client_email || null,
       client_phone: input.client_phone || null,
     })
@@ -238,7 +242,7 @@ export async function createQuoteAction(
   const quoteId = insertResult.data.id;
   const channel: "sms" | "email" = input.client_phone ? "sms" : "email";
   const quoteSentAt = quoteSentAtFromDaysSilent(input.days_silent);
-  const firstName = firstNameOf(input.client_name);
+  const firstName = firstNameOf(normalizedClientName);
 
   const plan = await generateRecoveryPlan({
     firstName,
@@ -266,6 +270,36 @@ export async function createQuoteAction(
 
   if (reminderRows.length === 3) {
     await serviceClient.from("reminders").insert(reminderRows);
+  }
+
+  // Recovery Graph telemetry — emit estimate_created + one followup_generated
+  // per reminder. Fire-and-forget; failures must not break quote creation.
+  await emitRecoveryEvent({
+    userId: userData.user.id,
+    sequenceId: quoteId,
+    quoteId,
+    eventType: "estimate_created",
+    trade: input.trade,
+    city: input.city || null,
+    state: input.state || null,
+    estimateAmount: input.estimate_amount,
+    daysSinceEstimate: input.days_silent,
+    channel,
+  });
+  for (const m of reminderRows) {
+    await emitRecoveryEvent({
+      userId: userData.user.id,
+      sequenceId: quoteId,
+      quoteId,
+      eventType: "followup_generated",
+      trade: input.trade,
+      estimateAmount: input.estimate_amount,
+      followupNumber: m.followup_number,
+      messageType: m.message_type,
+      frameworkUsed: m.framework_used,
+      ctaType: m.cta_type,
+      channel,
+    });
   }
 
   revalidatePath("/dashboard");
@@ -357,6 +391,38 @@ export async function markQuoteWonAction(id: string): Promise<ActionResult> {
   if (error) return { ok: false, error: `Mark won failed: ${error.message}` };
   const rpcResult = data as { error?: string } | null;
   if (rpcResult?.error) return { ok: false, error: rpcResult.error };
+
+  // Recovery Graph telemetry — emit win_recorded. Pull just the fields needed
+  // for benchmarking; ignore errors.
+  const { data: wonQuote } = await serviceClient
+    .from("quotes")
+    .select("trade, city, state, estimate_amount, created_at")
+    .eq("id", id)
+    .eq("user_id", userData.user.id)
+    .maybeSingle();
+  if (wonQuote) {
+    const daysSince = wonQuote.created_at
+      ? Math.max(
+          0,
+          Math.floor(
+            (Date.now() - Date.parse(String(wonQuote.created_at))) /
+              (1000 * 60 * 60 * 24),
+          ),
+        )
+      : null;
+    await emitRecoveryEvent({
+      userId: userData.user.id,
+      sequenceId: id,
+      quoteId: id,
+      eventType: "win_recorded",
+      trade: (wonQuote.trade as string | null) ?? null,
+      city: (wonQuote.city as string | null) ?? null,
+      state: (wonQuote.state as string | null) ?? null,
+      estimateAmount: Number(wonQuote.estimate_amount ?? 0),
+      daysSinceEstimate: daysSince,
+      isWinningEvent: true,
+    });
+  }
 
   revalidatePath("/dashboard");
   revalidatePath(`/quotes/${id}`);

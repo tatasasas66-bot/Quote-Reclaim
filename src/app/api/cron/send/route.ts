@@ -258,6 +258,30 @@ async function handleSend(request: NextRequest): Promise<NextResponse> {
       console.error("[cron:send] message_sent event insert failed", evtError.message);
     }
 
+    // Emit sequence_closed when the last scheduled follow-up has just been sent.
+    // The reminder cadence is fixed at 3 (followup_number 1..3); after the
+    // third send, the planned sequence is complete.
+    if (r.followup_number === 3) {
+      const { error: closedErr } = await supabase.from("recovery_events").insert({
+        user_id: r.user_id,
+        sequence_id: r.sequence_id,
+        quote_id: r.quote_id,
+        event_type: "sequence_closed",
+        source_event_id: `${r.sequence_id}:closed`,
+        trade: r.trade,
+        city: r.city,
+        state: r.state,
+        estimate_amount: r.estimate_amount,
+        channel: "sms",
+      });
+      if (closedErr && closedErr.code !== "23505") {
+        console.error(
+          "[cron:send] sequence_closed event insert failed",
+          closedErr.message,
+        );
+      }
+    }
+
     sent++;
   }
 

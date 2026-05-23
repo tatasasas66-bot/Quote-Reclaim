@@ -110,3 +110,31 @@ export async function getProfileStats(
     is_paid: Boolean(data.is_paid),
   };
 }
+
+export type WonQuoteSummary = {
+  estimate_amount: number;
+  won_at: string;
+  created_at: string;
+};
+
+/**
+ * Lifetime won quotes with the fields needed to compute avg days to win.
+ * Used by the dashboard MetricCards.
+ */
+export async function listWonQuotes(
+  supabase: SupabaseClient,
+  userId: string,
+): Promise<WonQuoteSummary[]> {
+  const { data, error } = await supabase
+    .from("quotes")
+    .select("estimate_amount, won_at, created_at")
+    .eq("user_id", userId)
+    .eq("outcome", "won")
+    .not("won_at", "is", null);
+  if (error) throw new Error(`listWonQuotes failed: ${error.message}`);
+  return (data ?? []).map((q) => ({
+    estimate_amount: Number(q.estimate_amount ?? 0),
+    won_at: String(q.won_at),
+    created_at: String(q.created_at),
+  }));
+}

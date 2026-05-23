@@ -1,39 +1,54 @@
 import Link from "next/link";
-import { Badge } from "@/components/ui";
+import { RiskBadge } from "@/components/dashboard/RiskBadge";
 import type { QuoteRow } from "@/lib/quotes/repo";
+import { effectiveDaysSilent } from "@/lib/recovery/effective-days";
+import { nextBestAction } from "@/lib/recovery/next-best-action";
+import { riskLevel } from "@/lib/recovery/risk";
 import { formatCurrency } from "@/lib/utils/currency";
+import { titleCaseName } from "@/lib/utils/title-case";
 
-type AgeBadge = { variant: "neutral" | "warning" | "danger"; label: string };
-
-function ageBadge(daysSilent: number): AgeBadge {
-  if (daysSilent >= 14) return { variant: "danger", label: `${daysSilent}d silent` };
-  if (daysSilent >= 7) return { variant: "warning", label: `${daysSilent}d silent` };
-  return { variant: "neutral", label: `${daysSilent}d silent` };
-}
+const severityClass: Record<"neutral" | "warning" | "danger", string> = {
+  neutral: "text-ink-muted",
+  warning: "text-warning",
+  danger: "text-danger",
+};
 
 export function QuoteListItem({ quote }: { quote: QuoteRow }) {
-  const age = ageBadge(quote.days_silent);
+  const level = riskLevel(quote);
+  const days = effectiveDaysSilent(quote);
+  const nba = nextBestAction(quote);
+  const displayName = titleCaseName(quote.client_name);
   return (
     <li>
       <Link
         href={`/quotes/${quote.id}`}
-        className="flex items-center justify-between gap-4 p-4 transition-colors hover:bg-surface-3 focus:bg-surface-3 focus:outline-none"
+        className="flex flex-col gap-3 p-4 transition-colors hover:bg-surface-3 focus:bg-surface-3 focus:outline-none sm:flex-row sm:items-center sm:justify-between"
       >
-        <div className="min-w-0 flex-1">
-          <p className="truncate font-medium text-ink-strong">
-            {quote.client_name}
+        <div className="min-w-0 flex-1 space-y-1.5">
+          <p className="truncate font-semibold text-ink-strong">
+            {displayName}
           </p>
-          <p className="mt-0.5 truncate text-sm text-ink-muted">
+          <p className="truncate text-sm text-ink-muted">
             {quote.trade}
             {quote.city ? ` · ${quote.city}` : ""}
             {quote.state ? `, ${quote.state}` : ""}
           </p>
+          <div className="flex flex-wrap items-center gap-2 text-xs text-ink-muted">
+            <RiskBadge level={level} />
+            <span>
+              {days} day{days === 1 ? "" : "s"} silent
+            </span>
+          </div>
+          {nba ? (
+            <p className={`text-xs font-semibold ${severityClass[nba.severity]}`}>
+              Next Best Action: {nba.label}
+            </p>
+          ) : null}
         </div>
         <div className="flex shrink-0 items-center gap-3">
-          <span className="font-semibold text-ink-strong">
+          <span className="font-semibold tabular-nums text-ink-strong">
             {formatCurrency(quote.estimate_amount)}
           </span>
-          <Badge variant={age.variant}>{age.label}</Badge>
         </div>
       </Link>
     </li>

@@ -41,16 +41,6 @@ export default function HomePage() {
           </Link>
         </div>
       </section>
-      <footer className="flex flex-wrap items-center gap-4 text-sm text-ink-muted">
-        <Link
-          href="/test-page"
-          className="rounded hover:text-ink-strong focus:outline-none focus-visible:ring-2 focus-visible:ring-focus"
-        >
-          Design system preview
-        </Link>
-        <span aria-hidden="true">·</span>
-        <span>v0.1 · scaffold</span>
-      </footer>
     </main>
   );
 }

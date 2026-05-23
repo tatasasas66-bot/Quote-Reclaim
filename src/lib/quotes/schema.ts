@@ -1,6 +1,15 @@
 import { z } from "zod";
 
-const TRADE_PATTERN = /^[A-Za-z][A-Za-z0-9 \-/&]*$/;
+export const TRADES = [
+  "HVAC",
+  "Plumbing",
+  "Roofing",
+  "Electrical",
+  "Remodeling",
+  "General Contracting",
+] as const;
+export type Trade = (typeof TRADES)[number];
+
 const STATE_PATTERN = /^[A-Z]{2}$/;
 
 const optionalText = (max: number) =>
@@ -41,16 +50,13 @@ const optionalState = z
 export const quoteInputSchema = z
   .object({
     client_name: z.string().trim().min(1, "Client name is required").max(120),
-    trade: z
-      .string()
-      .trim()
-      .min(2, "Trade must be at least 2 characters")
-      .max(80)
-      .regex(TRADE_PATTERN, "Letters, numbers, spaces, and -/& only"),
+    trade: z.enum(TRADES, {
+      errorMap: () => ({ message: "Choose a trade from the list" }),
+    }),
     estimate_amount: z
       .number({ invalid_type_error: "Enter a number" })
       .positive("Estimate must be greater than zero")
-      .max(10_000_000, "Estimate is too large"),
+      .max(1_000_000, "Estimate is too large"),
     days_silent: z
       .number({ invalid_type_error: "Enter a number" })
       .int("Days must be a whole number")
