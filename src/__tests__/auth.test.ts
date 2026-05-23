@@ -62,6 +62,53 @@ describe("AuthShell renders both pathways", () => {
   });
 });
 
+describe("Browser Supabase client must use static NEXT_PUBLIC reads", () => {
+  // Webpack inlines NEXT_PUBLIC_* env vars at build time only when they are
+  // referenced as literal property accesses. A dynamic key produces an
+  // undefined value in the browser bundle and throws at runtime in production.
+
+  function stripComments(src: string): string {
+    return src
+      .replace(/\/\*[\s\S]*?\*\//g, "")
+      .replace(/(^|[^:])\/\/.*$/gm, "$1");
+  }
+
+  const browserCode = stripComments(readSource("../lib/supabase/browser.ts"));
+  const authFormCode = stripComments(
+    readSource("../components/onboarding/AuthForm.tsx"),
+  );
+
+  it("browser.ts does not import requireEnv", () => {
+    expect(browserCode).not.toMatch(/from\s+["']@\/lib\/utils\/env["']/);
+    expect(browserCode).not.toMatch(/\brequireEnv\s*\(/);
+  });
+
+  it("browser.ts does not use process.env[dynamicKey] bracket syntax", () => {
+    expect(browserCode).not.toMatch(/process\.env\s*\[/);
+  });
+
+  it("browser.ts reads NEXT_PUBLIC_SUPABASE_URL as a literal property access", () => {
+    expect(browserCode).toMatch(/process\.env\.NEXT_PUBLIC_SUPABASE_URL\b/);
+  });
+
+  it("browser.ts reads NEXT_PUBLIC_SUPABASE_ANON_KEY as a literal property access", () => {
+    expect(browserCode).toMatch(
+      /process\.env\.NEXT_PUBLIC_SUPABASE_ANON_KEY\b/,
+    );
+  });
+
+  it("AuthForm uses static reads for every NEXT_PUBLIC_* var it touches", () => {
+    expect(authFormCode).toMatch(
+      /process\.env\.NEXT_PUBLIC_AUTH_CALLBACK_URL\b/,
+    );
+    expect(authFormCode).toMatch(
+      /process\.env\.NEXT_PUBLIC_ENABLE_GOOGLE_AUTH\b/,
+    );
+    expect(authFormCode).not.toMatch(/process\.env\s*\[/);
+    expect(authFormCode).not.toMatch(/\brequireEnv\s*\(\s*["']NEXT_PUBLIC_/);
+  });
+});
+
 describe("safeRedirectPath behavior (replicated for runtime test)", () => {
   function safeRedirectPath(next: string | null): string {
     if (!next) return "/dashboard";
