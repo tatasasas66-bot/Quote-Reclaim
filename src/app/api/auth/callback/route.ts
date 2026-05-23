@@ -18,12 +18,35 @@ function safeRedirectPath(next: string | null): string {
   return next;
 }
 
+function safeSupabaseError(err: unknown): { name?: string; code?: string; message?: string; status?: number } {
+  if (!err || typeof err !== "object") return {};
+  const e = err as Record<string, unknown>;
+  return {
+    name: typeof e.name === "string" ? e.name : undefined,
+    code: typeof e.code === "string" ? e.code : undefined,
+    message: typeof e.message === "string" ? e.message : undefined,
+    status: typeof e.status === "number" ? e.status : undefined,
+  };
+}
+
+function callbackErrorCode(err: unknown): string {
+  const { message = "", code = "" } = safeSupabaseError(err);
+  const lower = (message + " " + code).toLowerCase();
+  if (lower.includes("expired") || lower.includes("otp") || lower.includes("invalid token")) {
+    return "link_expired";
+  }
+  return "auth_callback_failed";
+}
+
 export async function GET(request: NextRequest) {
   const requestUrl = new URL(request.url);
+  // Log origin+pathname only — never log query params (they contain the auth code).
+  const requestPath = requestUrl.origin + requestUrl.pathname;
   const code = requestUrl.searchParams.get("code");
   const next = safeRedirectPath(requestUrl.searchParams.get("next"));
 
   if (!code) {
+    console.warn("[auth:callback] no code in request", { path: requestPath });
     return NextResponse.redirect(
       new URL("/sign-in?error=missing_code", request.url),
     );
@@ -33,14 +56,26 @@ export async function GET(request: NextRequest) {
     const supabase = createServerSupabaseClient();
     const { error } = await supabase.auth.exchangeCodeForSession(code);
     if (error) {
+      const safe = safeSupabaseError(error);
+      console.error("[auth:callback] exchangeCodeForSession failed", {
+        name: safe.name,
+        code: safe.code,
+        message: safe.message,
+        status: safe.status,
+        path: requestPath,
+      });
       return NextResponse.redirect(
-        new URL("/sign-in?error=auth_callback_failed", request.url),
+        new URL(`/sign-in?error=${callbackErrorCode(error)}`, request.url),
       );
     }
   } catch (err) {
-    if (process.env.NODE_ENV !== "production") {
-      console.warn("auth callback: Supabase unavailable", err);
-    }
+    const safe = safeSupabaseError(err);
+    console.error("[auth:callback] Supabase client exception", {
+      name: safe.name,
+      code: safe.code,
+      message: safe.message,
+      path: requestPath,
+    });
     return NextResponse.redirect(
       new URL("/sign-in?error=auth_callback_failed", request.url),
     );

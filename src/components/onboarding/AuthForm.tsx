@@ -43,13 +43,40 @@ function GoogleIcon() {
 function describeCallbackError(code: string | null): string | null {
   if (!code) return null;
   switch (code) {
+    case "link_expired":
+      return "That link has expired. Links are valid for 60 minutes — send a new one.";
     case "auth_callback_failed":
-      return "We couldn't finish signing you in. Try the link again or use Google.";
+      return "We couldn't finish signing you in. Try the link again or request a new one.";
     case "missing_code":
       return "That link expired or was already used. Send a new one.";
     default:
       return "Sign-in error. Try again.";
   }
+}
+
+function safeSupabaseError(err: unknown): { name?: string; code?: string; message?: string; status?: number } {
+  if (!err || typeof err !== "object") return {};
+  const e = err as Record<string, unknown>;
+  return {
+    name: typeof e.name === "string" ? e.name : undefined,
+    code: typeof e.code === "string" ? e.code : undefined,
+    message: typeof e.message === "string" ? e.message : undefined,
+    status: typeof e.status === "number" ? e.status : undefined,
+  };
+}
+
+function userFacingOtpError(err: unknown): string {
+  const { code, message = "" } = safeSupabaseError(err);
+  if (code === "over_email_send_rate_limit" || message.includes("rate limit")) {
+    return "Too many attempts. Wait a few minutes, then try again.";
+  }
+  if (code === "email_not_confirmed") {
+    return "Check your inbox — a link was already sent. Click it to sign in.";
+  }
+  if (message.toLowerCase().includes("invalid api key") || message.toLowerCase().includes("invalid project")) {
+    return "Service configuration error. Contact support if this persists.";
+  }
+  return "Could not send the link. Try again or contact support.";
 }
 
 const GOOGLE_AUTH_ENABLED =
@@ -100,8 +127,24 @@ export function AuthForm({ mode }: AuthFormProps) {
       });
       if (error) throw error;
       setMagicSent(true);
-    } catch {
-      setFormError("Could not send the link. Try again or use Google.");
+    } catch (err) {
+      const safe = safeSupabaseError(err);
+      const callbackOriginPath = (() => {
+        try {
+          const u = new URL(callbackUrl);
+          return u.origin + u.pathname;
+        } catch {
+          return callbackUrl.split("?")[0];
+        }
+      })();
+      console.error("[auth:magic-link] OTP send failed", {
+        name: safe.name,
+        code: safe.code,
+        message: safe.message,
+        status: safe.status,
+        callbackOriginPath,
+      });
+      setFormError(userFacingOtpError(err));
     } finally {
       setMagicLoading(false);
     }
@@ -118,7 +161,14 @@ export function AuthForm({ mode }: AuthFormProps) {
       });
       if (error) throw error;
       // Browser is being redirected; keep the loading state.
-    } catch {
+    } catch (err) {
+      const safe = safeSupabaseError(err);
+      console.error("[auth:google] OAuth start failed", {
+        name: safe.name,
+        code: safe.code,
+        message: safe.message,
+        status: safe.status,
+      });
       setFormError("Could not start Google sign-in. Try Magic Link instead.");
       setGoogleLoading(false);
     }
