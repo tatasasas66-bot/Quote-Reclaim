@@ -456,35 +456,24 @@ describe("claim_due_reminders SQL contract (smoke test)", () => {
 // ---------------------------------------------------------------------------
 
 describe("vercel.json cron schedule", () => {
-  it("declares the send job and weekly-briefing job", () => {
+  // Vercel Hobby plan does not support cron intervals faster than daily.
+  // The crons array is intentionally absent so Hobby deployments succeed.
+  // To enable automatic scheduling, upgrade to Vercel Pro and add:
+  //   { "path": "/api/cron/send", "schedule": "*/15 * * * *" }
+  //   { "path": "/api/cron/weekly-briefing", "schedule": "0 13 * * 1" }
+
+  it("does not register Vercel cron jobs (Hobby plan — no sub-daily cron support)", () => {
     const parsed = JSON.parse(vercelConfig);
-    expect(Array.isArray(parsed.crons)).toBe(true);
-    const paths = parsed.crons.map((c: { path: string }) => c.path);
-    expect(paths).toContain("/api/cron/send");
-    expect(paths).toContain("/api/cron/weekly-briefing");
+    // crons key must be absent or empty; Hobby plan rejects frequent crons
+    const crons = parsed.crons;
+    expect(!crons || (Array.isArray(crons) && crons.length === 0)).toBe(true);
   });
 
-  it("send job runs at a reasonable frequency (not faster than every 5 minutes)", () => {
-    const parsed = JSON.parse(vercelConfig);
-    const send = parsed.crons.find(
-      (c: { path: string }) => c.path === "/api/cron/send",
-    );
-    expect(send).toBeDefined();
-    // Reject "*/1 * * * *" or "* * * * *" (too aggressive)
-    expect(send.schedule).not.toBe("* * * * *");
-    expect(send.schedule).not.toBe("*/1 * * * *");
-    expect(send.schedule).not.toBe("*/2 * * * *");
-  });
-
-  it("weekly-briefing runs once per week", () => {
-    const parsed = JSON.parse(vercelConfig);
-    const wb = parsed.crons.find(
-      (c: { path: string }) => c.path === "/api/cron/weekly-briefing",
-    );
-    expect(wb).toBeDefined();
-    // Day-of-week field (5th) must NOT be '*' (which would mean daily)
-    const parts = wb.schedule.split(/\s+/);
-    expect(parts.length).toBe(5);
-    expect(parts[4]).not.toBe("*");
+  it("cron route files still exist in the codebase", () => {
+    // Routes are deployable and manually triggerable even without Vercel scheduling
+    expect(sendRoute).toContain("export async function GET");
+    expect(sendRoute).toContain("export async function POST");
+    expect(briefingRoute).toContain("export async function GET");
+    expect(briefingRoute).toContain("export async function POST");
   });
 });

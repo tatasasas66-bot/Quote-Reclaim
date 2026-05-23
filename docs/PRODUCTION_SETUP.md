@@ -99,10 +99,6 @@ openssl rand -base64 32
 
 Set it as `CRON_SECRET` in Vercel.
 
-The `vercel.json` crons run on Vercel's scheduler and include this secret
-automatically in the `Authorization` header. You do not need to pass it manually
-for scheduled runs.
-
 For manual triggers (testing, backfill):
 ```bash
 curl -X POST https://your-app.vercel.app/api/cron/send \
@@ -111,17 +107,47 @@ curl -X POST https://your-app.vercel.app/api/cron/send \
 
 ---
 
-## Step 7: Verify cron schedule
+## Step 7: Cron schedule — Vercel plan requirements
 
-`vercel.json` configures two cron jobs:
+> **Vercel Hobby plan limitation:** Vercel Hobby only supports cron schedules
+> with a minimum interval of once per day. The `*/15 * * * *` (every 15 minutes)
+> schedule required for timely reminder delivery is a **Vercel Pro** feature.
 
-| Job | Schedule | Purpose |
-|-----|----------|---------|
-| `/api/cron/send` | Every 15 minutes | Send due reminders |
-| `/api/cron/weekly-briefing` | Mondays at 13:00 UTC | Compute weekly recovery snapshot |
+### Current state (Hobby plan)
 
-Verify in Vercel dashboard under **Settings → Cron Jobs** that both appear
-and have a successful recent run after deployment.
+The `vercel.json` cron registration has been removed so the Hobby deployment
+succeeds without errors. Both cron route files remain in the codebase and work
+correctly when triggered manually.
+
+**Automatic Day 1 / Day 3 / Day 7 reminder sending requires one of:**
+- **Vercel Pro** — re-add the `crons` block to `vercel.json` (see below).
+- **External scheduler** — call `/api/cron/send` every 15 minutes from any
+  cron service (GitHub Actions, cron-job.org, Render cron, etc.) using your
+  `CRON_SECRET`.
+
+**Until then, send reminders by:**
+- Using the **Send early** button on a quote detail page (manual send).
+- Triggering the cron endpoint manually during testing:
+  ```bash
+  curl -X POST https://your-app.vercel.app/api/cron/send \
+    -H "Authorization: Bearer $CRON_SECRET"
+  ```
+
+### Upgrading to Vercel Pro
+
+When on Vercel Pro, restore automatic scheduling by adding to `vercel.json`:
+
+```json
+{
+  "crons": [
+    { "path": "/api/cron/send", "schedule": "*/15 * * * *" },
+    { "path": "/api/cron/weekly-briefing", "schedule": "0 13 * * 1" }
+  ]
+}
+```
+
+Then verify under **Vercel dashboard → Settings → Cron Jobs** that both jobs
+appear and show a successful recent run.
 
 ---
 
