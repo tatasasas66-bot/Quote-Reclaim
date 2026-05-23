@@ -18,6 +18,9 @@ export function QuoteListItem({ quote }: { quote: QuoteRow }) {
   const days = effectiveDaysSilent(quote);
   const nba = nextBestAction(quote);
   const displayName = titleCaseName(quote.client_name);
+  const displayTrade = titleCaseName(quote.trade);
+  const displayCity = quote.city ? titleCaseName(quote.city) : "";
+  const displayState = quote.state ? quote.state.toUpperCase() : "";
   return (
     <li>
       <Link
@@ -29,14 +32,14 @@ export function QuoteListItem({ quote }: { quote: QuoteRow }) {
             {displayName}
           </p>
           <p className="truncate text-sm text-ink-muted">
-            {quote.trade}
-            {quote.city ? ` · ${quote.city}` : ""}
-            {quote.state ? `, ${quote.state}` : ""}
+            {displayTrade}
+            {displayCity ? ` · ${displayCity}` : ""}
+            {displayState ? `, ${displayState}` : ""}
           </p>
           <div className="flex flex-wrap items-center gap-2 text-xs text-ink-muted">
             <RiskBadge level={level} />
             <span>
-              {days} day{days === 1 ? "" : "s"} silent
+              {days} day{days === 1 ? "" : "s"} quiet
             </span>
           </div>
           {nba ? (

@@ -18,16 +18,20 @@ export function riskLevel(quote: QuoteRow): RiskLevel {
   return "warm";
 }
 
+/**
+ * Display label for a risk level. These are the contractor-facing words.
+ * Internal code keeps the original warm/cooling/cold/hot identifiers.
+ */
 export function riskLabel(level: RiskLevel): string {
   switch (level) {
     case "warm":
-      return "WARM";
+      return "FRESH";
     case "cooling":
       return "COOLING";
     case "cold":
-      return "COLD";
+      return "AT RISK";
     case "hot":
-      return "HOT";
+      return "CRITICAL";
     case "won":
       return "WON";
     case "closed":

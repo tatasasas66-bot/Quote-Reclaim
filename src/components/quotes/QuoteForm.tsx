@@ -8,6 +8,7 @@ import type { ActionResult } from "@/lib/quotes/actions";
 import type { QuoteRow } from "@/lib/quotes/repo";
 import type { VoiceParseResult } from "@/lib/voice/types";
 import { TRADES } from "@/lib/quotes/schema";
+import { US_STATES } from "@/lib/utils/us-states";
 
 type FormAction = (
   prev: ActionResult | null,
@@ -132,15 +133,10 @@ export function QuoteForm({ mode, initial, action }: Props) {
           error={fieldError("city")}
           autoComplete="off"
         />
-        <Input
-          label="State"
-          name="state"
-          maxLength={2}
+        <StateSelect
           defaultValue={prefill?.state ?? initial?.state ?? ""}
           key={`state-${prefill?._key ?? "initial"}`}
-          placeholder="CA"
           error={fieldError("state")}
-          autoComplete="off"
         />
       </div>
       <Input
@@ -191,6 +187,44 @@ function TradeSelect({ defaultValue, error }: TradeSelectProps) {
         {TRADES.map((t) => (
           <option key={t} value={t}>
             {t}
+          </option>
+        ))}
+      </select>
+      {error ? (
+        <p className="text-xs text-danger" role="alert">
+          {error}
+        </p>
+      ) : null}
+    </div>
+  );
+}
+
+type StateSelectProps = {
+  defaultValue?: string;
+  error?: string;
+};
+
+function StateSelect({ defaultValue, error }: StateSelectProps) {
+  const id = React.useId();
+  return (
+    <div className="flex flex-col gap-1.5">
+      <label htmlFor={id} className="text-sm font-medium text-ink">
+        State
+      </label>
+      <select
+        id={id}
+        name="state"
+        defaultValue={defaultValue ?? ""}
+        aria-invalid={error ? true : undefined}
+        className={
+          "h-11 rounded-lg border border-line-subtle bg-surface-2 px-3 text-base text-ink-strong focus:border-brand focus:outline-none focus:ring-2 focus:ring-focus/40 disabled:cursor-not-allowed disabled:opacity-50" +
+          (error ? " border-danger focus:border-danger focus:ring-danger/30" : "")
+        }
+      >
+        <option value="">Select state</option>
+        {US_STATES.map((s) => (
+          <option key={s.code} value={s.code}>
+            {s.name} ({s.code})
           </option>
         ))}
       </select>

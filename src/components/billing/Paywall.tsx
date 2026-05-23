@@ -46,16 +46,19 @@ export function Paywall({ silentQuoteValue }: Props) {
           Free plan limit reached
         </p>
         <h2 className="text-2xl font-bold text-ink-strong">
-          You&apos;ve used your 3 free recovery plans.
+          Unlock unlimited silent quote recovery — $79/month
         </h2>
         <p className="text-sm text-ink">
-          Your silent quotes are still sitting there. One recovered job can pay
-          for Quote Reclaim for months or years.
+          You&apos;ve used your 3 free silent quotes. The quiet money is still
+          sitting there.
+        </p>
+        <p className="text-sm font-medium text-money">
+          One won-back job can pay for months.
         </p>
         {hasSilent ? (
-          <p className="text-sm font-medium text-money">
-            You currently have {formatCurrency(silentQuoteValue)} of silent
-            quotes in your queue.
+          <p className="text-sm text-ink">
+            You currently have {formatCurrency(silentQuoteValue)} of quiet
+            estimates in your queue.
           </p>
         ) : null}
       </div>
@@ -67,7 +70,7 @@ export function Paywall({ silentQuoteValue }: Props) {
           loading={pending}
           disabled={pending}
         >
-          Unlock unlimited recovery — $79/month
+          Unlock unlimited recovery
         </Button>
         <Link
           href="/dashboard"

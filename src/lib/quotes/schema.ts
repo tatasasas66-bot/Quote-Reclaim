@@ -1,9 +1,10 @@
 import { z } from "zod";
+import { US_STATE_CODES } from "@/lib/utils/us-states";
 
 export const TRADES = [
+  "Roofing",
   "HVAC",
   "Plumbing",
-  "Roofing",
   "Electrical",
   "Remodeling",
   "General Contracting",
@@ -45,6 +46,9 @@ const optionalState = z
   .transform((v) => (v ? v.toUpperCase() : ""))
   .refine((v) => v === "" || STATE_PATTERN.test(v), {
     message: "Use a 2-letter state code (e.g. CA)",
+  })
+  .refine((v) => v === "" || US_STATE_CODES.has(v), {
+    message: "Pick a US state from the list",
   });
 
 export const quoteInputSchema = z

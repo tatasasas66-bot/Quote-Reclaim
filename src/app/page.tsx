@@ -15,31 +15,33 @@ export default function HomePage() {
       </header>
       <section className="w-full min-w-0 space-y-6">
         <p className="text-xs font-semibold uppercase tracking-widest text-brand">
-          Revenue Recovery OS
+          Silent Quote Command
         </p>
         <h1 className="text-balance text-4xl font-bold leading-tight text-ink-strong sm:text-5xl">
           You sent the quote.
           <br />
-          The customer went quiet.
+          They went quiet.
           <br />
           <span className="text-brand">Get the job back.</span>
         </h1>
         <p className="max-w-xl break-words text-lg text-ink">
-          Quote Reclaim is the revenue recovery layer for US home-service
-          contractors. Approve once, and it does the chasing on every silent
-          estimate until the customer replies, the job comes back, or the
-          sequence closes cleanly.
+          Quote Reclaim turns silent estimates into a recovery queue with clear
+          next moves, risk signals, and recovered-revenue tracking. No CRM. No
+          chasing. No guessing.
         </p>
         <div className="flex flex-wrap items-center gap-3 pt-2">
           <Link href="/sign-up">
-            <Button size="lg">Start free</Button>
+            <Button size="lg">Find Silent Money</Button>
           </Link>
           <Link href="/sign-in">
             <Button size="lg" variant="secondary">
-              Sign in
+              See how it works
             </Button>
           </Link>
         </div>
+        <p className="text-sm text-ink-muted">
+          Start with 3 silent quotes free. One recovered job can pay for months.
+        </p>
       </section>
     </main>
   );

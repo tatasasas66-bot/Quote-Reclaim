@@ -68,10 +68,11 @@ export default async function DashboardPage() {
         <div className="mt-1 flex flex-wrap items-start justify-between gap-3">
           <div className="min-w-0">
             <h1 className="text-3xl font-bold leading-tight text-ink-strong">
-              Recovery Dashboard
+              Silent Quote Command
             </h1>
             <p className="mt-1 text-base text-ink">
-              Quotes you sent. Money waiting to come back.
+              Every quiet estimate has a dollar value, a risk level, and a next
+              move.
             </p>
           </div>
           <form action="/api/auth/sign-out" method="post">
@@ -115,12 +116,12 @@ export default async function DashboardPage() {
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div className="min-w-0">
               <p className="text-xs font-semibold uppercase tracking-widest text-ink-muted">
-                IN THE QUEUE
+                MONEY SITTING QUIET
               </p>
               <p className="text-sm text-ink">
                 {pending.length === 0
                   ? "All caught up."
-                  : `${stillBleedingValue} sitting silent`}
+                  : `${stillBleedingValue} sitting quiet`}
               </p>
             </div>
             <Link href="/quotes/new">
@@ -137,7 +138,7 @@ export default async function DashboardPage() {
               </p>
               <p className="mt-1 text-sm text-ink-muted">
                 {jobsWonLifetime > 0
-                  ? `${jobsWonLifetime} quote${jobsWonLifetime === 1 ? "" : "s"} won back · ${formatCurrency(allTimeRecovered)} recovered so far.`
+                  ? `${jobsWonLifetime} job${jobsWonLifetime === 1 ? "" : "s"} won back · ${formatCurrency(allTimeRecovered)} recovered so far.`
                   : "Add one quote and see what revenue is sitting quiet."}
               </p>
               <Link href="/quotes/new" className="mt-4 inline-block">

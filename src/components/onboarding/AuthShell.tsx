@@ -10,13 +10,13 @@ type AuthShellProps = {
 
 const COPY = {
   "sign-in": {
-    title: "Welcome back",
-    subtitle: "Sign in with Magic Link or Google. No password.",
+    title: "Start your recovery",
+    subtitle: "Sign in with Magic Link. No password.",
     crossLink: { href: "/sign-up", label: "New here? Start free →" },
   },
   "sign-up": {
     title: "Start your recovery",
-    subtitle: "3 quotes free. No credit card. No setup.",
+    subtitle: "3 silent quotes free. No credit card. No setup.",
     crossLink: {
       href: "/sign-in",
       label: "Already on Quote Reclaim? Sign in →",

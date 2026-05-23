@@ -192,11 +192,13 @@ export function AuthForm({ mode }: AuthFormProps) {
           aria-live="polite"
           className="rounded-lg border border-success/40 bg-success/10 p-4 text-sm"
         >
-          <p className="font-semibold text-success">Secure link sent.</p>
+          <p className="font-semibold text-success">
+            Secure link sent. Check your inbox.
+          </p>
           <p className="mt-1 text-ink">
-            Check{" "}
-            <span className="font-medium text-ink-strong">{email}</span> for a
-            magic link from Quote Reclaim. It expires in 60 minutes.
+            Sent to{" "}
+            <span className="font-medium text-ink-strong">{email}</span>. This
+            link expires in 60 minutes.
           </p>
           <button
             type="button"

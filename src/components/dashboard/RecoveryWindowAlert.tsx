@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { formatCurrency } from "@/lib/utils/currency";
+import { titleCaseName } from "@/lib/utils/title-case";
 
 type RecoveryWindowAlertProps = {
   quoteId: string;
@@ -20,13 +21,19 @@ export function RecoveryWindowAlert({
   state,
   daysSilent,
 }: RecoveryWindowAlertProps) {
+  // Defensive normalization so legacy/lowercase data still reads cleanly.
+  const displayName = titleCaseName(clientName);
+  const displayTrade = titleCaseName(trade);
+  const displayCity = city ? titleCaseName(city) : "";
+  const displayState = state ? state.toUpperCase() : "";
+
   const locationFragment =
-    city && state
-      ? ` in ${city}, ${state}`
-      : city
-        ? ` in ${city}`
-        : state
-          ? ` in ${state}`
+    displayCity && displayState
+      ? ` in ${displayCity}, ${displayState}`
+      : displayCity
+        ? ` in ${displayCity}`
+        : displayState
+          ? ` in ${displayState}`
           : "";
 
   return (
@@ -44,11 +51,11 @@ export function RecoveryWindowAlert({
         <span className="font-semibold text-ink-strong">
           {formatCurrency(amount)}
         </span>{" "}
-        {trade} quote · {clientName}
-        {locationFragment} · {daysSilent} days with no reply.
+        {displayTrade} estimate · {displayName}
+        {locationFragment} · {daysSilent} days quiet.
       </p>
       <p className="mt-1 text-sm text-ink-muted">
-        The next follow-up is queued. Open the plan or send it early today.
+        Open the plan and make the next move before the job disappears.
       </p>
       <div className="mt-4">
         <Link

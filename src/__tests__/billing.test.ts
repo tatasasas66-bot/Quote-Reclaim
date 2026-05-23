@@ -358,10 +358,13 @@ describe("Paywall component", () => {
 
   it("displays the prescribed copy", () => {
     expect(paywall).toContain("You");
-    expect(paywall).toContain("3 free recovery plans");
-    expect(paywall).toContain("Your silent quotes are still sitting there");
-    expect(paywall).toContain("One recovered job can pay");
-    expect(paywall).toContain("Unlock unlimited recovery — $79/month");
+    expect(paywall).toContain("3 free silent quotes");
+    expect(paywall).toContain("The quiet money is still");
+    expect(paywall).toContain("One won-back job can pay");
+    expect(paywall).toContain(
+      "Unlock unlimited silent quote recovery — $79/month",
+    );
+    expect(paywall).toContain("Unlock unlimited recovery");
     expect(paywall).toContain("Keep viewing existing recovery plans");
   });
 

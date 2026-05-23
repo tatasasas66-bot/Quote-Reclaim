@@ -213,13 +213,15 @@ export async function createQuoteAction(
   }
 
   const normalizedClientName = titleCaseName(input.client_name);
+  const normalizedCity = input.city ? titleCaseName(input.city) : "";
+  // State is already uppercased + US-validated by the schema transform.
 
   const insertResult = await userClient
     .from("quotes")
     .insert({
       user_id: userData.user.id,
       trade: input.trade,
-      city: input.city,
+      city: normalizedCity,
       state: input.state,
       estimate_amount: input.estimate_amount,
       job_description: input.job_description || null,
@@ -330,13 +332,13 @@ export async function updateQuoteAction(
     .from("quotes")
     .update({
       trade: input.trade,
-      city: input.city,
+      city: input.city ? titleCaseName(input.city) : "",
       state: input.state,
       estimate_amount: input.estimate_amount,
       job_description: input.job_description || null,
       days_silent: input.days_silent,
       quote_sent_at: newQuoteSentAt,
-      client_name: input.client_name,
+      client_name: titleCaseName(input.client_name),
       client_email: input.client_email || null,
       client_phone: input.client_phone || null,
     })

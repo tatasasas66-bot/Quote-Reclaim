@@ -21,33 +21,33 @@ export function HeroMetric({
   return (
     <section className="grid w-full min-w-0 gap-3 sm:grid-cols-3">
       <LedgerCard
-        eyebrowClassName="text-warning"
+        eyebrowClassName="text-warning/80"
         eyebrow="STILL BLEEDING"
         value={formatCurrency(stillBleeding)}
         valueClassName="text-ink-strong"
         subline={
           pendingCount === 0
-            ? "No silent quotes right now"
-            : `${pendingCount} silent quote${pendingCount === 1 ? "" : "s"} waiting on a follow-up`
+            ? "No quiet estimates right now."
+            : `Money sitting quiet right now. ${pendingCount} estimate${pendingCount === 1 ? "" : "s"} waiting.`
         }
       />
       <LedgerCard
-        eyebrowClassName="text-success"
+        eyebrowClassName="text-success/80"
         eyebrow="RECOVERED THIS MONTH"
         value={`+${formatCurrency(recoveredThisMonth)}`}
         valueClassName="text-success"
         subline={
           jobsWonThisMonth === 0
-            ? "No jobs won back yet this month"
-            : `${jobsWonThisMonth} job${jobsWonThisMonth === 1 ? "" : "s"} won back so far`
+            ? "Jobs won back so far: 0."
+            : `Jobs won back so far: ${jobsWonThisMonth}.`
         }
       />
       <LedgerCard
-        eyebrowClassName="text-money"
+        eyebrowClassName="text-money/80"
         eyebrow="ALL-TIME RECOVERED"
         value={formatCurrency(allTimeRecovered)}
         valueClassName="text-money"
-        subline={`≈ ${monthsPaidFor} month${monthsPaidFor === 1 ? "" : "s"} paid for`}
+        subline={`Approx. ${monthsPaidFor} month${monthsPaidFor === 1 ? "" : "s"} paid for.`}
       />
     </section>
   );
