@@ -66,8 +66,8 @@ export function AuthShell({ mode }: AuthShellProps) {
   const { title, subtitle, crossLink } = COPY[mode];
 
   return (
-    <main className="min-h-screen px-6 py-8 lg:px-10 lg:py-10">
-      <header className="mx-auto mb-8 flex max-w-6xl items-center justify-between">
+    <main className="min-h-screen w-full px-4 py-8 sm:px-6 lg:px-10 lg:py-10">
+      <header className="mx-auto mb-8 flex w-full max-w-6xl flex-wrap items-center justify-between gap-3">
         <Link
           href="/"
           className="rounded focus:outline-none focus-visible:ring-2 focus-visible:ring-focus"
@@ -83,7 +83,7 @@ export function AuthShell({ mode }: AuthShellProps) {
         </Link>
       </header>
 
-      <div className="mx-auto mb-8 max-w-md text-center lg:hidden">
+      <div className="mx-auto mb-8 w-full max-w-md text-center lg:hidden">
         <p className="text-xs font-semibold uppercase tracking-widest text-brand">
           Revenue Recovery OS
         </p>
@@ -94,8 +94,8 @@ export function AuthShell({ mode }: AuthShellProps) {
         </h1>
       </div>
 
-      <div className="mx-auto grid max-w-6xl items-start gap-12 lg:grid-cols-[3fr_2fr]">
-        <section className="hidden flex-col gap-8 lg:flex">
+      <div className="mx-auto grid w-full max-w-6xl min-w-0 items-start gap-12 lg:grid-cols-[3fr_2fr]">
+        <section className="hidden min-w-0 flex-col gap-8 lg:flex">
           <div className="space-y-4">
             <p className="text-xs font-semibold uppercase tracking-widest text-brand">
               Revenue Recovery OS
@@ -107,7 +107,7 @@ export function AuthShell({ mode }: AuthShellProps) {
               <br />
               <span className="text-brand">Get the job back.</span>
             </h1>
-            <p className="max-w-md text-lg text-ink">
+            <p className="max-w-md break-words text-lg text-ink">
               Approve once, and Quote Reclaim chases every silent estimate on
               its own — until the customer replies, the job comes back, or the
               sequence closes cleanly.
@@ -116,8 +116,8 @@ export function AuthShell({ mode }: AuthShellProps) {
           <PreviewCard />
         </section>
 
-        <section className="flex items-start">
-          <div className="w-full rounded-2xl border border-line-subtle bg-surface-1 p-6 shadow-xl sm:p-8">
+        <section className="mx-auto flex w-full min-w-0 max-w-md items-start lg:mx-0">
+          <div className="w-full min-w-0 rounded-2xl border border-line-subtle bg-surface-1 p-6 shadow-xl sm:p-8">
             <div className="mb-6">
               <h2 className="text-2xl font-bold text-ink-strong">{title}</h2>
               <p className="mt-1 text-sm text-ink-muted">{subtitle}</p>

@@ -52,6 +52,9 @@ function describeCallbackError(code: string | null): string | null {
   }
 }
 
+const GOOGLE_AUTH_ENABLED =
+  process.env.NEXT_PUBLIC_ENABLE_GOOGLE_AUTH === "true";
+
 export function AuthForm({ mode }: AuthFormProps) {
   const searchParams = useSearchParams();
   const callbackError = describeCallbackError(searchParams.get("error"));
@@ -186,7 +189,7 @@ export function AuthForm({ mode }: AuthFormProps) {
         </form>
       )}
 
-      {!magicSent ? (
+      {!magicSent && GOOGLE_AUTH_ENABLED ? (
         <>
           <div
             className="flex items-center gap-3 text-xs uppercase tracking-widest text-ink-muted"
