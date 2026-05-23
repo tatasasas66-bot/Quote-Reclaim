@@ -219,13 +219,138 @@ describe("/api/cron/send route", () => {
     expect(sendRoute).toMatch(/status:\s*"success"|"partial"|"failed"/);
   });
 
-  it("returns JSON with claimed/sent/failed/skipped", () => {
+  it("returns JSON with claimed/sent/failed/skipped/cap_deferred/stale_claims_released", () => {
     expect(sendRoute).toMatch(/claimed:\s*claimed\.length/);
-    expect(sendRoute).toMatch(/sent,\s*\n?\s*failed,\s*\n?\s*skipped/);
+    expect(sendRoute).toMatch(/sent,/);
+    expect(sendRoute).toMatch(/failed,/);
+    expect(sendRoute).toMatch(/skipped,/);
+    expect(sendRoute).toMatch(/cap_deferred/);
+    expect(sendRoute).toMatch(/stale_claims_released/);
   });
 
   it("never uses the word 'Bid'", () => {
     expect(sendRoute).not.toMatch(/\bBid\b/);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Hardening: stale claim release
+// ---------------------------------------------------------------------------
+
+describe("/api/cron/send — stale claim release", () => {
+  it("defines a 30-minute stale-claim window", () => {
+    expect(sendRoute).toMatch(
+      /STALE_CLAIM_MAX_AGE_MS\s*=\s*30\s*\*\s*60\s*\*\s*1000/,
+    );
+  });
+
+  it("calls releaseStaleClaims BEFORE claim_due_reminders", () => {
+    expect(sendRoute).toMatch(
+      /releaseStaleClaims\([\s\S]*?STALE_CLAIM_MAX_AGE_MS[\s\S]*?\)[\s\S]*?\.rpc\(\s*"claim_due_reminders"/,
+    );
+  });
+
+  it("only releases stale claims that are older than the cutoff (fresh claims untouched)", () => {
+    // The update must use .lt("claimed_at", cutoff) so anything newer than
+    // (now - 30 min) is left alone for the still-running cron.
+    expect(sendRoute).toMatch(
+      /\.lt\("claimed_at",\s*cutoff\)/,
+    );
+  });
+
+  it("only releases claims for reminders that have not yet been sent", () => {
+    expect(sendRoute).toMatch(
+      /releaseStaleClaims[\s\S]*?\.eq\("sent",\s*false\)/,
+    );
+  });
+
+  it("only releases rows that are actually claimed (claimed_by IS NOT NULL)", () => {
+    expect(sendRoute).toMatch(/\.not\("claimed_by",\s*"is",\s*null\)/);
+  });
+
+  it("computes the cutoff as now() - maxAgeMs (never the other way around)", () => {
+    expect(sendRoute).toMatch(/Date\.now\(\)\s*-\s*maxAgeMs/);
+  });
+
+  it("clears both claimed_by AND claimed_at on stale release", () => {
+    expect(sendRoute).toMatch(
+      /releaseStaleClaims[\s\S]*?claimed_by:\s*null[\s\S]*?claimed_at:\s*null/,
+    );
+  });
+
+  it("records the released count + any release error in cron_runs.metadata", () => {
+    expect(sendRoute).toContain("stale_claims_released: staleRelease.released");
+    expect(sendRoute).toContain("stale_release_error");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Hardening: per-user send cap
+// ---------------------------------------------------------------------------
+
+describe("/api/cron/send — per-user send cap", () => {
+  it("defines a per-user-per-run cap of 5", () => {
+    expect(sendRoute).toMatch(
+      /PER_USER_SEND_CAP_PER_RUN\s*=\s*5/,
+    );
+  });
+
+  it("counts attempts per user_id (not per reminder, not per quote)", () => {
+    expect(sendRoute).toMatch(/perUserAttempts\s*=\s*new Map<string,\s*number>/);
+    expect(sendRoute).toMatch(/perUserAttempts\.get\(r\.user_id\)/);
+  });
+
+  it("releases the claim when a user hits the cap so the next tick can retry", () => {
+    expect(sendRoute).toMatch(
+      /attempts\s*>=\s*PER_USER_SEND_CAP_PER_RUN[\s\S]*?releaseClaim\(supabase,\s*r\.reminder_id\)/,
+    );
+  });
+
+  it("does NOT mark cap-released rows as 'failed' (counts them as capDeferred)", () => {
+    // The cap branch must increment capDeferred, not failed.
+    expect(sendRoute).toMatch(
+      /attempts\s*>=\s*PER_USER_SEND_CAP_PER_RUN[\s\S]{0,300}capDeferred\+\+/,
+    );
+    // And capDeferred MUST be a separate counter from failed.
+    expect(sendRoute).toMatch(/let capDeferred = 0/);
+  });
+
+  it("skip-then-cap order: opt-out / wrong-channel / bad-phone do NOT consume the cap", () => {
+    // The cap check must come AFTER the three early-skip branches so that
+    // a user with 10 opted-out reminders still gets 5 valid attempts. Use
+    // tokens that only appear once in the loop body to avoid matching
+    // the constant declarations at the top of the file.
+    const optOutIdx = sendRoute.indexOf("if (r.client_opted_out)");
+    const channelIdx = sendRoute.indexOf('if (r.message_type !== "sms")');
+    const phoneIdx = sendRoute.indexOf("if (!phone)");
+    const capIdx = sendRoute.indexOf("attempts >= PER_USER_SEND_CAP_PER_RUN");
+    expect(optOutIdx).toBeGreaterThan(0);
+    expect(channelIdx).toBeGreaterThan(optOutIdx);
+    expect(phoneIdx).toBeGreaterThan(channelIdx);
+    expect(capIdx).toBeGreaterThan(phoneIdx);
+  });
+
+  it("increments the per-user counter only on rows that reach the provider", () => {
+    // perUserAttempts must be incremented INSIDE the if-not-over-cap branch,
+    // before calling provider.send, and never inside the skip branches.
+    expect(sendRoute).toMatch(
+      /perUserAttempts\.set\(r\.user_id,\s*attempts\s*\+\s*1\)[\s\S]{0,300}smsResult\s*=\s*await provider\.send/,
+    );
+  });
+
+  it("counts attempts (not successes) so failed sends still consume cap", () => {
+    // The cap is bumped BEFORE we know smsResult.ok, so a failure still
+    // costs one slot. Comments explain the rationale.
+    expect(sendRoute).toMatch(/bounds per-tenant SMS burst/i);
+  });
+
+  it("does not let global batch cap masquerade as per-user cap (claim limit is 200)", () => {
+    const migration = readSource(
+      "../../supabase/migrations/001_core_schema.sql",
+    );
+    expect(migration).toMatch(/limit 200/);
+    // 5 is the per-user, 200 the global. Both should coexist.
+    expect(sendRoute).toMatch(/PER_USER_SEND_CAP_PER_RUN\s*=\s*5/);
   });
 });
 

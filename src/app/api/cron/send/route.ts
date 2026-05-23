@@ -11,6 +11,23 @@ export const dynamic = "force-dynamic";
 
 const CRON_NAME = "send_reminders";
 
+/**
+ * Reminders left in a "claimed but not yet sent" state for longer than this
+ * window are considered abandoned (process crash, deploy mid-run, provider
+ * exception that skipped both branches of release). The next cron tick
+ * releases them so the schedule self-heals. 30 minutes is far longer than
+ * a healthy cron run, so live claims are never disturbed.
+ */
+const STALE_CLAIM_MAX_AGE_MS = 30 * 60 * 1000;
+
+/**
+ * Maximum reminders a single contractor can attempt to send in one cron
+ * tick. Bounds per-tenant SMS burst regardless of how many quotes are
+ * simultaneously due. Excess rows are released so the next tick picks
+ * them up.
+ */
+const PER_USER_SEND_CAP_PER_RUN = 5;
+
 type ClaimedReminder = {
   reminder_id: string;
   user_id: string;
@@ -32,6 +49,22 @@ type ClaimedReminder = {
 };
 
 type CronSupabase = ReturnType<typeof createServiceSupabaseClient>;
+
+async function releaseStaleClaims(
+  supabase: CronSupabase,
+  maxAgeMs: number,
+): Promise<{ released: number; error?: string }> {
+  const cutoff = new Date(Date.now() - maxAgeMs).toISOString();
+  const { data, error } = await supabase
+    .from("reminders")
+    .update({ claimed_by: null, claimed_at: null })
+    .lt("claimed_at", cutoff)
+    .eq("sent", false)
+    .not("claimed_by", "is", null)
+    .select("id");
+  if (error) return { released: 0, error: error.message };
+  return { released: data?.length ?? 0 };
+}
 
 async function finalizeCronRun(
   supabase: CronSupabase,
@@ -95,6 +128,14 @@ async function handleSend(request: NextRequest): Promise<NextResponse> {
     );
   }
 
+  // Self-heal: free any reminders that were claimed by a prior run that
+  // died mid-flight. Live runs are bounded well under STALE_CLAIM_MAX_AGE_MS
+  // so this never disturbs in-flight work.
+  const staleRelease = await releaseStaleClaims(
+    supabase,
+    STALE_CLAIM_MAX_AGE_MS,
+  );
+
   const { data: claimedRows, error: claimError } = await supabase.rpc(
     "claim_due_reminders",
     { p_cron_run_id: cronRunId },
@@ -115,7 +156,13 @@ async function handleSend(request: NextRequest): Promise<NextResponse> {
   let sent = 0;
   let failed = 0;
   let skipped = 0;
+  let capDeferred = 0;
   const errors: Array<{ reminder_id: string; error: string }> = [];
+  // Per-user attempt counter. We count anything that reaches the provider,
+  // not only successes, so the per-user cap bounds outbound load even when
+  // sends fail. Skipped rows (opt-out / wrong channel / bad phone) do not
+  // consume the cap.
+  const perUserAttempts = new Map<string, number>();
 
   for (const r of claimed) {
     // Defence in depth: the RPC already filters opted-out quotes, but if
@@ -139,6 +186,15 @@ async function handleSend(request: NextRequest): Promise<NextResponse> {
       skipped++;
       continue;
     }
+
+    // Per-user send cap: release excess so the next tick picks them up.
+    const attempts = perUserAttempts.get(r.user_id) ?? 0;
+    if (attempts >= PER_USER_SEND_CAP_PER_RUN) {
+      await releaseClaim(supabase, r.reminder_id);
+      capDeferred++;
+      continue;
+    }
+    perUserAttempts.set(r.user_id, attempts + 1);
 
     let smsResult: SmsResult;
     try {
@@ -222,6 +278,11 @@ async function handleSend(request: NextRequest): Promise<NextResponse> {
       claimed: claimed.length,
       skipped,
       failed,
+      cap_deferred: capDeferred,
+      stale_claims_released: staleRelease.released,
+      stale_release_error: staleRelease.error ?? null,
+      per_user_cap: PER_USER_SEND_CAP_PER_RUN,
+      stale_claim_max_age_ms: STALE_CLAIM_MAX_AGE_MS,
     },
   });
 
@@ -231,6 +292,8 @@ async function handleSend(request: NextRequest): Promise<NextResponse> {
     sent,
     failed,
     skipped,
+    cap_deferred: capDeferred,
+    stale_claims_released: staleRelease.released,
   });
 }
 
