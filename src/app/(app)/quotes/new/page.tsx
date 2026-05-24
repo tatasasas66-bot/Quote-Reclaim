@@ -49,8 +49,8 @@ export default async function NewQuotePage() {
               Add a silent quote
             </h1>
             <p className="text-sm text-ink-muted">
-              We&apos;ll build a 3-step recovery plan and schedule follow-ups
-              automatically.
+              Turn one quiet estimate into a 3-step recovery plan in under a
+              minute.
             </p>
           </section>
           <QuoteForm mode="create" action={createQuoteAction} />

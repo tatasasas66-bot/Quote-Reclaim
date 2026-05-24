@@ -9,10 +9,13 @@ function readSource(relative: string): string {
 
 const homepage = readSource("../app/page.tsx");
 const dashboard = readSource("../app/(app)/dashboard/page.tsx");
+const quoteDetail = readSource("../app/(app)/quotes/[id]/page.tsx");
 const recoveryAlert = readSource(
   "../components/dashboard/RecoveryWindowAlert.tsx",
 );
 const heroMetric = readSource("../components/dashboard/HeroMetric.tsx");
+const quoteForm = readSource("../components/quotes/QuoteForm.tsx");
+const quoteListItem = readSource("../components/quotes/QuoteListItem.tsx");
 // Paywall copy is asserted inside billing.test.ts; we read it through the
 // banned-word audit below, not here.
 const authShell = readSource("../components/onboarding/AuthShell.tsx");
@@ -28,33 +31,33 @@ const aiFallbacks = readSource("../lib/ai/fallback-messages.ts");
 // ---------------------------------------------------------------------------
 
 describe("Homepage hero copy (Phase 4.1)", () => {
-  it("eyebrow is QUOTE RECLAIM · REVENUE RECOVERY OS", () => {
-    expect(homepage).toMatch(/QUOTE RECLAIM · REVENUE RECOVERY OS/);
+  it("eyebrow is QUOTE RECLAIM · SILENT QUOTE COMMAND", () => {
+    expect(homepage).toMatch(/QUOTE RECLAIM · SILENT QUOTE COMMAND/);
   });
 
   it("uses the prescribed three-line headline", () => {
     expect(homepage).toMatch(/You sent the quote\./);
-    expect(homepage).toMatch(/The customer went quiet\./);
+    expect(homepage).toMatch(/They went quiet\./);
     expect(homepage).toMatch(/Get the job back\./);
   });
 
-  it("subhead uses calm follow-ups / recovered-revenue math framing", () => {
+  it("subhead uses silent-money recovery queue framing", () => {
     expect(homepage).toMatch(/turns silent estimates into a recovery queue/);
-    expect(homepage).toMatch(/calm\s+follow-ups/);
-    expect(homepage).toMatch(/recovered-revenue math/);
+    expect(homepage).toMatch(/clear\s+next moves, risk signals/);
+    expect(homepage).toMatch(/No CRM\. No\s+chasing\. No guessing\./);
   });
 
-  it("primary CTA is Start recovering quotes", () => {
-    expect(homepage).toMatch(/Start recovering quotes/);
+  it("primary CTA is Find Silent Money", () => {
+    expect(homepage).toMatch(/Find Silent Money/);
   });
 
   it("secondary CTA is Sign in", () => {
     expect(homepage).toMatch(/<Button[^>]*variant=["']secondary["']/);
   });
 
-  it("trust line uses 3 free recoveries phrasing", () => {
+  it("trust line uses 3 silent quotes free phrasing", () => {
     expect(homepage).toMatch(
-      /3 free recoveries\. No credit card\. One won-back job/,
+      /Start with 3 silent quotes free\. One recovered job can pay for months\./,
     );
   });
 
@@ -68,14 +71,14 @@ describe("Homepage hero copy (Phase 4.1)", () => {
 // ---------------------------------------------------------------------------
 
 describe("Dashboard header (Phase 4.2)", () => {
-  it("title is Recovery Dashboard (not 'Silent Quote Command')", () => {
-    expect(dashboard).toMatch(/Recovery Dashboard/);
-    expect(dashboard).not.toMatch(/Silent Quote Command/);
+  it("title is Silent Quote Command", () => {
+    expect(dashboard).toMatch(/Silent Quote Command/);
+    expect(dashboard).not.toMatch(/Recovery Dashboard/);
   });
 
-  it("subtitle is 'Quotes you sent. Money waiting to come back.'", () => {
+  it("subtitle is the desired quiet-estimate command frame", () => {
     expect(dashboard).toMatch(
-      /Quotes you sent\. Money waiting to come back\./,
+      /Every quiet estimate has a dollar value, a risk level, and a next\s+move\./,
     );
   });
 
@@ -140,9 +143,35 @@ describe("Auth copy", () => {
     expect(authShell).toMatch(/title:\s*"Start your recovery"/);
   });
 
+  it("AuthShell uses Silent Quote Command, not Revenue Recovery OS", () => {
+    expect(authShell).toMatch(/Silent Quote Command/);
+    expect(authShell).not.toMatch(/Revenue Recovery OS/);
+  });
+
   it("magic-link success uses 'Check your inbox' and the 60-minute expiry", () => {
     expect(authForm).toMatch(/Check your inbox/);
     expect(authForm).toMatch(/expires in 60 minutes/);
+  });
+});
+
+describe("Recovery plan product framing", () => {
+  it("QuoteForm no longer promises automatic scheduled follow-ups", () => {
+    expect(quoteForm).not.toMatch(/schedule follow-ups automatically/);
+    expect(quoteForm).not.toMatch(/We'll send these follow-ups on schedule/);
+    expect(quoteForm).not.toMatch(/Approve & Schedule Recovery/);
+    expect(quoteForm).toMatch(/Build Recovery Plan/);
+    expect(quoteForm).toMatch(/ready to copy or send manually/);
+  });
+
+  it("quote detail no longer says 'We'll send these on schedule'", () => {
+    expect(quoteDetail).not.toMatch(/We'll send these on schedule/);
+    expect(quoteDetail).toMatch(/Your recovery plan is ready/);
+  });
+
+  it("visible UI says Recovery Priority, not Recovery Score", () => {
+    const visibleUi = [quoteDetail, quoteListItem, authShell].join("\n");
+    expect(visibleUi).not.toMatch(/Recovery Score/);
+    expect(visibleUi).toMatch(/Recovery Priority/);
   });
 });
 
@@ -273,6 +302,18 @@ describe("Already-banned vocabulary stays banned", () => {
 
   it('no source contains "Design system preview" stub copy', () => {
     const re = /Design system preview/;
+    const hits = sources.filter((s) => re.test(s.content));
+    expect(hits.map((h) => h.path)).toEqual([]);
+  });
+
+  it('no source contains "v0.1" launch-stub copy', () => {
+    const re = /\bv0\.1\b/;
+    const hits = sources.filter((s) => re.test(s.content));
+    expect(hits.map((h) => h.path)).toEqual([]);
+  });
+
+  it('no source contains "scaffold" stub copy', () => {
+    const re = /\bscaffold\b/i;
     const hits = sources.filter((s) => re.test(s.content));
     expect(hits.map((h) => h.path)).toEqual([]);
   });

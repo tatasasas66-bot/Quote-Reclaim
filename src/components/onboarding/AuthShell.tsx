@@ -30,30 +30,32 @@ function PreviewCard() {
       <div className="mb-4 flex items-center justify-between">
         <Badge>EXAMPLE PREVIEW · NOT YOUR DATA</Badge>
         <span className="text-xs uppercase tracking-wide text-ink-muted">
-          Recovery dashboard
+          Silent Quote Command
         </span>
       </div>
       <div className="space-y-5">
         <div>
           <p className="text-xs uppercase tracking-wide text-ink-muted">
-            Still Bleeding
+            Money Sitting Quiet
           </p>
           <p className="mt-1 text-5xl font-bold text-money tabular-nums">
             {formatCurrency(47200)}
           </p>
           <p className="mt-1 text-sm text-ink-muted">
-            12 silent quotes · oldest 14 days
+            12 quiet estimates · oldest 14 days
           </p>
         </div>
         <div className="grid grid-cols-2 gap-3">
           <div className="rounded-lg border border-line-subtle bg-surface-2 p-3">
-            <p className="text-xs text-ink-muted">Jobs Won Back</p>
-            <p className="mt-1 text-2xl font-bold text-success tabular-nums">7</p>
+            <p className="text-xs text-ink-muted">Recovery Priority</p>
+            <p className="mt-1 text-2xl font-bold text-warning tabular-nums">
+              High
+            </p>
           </div>
           <div className="rounded-lg border border-line-subtle bg-surface-2 p-3">
-            <p className="text-xs text-ink-muted">Recovered this month</p>
-            <p className="mt-1 text-2xl font-bold text-money tabular-nums">
-              {formatCurrency(24400)}
+            <p className="text-xs text-ink-muted">Next Best Action</p>
+            <p className="mt-1 text-2xl font-bold text-success tabular-nums">
+              Today
             </p>
           </div>
         </div>
@@ -85,7 +87,7 @@ export function AuthShell({ mode }: AuthShellProps) {
 
       <div className="mx-auto mb-8 w-full max-w-md text-center lg:hidden">
         <p className="text-xs font-semibold uppercase tracking-widest text-brand">
-          Revenue Recovery OS
+          Silent Quote Command
         </p>
         <h1 className="mt-2 text-balance text-3xl font-bold leading-tight text-ink-strong">
           You sent the quote.
@@ -98,19 +100,18 @@ export function AuthShell({ mode }: AuthShellProps) {
         <section className="hidden min-w-0 flex-col gap-8 lg:flex">
           <div className="space-y-4">
             <p className="text-xs font-semibold uppercase tracking-widest text-brand">
-              Revenue Recovery OS
+              Silent Quote Command
             </p>
             <h1 className="text-balance text-5xl font-bold leading-tight text-ink-strong">
               You sent the quote.
               <br />
-              The customer went quiet.
+              They went quiet.
               <br />
               <span className="text-brand">Get the job back.</span>
             </h1>
             <p className="max-w-md break-words text-lg text-ink">
-              Approve once, and Quote Reclaim chases every silent estimate on
-              its own — until the customer replies, the job comes back, or the
-              sequence closes cleanly.
+              Every quiet estimate has a dollar value, a risk level, and a next
+              move. See the money sitting quiet and decide what happens next.
             </p>
           </div>
           <PreviewCard />

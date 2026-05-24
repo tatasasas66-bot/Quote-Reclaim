@@ -48,11 +48,11 @@ export function QuoteListItem({
           <div className="flex flex-wrap items-center gap-2 text-xs text-ink-muted">
             <RiskBadge level={level} />
             <span>
-              {days} day{days === 1 ? "" : "s"} silent
+              {days} day{days === 1 ? "" : "s"} quiet
             </span>
           </div>
           <p className="text-xs text-ink-muted">
-            Recovery Score: {score.score}
+            Recovery Priority: {score.score}
           </p>
           {nba ? (
             <p className={`text-xs font-semibold ${severityClass[nba.severity]}`}>

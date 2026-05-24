@@ -246,7 +246,7 @@ function ReviewBody({
         onChange={(v) => onPatch("estimate_amount", v ? Number(v) : null)}
       />
       <FieldRow
-        label="Days silent"
+        label="Days quiet"
         type="number"
         value={parsed.days_silent?.toString() ?? ""}
         onChange={(v) => onPatch("days_silent", v ? Number(v) : null)}
@@ -265,7 +265,7 @@ function ReviewBody({
 
       <div className="pt-2">
         <Button type="button" fullWidth size="lg" onClick={onApprove}>
-          Approve &amp; Schedule Recovery
+          Build Recovery Plan
         </Button>
         <button
           type="button"
@@ -317,7 +317,7 @@ function ClarifyBody({
       ) : null}
       {nextField === "days_silent" ? (
         <FieldRow
-          label="How many days silent?"
+          label="How many days quiet?"
           type="number"
           value={parsed.days_silent?.toString() ?? ""}
           onChange={(v) => onPatch("days_silent", v ? Number(v) : null)}

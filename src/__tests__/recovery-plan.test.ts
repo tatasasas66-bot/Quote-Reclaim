@@ -28,11 +28,11 @@ describe("Recovery Plan UI: /quotes/[id]", () => {
     expect(detailPage).toContain("Next follow-up sends");
   });
 
-  it("contains the automation-first reassurance sentence", () => {
+  it("contains the copy/send-manually reassurance sentence", () => {
     expect(detailPage).toContain(
-      "Quote Reclaim does the chasing",
+      "Your recovery plan is ready",
     );
-    expect(detailPage).toContain("step in when they reply");
+    expect(detailPage).toContain("connect sending automation");
   });
 
   it("never shows the words 'Send Now'", () => {

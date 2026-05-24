@@ -171,7 +171,7 @@ function QuoteSummary({
             {quote.state ? `, ${quote.state.toUpperCase()}` : ""}
           </p>
           <p className="mt-1 text-xs text-ink-muted">
-            Recovery Score: {score.score} · {score.label}
+            Recovery Priority: {score.score} · {score.label}
           </p>
         </div>
         <Badge variant={badge.variant}>{badge.label}</Badge>
@@ -179,7 +179,7 @@ function QuoteSummary({
 
       <dl className="grid grid-cols-2 gap-4 sm:grid-cols-3">
         <Field label="Estimate" value={formatCurrency(quote.estimate_amount)} />
-        <Field label="Days silent" value={String(quote.days_silent)} />
+        <Field label="Days quiet" value={String(quote.days_silent)} />
         {quote.client_email ? (
           <Field label="Email" value={quote.client_email} />
         ) : null}
@@ -295,7 +295,7 @@ function RecoveryPlanSection({
       {(status === "running" || status === "paused") && reminders.length > 0 ? (
         <p className="text-sm text-ink-muted">
           {status === "running"
-            ? "We'll send these on schedule. You can pause, copy, or send early later. Quote Reclaim does the chasing — you step in when they reply or the job comes back."
+            ? "Your recovery plan is ready. Copy a message now, or connect sending automation to let Quote Reclaim handle the chasing."
             : "Recovery is paused. Future reminders won't send until you resume."}
         </p>
       ) : null}

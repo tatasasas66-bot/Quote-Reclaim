@@ -165,7 +165,7 @@ export function QuoteForm({ mode, initial, action }: Props) {
       <SubmitButton mode={mode} />
       <p className="text-center text-xs text-ink-muted">
         {mode === "create"
-          ? "We'll send these follow-ups on schedule (Day 1, 3, 7). You can pause, copy, or send early anytime."
+          ? "Your plan will be ready to copy or send manually. Connect sending automation when you're ready."
           : "Saving updates the existing recovery plan."}
       </p>
     </form>
@@ -295,7 +295,7 @@ function SubmitButton({ mode }: { mode: "create" | "edit" }) {
           ? "Saving…"
           : "Updating…"
         : mode === "create"
-          ? "Approve & Schedule Recovery"
+          ? "Build Recovery Plan"
           : "Save changes"}
     </Button>
   );

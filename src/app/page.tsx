@@ -15,23 +15,23 @@ export default function HomePage() {
       </header>
       <section className="w-full min-w-0 space-y-6 py-12 md:py-16">
         <p className="text-xs font-semibold uppercase tracking-widest text-brand">
-          QUOTE RECLAIM · REVENUE RECOVERY OS
+          QUOTE RECLAIM · SILENT QUOTE COMMAND
         </p>
         <h1 className="text-balance text-4xl font-bold leading-tight text-ink-strong sm:text-5xl">
           You sent the quote.
           <br />
-          The customer went quiet.
+          They went quiet.
           <br />
           <span className="text-brand">Get the job back.</span>
         </h1>
         <p className="max-w-xl break-words text-lg text-ink">
-          Quote Reclaim turns silent estimates into a recovery queue — with
-          calm follow-ups, clear next moves, and recovered-revenue math built
-          for contractors.
+          Quote Reclaim turns silent estimates into a recovery queue with clear
+          next moves, risk signals, and recovered-revenue tracking. No CRM. No
+          chasing. No guessing.
         </p>
         <div className="flex flex-wrap items-center gap-3 pt-2">
           <Link href="/sign-up">
-            <Button size="lg">Start recovering quotes</Button>
+            <Button size="lg">Find Silent Money</Button>
           </Link>
           <Link href="/sign-in">
             <Button size="lg" variant="secondary">
@@ -40,8 +40,7 @@ export default function HomePage() {
           </Link>
         </div>
         <p className="text-sm text-ink-muted">
-          3 free recoveries. No credit card. One won-back job can pay for
-          months.
+          Start with 3 silent quotes free. One recovered job can pay for months.
         </p>
       </section>
     </main>

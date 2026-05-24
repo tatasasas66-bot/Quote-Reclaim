@@ -23,7 +23,7 @@ export const metadata: Metadata = {
     template: "%s · Quote Reclaim",
   },
   description:
-    "Approve once. Quote Reclaim does the chasing on every silent estimate until the customer replies or the job comes back.",
+    "Quote Reclaim turns silent estimates into a recovery queue with clear next moves, risk signals, and recovered-revenue tracking.",
 };
 
 export const viewport: Viewport = {

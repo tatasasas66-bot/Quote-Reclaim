@@ -68,10 +68,11 @@ export default async function DashboardPage() {
         <div className="mt-1 flex flex-wrap items-start justify-between gap-3">
           <div className="min-w-0">
             <h1 className="text-3xl font-bold leading-tight text-ink-strong">
-              Recovery Dashboard
+              Silent Quote Command
             </h1>
             <p className="mt-1 text-base text-ink">
-              Quotes you sent. Money waiting to come back.
+              Every quiet estimate has a dollar value, a risk level, and a next
+              move.
             </p>
           </div>
           <form action="/api/auth/sign-out" method="post">
