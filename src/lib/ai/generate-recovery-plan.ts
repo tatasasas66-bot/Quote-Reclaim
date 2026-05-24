@@ -1,14 +1,18 @@
 import { z } from "zod";
 import { AIUnavailableError, callAI, type ChatMessage } from "./call-ai";
-import { fallbackMessages } from "./fallback-messages";
+import {
+  fallbackMessages,
+  projectLabel,
+  researchSequenceMessages,
+} from "./fallback-messages";
 import { isWriterAvailable } from "./router";
 import { scoreMessage, MIN_AI_SCORE } from "./score-message";
 import { validateMessage } from "./validate-message";
 
 export type RecoveryFramework =
-  | "Specific Reassurance"
-  | "Easy Next Step"
-  | "Permission-Based Check-In";
+  | "Casual Pattern Interrupt"
+  | "Authority & Status Squeeze"
+  | "Professional Closeout";
 
 export type RecoveryMessage = {
   followup_number: 1 | 2 | 3;
@@ -21,6 +25,7 @@ export type RecoveryMessage = {
 
 export type RecoveryContext = {
   firstName: string;
+  contractorFirstName?: string | null;
   trade: string;
   estimateAmount: number;
   jobDescription?: string | null;
@@ -29,9 +34,9 @@ export type RecoveryContext = {
 };
 
 const FRAMEWORK_BY_NUMBER: Record<1 | 2 | 3, RecoveryFramework> = {
-  1: "Specific Reassurance",
-  2: "Easy Next Step",
-  3: "Permission-Based Check-In",
+  1: "Casual Pattern Interrupt",
+  2: "Authority & Status Squeeze",
+  3: "Professional Closeout",
 };
 
 const aiResponseSchema = z.object({
@@ -48,79 +53,64 @@ const aiResponseSchema = z.object({
     .length(3),
 });
 
+function expectedMessage(
+  ctx: RecoveryContext,
+  followupNumber: 1 | 2 | 3,
+): string {
+  const sequence = researchSequenceMessages(ctx);
+  if (followupNumber === 1) return sequence.day1;
+  if (followupNumber === 2) return sequence.day3;
+  return sequence.day7;
+}
+
 function buildPrompt(ctx: RecoveryContext): ChatMessage[] {
-  const bracket =
-    ctx.estimateAmount < 500
-      ? "Under $500: keep it very short, low-pressure, simple scheduling."
-      : ctx.estimateAmount < 1500
-        ? "$500-$1,500: emphasize convenience, prevention, a clear next step."
-        : ctx.estimateAmount < 5000
-          ? "$1,500-$5,000: emphasize scope clarity, trust, timing."
-          : ctx.estimateAmount < 15000
-            ? "$5,000-$15,000: emphasize options, timing, process clarity, stakeholder comfort."
-            : "$15,000+: be stakeholder-friendly and summary-oriented; low-pressure; easy to share or ask questions.";
+  const project = projectLabel(ctx.trade);
+  const contractorFirstName =
+    (ctx.contractorFirstName ?? "").trim().split(/\s+/)[0] || "Contractor";
+  const sequence = researchSequenceMessages(ctx);
 
-  const system = `You write SMS follow-ups from a small-business contractor to a homeowner about an estimate the contractor already sent.
+  const system = `You write SMS recovery plans for high-ticket home service contractors after a homeowner has gone quiet on an estimate.
 
-You are not a marketer. You are not a SaaS assistant. You do not sound like AI.
-Your only job is to protect the contractor's reputation and make replying easy for the homeowner.
+SOURCE OF TRUTH:
+"Engineering a 3-Step SMS Sequence for High-Ticket Home Service Contractors: Research Dossier & Framework"
 
-EVERY message MUST:
-- be under 320 characters
-- include the homeowner's first name
-- include the trade or job context (use the trade word naturally)
-- have exactly ONE question mark (the single CTA)
-- sound like a respected local contractor speaking, not a sales script
-- be calm, direct, and specific
-- end as a calm professional, not a salesperson
+Do not reinterpret the strategy. Return the exact three-step sequence with the provided variables inserted.
 
-Step 3 specifically MUST offer a clear close-the-loop: either keep the estimate
-active or release the slot. The contractor must look organized and in demand,
-not needy.
+MESSAGE STRATEGY:
+1. Casual Pattern Interrupt - warm-direct. Confirm receipt, disarm defensiveness, surface hidden objections around clarity and price.
+2. Authority & Status Squeeze - cold-confident. Use the contractor schedule / slot frame exactly. No greeting, no apology, no begging, no discount.
+3. Professional Closeout - emotionless-final. No name, no greeting. Use the no-oriented closeout question exactly.
 
-NEVER use any of these phrases or close variants:
-"just following up", "just checking in", "checking back", "touching base", "circling back", "wanted to follow up", "checking in to see", "quick reminder", "final reminder", "one final follow-up", "last chance", "act now", "don't miss out", "AI-generated", "our system", "optimize", "leverage", "please don't hesitate", "looking forward to hearing", "happy to help", "on file", "no problem whenever you're ready", "whenever you're ready"
+VARIABLE RULES:
+- {FirstName} comes from the homeowner first name.
+- {ContractorFirstName} comes from the contractor first name when available; otherwise use the supplied fallback.
+- {project} is the trade/project label and must appear in every message.
+- Day 1 starts with "Hey {FirstName} —".
+- Day 3 starts with "{FirstName}," and does not use "Hey" or "Hi".
+- Day 7 starts with "Have you given up on the {project}?" and uses no name or greeting.
 
-NEVER:
-- use the word "final"
-- imply scarcity, urgency, guilt, or pressure
-- claim a specific crew, slot, window, or appointment exists unless the input explicitly says so
-- use emojis
-- use exclamation marks
-- use the word "just" as a hedge ("just checking", "just wanted")
-- ask more than one question per message
+NEVER use disqualifying patterns:
+"Hi {Name}, just checking in", "just checking in", "following up", "touching base", "circle back", "circling back", "hope this finds you well", "hope you're doing great", "leave it hanging", "make the next step simple", "before you decide", emojis, exclamation marks, unsolicited discounts, guilt language, generic company signatures, "The Team at", tracking links, or manufactured price-drop urgency.
 
-THE THREE MESSAGES, IN ORDER:
+NEVER use exclamation marks.
 
-1. Specific Reassurance — the homeowner may be silent because something is unclear (scope, price, timing, materials, warranty). Lower the friction and invite a question.
+The exact Day 7 sentence "Just need a yes or no so I can clear it from my list." is allowed because it is part of the source framework. Do not use "just" anywhere else.
 
-2. Easy Next Step — make the next action simple. Do not assume availability. Offer a low-friction next step (e.g. "want me to walk through the scope again", "want me to send the summary").
-
-3. Permission-Based Check-In — give the homeowner a respectful exit. They should feel safe saying yes, no, or not now. Close the loop without pressure.
-
-TRADE CONTEXT (use naturally if relevant):
-- HVAC: comfort, system options, equipment, install timing
-- Plumbing: scope, repair path, fixture, water heater, drain
-- Roofing: scope, materials, warranty
-- Electrical: safety, code, panel, licensed work
-- Remodeling: scope, timeline, materials, stakeholder sharing
-- General Contracting: scope, coordination, schedule
-
-ESTIMATE VALUE GUIDANCE FOR THIS QUOTE: ${bracket}
-
-OUTPUT FORMAT — return JSON only, no markdown, no commentary:
+Return JSON only, no markdown, no commentary:
 {
   "messages": [
-    { "followup_number": 1, "framework": "Specific Reassurance", "message": "...", "cta_type": "question", "confidence": 0.0 },
-    { "followup_number": 2, "framework": "Easy Next Step", "message": "...", "cta_type": "question", "confidence": 0.0 },
-    { "followup_number": 3, "framework": "Permission-Based Check-In", "message": "...", "cta_type": "question", "confidence": 0.0 }
+    { "followup_number": 1, "framework": "Casual Pattern Interrupt", "message": "${sequence.day1}", "cta_type": "question", "confidence": 1 },
+    { "followup_number": 2, "framework": "Authority & Status Squeeze", "message": "${sequence.day3}", "cta_type": "question", "confidence": 1 },
+    { "followup_number": 3, "framework": "Professional Closeout", "message": "${sequence.day7}", "cta_type": "question", "confidence": 1 }
   ]
 }`;
 
-  const user = `Generate the three-message recovery sequence.
+  const user = `Generate the exact three-message recovery sequence.
 
 firstName: ${ctx.firstName}
+contractorFirstName: ${contractorFirstName}
 trade: ${ctx.trade}
+project: ${project}
 estimateAmount: $${ctx.estimateAmount.toLocaleString("en-US")}
 jobDescription: ${ctx.jobDescription ? ctx.jobDescription : "(not provided)"}
 location: ${[ctx.city, ctx.state].filter(Boolean).join(", ") || "(not provided)"}`;
@@ -135,7 +125,7 @@ async function attemptAI(ctx: RecoveryContext): Promise<RecoveryMessage[] | null
   let raw: string;
   try {
     raw = await callAI(buildPrompt(ctx), {
-      temperature: 0.55,
+      temperature: 0.1,
       jsonMode: true,
       maxTokens: 700,
     });
@@ -160,15 +150,21 @@ async function attemptAI(ctx: RecoveryContext): Promise<RecoveryMessage[] | null
   const out: RecoveryMessage[] = [];
   for (const m of ordered) {
     const ctaType = (m.cta_type ?? "question").toString();
+    const expected = expectedMessage(ctx, m.followup_number);
+    if (m.message.trim() !== expected) return null;
+
     const validation = validateMessage(m.message, {
       firstName: ctx.firstName,
       trade: ctx.trade,
+      followupNumber: m.followup_number,
     });
     if (!validation.ok) return null;
+
     const score = scoreMessage(m.message, {
       firstName: ctx.firstName,
       trade: ctx.trade,
       ctaType,
+      followupNumber: m.followup_number,
     });
     if (score < MIN_AI_SCORE) return null;
     out.push({
@@ -191,14 +187,14 @@ function fallbackPlan(ctx: RecoveryContext): RecoveryMessage[] {
       firstName: ctx.firstName,
       trade: ctx.trade,
       ctaType: m.cta_type,
+      followupNumber: m.followup_number,
     }),
   }));
 }
 
 /**
- * Generate a 3-step recovery plan. Tries Groq up to twice, then falls back
- * to deterministic per-trade templates. Never throws to the caller —
- * always returns 3 valid messages.
+ * Generate a 3-step recovery plan. Tries the configured writer twice, then
+ * falls back to deterministic research templates. Never throws to the caller.
  */
 export async function generateRecoveryPlan(
   ctx: RecoveryContext,

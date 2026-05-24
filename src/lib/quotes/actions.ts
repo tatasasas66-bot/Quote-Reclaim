@@ -55,6 +55,26 @@ function firstNameOf(fullName: string): string {
   return first.replace(/[.,]/g, "");
 }
 
+function firstStringValue(...values: unknown[]): string | null {
+  for (const value of values) {
+    if (typeof value === "string" && value.trim()) return value.trim();
+  }
+  return null;
+}
+
+function contractorFirstNameOf(user: {
+  user_metadata?: Record<string, unknown> | null;
+}): string | null {
+  const metadata = user.user_metadata ?? {};
+  const fullName = firstStringValue(
+    metadata.first_name,
+    metadata.full_name,
+    metadata.name,
+    metadata.display_name,
+  );
+  return fullName ? firstNameOf(fullName) : null;
+}
+
 function sendAtFromBase(quoteSentAt: string, daysAfter: number): string {
   const d = new Date(quoteSentAt);
   d.setUTCDate(d.getUTCDate() + daysAfter);
@@ -72,6 +92,7 @@ type ReminderShape = {
 
 type RecoveryInput = {
   firstName: string;
+  contractorFirstName?: string | null;
   trade: string;
   estimateAmount: number;
   jobDescription: string | null;
@@ -134,6 +155,7 @@ async function reconcileReminders(params: {
       validateMessage(m.message, {
         firstName: recovery.firstName,
         trade: recovery.trade,
+        followupNumber: m.followup_number,
       }).ok,
   );
   if (valid.length !== 3) return;
@@ -245,9 +267,11 @@ export async function createQuoteAction(
   const channel: "sms" | "email" = input.client_phone ? "sms" : "email";
   const quoteSentAt = quoteSentAtFromDaysSilent(input.days_silent);
   const firstName = firstNameOf(normalizedClientName);
+  const contractorFirstName = contractorFirstNameOf(userData.user);
 
   const plan = await generateRecoveryPlan({
     firstName,
+    contractorFirstName,
     trade: input.trade,
     estimateAmount: input.estimate_amount,
     jobDescription: input.job_description || null,
@@ -257,7 +281,11 @@ export async function createQuoteAction(
 
   const reminderRows = plan
     .filter((m) =>
-      validateMessage(m.message, { firstName, trade: input.trade }).ok,
+      validateMessage(m.message, {
+        firstName,
+        trade: input.trade,
+        followupNumber: m.followup_number,
+      }).ok,
     )
     .map((m) => ({
       user_id: userData.user.id,
@@ -367,6 +395,7 @@ export async function updateQuoteAction(
     channel: input.client_phone ? "sms" : "email",
     recovery: {
       firstName: firstNameOf(input.client_name),
+      contractorFirstName: contractorFirstNameOf(userData.user),
       trade: input.trade,
       estimateAmount: input.estimate_amount,
       jobDescription: input.job_description || null,

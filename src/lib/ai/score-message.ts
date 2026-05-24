@@ -8,6 +8,7 @@ export type ScoringContext = {
   firstName?: string;
   trade?: string;
   ctaType?: string;
+  followupNumber?: 1 | 2 | 3;
 };
 
 /**
@@ -27,10 +28,8 @@ const CALM_PHRASES = [
   "no rush",
   "no pressure",
   "if it works",
-  "happy to clarify",
   "want me to",
-  "if it's still",
-  "if the",
+  "what works",
 ];
 
 const SPECIFICITY_NOUNS: Record<string, readonly string[]> = {
@@ -61,9 +60,8 @@ const ROBOTIC_WORDS = [
 ];
 
 /**
- * Score a recovery message on a 0-100 scale. Hard failures (banned phrases,
- * emojis, excessive length, fake availability) zero out the score so callers
- * never confuse a structural failure with a tone issue.
+ * Score a recovery message on a 0-100 scale. Hard failures zero out the score
+ * so callers never confuse structural failures with tone issues.
  */
 export function scoreMessage(
   message: string,
@@ -77,18 +75,19 @@ export function scoreMessage(
   if (containsBannedPhrase(trimmed)) return 0;
   if (/\bfinal\b/i.test(trimmed)) return 0;
   if (/last chance/i.test(trimmed)) return 0;
+  if (/[!]/.test(trimmed)) return 0;
   if (/[\uD83C-\uD83E][\uDC00-\uDFFF]|[\u2600-\u27BF]/.test(trimmed)) return 0;
+  if (/\bhttps?:\/\//i.test(trimmed) || /\bwww\./i.test(trimmed)) return 0;
   if (trimmed.length > MAX_MESSAGE_CHARS + 40) return 0;
 
   let score = 100;
 
   // Length
-  if (trimmed.length > MAX_MESSAGE_CHARS) score -= 20;
-  else if (trimmed.length > 280) score -= 5;
+  if (trimmed.length > MAX_MESSAGE_CHARS) score -= 25;
   if (trimmed.length < 40) score -= 15;
 
-  // Client first name
-  if (ctx.firstName && ctx.firstName.length > 0) {
+  // Client first name is intentionally absent from Day 7 / followup 3.
+  if (ctx.firstName && ctx.firstName.length > 0 && ctx.followupNumber !== 3) {
     if (!lower.includes(ctx.firstName.toLowerCase())) score -= 20;
   }
 
@@ -103,10 +102,6 @@ export function scoreMessage(
   if (questions === 0) score -= 8;
   if (questions > 1) score -= 25;
 
-  // Exclamations
-  const exclamations = (trimmed.match(/!/g) ?? []).length;
-  if (exclamations > 1) score -= 20;
-
   // Pressure
   for (const w of PRESSURE_WORDS) {
     if (lower.includes(w)) score -= 12;
@@ -117,7 +112,7 @@ export function scoreMessage(
     if (lower.includes(w)) score -= 10;
   }
 
-  // Calm tone bonus
+  // Calm, direct tone bonus
   let calmHits = 0;
   for (const p of CALM_PHRASES) {
     if (lower.includes(p)) {

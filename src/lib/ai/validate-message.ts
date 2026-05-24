@@ -1,12 +1,13 @@
 /**
  * Hard validation rules for recovery messages. Anything failing these rules
- * must never be stored or sent. Validation is intentionally strict — false
+ * must never be stored or sent. Validation is intentionally strict: false
  * positives are acceptable; false negatives are not.
  */
 
 export type ValidationContext = {
   firstName?: string;
   trade?: string;
+  followupNumber?: 1 | 2 | 3;
 };
 
 export type ValidationResult = {
@@ -14,13 +15,16 @@ export type ValidationResult = {
   reasons: string[];
 };
 
-export const MAX_MESSAGE_CHARS = 320;
+export const MAX_MESSAGE_CHARS = 220;
 
 export const BANNED_PHRASES: readonly string[] = [
+  "hi {name}, just checking in",
   "just following up",
   "just checking in",
+  "following up",
   "checking back",
   "touching base",
+  "circle back",
   "circling back",
   "wanted to follow up",
   "checking in to see",
@@ -31,20 +35,32 @@ export const BANNED_PHRASES: readonly string[] = [
   "last chance",
   "act now",
   "don't miss out",
-  "don’t miss out",
   "ai-generated",
   "our system",
   "optimize",
   "leverage",
   "please don't hesitate",
-  "please don’t hesitate",
   "looking forward to hearing",
   "happy to help",
   "on file",
   "no problem whenever you're ready",
-  "no problem whenever you’re ready",
   "whenever you're ready",
-  "whenever you’re ready",
+  "hope this finds you well",
+  "hope you're doing great",
+  "leave it hanging",
+  "make the next step simple",
+  "before you decide",
+  "haven't heard back",
+  "have not heard back",
+  "did i do something wrong",
+  "the team at",
+  "tracking link",
+  "price-drop",
+  "price drop",
+  "today only",
+  "discount",
+  "send now",
+  "bid",
 ];
 
 const FAKE_AVAILABILITY_PHRASES: readonly string[] = [
@@ -71,8 +87,7 @@ const CORPORATE_WORDS: readonly string[] = [
 ];
 
 // Detect emoji without the `/u` flag for TS target compatibility:
-//   - any UTF-16 surrogate pair lands a character in U+10000..U+10FFFF
-//     (covers all modern emoji blocks 1F000-1FFFF)
+//   - surrogate pairs cover modern emoji blocks
 //   - U+2600..U+27BF covers basic-plane misc symbols / dingbats
 const EMOJI_REGEX = /[\uD83C-\uD83E][\uDC00-\uDFFF]|[\u2600-\u27BF]/;
 
@@ -89,6 +104,21 @@ const STOP_WORDS = new Set([
   "an",
   "a",
 ]);
+
+function normalizeForScan(value: string): string {
+  return value
+    .toLowerCase()
+    .replace(/[\u2018\u2019]/g, "'")
+    .replace(/[\u201C\u201D]/g, '"');
+}
+
+function escapeRegExp(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function containsWholeWord(haystack: string, needle: string): boolean {
+  return new RegExp(`\\b${escapeRegExp(needle)}\\b`, "i").test(haystack);
+}
 
 /**
  * Break a free-text trade string into the words a message should reference.
@@ -107,9 +137,14 @@ export function tradeKeywords(trade: string): string[] {
 }
 
 export function containsBannedPhrase(message: string): string | null {
-  const lower = message.toLowerCase();
+  const lower = normalizeForScan(message);
   for (const phrase of BANNED_PHRASES) {
-    if (lower.includes(phrase)) return phrase;
+    const scanned = normalizeForScan(phrase);
+    if (/^[a-z0-9]+$/i.test(scanned)) {
+      if (containsWholeWord(lower, scanned)) return phrase;
+    } else if (lower.includes(scanned)) {
+      return phrase;
+    }
   }
   return null;
 }
@@ -120,7 +155,7 @@ export function validateMessage(
 ): ValidationResult {
   const reasons: string[] = [];
   const trimmed = message.trim();
-  const lower = trimmed.toLowerCase();
+  const lower = normalizeForScan(trimmed);
 
   if (trimmed.length === 0) {
     return { ok: false, reasons: ["empty message"] };
@@ -141,15 +176,21 @@ export function validateMessage(
   if (/\b(urgent|asap|immediately|right now|act now)\b/i.test(trimmed)) {
     reasons.push("uses pressure language");
   }
+  if (/\b(discount|price drop|price-drop|today only)\b/i.test(trimmed)) {
+    reasons.push("uses discount or manufactured urgency");
+  }
+  if (/\bhttps?:\/\//i.test(trimmed) || /\bwww\./i.test(trimmed)) {
+    reasons.push("contains tracking/link-like URL");
+  }
 
   // CTA / question count
   const questions = (trimmed.match(/\?/g) ?? []).length;
-  if (questions > 1) reasons.push(`more than one question (${questions})`);
+  if (questions !== 1) reasons.push(`must have exactly one question (${questions})`);
 
   // Exclamations
   const exclamations = (trimmed.match(/!/g) ?? []).length;
-  if (exclamations > 1) {
-    reasons.push(`more than one exclamation mark (${exclamations})`);
+  if (exclamations > 0) {
+    reasons.push(`contains exclamation mark (${exclamations})`);
   }
 
   // Emojis
@@ -170,11 +211,34 @@ export function validateMessage(
     }
   }
 
-  // Client first name
-  if (ctx.firstName && ctx.firstName.length > 0) {
-    if (!lower.includes(ctx.firstName.toLowerCase())) {
-      reasons.push("missing client first name");
+  const firstName = (ctx.firstName ?? "").trim();
+  const firstNameLower = normalizeForScan(firstName);
+
+  if (ctx.followupNumber === 1 && firstNameLower) {
+    const expectedStart = `hey ${firstNameLower} —`;
+    if (!lower.startsWith(expectedStart)) {
+      reasons.push('day 1 must start with "Hey {FirstName} —"');
     }
+  }
+
+  if (ctx.followupNumber === 2 && firstNameLower) {
+    if (!lower.startsWith(`${firstNameLower},`)) {
+      reasons.push('day 2 must start with "{FirstName},"');
+    }
+    if (/^(hi|hey)\b/i.test(trimmed)) {
+      reasons.push("day 2 must not start with a greeting");
+    }
+  }
+
+  if (ctx.followupNumber === 3) {
+    if (/^(hi|hey)\b/i.test(trimmed)) {
+      reasons.push("day 3 must not start with a greeting");
+    }
+    if (firstNameLower && containsWholeWord(lower, firstNameLower)) {
+      reasons.push("day 3 must not include the client first name");
+    }
+  } else if (firstNameLower && !containsWholeWord(lower, firstNameLower)) {
+    reasons.push("missing client first name");
   }
 
   // Trade / context anchor

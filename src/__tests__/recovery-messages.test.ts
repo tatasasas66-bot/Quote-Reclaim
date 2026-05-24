@@ -2,24 +2,25 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
   BANNED_PHRASES,
+  MAX_MESSAGE_CHARS,
   containsBannedPhrase,
-  validateMessage,
   tradeKeywords,
+  validateMessage,
 } from "@/lib/ai/validate-message";
 import {
-  scoreMessage,
-  MIN_AI_SCORE,
   FALLBACK_FLOOR_SCORE,
+  MIN_AI_SCORE,
+  scoreMessage,
 } from "@/lib/ai/score-message";
-import { fallbackMessages } from "@/lib/ai/fallback-messages";
+import {
+  fallbackMessages,
+  projectLabel,
+  researchSequenceMessages,
+} from "@/lib/ai/fallback-messages";
 import {
   generateRecoveryPlan,
   type RecoveryContext,
 } from "@/lib/ai/generate-recovery-plan";
-
-// ---------------------------------------------------------------------------
-// Test helpers
-// ---------------------------------------------------------------------------
 
 beforeEach(() => {
   vi.stubEnv("GROQ_API_KEY", "");
@@ -37,54 +38,60 @@ const SCENARIOS: Array<{
   ctx: RecoveryContext;
 }> = [
   {
-    label: "Roofing $8,500 — Jane",
+    label: "Roofing $8,500 - Jane",
     ctx: {
       firstName: "Jane",
+      contractorFirstName: "Mike",
       trade: "Roofing",
       estimateAmount: 8500,
       jobDescription: "Re-roof main house, asphalt shingles",
     },
   },
   {
-    label: "Plumbing $2,400 — Tom",
+    label: "Plumbing $2,400 - Tom",
     ctx: {
       firstName: "Tom",
+      contractorFirstName: "Luis",
       trade: "Plumbing",
       estimateAmount: 2400,
       jobDescription: "Replace water heater",
     },
   },
   {
-    label: "HVAC $7,900 — Mike",
+    label: "HVAC $7,900 - Mike",
     ctx: {
       firstName: "Mike",
+      contractorFirstName: "Aaron",
       trade: "HVAC",
       estimateAmount: 7900,
       jobDescription: "Replace 3-ton AC + furnace",
     },
   },
   {
-    label: "Electrical $4,200 — Sarah",
+    label: "Electrical $4,200 - Sarah",
     ctx: {
       firstName: "Sarah",
+      contractorFirstName: "Dana",
       trade: "Electrical",
       estimateAmount: 4200,
       jobDescription: "Panel upgrade to 200A",
     },
   },
   {
-    label: "Remodeling $18,000 — David",
+    label: "Remodeling $18,000 - David",
     ctx: {
       firstName: "David",
+      contractorFirstName: "Chris",
       trade: "Remodeling",
       estimateAmount: 18000,
       jobDescription: "Kitchen remodel",
     },
   },
   {
-    label: "General Contracting $12,500 — Amanda",
+    label: "General Contracting $12,500 - Amanda",
     ctx: {
       firstName: "Amanda",
+      contractorFirstName: "Pat",
       trade: "General Contracting",
       estimateAmount: 12500,
       jobDescription: "Deck + sunroom addition",
@@ -92,247 +99,259 @@ const SCENARIOS: Array<{
   },
 ];
 
-// ---------------------------------------------------------------------------
-// validateMessage — every banned phrase must fail
-// ---------------------------------------------------------------------------
+const DISQUALIFYING_PATTERNS = [
+  "Hi Jane, just checking in",
+  "just checking in",
+  "following up",
+  "touching base",
+  "circle back",
+  "circling back",
+  "hope this finds you well",
+  "hope you're doing great",
+  "leave it hanging",
+  "make the next step simple",
+  "before you decide",
+  "The Team at",
+  "tracking link",
+  "discount",
+  "Bid",
+  "Send Now",
+];
 
-describe("validateMessage: banned phrases", () => {
-  const BAD_INPUTS: Array<{ phrase: string; sample: string }> = [
-    {
-      phrase: "just following up",
-      sample:
-        "Hi Jane, just following up on the roofing estimate. Any questions?",
-    },
-    {
-      phrase: "just checking in",
-      sample: "Hi Jane, just checking in on the roofing quote. Any questions?",
-    },
-    {
-      phrase: "checking back",
-      sample: "Hi Jane, checking back on the roofing job. Any questions?",
-    },
-    {
-      phrase: "touching base",
-      sample: "Hi Jane, touching base about the roofing project. Any update?",
-    },
-    {
-      phrase: "circling back",
-      sample:
-        "Hi Jane, circling back on the roofing estimate. Any questions for me?",
-    },
-    {
-      phrase: "wanted to follow up",
-      sample:
-        "Hi Jane, wanted to follow up on the roofing estimate. Any questions?",
-    },
-    {
-      phrase: "checking in to see",
-      sample:
-        "Hi Jane, checking in to see if you had questions on the roofing job?",
-    },
-    {
-      phrase: "quick reminder",
-      sample:
-        "Hi Jane, quick reminder about the roofing estimate. Any questions?",
-    },
-    {
-      phrase: "final reminder",
-      sample:
-        "Hi Jane, this is a final reminder about the roofing estimate. Any questions?",
-    },
-    {
-      phrase: "one final follow-up",
-      sample:
-        "Hi Jane, one final follow-up on the roofing quote. Any questions?",
-    },
-    {
-      phrase: "last chance",
-      sample:
-        "Hi Jane, last chance on the roofing quote pricing. Any questions?",
-    },
-    {
-      phrase: "act now",
-      sample: "Hi Jane, act now on the roofing estimate. Any questions?",
-    },
-    {
-      phrase: "don't miss out",
-      sample:
-        "Hi Jane, don't miss out on the roofing slot pricing. Any questions?",
-    },
-    {
-      phrase: "AI-generated",
-      sample:
-        "Hi Jane, this is an AI-generated note about the roofing quote. Any questions?",
-    },
-    {
-      phrase: "our system",
-      sample:
-        "Hi Jane, our system flagged your roofing quote. Any questions today?",
-    },
-    {
-      phrase: "optimize",
-      sample:
-        "Hi Jane, we can optimize the roofing scope. Any questions for me?",
-    },
-    {
-      phrase: "leverage",
-      sample:
-        "Hi Jane, we can leverage volume pricing on the roofing job. Any questions?",
-    },
-    {
-      phrase: "please don't hesitate",
-      sample:
-        "Hi Jane, please don't hesitate about the roofing quote. Any questions?",
-    },
-    {
-      phrase: "looking forward to hearing",
-      sample:
-        "Hi Jane, looking forward to hearing about the roofing job. Any questions?",
-    },
-    {
-      phrase: "happy to help",
-      sample:
-        "Hi Jane, happy to help on the roofing estimate. Any questions today?",
-    },
-    {
-      phrase: "on file",
-      sample:
-        "Hi Jane, I'll keep the roofing estimate on file. Any questions?",
-    },
-    {
-      phrase: "no problem whenever you're ready",
-      sample:
-        "Hi Jane, no problem whenever you're ready on the roofing job. Any questions?",
-    },
-  ];
+function validatePlan(ctx: RecoveryContext) {
+  return fallbackMessages(ctx).map((m) => ({
+    ...m,
+    validation: validateMessage(m.message, {
+      firstName: ctx.firstName,
+      trade: ctx.trade,
+      followupNumber: m.followup_number,
+    }),
+    score: scoreMessage(m.message, {
+      firstName: ctx.firstName,
+      trade: ctx.trade,
+      ctaType: m.cta_type,
+      followupNumber: m.followup_number,
+    }),
+  }));
+}
 
-  for (const { phrase, sample } of BAD_INPUTS) {
-    it(`rejects "${phrase}"`, () => {
+describe("research framework fallback sequence", () => {
+  it("Day 1 matches the uploaded report template with app variables", () => {
+    const ctx = SCENARIOS[0].ctx;
+    const sequence = researchSequenceMessages(ctx);
+    expect(sequence.day1).toBe(
+      "Hey Jane — Mike here. Looked back at your roofing estimate. Anything on it that didn't make sense, or any number you want me to walk through?",
+    );
+    expect(sequence.day1.startsWith("Hey Jane —")).toBe(true);
+    expect(sequence.day1).not.toMatch(/just checking in/i);
+  });
+
+  it("Day 3 matches the uploaded report schedule/slot frame", () => {
+    const ctx = SCENARIOS[0].ctx;
+    const sequence = researchSequenceMessages(ctx);
+    expect(sequence.day3).toBe(
+      "Jane, putting next week's roofing install schedule together. Need to know if I'm holding a slot for you or releasing it. What works?",
+    );
+    expect(sequence.day3.startsWith("Jane,")).toBe(true);
+    expect(sequence.day3).not.toMatch(/^(Hi|Hey)\b/);
+  });
+
+  it("Day 7 matches the uploaded report no-oriented closeout template", () => {
+    const ctx = SCENARIOS[0].ctx;
+    const sequence = researchSequenceMessages(ctx);
+    expect(sequence.day7).toBe(
+      "Have you given up on the roofing? If so, I'll close out the file — no problem either way. Just need a yes or no so I can clear it from my list.",
+    );
+    expect(sequence.day7).not.toMatch(/^Jane\b/);
+    expect(sequence.day7).not.toMatch(/^(Hi|Hey)\b/);
+  });
+
+  it("uses a safe contractor-name fallback without changing the template", () => {
+    const sequence = researchSequenceMessages({
+      firstName: "Rita",
+      contractorFirstName: null,
+      trade: "Roofing",
+      estimateAmount: 9000,
+    });
+    expect(sequence.day1).toMatch(/^Hey Rita — Contractor here\./);
+  });
+
+  for (const { label, ctx } of SCENARIOS) {
+    describe(label, () => {
+      const expected = researchSequenceMessages(ctx);
+      const plan = fallbackMessages(ctx);
+
+      it("has exactly 3 messages numbered 1/2/3", () => {
+        expect(plan).toHaveLength(3);
+        expect(plan.map((m) => m.followup_number)).toEqual([1, 2, 3]);
+      });
+
+      it("uses the research frameworks in order", () => {
+        expect(plan.map((m) => m.framework)).toEqual([
+          "Casual Pattern Interrupt",
+          "Authority & Status Squeeze",
+          "Professional Closeout",
+        ]);
+      });
+
+      it("returns the exact fallback sequence", () => {
+        expect(plan.map((m) => m.message)).toEqual([
+          expected.day1,
+          expected.day3,
+          expected.day7,
+        ]);
+      });
+
+      it("keeps the asymmetrical naming pattern", () => {
+        expect(plan[0].message.startsWith(`Hey ${ctx.firstName} —`)).toBe(
+          true,
+        );
+        expect(plan[1].message.startsWith(`${ctx.firstName},`)).toBe(true);
+        expect(plan[2].message).not.toMatch(
+          new RegExp(`^(Hi|Hey|${ctx.firstName})\\b`, "i"),
+        );
+      });
+
+      it("includes the project/trade keyword in every message", () => {
+        const project = projectLabel(ctx.trade).toLowerCase();
+        for (const message of plan.map((m) => m.message.toLowerCase())) {
+          expect(message).toContain(project.toLowerCase());
+        }
+      });
+
+      it("passes validation, scores above the fallback floor, and stays concise", () => {
+        for (const item of validatePlan(ctx)) {
+          expect(item.validation.ok).toBe(true);
+          expect(item.validation.reasons).toEqual([]);
+          expect(item.score).toBeGreaterThanOrEqual(FALLBACK_FLOOR_SCORE);
+          expect(item.message.length).toBeLessThanOrEqual(MAX_MESSAGE_CHARS);
+          expect((item.message.match(/\?/g) ?? []).length).toBe(1);
+        }
+      });
+
+      it("does not repeat a robotic greeting pattern", () => {
+        const starts = plan.map((m) => m.message.trim());
+        expect(starts.every((m) => /^Hi\b/i.test(m))).toBe(false);
+        expect(starts.every((m) => m.startsWith(ctx.firstName))).toBe(false);
+      });
+
+      it("contains none of the disqualifying patterns", () => {
+        const joined = plan.map((m) => m.message).join("\n");
+        for (const pattern of DISQUALIFYING_PATTERNS) {
+          expect(joined).not.toMatch(new RegExp(pattern, "i"));
+        }
+      });
+    });
+  }
+});
+
+describe("validateMessage", () => {
+  it("rejects every disqualifying phrase", () => {
+    for (const phrase of DISQUALIFYING_PATTERNS) {
+      const sample = `Jane, ${phrase} about the roofing estimate. Any questions?`;
       const result = validateMessage(sample, {
         firstName: "Jane",
         trade: "Roofing",
+        followupNumber: 2,
       });
       expect(result.ok).toBe(false);
       expect(containsBannedPhrase(sample)).not.toBeNull();
-    });
-  }
+    }
+  });
 
   it("rejects more than one question mark", () => {
-    const r = validateMessage(
-      "Hi Jane, the roofing estimate is ready? Are you free to chat?",
-      { firstName: "Jane", trade: "Roofing" },
+    const result = validateMessage(
+      "Hey Jane — Mike here. Looked back at your roofing estimate. Anything unclear? Any number you want me to walk through?",
+      { firstName: "Jane", trade: "Roofing", followupNumber: 1 },
     );
-    expect(r.ok).toBe(false);
-    expect(r.reasons.some((x) => x.includes("more than one question"))).toBe(
+    expect(result.ok).toBe(false);
+    expect(result.reasons.some((x) => x.includes("exactly one question"))).toBe(
       true,
     );
   });
 
-  it("rejects emojis", () => {
-    const r = validateMessage(
-      "Hi Jane, the roofing quote is ready 👋 Any questions?",
-      { firstName: "Jane", trade: "Roofing" },
-    );
-    expect(r.ok).toBe(false);
-    expect(r.reasons.some((x) => x.includes("emoji"))).toBe(true);
+  it("rejects emojis, exclamation marks, and links", () => {
+    const samples = [
+      "Jane, putting next week's roofing install schedule together! What works?",
+      "Jane, putting next week's roofing install schedule together. What works? https://example.com",
+      "Jane, putting next week's roofing install schedule together. What works? 🙂",
+    ];
+    for (const sample of samples) {
+      const result = validateMessage(sample, {
+        firstName: "Jane",
+        trade: "Roofing",
+        followupNumber: 2,
+      });
+      expect(result.ok).toBe(false);
+    }
   });
 
-  it("rejects messages over 320 chars", () => {
+  it("rejects messages over the concise SMS ceiling", () => {
     const long =
-      "Hi Jane, " + "roofing scope is clear ".repeat(20) + "any questions?";
-    const r = validateMessage(long, { firstName: "Jane", trade: "Roofing" });
-    expect(r.ok).toBe(false);
-    expect(r.reasons.some((x) => x.includes("320"))).toBe(true);
+      "Hey Jane — Mike here. " +
+      "roofing estimate details ".repeat(10) +
+      "Anything on it that didn't make sense?";
+    const result = validateMessage(long, {
+      firstName: "Jane",
+      trade: "Roofing",
+      followupNumber: 1,
+    });
+    expect(result.ok).toBe(false);
+    expect(result.reasons.some((x) => x.includes(String(MAX_MESSAGE_CHARS)))).toBe(
+      true,
+    );
   });
 
-  it("rejects 'final' framing", () => {
-    const r = validateMessage(
-      "Hi Jane, here is the final roofing note. Any questions?",
-      { firstName: "Jane", trade: "Roofing" },
-    );
-    expect(r.ok).toBe(false);
-  });
+  it("allows Day 7 to omit the client name but rejects a Day 7 greeting", () => {
+    const good = researchSequenceMessages(SCENARIOS[0].ctx).day7;
+    expect(
+      validateMessage(good, {
+        firstName: "Jane",
+        trade: "Roofing",
+        followupNumber: 3,
+      }).ok,
+    ).toBe(true);
 
-  it("rejects when client first name is missing", () => {
-    const r = validateMessage(
-      "Hi there, the roofing estimate is ready. Any questions?",
-      { firstName: "Jane", trade: "Roofing" },
-    );
-    expect(r.ok).toBe(false);
-    expect(r.reasons.some((x) => x.includes("first name"))).toBe(true);
-  });
-
-  it("rejects when trade is missing", () => {
-    const r = validateMessage(
-      "Hi Jane, the estimate is ready. Any questions before you decide?",
-      { firstName: "Jane", trade: "Roofing" },
-    );
-    expect(r.ok).toBe(false);
-    expect(r.reasons.some((x) => x.includes("trade"))).toBe(true);
-  });
-
-  it("rejects fake availability promises", () => {
-    const r = validateMessage(
-      "Hi Jane, I have a slot open Tuesday for the roofing work. Want it?",
-      { firstName: "Jane", trade: "Roofing" },
-    );
-    expect(r.ok).toBe(false);
+    const bad =
+      "Hi Jane, have you given up on the roofing? If so, I'll close out the file — no problem either way.";
+    const result = validateMessage(bad, {
+      firstName: "Jane",
+      trade: "Roofing",
+      followupNumber: 3,
+    });
+    expect(result.ok).toBe(false);
+    expect(result.reasons.some((x) => x.includes("greeting"))).toBe(true);
   });
 });
 
-describe("validateMessage: accepts well-formed messages", () => {
-  it("accepts the roofing reassurance fallback", () => {
-    const msg =
-      "Hi Jane, I sent the roofing estimate over. If scope, materials, or warranty details are unclear, I can clean that up quickly. Any questions before you decide?";
-    const r = validateMessage(msg, { firstName: "Jane", trade: "Roofing" });
-    expect(r.ok).toBe(true);
-    expect(r.reasons).toEqual([]);
-  });
-});
-
-// ---------------------------------------------------------------------------
-// tradeKeywords
-// ---------------------------------------------------------------------------
-
-describe("tradeKeywords", () => {
-  it("returns 'roofing' for 'Roofing'", () => {
+describe("tradeKeywords and scoring", () => {
+  it("extracts trade keywords", () => {
     expect(tradeKeywords("Roofing")).toEqual(["roofing"]);
-  });
-  it("returns 'hvac' for 'HVAC'", () => {
     expect(tradeKeywords("HVAC")).toEqual(["hvac"]);
-  });
-  it("splits 'general contracting' into both words", () => {
     expect(tradeKeywords("General Contracting")).toEqual([
       "general",
       "contracting",
     ]);
-  });
-  it("strips stopwords", () => {
     expect(tradeKeywords("Roofing and Siding")).toEqual(["roofing", "siding"]);
   });
-});
 
-// ---------------------------------------------------------------------------
-// scoreMessage
-// ---------------------------------------------------------------------------
-
-describe("scoreMessage", () => {
   it("zeroes a banned-phrase message", () => {
     const score = scoreMessage(
-      "Hi Jane, just following up on the roofing quote. Any questions?",
-      { firstName: "Jane", trade: "Roofing" },
+      "Jane, following up on the roofing estimate. Any questions?",
+      { firstName: "Jane", trade: "Roofing", followupNumber: 2 },
     );
     expect(score).toBe(0);
   });
 
-  it("penalises missing first name", () => {
-    const good =
-      "Hi Jane, the roofing scope and warranty are ready to review. Any questions before you decide?";
-    const bad =
-      "Hi there, the roofing scope and warranty are ready to review. Any questions before you decide?";
-    expect(scoreMessage(good, { firstName: "Jane", trade: "Roofing" })).toBeGreaterThan(
-      scoreMessage(bad, { firstName: "Jane", trade: "Roofing" }),
-    );
+  it("does not penalize the required Day 7 no-name pattern", () => {
+    const msg = researchSequenceMessages(SCENARIOS[0].ctx).day7;
+    expect(
+      scoreMessage(msg, {
+        firstName: "Jane",
+        trade: "Roofing",
+        followupNumber: 3,
+      }),
+    ).toBeGreaterThanOrEqual(FALLBACK_FLOOR_SCORE);
   });
 
   it("the constants are sane", () => {
@@ -342,143 +361,89 @@ describe("scoreMessage", () => {
   });
 });
 
-// ---------------------------------------------------------------------------
-// Fallback per-trade
-// ---------------------------------------------------------------------------
-
-describe("fallback per-trade", () => {
-  for (const { label, ctx } of SCENARIOS) {
-    describe(label, () => {
-      const plan = fallbackMessages(ctx);
-
-      it("has exactly 3 messages numbered 1/2/3", () => {
-        expect(plan).toHaveLength(3);
-        expect(plan.map((m) => m.followup_number)).toEqual([1, 2, 3]);
-      });
-
-      for (let i = 0; i < 3; i++) {
-        it(`message ${i + 1} passes validation`, () => {
-          const result = validateMessage(plan[i].message, {
-            firstName: ctx.firstName,
-            trade: ctx.trade,
-          });
-          expect(result.ok).toBe(true);
-          expect(result.reasons).toEqual([]);
-        });
-
-        it(`message ${i + 1} scores >= ${FALLBACK_FLOOR_SCORE}`, () => {
-          const score = scoreMessage(plan[i].message, {
-            firstName: ctx.firstName,
-            trade: ctx.trade,
-            ctaType: plan[i].cta_type,
-          });
-          expect(score).toBeGreaterThanOrEqual(FALLBACK_FLOOR_SCORE);
-        });
-
-        it(`message ${i + 1} is under 320 chars`, () => {
-          expect(plan[i].message.length).toBeLessThanOrEqual(320);
-        });
-
-        it(`message ${i + 1} contains the first name and a trade keyword`, () => {
-          const m = plan[i].message.toLowerCase();
-          expect(m).toContain(ctx.firstName.toLowerCase());
-          const kws = tradeKeywords(ctx.trade);
-          expect(kws.some((k) => m.includes(k))).toBe(true);
-        });
-
-        it(`message ${i + 1} has exactly one question mark`, () => {
-          const count = (plan[i].message.match(/\?/g) ?? []).length;
-          expect(count).toBe(1);
-        });
-
-        it(`message ${i + 1} contains no banned phrase`, () => {
-          expect(containsBannedPhrase(plan[i].message)).toBeNull();
-        });
-      }
-    });
-  }
-
-  it("frameworks are assigned in order", () => {
-    const plan = fallbackMessages(SCENARIOS[0].ctx);
-    expect(plan[0].framework).toBe("Specific Reassurance");
-    expect(plan[1].framework).toBe("Easy Next Step");
-    expect(plan[2].framework).toBe("Permission-Based Check-In");
-  });
-});
-
-// ---------------------------------------------------------------------------
-// generateRecoveryPlan integration
-// ---------------------------------------------------------------------------
-
-describe("generateRecoveryPlan: GROQ_API_KEY missing → fallback path", () => {
-  it("returns 3 fallback messages and never throws", async () => {
+describe("generateRecoveryPlan", () => {
+  it("returns 3 fallback messages and never throws when no writer key is configured", async () => {
     const plan = await generateRecoveryPlan(SCENARIOS[0].ctx);
     expect(plan).toHaveLength(3);
     expect(plan.every((m) => m.source === "fallback")).toBe(true);
+    expect(plan.map((m) => m.message)).toEqual(
+      Object.values(researchSequenceMessages(SCENARIOS[0].ctx)),
+    );
   });
 
-  for (const { label, ctx } of SCENARIOS) {
-    it(`produces a valid, scored 3-step plan for ${label}`, async () => {
-      const plan = await generateRecoveryPlan(ctx);
-      expect(plan).toHaveLength(3);
-      for (const m of plan) {
-        const v = validateMessage(m.message, {
-          firstName: ctx.firstName,
-          trade: ctx.trade,
-        });
-        expect(v.ok).toBe(true);
-        expect(m.score).toBeGreaterThanOrEqual(FALLBACK_FLOOR_SCORE);
-      }
-    });
-  }
-});
-
-describe("generateRecoveryPlan: malformed AI output → fallback", () => {
-  it("falls back when the AI returns non-JSON garbage", async () => {
+  it("accepts AI output only when it matches the exact research sequence", async () => {
     vi.stubEnv("GROQ_API_KEY", "test-key-not-real");
-    const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValue(
+    const ctx = SCENARIOS[0].ctx;
+    const sequence = researchSequenceMessages(ctx);
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(
       new Response(
         JSON.stringify({
-          choices: [{ message: { content: "this is not json at all" } }],
+          choices: [
+            {
+              message: {
+                content: JSON.stringify({
+                  messages: [
+                    {
+                      followup_number: 1,
+                      framework: "Casual Pattern Interrupt",
+                      message: sequence.day1,
+                      cta_type: "question",
+                      confidence: 1,
+                    },
+                    {
+                      followup_number: 2,
+                      framework: "Authority & Status Squeeze",
+                      message: sequence.day3,
+                      cta_type: "question",
+                      confidence: 1,
+                    },
+                    {
+                      followup_number: 3,
+                      framework: "Professional Closeout",
+                      message: sequence.day7,
+                      cta_type: "question",
+                      confidence: 1,
+                    },
+                  ],
+                }),
+              },
+            },
+          ],
         }),
         { status: 200, headers: { "content-type": "application/json" } },
       ),
     );
 
-    const plan = await generateRecoveryPlan(SCENARIOS[0].ctx);
-
+    const plan = await generateRecoveryPlan(ctx);
     expect(plan).toHaveLength(3);
-    expect(plan.every((m) => m.source === "fallback")).toBe(true);
-    expect(fetchSpy).toHaveBeenCalled();
+    expect(plan.every((m) => m.source === "ai")).toBe(true);
+    expect(plan.map((m) => m.message)).toEqual(Object.values(sequence));
   });
 
-  it("falls back when the AI returns valid JSON but a banned phrase", async () => {
+  it("falls back when AI paraphrases the strategy", async () => {
     vi.stubEnv("GROQ_API_KEY", "test-key-not-real");
     const badPayload = {
       messages: [
         {
           followup_number: 1,
-          framework: "Specific Reassurance",
+          framework: "Casual Pattern Interrupt",
           message:
-            "Hi Jane, just following up on the roofing estimate. Any questions?",
+            "Hey Jane — Mike here. Looked back at your roofing estimate. Want me to make the next step simple?",
           cta_type: "question",
-          confidence: 0.9,
         },
         {
           followup_number: 2,
-          framework: "Easy Next Step",
+          framework: "Authority & Status Squeeze",
           message:
-            "Hi Jane, just following up again on the roofing estimate. Any questions?",
+            "Jane, touching base on the roofing schedule. Want me to hold your spot?",
           cta_type: "question",
-          confidence: 0.9,
         },
         {
           followup_number: 3,
-          framework: "Permission-Based Check-In",
+          framework: "Professional Closeout",
           message:
-            "Hi Jane, just following up one last time on the roofing estimate. Any questions?",
+            "Jane, have you given up on the roofing? I can leave it hanging if needed.",
           cta_type: "question",
-          confidence: 0.9,
         },
       ],
     };
@@ -493,82 +458,31 @@ describe("generateRecoveryPlan: malformed AI output → fallback", () => {
 
     const plan = await generateRecoveryPlan(SCENARIOS[0].ctx);
     expect(plan.every((m) => m.source === "fallback")).toBe(true);
-    for (const m of plan) expect(containsBannedPhrase(m.message)).toBeNull();
-  });
-
-  it("falls back when AI output scores below MIN_AI_SCORE", async () => {
-    vi.stubEnv("GROQ_API_KEY", "test-key-not-real");
-    // Valid format, no banned phrases, but missing trade word -> low score
-    const lowScorePayload = {
-      messages: [
-        {
-          followup_number: 1,
-          framework: "Specific Reassurance",
-          message:
-            "Hi Jane, the estimate is ready. Want to chat tomorrow morning sometime?",
-          cta_type: "question",
-        },
-        {
-          followup_number: 2,
-          framework: "Easy Next Step",
-          message:
-            "Hi Jane, the estimate is ready. Want to chat tomorrow morning sometime?",
-          cta_type: "question",
-        },
-        {
-          followup_number: 3,
-          framework: "Permission-Based Check-In",
-          message:
-            "Hi Jane, the estimate is ready. Want to chat tomorrow morning sometime?",
-          cta_type: "question",
-        },
-      ],
-    };
-    vi.spyOn(globalThis, "fetch").mockResolvedValue(
-      new Response(
-        JSON.stringify({
-          choices: [
-            { message: { content: JSON.stringify(lowScorePayload) } },
-          ],
-        }),
-        { status: 200, headers: { "content-type": "application/json" } },
-      ),
+    expect(plan.map((m) => m.message)).toEqual(
+      Object.values(researchSequenceMessages(SCENARIOS[0].ctx)),
     );
-
-    const plan = await generateRecoveryPlan(SCENARIOS[0].ctx);
-    expect(plan.every((m) => m.source === "fallback")).toBe(true);
   });
 });
 
-// ---------------------------------------------------------------------------
-// Source-level invariants — no Twilio/Resend yet
-// ---------------------------------------------------------------------------
-
-describe("Phase 5 boundary: no Twilio/Resend integration yet", () => {
-  it("BANNED_PHRASES list includes every required entry", () => {
+describe("source-level guardrails", () => {
+  it("BANNED_PHRASES includes the research disqualifiers", () => {
     const required = [
-      "just following up",
       "just checking in",
-      "checking back",
+      "following up",
       "touching base",
-      "circling back",
-      "wanted to follow up",
-      "checking in to see",
-      "quick reminder",
-      "final reminder",
-      "one final follow-up",
-      "last chance",
-      "act now",
-      "ai-generated",
-      "our system",
-      "optimize",
-      "leverage",
-      "looking forward to hearing",
-      "happy to help",
-      "on file",
+      "circle back",
+      "hope this finds you well",
+      "hope you're doing great",
+      "leave it hanging",
+      "make the next step simple",
+      "before you decide",
+      "the team at",
+      "discount",
+      "send now",
+      "bid",
     ];
-    for (const p of required) {
-      expect(BANNED_PHRASES.map((s) => s.toLowerCase())).toContain(p);
+    for (const phrase of required) {
+      expect(BANNED_PHRASES.map((s) => s.toLowerCase())).toContain(phrase);
     }
   });
 });

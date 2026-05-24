@@ -200,21 +200,26 @@ describe("IntelligencePanel locked state (Phase 7.2)", () => {
 // ---------------------------------------------------------------------------
 
 describe("AI system prompt hardening (Phase 4.5)", () => {
-  it("instructs the writer to end as a calm professional", () => {
-    expect(aiPrompt).toMatch(/calm professional, not a salesperson/);
+  it("uses the uploaded SMS research dossier as the source of truth", () => {
+    expect(aiPrompt).toMatch(
+      /Engineering a 3-Step SMS Sequence for High-Ticket Home Service Contractors/,
+    );
+    expect(aiPrompt).toMatch(/Do not reinterpret the strategy/);
   });
 
-  it("step 3 must offer a close-the-loop / release the slot", () => {
-    expect(aiPrompt).toMatch(/Step 3 specifically MUST offer a clear close-the-loop/);
-    expect(aiPrompt).toMatch(/release the slot/);
+  it("locks the three research frameworks", () => {
+    expect(aiPrompt).toMatch(/Casual Pattern Interrupt/);
+    expect(aiPrompt).toMatch(/Authority & Status Squeeze/);
+    expect(aiPrompt).toMatch(/Professional Closeout/);
   });
 
   it("bans exclamation marks outright", () => {
     expect(aiPrompt).toMatch(/use exclamation marks/);
   });
 
-  it("bans 'just' as a hedge", () => {
-    expect(aiPrompt).toMatch(/word "just" as a hedge/);
+  it("allows only the source-framework Day 7 use of Just", () => {
+    expect(aiPrompt).toMatch(/exact Day 7 sentence/);
+    expect(aiPrompt).toMatch(/Do not use "just" anywhere else/);
   });
 });
 
@@ -222,21 +227,19 @@ describe("AI system prompt hardening (Phase 4.5)", () => {
 // Fallback messages — Day 7 Takeaway frame (Phase 4.6)
 // ---------------------------------------------------------------------------
 
-describe("Day 7 fallback messages use the Takeaway frame (Phase 4.6)", () => {
-  it("HVAC checkIn frees up the install window", () => {
-    expect(aiFallbacks).toMatch(/free up the install window/);
+describe("Fallback messages use the uploaded SMS research sequence", () => {
+  it("Day 1 uses Hey + contractor-name pattern interrupt", () => {
+    expect(aiFallbacks).toMatch(/Hey \$\{firstName\} — \$\{contractorFirstName\} here/);
   });
 
-  it("Roofing checkIn releases the crew window", () => {
-    expect(aiFallbacks).toMatch(/release the crew window/);
+  it("Day 3 uses schedule and slot framing", () => {
+    expect(aiFallbacks).toMatch(/putting next week's \$\{project\} install schedule together/);
+    expect(aiFallbacks).toMatch(/holding a slot for you or releasing it/);
   });
 
-  it("Remodeling checkIn frees up the planning slot", () => {
-    expect(aiFallbacks).toMatch(/free up the planning slot/);
-  });
-
-  it("General Contracting checkIn releases the project window", () => {
-    expect(aiFallbacks).toMatch(/release the project window/);
+  it("Day 7 uses the no-oriented closeout", () => {
+    expect(aiFallbacks).toMatch(/Have you given up on the \$\{project\}/);
+    expect(aiFallbacks).toMatch(/Just need a yes or no so I can clear it from my list/);
   });
 
   it("no fallback message string literal contains an exclamation mark", () => {
