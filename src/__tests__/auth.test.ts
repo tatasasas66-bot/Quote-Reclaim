@@ -107,6 +107,12 @@ describe("Browser Supabase client must use static NEXT_PUBLIC reads", () => {
     expect(authFormCode).not.toMatch(/process\.env\s*\[/);
     expect(authFormCode).not.toMatch(/\brequireEnv\s*\(\s*["']NEXT_PUBLIC_/);
   });
+
+  it("AuthForm normalizes labeled callback URL values before signInWithOtp", () => {
+    expect(authFormCode).toContain("normalizeCallbackBase");
+    expect(authFormCode).toContain("https?:");
+    expect(authFormCode).toContain("url.pathname = CALLBACK_PATH");
+  });
 });
 
 describe("safeRedirectPath behavior (replicated for runtime test)", () => {

@@ -11,6 +11,21 @@ type AuthFormProps = {
 
 const CALLBACK_PATH = "/api/auth/callback";
 
+function normalizeCallbackBase(raw: string): string {
+  const trimmed = raw.trim();
+  const embeddedUrl = trimmed.match(/https?:\/\/\S+/)?.[0] ?? trimmed;
+
+  try {
+    const url = new URL(embeddedUrl);
+    if (url.pathname === "/" || url.pathname === "") {
+      url.pathname = CALLBACK_PATH;
+    }
+    return url.toString();
+  } catch {
+    return embeddedUrl;
+  }
+}
+
 function GoogleIcon() {
   return (
     <svg
@@ -94,11 +109,12 @@ export function AuthForm({ mode }: AuthFormProps) {
   const [formError, setFormError] = React.useState<string | null>(null);
 
   const callbackUrl = React.useMemo(() => {
-    const base =
-      process.env.NEXT_PUBLIC_AUTH_CALLBACK_URL ??
-      (typeof window !== "undefined"
+    const configured = process.env.NEXT_PUBLIC_AUTH_CALLBACK_URL;
+    const base = configured
+      ? normalizeCallbackBase(configured)
+      : typeof window !== "undefined"
         ? `${window.location.origin}${CALLBACK_PATH}`
-        : CALLBACK_PATH);
+        : CALLBACK_PATH;
     // Always pin ?next= so the callback knows where to land. Audit-flow users
     // get the audit token threaded through; everyone else lands on /dashboard.
     const nextPath = auditToken
