@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Button, Input } from "@/components/ui";
 import { createBrowserSupabaseClient } from "@/lib/supabase/browser";
 
@@ -10,6 +10,8 @@ type AuthFormProps = {
 };
 
 const CALLBACK_PATH = "/api/auth/callback";
+const RESEND_COOLDOWN_SECONDS = 60;
+const OTP_LENGTH = 6;
 
 function normalizeCallbackBase(raw: string): string {
   const trimmed = raw.trim();
@@ -59,17 +61,21 @@ function describeCallbackError(code: string | null): string | null {
   if (!code) return null;
   switch (code) {
     case "link_expired":
-      return "That link has expired. Links are valid for 60 minutes — send a new one.";
+    case "missing_code":
+      return "That code or link expired. Send a fresh one.";
     case "auth_callback_failed":
       return "We couldn't finish signing you in. Try the link again or request a new one.";
-    case "missing_code":
-      return "That link expired or was already used. Send a new one.";
     default:
       return "Sign-in error. Try again.";
   }
 }
 
-function safeSupabaseError(err: unknown): { name?: string; code?: string; message?: string; status?: number } {
+function safeSupabaseError(err: unknown): {
+  name?: string;
+  code?: string;
+  message?: string;
+  status?: number;
+} {
   if (!err || typeof err !== "object") return {};
   const e = err as Record<string, unknown>;
   return {
@@ -80,33 +86,77 @@ function safeSupabaseError(err: unknown): { name?: string; code?: string; messag
   };
 }
 
+function isRateLimitError(err: unknown): boolean {
+  const { code, message = "", status } = safeSupabaseError(err);
+  const lower = message.toLowerCase();
+  return (
+    code === "over_email_send_rate_limit" ||
+    status === 429 ||
+    lower.includes("rate limit") ||
+    lower.includes("too many")
+  );
+}
+
 function userFacingOtpError(err: unknown): string {
   const { code, message = "" } = safeSupabaseError(err);
-  if (code === "over_email_send_rate_limit" || message.includes("rate limit")) {
-    return "Too many attempts. Wait a few minutes, then try again.";
+  const lower = message.toLowerCase();
+  if (isRateLimitError(err)) {
+    return "Too many attempts. Wait a few minutes before sending another code.";
   }
   if (code === "email_not_confirmed") {
-    return "Check your inbox — a link was already sent. Click it to sign in.";
+    return "Check your inbox. Enter the 6-digit code or use the secure link.";
   }
-  if (message.toLowerCase().includes("invalid api key") || message.toLowerCase().includes("invalid project")) {
+  if (lower.includes("invalid api key") || lower.includes("invalid project")) {
     return "Service configuration error. Contact support if this persists.";
   }
   return "Could not send the link. Try again or contact support.";
+}
+
+function userFacingVerifyError(err: unknown): string {
+  const { code, message = "", status } = safeSupabaseError(err);
+  const lower = message.toLowerCase();
+  if (
+    code === "otp_expired" ||
+    code === "email_otp_expired" ||
+    code === "invalid_otp" ||
+    status === 403 ||
+    lower.includes("expired") ||
+    lower.includes("invalid")
+  ) {
+    return "That code or link expired. Send a fresh one.";
+  }
+  if (isRateLimitError(err)) {
+    return "Too many attempts. Wait a few minutes before sending another code.";
+  }
+  return "Could not verify that code. Send a fresh one.";
 }
 
 const GOOGLE_AUTH_ENABLED =
   process.env.NEXT_PUBLIC_ENABLE_GOOGLE_AUTH === "true";
 
 export function AuthForm({ mode }: AuthFormProps) {
+  const router = useRouter();
   const searchParams = useSearchParams();
   const callbackError = describeCallbackError(searchParams.get("error"));
   const auditToken = searchParams.get("audit_token") ?? undefined;
 
   const [email, setEmail] = React.useState("");
+  const [sentEmail, setSentEmail] = React.useState("");
+  const [otpToken, setOtpToken] = React.useState("");
   const [magicLoading, setMagicLoading] = React.useState(false);
+  const [verifyLoading, setVerifyLoading] = React.useState(false);
   const [googleLoading, setGoogleLoading] = React.useState(false);
   const [magicSent, setMagicSent] = React.useState(false);
   const [formError, setFormError] = React.useState<string | null>(null);
+  const [verifyError, setVerifyError] = React.useState<string | null>(null);
+  const [resendAvailableAt, setResendAvailableAt] = React.useState<
+    number | null
+  >(null);
+  const [now, setNow] = React.useState(() => Date.now());
+
+  const cooldownRemaining = resendAvailableAt
+    ? Math.max(0, Math.ceil((resendAvailableAt - now) / 1000))
+    : 0;
 
   const callbackUrl = React.useMemo(() => {
     const configured = process.env.NEXT_PUBLIC_AUTH_CALLBACK_URL;
@@ -115,8 +165,6 @@ export function AuthForm({ mode }: AuthFormProps) {
       : typeof window !== "undefined"
         ? `${window.location.origin}${CALLBACK_PATH}`
         : CALLBACK_PATH;
-    // Always pin ?next= so the callback knows where to land. Audit-flow users
-    // get the audit token threaded through; everyone else lands on /dashboard.
     const nextPath = auditToken
       ? `/dashboard?audit_token=${auditToken}`
       : "/dashboard";
@@ -124,9 +172,40 @@ export function AuthForm({ mode }: AuthFormProps) {
     return `${base}${sep}next=${encodeURIComponent(nextPath)}`;
   }, [auditToken]);
 
+  React.useEffect(() => {
+    if (!resendAvailableAt) return undefined;
+    const id = window.setInterval(() => setNow(Date.now()), 1000);
+    return () => window.clearInterval(id);
+  }, [resendAvailableAt]);
+
+  function startResendCooldown() {
+    const next = Date.now() + RESEND_COOLDOWN_SECONDS * 1000;
+    setResendAvailableAt(next);
+    setNow(Date.now());
+  }
+
+  async function sendSignInEmail(targetEmail: string) {
+    const supabase = createBrowserSupabaseClient();
+    const { error } = await supabase.auth.signInWithOtp({
+      email: targetEmail,
+      options: {
+        emailRedirectTo: callbackUrl,
+        shouldCreateUser: true,
+      },
+    });
+    if (error) throw error;
+    setSentEmail(targetEmail);
+    setMagicSent(true);
+    setOtpToken("");
+    setVerifyError(null);
+    setFormError(null);
+    startResendCooldown();
+  }
+
   async function handleMagicLink(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setFormError(null);
+    setVerifyError(null);
     const trimmed = email.trim();
     if (!trimmed) {
       setFormError("Enter your work email.");
@@ -134,16 +213,7 @@ export function AuthForm({ mode }: AuthFormProps) {
     }
     setMagicLoading(true);
     try {
-      const supabase = createBrowserSupabaseClient();
-      const { error } = await supabase.auth.signInWithOtp({
-        email: trimmed,
-        options: {
-          emailRedirectTo: callbackUrl,
-          shouldCreateUser: true,
-        },
-      });
-      if (error) throw error;
-      setMagicSent(true);
+      await sendSignInEmail(trimmed);
     } catch (err) {
       const safe = safeSupabaseError(err);
       const callbackOriginPath = (() => {
@@ -162,8 +232,69 @@ export function AuthForm({ mode }: AuthFormProps) {
         callbackOriginPath,
       });
       setFormError(userFacingOtpError(err));
+      startResendCooldown();
     } finally {
       setMagicLoading(false);
+    }
+  }
+
+  async function handleResend() {
+    if (!sentEmail || cooldownRemaining > 0) return;
+    setFormError(null);
+    setVerifyError(null);
+    setMagicLoading(true);
+    try {
+      await sendSignInEmail(sentEmail);
+    } catch (err) {
+      const safe = safeSupabaseError(err);
+      console.error("[auth:magic-link] OTP resend failed", {
+        name: safe.name,
+        code: safe.code,
+        message: safe.message,
+        status: safe.status,
+      });
+      setFormError(userFacingOtpError(err));
+      startResendCooldown();
+    } finally {
+      setMagicLoading(false);
+    }
+  }
+
+  async function handleVerifyOtp(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setFormError(null);
+    setVerifyError(null);
+    const token = otpToken.trim();
+    if (!sentEmail) {
+      setFormError("Send a fresh code first.");
+      return;
+    }
+    if (!new RegExp(`^\\d{${OTP_LENGTH}}$`).test(token)) {
+      setVerifyError("Enter the 6-digit code from your email.");
+      return;
+    }
+    setVerifyLoading(true);
+    try {
+      const supabase = createBrowserSupabaseClient();
+      const { error } = await supabase.auth.verifyOtp({
+        email: sentEmail,
+        token,
+        type: "email",
+      });
+      if (error) throw error;
+      router.replace("/dashboard");
+      router.refresh();
+    } catch (err) {
+      const safe = safeSupabaseError(err);
+      console.error("[auth:otp-code] OTP verify failed", {
+        name: safe.name,
+        code: safe.code,
+        message: safe.message,
+        status: safe.status,
+      });
+      setVerifyError(userFacingVerifyError(err));
+    } finally {
+      setVerifyLoading(false);
     }
   }
 
@@ -180,7 +311,6 @@ export function AuthForm({ mode }: AuthFormProps) {
         },
       });
       if (error) throw error;
-      // Browser is being redirected; keep the loading state.
     } catch (err) {
       const safe = safeSupabaseError(err);
       console.error("[auth:google] OAuth start failed", {
@@ -196,6 +326,16 @@ export function AuthForm({ mode }: AuthFormProps) {
 
   return (
     <div className="space-y-5">
+      {formError ? (
+        <div
+          role="alert"
+          aria-live="polite"
+          className="rounded-lg border border-danger/40 bg-danger/10 p-3 text-sm text-danger"
+        >
+          {formError}
+        </div>
+      ) : null}
+
       {callbackError && !formError ? (
         <div
           role="alert"
@@ -213,23 +353,75 @@ export function AuthForm({ mode }: AuthFormProps) {
           className="rounded-lg border border-success/40 bg-success/10 p-4 text-sm"
         >
           <p className="font-semibold text-success">
-            Secure link sent. Check your inbox.
+            Check your inbox. Enter the 6-digit code or use the secure link.
           </p>
           <p className="mt-1 text-ink">
             Sent to{" "}
-            <span className="font-medium text-ink-strong">{email}</span>. This
-            link expires in 60 minutes.
+            <span className="font-medium text-ink-strong">{sentEmail}</span>.
+            The secure link expires in 60 minutes.
           </p>
-          <button
-            type="button"
-            className="mt-3 text-xs text-ink-muted underline hover:text-ink-strong"
-            onClick={() => {
-              setMagicSent(false);
-              setFormError(null);
-            }}
-          >
-            Use a different email
-          </button>
+
+          <form onSubmit={handleVerifyOtp} noValidate className="mt-4 space-y-3">
+            <Input
+              label="6-digit code"
+              type="text"
+              value={otpToken}
+              onChange={(e) =>
+                setOtpToken(
+                  e.target.value.replace(/\D/g, "").slice(0, OTP_LENGTH),
+                )
+              }
+              placeholder="123456"
+              required
+              autoComplete="one-time-code"
+              inputMode="numeric"
+              pattern="[0-9]*"
+              maxLength={OTP_LENGTH}
+              disabled={verifyLoading || magicLoading}
+              error={verifyError ?? undefined}
+            />
+            <Button
+              type="submit"
+              fullWidth
+              size="lg"
+              loading={verifyLoading}
+              disabled={magicLoading || otpToken.length !== OTP_LENGTH}
+            >
+              Verify code
+            </Button>
+          </form>
+
+          <div className="mt-3 flex flex-col gap-2 sm:flex-row">
+            <Button
+              type="button"
+              variant="secondary"
+              size="sm"
+              fullWidth
+              loading={magicLoading}
+              disabled={verifyLoading || cooldownRemaining > 0}
+              onClick={handleResend}
+            >
+              {cooldownRemaining > 0
+                ? `Send fresh code in ${cooldownRemaining}s`
+                : "Send a fresh one"}
+            </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              fullWidth
+              disabled={magicLoading || verifyLoading}
+              onClick={() => {
+                setMagicSent(false);
+                setSentEmail("");
+                setOtpToken("");
+                setFormError(null);
+                setVerifyError(null);
+              }}
+            >
+              Use a different email
+            </Button>
+          </div>
         </div>
       ) : (
         <form onSubmit={handleMagicLink} noValidate className="space-y-3">
@@ -243,20 +435,21 @@ export function AuthForm({ mode }: AuthFormProps) {
             autoComplete="email"
             inputMode="email"
             disabled={magicLoading || googleLoading}
-            error={formError ?? undefined}
           />
           <Button
             type="submit"
             fullWidth
             size="lg"
             loading={magicLoading}
-            disabled={googleLoading}
+            disabled={googleLoading || cooldownRemaining > 0}
           >
             {magicLoading
-              ? "Sending secure link…"
-              : mode === "sign-up"
-                ? "Send secure link"
-                : "Send secure link"}
+              ? "Sending secure link..."
+              : cooldownRemaining > 0
+                ? `Send secure link in ${cooldownRemaining}s`
+                : mode === "sign-up"
+                  ? "Send secure link"
+                  : "Send secure link"}
           </Button>
         </form>
       )}
@@ -282,7 +475,7 @@ export function AuthForm({ mode }: AuthFormProps) {
             onClick={handleGoogle}
           >
             {googleLoading ? null : <GoogleIcon />}
-            {googleLoading ? "Opening Google…" : "Continue with Google"}
+            {googleLoading ? "Opening Google..." : "Continue with Google"}
           </Button>
         </>
       ) : null}

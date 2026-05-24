@@ -13,6 +13,11 @@ describe("AuthForm contract", () => {
     expect(source).toContain("signInWithOtp");
   });
 
+  it("calls verifyOtp with type email for the 6-digit fallback", () => {
+    expect(source).toContain("verifyOtp");
+    expect(source).toContain('type: "email"');
+  });
+
   it("calls signInWithOAuth with provider google", () => {
     expect(source).toContain("signInWithOAuth");
     expect(source).toContain('provider: "google"');
@@ -26,6 +31,27 @@ describe("AuthForm contract", () => {
 
   it("never accepts a password field", () => {
     expect(source).not.toMatch(/type=["']password["']/);
+  });
+
+  it("shows safe OTP, expired-link, and rate-limit copy", () => {
+    expect(source).toContain(
+      "Check your inbox. Enter the 6-digit code or use the secure link.",
+    );
+    expect(source).toContain("That code or link expired. Send a fresh one.");
+    expect(source).toContain(
+      "Too many attempts. Wait a few minutes before sending another code.",
+    );
+  });
+
+  it("does not log OTP tokens or secrets", () => {
+    const consoleCalls =
+      source.match(/console\.(?:log|error|warn|info)\([\s\S]*?\);/g) ?? [];
+    for (const call of consoleCalls) {
+      expect(call).not.toMatch(/\botpToken\b/);
+      expect(call).not.toMatch(/\btoken\b/);
+      expect(call).not.toMatch(/SUPABASE_SERVICE_ROLE_KEY/);
+      expect(call).not.toMatch(/NEXT_PUBLIC_SUPABASE_ANON_KEY/);
+    }
   });
 });
 
