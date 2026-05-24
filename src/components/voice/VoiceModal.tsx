@@ -11,24 +11,45 @@ type VoiceModalProps = {
   onApprove: (result: VoiceParseResult) => void;
 };
 
-type Phase = "listening" | "review" | "clarify" | "unsupported" | "error";
+type Phase =
+  | "checking"
+  | "listening"
+  | "review"
+  | "clarify"
+  | "unsupported"
+  | "permission-denied"
+  | "error";
 
 export function VoiceModal({ onClose, onApprove }: VoiceModalProps) {
   const speech = useSpeechRecognition();
-  const [phase, setPhase] = React.useState<Phase>("listening");
+  const [phase, setPhase] = React.useState<Phase>("checking");
   const [parsed, setParsed] = React.useState<VoiceParseResult | null>(null);
   const [parseError, setParseError] = React.useState<string | null>(null);
   const [parsing, setParsing] = React.useState(false);
+  const startAttemptedRef = React.useRef(false);
 
-  // Initial state — start listening (or surface unsupported once probed).
+  // Initial state: wait for client-side support detection before deciding.
   React.useEffect(() => {
-    if (speech.supported) {
+    if (!speech.supportChecked) return;
+    if (speech.supported && !startAttemptedRef.current) {
+      startAttemptedRef.current = true;
+      setPhase("listening");
       speech.start();
-    } else {
+    } else if (!speech.supported) {
       setPhase("unsupported");
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [speech.supported]);
+  }, [speech.supportChecked, speech.supported]);
+
+  React.useEffect(() => {
+    if (!speech.error) return;
+    if (speech.error === "permission-denied") {
+      setPhase("permission-denied");
+    } else {
+      setParseError("Voice input stopped. You can type the quote below or try again.");
+      setPhase("error");
+    }
+  }, [speech.error]);
 
   // When listening ends, ship the transcript to the parser.
   React.useEffect(() => {
@@ -68,7 +89,9 @@ export function VoiceModal({ onClose, onApprove }: VoiceModalProps) {
   function recordAgain() {
     speech.reset();
     setParsed(null);
+    setParseError(null);
     setPhase("listening");
+    startAttemptedRef.current = true;
     speech.start();
   }
 
@@ -97,15 +120,19 @@ export function VoiceModal({ onClose, onApprove }: VoiceModalProps) {
             id="voice-modal-title"
             className="text-lg font-bold text-ink-strong"
           >
-            {phase === "listening"
+            {phase === "checking"
+              ? "Checking voice support"
+              : phase === "listening"
               ? "Listening…"
               : phase === "review"
                 ? "Here's what I heard"
                 : phase === "clarify"
                   ? "Almost there"
                   : phase === "unsupported"
-                    ? "Voice not available"
-                    : "Couldn't parse that"}
+                    ? "Type the quote below"
+                    : phase === "permission-denied"
+                      ? "Microphone blocked"
+                      : "Couldn't parse that"}
           </h2>
           <button
             type="button"
@@ -116,6 +143,12 @@ export function VoiceModal({ onClose, onApprove }: VoiceModalProps) {
             <X className="h-5 w-5" aria-hidden="true" />
           </button>
         </div>
+
+        {phase === "checking" ? (
+          <p className="mt-3 text-sm text-ink-muted">
+            Checking whether voice entry is available in this browser.
+          </p>
+        ) : null}
 
         {phase === "listening" ? (
           <ListeningBody
@@ -145,9 +178,16 @@ export function VoiceModal({ onClose, onApprove }: VoiceModalProps) {
         ) : null}
 
         {phase === "unsupported" ? (
-          <p className="mt-3 text-sm text-ink-muted">
-            Your browser doesn&apos;t support voice input. Type the quote in the
-            form below instead.
+          <p className="mt-3 rounded-lg border border-line-subtle bg-surface-2 p-3 text-sm text-ink-muted">
+            Voice entry is not supported in this browser. You can still type the
+            quote below.
+          </p>
+        ) : null}
+
+        {phase === "permission-denied" ? (
+          <p className="mt-3 rounded-lg border border-warning/30 bg-warning/10 p-3 text-sm text-ink">
+            Microphone permission was blocked. You can enable it in your browser
+            settings or type the quote below.
           </p>
         ) : null}
 
