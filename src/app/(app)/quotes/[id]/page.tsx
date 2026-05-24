@@ -10,11 +10,16 @@ import {
 } from "@/components/quotes";
 import { requireUser } from "@/lib/auth/require-user";
 import {
+  getProfileStats,
   getQuoteById,
   listRemindersForQuote,
   type QuoteRow,
   type ReminderRow,
 } from "@/lib/quotes/repo";
+import { getRecoveryScore } from "@/lib/quotes/recovery-score";
+import { computeStepDisplay } from "@/lib/quotes/step-status";
+import { titleCaseName } from "@/lib/utils/title-case";
+import { createServiceSupabaseClient } from "@/lib/supabase/service";
 import { formatCurrency } from "@/lib/utils/currency";
 
 export const metadata: Metadata = { title: "Quote – Quote Reclaim" };
@@ -62,15 +67,30 @@ export default async function QuoteDetailPage({
   const { user, supabase } = await requireUser();
   if (!user || !supabase) redirect("/sign-in");
 
-  const [quote, reminders] = await Promise.all([
+  const [quote, reminders, profile] = await Promise.all([
     getQuoteById(supabase, user.id, params.id),
     listRemindersForQuote(supabase, user.id, params.id),
+    getProfileStats(supabase, user.id),
   ]);
 
   if (!quote) notFound();
 
+  const allTimeRecovered = profile?.recovered_amount ?? 0;
+
   const status = computeStatus(quote, reminders);
   const next = status === "running" ? nextSendAt(reminders) : null;
+
+  // Was there any inbound reply for this quote? Used to flip per-step status
+  // to "Paused · customer replied" without flagging the sequence as ended.
+  // Reads via service client to bypass RLS on outbound_messages.
+  const serviceClient = createServiceSupabaseClient();
+  const { data: replyRows } = await serviceClient
+    .from("outbound_messages")
+    .select("id")
+    .eq("quote_id", quote.id)
+    .eq("status", "replied")
+    .limit(1);
+  const hasReplyForQuote = (replyRows ?? []).length > 0;
 
   return (
     <main className="mx-auto flex min-h-screen max-w-2xl flex-col gap-8 px-6 py-8">
@@ -86,13 +106,19 @@ export default async function QuoteDetailPage({
 
       <QuoteSummary quote={quote} status={status} />
 
-      {status === "won" ? <WinCelebration quote={quote} /> : null}
+      {status === "won" ? (
+        <WinCelebration
+          quote={quote}
+          allTimeRecovered={allTimeRecovered}
+        />
+      ) : null}
 
       <RecoveryPlanSection
         reminders={reminders}
         status={status}
         nextDate={next}
         hasPhone={Boolean(quote.client_phone)}
+        hasReplyForQuote={hasReplyForQuote}
       />
     </main>
   );
@@ -119,17 +145,33 @@ function QuoteSummary({
     }
   })();
 
+  const score = getRecoveryScore(quote);
+  const scoreBadgeVariant: "success" | "warning" | "danger" | "neutral" =
+    score.tone === "success"
+      ? "success"
+      : score.tone === "warning"
+        ? "warning"
+        : score.tone === "danger"
+          ? "danger"
+          : "neutral";
+
   return (
     <section className="space-y-4 rounded-xl border border-line-subtle bg-surface-2 p-6">
       <div className="flex items-start justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-ink-strong">
-            {quote.client_name}
-          </h1>
+          <div className="flex flex-wrap items-center gap-2">
+            <h1 className="text-2xl font-bold text-ink-strong">
+              {titleCaseName(quote.client_name)}
+            </h1>
+            <Badge variant={scoreBadgeVariant}>{score.label}</Badge>
+          </div>
           <p className="mt-1 text-sm text-ink-muted">
-            {quote.trade}
-            {quote.city ? ` · ${quote.city}` : ""}
-            {quote.state ? `, ${quote.state}` : ""}
+            {titleCaseName(quote.trade)}
+            {quote.city ? ` · ${titleCaseName(quote.city)}` : ""}
+            {quote.state ? `, ${quote.state.toUpperCase()}` : ""}
+          </p>
+          <p className="mt-1 text-xs text-ink-muted">
+            Recovery Score: {score.score} · {score.label}
           </p>
         </div>
         <Badge variant={badge.variant}>{badge.label}</Badge>
@@ -176,9 +218,22 @@ function Field({ label, value }: { label: string; value: string }) {
   );
 }
 
-function WinCelebration({ quote }: { quote: QuoteRow }) {
+function WinCelebration({
+  quote,
+  allTimeRecovered,
+}: {
+  quote: QuoteRow;
+  allTimeRecovered: number;
+}) {
   const amount = quote.estimate_amount;
   const months = Math.floor(amount / MONTHLY_PRICE_USD);
+  // ROI multiplier: months of subscription paid for by recovered revenue.
+  // monthsSubscribed is not tracked yet, so default to 1 — surfaces the
+  // simplest "months paid for" answer per the spec's formula.
+  const monthsSubscribed = 1;
+  const roiMultiplier = Math.round(
+    allTimeRecovered / Math.max(MONTHLY_PRICE_USD, monthsSubscribed * MONTHLY_PRICE_USD),
+  );
   return (
     <section
       role="status"
@@ -200,6 +255,15 @@ function WinCelebration({ quote }: { quote: QuoteRow }) {
           .
         </p>
       ) : null}
+      {allTimeRecovered > 0 ? (
+        <p className="mt-4 text-xs text-ink-muted">
+          Quote Reclaim has now saved you{" "}
+          <span className="font-semibold text-money">
+            {formatCurrency(allTimeRecovered)}
+          </span>{" "}
+          lifetime · {roiMultiplier}× return
+        </p>
+      ) : null}
     </section>
   );
 }
@@ -209,11 +273,13 @@ function RecoveryPlanSection({
   status,
   nextDate,
   hasPhone,
+  hasReplyForQuote,
 }: {
   reminders: ReminderRow[];
   status: RecoveryStatus;
   nextDate: Date | null;
   hasPhone: boolean;
+  hasReplyForQuote: boolean;
 }) {
   return (
     <section className="space-y-3">
@@ -244,6 +310,8 @@ function RecoveryPlanSection({
               reminder={r}
               recoveryStatus={status}
               hasPhone={hasPhone}
+              allReminders={reminders}
+              hasReplyForQuote={hasReplyForQuote}
             />
           ))}
         </ol>
@@ -256,27 +324,30 @@ function ReminderCard({
   reminder: r,
   recoveryStatus,
   hasPhone,
+  allReminders,
+  hasReplyForQuote,
 }: {
   reminder: ReminderRow;
   recoveryStatus: RecoveryStatus;
   hasPhone: boolean;
+  allReminders: ReminderRow[];
+  hasReplyForQuote: boolean;
 }) {
   const sendDate = new Date(r.send_at);
-  const isPast = sendDate.getTime() < Date.now();
-
-  let statusVariant: "success" | "warning" | "neutral" | "danger" | "brand" =
-    "neutral";
-  let statusLabel = "Scheduled";
-  if (r.sent) {
-    statusVariant = "success";
-    statusLabel = "Sent";
-  } else if (r.paused_at) {
-    statusVariant = "warning";
-    statusLabel = "Paused";
-  } else if (isPast) {
-    statusVariant = "brand";
-    statusLabel = "Due";
-  }
+  const display = computeStepDisplay(r, allReminders, hasReplyForQuote);
+  // Only one reminder per quote is "due" — the soonest unsent one — so the
+  // contractor sees one clear next action, never two "Due" badges stacked.
+  const statusVariant: "success" | "warning" | "neutral" | "danger" | "brand" =
+    display.tone === "rust"
+      ? "brand"
+      : display.tone === "success"
+        ? "success"
+        : display.tone === "warning"
+          ? "warning"
+          : display.tone === "danger"
+            ? "danger"
+            : "neutral";
+  const statusLabel = display.label;
 
   const dayLabel =
     CADENCE_DAYS[r.followup_number as 1 | 2 | 3] ?? r.followup_number;
@@ -301,7 +372,9 @@ function ReminderCard({
         <Badge variant={statusVariant}>{statusLabel}</Badge>
       </div>
 
-      <p className="text-sm text-ink">{r.message_text}</p>
+      <p className="whitespace-pre-wrap text-sm leading-6 text-ink-strong">
+        {r.message_text}
+      </p>
 
       <div className="flex flex-wrap items-center justify-between gap-2 border-t border-line-subtle pt-3">
         <p className="text-xs text-ink-muted">

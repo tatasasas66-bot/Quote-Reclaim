@@ -68,11 +68,10 @@ export default async function DashboardPage() {
         <div className="mt-1 flex flex-wrap items-start justify-between gap-3">
           <div className="min-w-0">
             <h1 className="text-3xl font-bold leading-tight text-ink-strong">
-              Silent Quote Command
+              Recovery Dashboard
             </h1>
             <p className="mt-1 text-base text-ink">
-              Every quiet estimate has a dollar value, a risk level, and a next
-              move.
+              Quotes you sent. Money waiting to come back.
             </p>
           </div>
           <form action="/api/auth/sign-out" method="post">
@@ -160,6 +159,16 @@ export default async function DashboardPage() {
             unlockAt={5}
           />
         </aside>
+      </div>
+
+      {/* Mobile-only sticky CTA so the primary action stays in reach. */}
+      <div className="fixed inset-x-3 bottom-3 z-30 sm:hidden">
+        <Link
+          href="/quotes/new"
+          className="inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-md border border-brand bg-brand px-4 py-3 text-sm font-semibold text-ink-strong shadow-[0_0_36px_rgba(217,111,50,0.35)] active:scale-[0.99]"
+        >
+          + Add Silent Quote
+        </Link>
       </div>
     </main>
   );

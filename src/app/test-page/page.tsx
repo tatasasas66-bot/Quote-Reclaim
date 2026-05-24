@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { TestPageClient } from "./client";
 
 export const metadata: Metadata = {
-  title: "Design system preview",
+  title: "Internal UI Reference",
   robots: { index: false, follow: false },
 };
 

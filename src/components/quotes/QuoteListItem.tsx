@@ -1,22 +1,31 @@
 import Link from "next/link";
 import { RiskBadge } from "@/components/dashboard/RiskBadge";
+import { nextBestAction } from "@/lib/quotes/next-best-action";
+import { getRecoveryScore } from "@/lib/quotes/recovery-score";
 import type { QuoteRow } from "@/lib/quotes/repo";
 import { effectiveDaysSilent } from "@/lib/recovery/effective-days";
-import { nextBestAction } from "@/lib/recovery/next-best-action";
 import { riskLevel } from "@/lib/recovery/risk";
 import { formatCurrency } from "@/lib/utils/currency";
 import { titleCaseName } from "@/lib/utils/title-case";
 
-const severityClass: Record<"neutral" | "warning" | "danger", string> = {
-  neutral: "text-ink-muted",
+const severityClass: Record<"info" | "rust" | "warning" | "success", string> = {
+  info: "text-ink-muted",
+  rust: "text-brand",
   warning: "text-warning",
-  danger: "text-danger",
+  success: "text-success",
 };
 
-export function QuoteListItem({ quote }: { quote: QuoteRow }) {
+export function QuoteListItem({
+  quote,
+  hasReply = false,
+}: {
+  quote: QuoteRow;
+  hasReply?: boolean;
+}) {
   const level = riskLevel(quote);
   const days = effectiveDaysSilent(quote);
-  const nba = nextBestAction(quote);
+  const score = getRecoveryScore(quote);
+  const nba = nextBestAction(quote, hasReply);
   const displayName = titleCaseName(quote.client_name);
   const displayTrade = titleCaseName(quote.trade);
   const displayCity = quote.city ? titleCaseName(quote.city) : "";
@@ -39,9 +48,12 @@ export function QuoteListItem({ quote }: { quote: QuoteRow }) {
           <div className="flex flex-wrap items-center gap-2 text-xs text-ink-muted">
             <RiskBadge level={level} />
             <span>
-              {days} day{days === 1 ? "" : "s"} quiet
+              {days} day{days === 1 ? "" : "s"} silent
             </span>
           </div>
+          <p className="text-xs text-ink-muted">
+            Recovery Score: {score.score}
+          </p>
           {nba ? (
             <p className={`text-xs font-semibold ${severityClass[nba.severity]}`}>
               Next Best Action: {nba.label}

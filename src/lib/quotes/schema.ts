@@ -1,14 +1,7 @@
 import { z } from "zod";
-import { US_STATE_CODES } from "@/lib/utils/us-states";
+import { TRADES, US_STATE_CODES } from "@/lib/utils/normalize";
 
-export const TRADES = [
-  "Roofing",
-  "HVAC",
-  "Plumbing",
-  "Electrical",
-  "Remodeling",
-  "General Contracting",
-] as const;
+export { TRADES };
 export type Trade = (typeof TRADES)[number];
 
 const STATE_PATTERN = /^[A-Z]{2}$/;
@@ -70,10 +63,11 @@ export const quoteInputSchema = z
     client_phone: optionalPhone,
     city: optionalText(80),
     state: optionalState,
-    job_description: optionalText(2000),
+    job_description: optionalText(500),
   })
   .refine((v) => v.client_email !== "" || v.client_phone !== "", {
-    message: "Email or phone is required so reminders can be sent",
+    message:
+      "Add a phone or email so the recovery plan can reach the customer.",
     path: ["client_email"],
   });
 

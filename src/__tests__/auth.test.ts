@@ -139,3 +139,29 @@ describe("safeRedirectPath behavior (replicated for runtime test)", () => {
     expect(safeRedirectPath(null)).toBe("/dashboard");
   });
 });
+
+// Phase 2 — Google OAuth contract assertions
+describe("Google OAuth contract (Phase 2)", () => {
+  const formSource = readSource("../components/onboarding/AuthForm.tsx");
+  const callbackSource = readSource("../app/api/auth/callback/route.ts");
+
+  it("AuthForm uses signInWithOtp and signInWithOAuth(google)", () => {
+    expect(formSource).toContain("signInWithOtp");
+    expect(formSource).toContain("signInWithOAuth");
+    expect(formSource).toContain('provider: "google"');
+  });
+
+  it("Google flow requests offline access and consent prompt", () => {
+    expect(formSource).toContain("access_type");
+    expect(formSource).toContain("prompt");
+  });
+
+  it("Google button is gated by NEXT_PUBLIC_ENABLE_GOOGLE_AUTH", () => {
+    expect(formSource).toContain("NEXT_PUBLIC_ENABLE_GOOGLE_AUTH");
+    expect(formSource).toContain("GOOGLE_AUTH_ENABLED");
+  });
+
+  it("auth callback blocks protocol-relative open-redirect targets", () => {
+    expect(callbackSource).toContain('next.startsWith("//")');
+  });
+});

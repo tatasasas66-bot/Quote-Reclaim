@@ -356,16 +356,16 @@ describe("Paywall component", () => {
     expect(paywall).toContain("/api/lemonsqueezy/checkout");
   });
 
-  it("displays the prescribed copy", () => {
-    expect(paywall).toContain("You");
-    expect(paywall).toContain("3 free silent quotes");
-    expect(paywall).toContain("The quiet money is still");
-    expect(paywall).toContain("One won-back job can pay");
-    expect(paywall).toContain(
-      "Unlock unlimited silent quote recovery — $79/month",
-    );
+  it("displays the prescribed copy (Phase 4 locked strings)", () => {
+    expect(paywall).toContain("FREE RECOVERIES USED");
+    expect(paywall).toContain("Unlock unlimited recovery — $79/month");
+    expect(paywall).toContain("3 free recovery plans");
+    // JSX wraps long lines — match with a whitespace-tolerant regex.
+    expect(paywall).toMatch(/Your silent quotes are\s+still/);
+    expect(paywall).toContain("One won-back job typically pays for");
     expect(paywall).toContain("Unlock unlimited recovery");
-    expect(paywall).toContain("Keep viewing existing recovery plans");
+    expect(paywall).toContain("Not now");
+    expect(paywall).toContain("Cancel anytime. No setup. No contract.");
   });
 
   it("shows a loading state and shows checkout errors inline", () => {

@@ -7,8 +7,7 @@ import { VoiceButton } from "@/components/voice/VoiceButton";
 import type { ActionResult } from "@/lib/quotes/actions";
 import type { QuoteRow } from "@/lib/quotes/repo";
 import type { VoiceParseResult } from "@/lib/voice/types";
-import { TRADES } from "@/lib/quotes/schema";
-import { US_STATES } from "@/lib/utils/us-states";
+import { TRADES, US_STATES } from "@/lib/utils/normalize";
 
 type FormAction = (
   prev: ActionResult | null,
@@ -109,7 +108,7 @@ export function QuoteForm({ mode, initial, action }: Props) {
           type="email"
           inputMode="email"
           defaultValue={initial?.client_email ?? ""}
-          hint="Email or phone required"
+          hint="Email OR phone required so the recovery plan can reach the customer."
           error={fieldError("client_email")}
           autoComplete="off"
         />
@@ -124,29 +123,44 @@ export function QuoteForm({ mode, initial, action }: Props) {
           autoComplete="off"
         />
       </div>
-      <div className="grid gap-4 sm:grid-cols-2">
-        <Input
-          label="City"
-          name="city"
-          defaultValue={prefill?.city ?? initial?.city ?? ""}
-          key={`city-${prefill?._key ?? "initial"}`}
-          error={fieldError("city")}
-          autoComplete="off"
-        />
-        <StateSelect
-          defaultValue={prefill?.state ?? initial?.state ?? ""}
-          key={`state-${prefill?._key ?? "initial"}`}
-          error={fieldError("state")}
-        />
-      </div>
-      <Input
-        label="Job description (optional)"
-        name="job_description"
-        defaultValue={prefill?.job_description ?? initial?.job_description ?? ""}
-        key={`job_description-${prefill?._key ?? "initial"}`}
-        error={fieldError("job_description")}
-        autoComplete="off"
-      />
+
+      <details className="group rounded-xl border border-line-subtle bg-surface-2 p-4 open:bg-surface-3">
+        <summary className="cursor-pointer list-none text-sm font-semibold text-ink-strong">
+          <span className="inline-flex items-center gap-2">
+            Add location &amp; details
+            <span
+              aria-hidden="true"
+              className="text-ink-muted transition-transform group-open:rotate-180"
+            >
+              ▾
+            </span>
+          </span>
+        </summary>
+        <div className="mt-4 space-y-4">
+          <div className="grid gap-4 sm:grid-cols-2">
+            <Input
+              label="City"
+              name="city"
+              defaultValue={prefill?.city ?? initial?.city ?? ""}
+              key={`city-${prefill?._key ?? "initial"}`}
+              error={fieldError("city")}
+              autoComplete="off"
+            />
+            <StateSelect
+              defaultValue={prefill?.state ?? initial?.state ?? ""}
+              key={`state-${prefill?._key ?? "initial"}`}
+              error={fieldError("state")}
+            />
+          </div>
+          <JobDescriptionField
+            defaultValue={
+              prefill?.job_description ?? initial?.job_description ?? ""
+            }
+            key={`job_description-${prefill?._key ?? "initial"}`}
+            error={fieldError("job_description")}
+          />
+        </div>
+      </details>
 
       <SubmitButton mode={mode} />
       <p className="text-center text-xs text-ink-muted">
@@ -155,6 +169,41 @@ export function QuoteForm({ mode, initial, action }: Props) {
           : "Saving updates the existing recovery plan."}
       </p>
     </form>
+  );
+}
+
+type JobDescriptionFieldProps = {
+  defaultValue?: string;
+  error?: string;
+};
+
+function JobDescriptionField({ defaultValue, error }: JobDescriptionFieldProps) {
+  const id = React.useId();
+  return (
+    <div className="flex flex-col gap-1.5">
+      <label htmlFor={id} className="text-sm font-medium text-ink">
+        Job description (optional)
+      </label>
+      <textarea
+        id={id}
+        name="job_description"
+        defaultValue={defaultValue ?? ""}
+        maxLength={500}
+        rows={3}
+        aria-invalid={error ? true : undefined}
+        className={
+          "rounded-lg border border-line-subtle bg-surface-2 px-3 py-2 text-base text-ink-strong focus:border-brand focus:outline-none focus:ring-2 focus:ring-focus/40 disabled:cursor-not-allowed disabled:opacity-50" +
+          (error ? " border-danger focus:border-danger focus:ring-danger/30" : "")
+        }
+      />
+      {error ? (
+        <p className="text-xs text-danger" role="alert">
+          {error}
+        </p>
+      ) : (
+        <p className="text-xs text-ink-muted">Up to 500 characters.</p>
+      )}
+    </div>
   );
 }
 
@@ -222,9 +271,9 @@ function StateSelect({ defaultValue, error }: StateSelectProps) {
         }
       >
         <option value="">Select state</option>
-        {US_STATES.map((s) => (
-          <option key={s.code} value={s.code}>
-            {s.name} ({s.code})
+        {US_STATES.map(([code, name]) => (
+          <option key={code} value={code}>
+            {name} ({code})
           </option>
         ))}
       </select>

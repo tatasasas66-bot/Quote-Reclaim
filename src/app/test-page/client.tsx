@@ -48,7 +48,9 @@ export function TestPageClient() {
         <Badge variant="warning">DEV ONLY · /test-page</Badge>
       </header>
 
-      <h1 className="text-3xl font-bold text-ink-strong">Design system preview</h1>
+      <h1 className="text-3xl font-bold text-ink-strong">
+        Internal UI reference
+      </h1>
       <p className="text-ink-muted">
         Visual smoke test for the UI primitives. Removed before launch.
       </p>

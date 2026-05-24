@@ -51,11 +51,11 @@ export function RecoveryWindowAlert({
         <span className="font-semibold text-ink-strong">
           {formatCurrency(amount)}
         </span>{" "}
-        {displayTrade} estimate · {displayName}
-        {locationFragment} · {daysSilent} days quiet.
+        {displayTrade.toLowerCase()} quote · {displayName}
+        {locationFragment} · {daysSilent} days with no reply.
       </p>
       <p className="mt-1 text-sm text-ink-muted">
-        Open the plan and make the next move before the job disappears.
+        The next follow-up is queued. Open the plan or send it early today.
       </p>
       <div className="mt-4">
         <Link

@@ -72,6 +72,11 @@ EVERY message MUST:
 - have exactly ONE question mark (the single CTA)
 - sound like a respected local contractor speaking, not a sales script
 - be calm, direct, and specific
+- end as a calm professional, not a salesperson
+
+Step 3 specifically MUST offer a clear close-the-loop: either keep the estimate
+active or release the slot. The contractor must look organized and in demand,
+not needy.
 
 NEVER use any of these phrases or close variants:
 "just following up", "just checking in", "checking back", "touching base", "circling back", "wanted to follow up", "checking in to see", "quick reminder", "final reminder", "one final follow-up", "last chance", "act now", "don't miss out", "AI-generated", "our system", "optimize", "leverage", "please don't hesitate", "looking forward to hearing", "happy to help", "on file", "no problem whenever you're ready", "whenever you're ready"
@@ -81,7 +86,8 @@ NEVER:
 - imply scarcity, urgency, guilt, or pressure
 - claim a specific crew, slot, window, or appointment exists unless the input explicitly says so
 - use emojis
-- use more than one exclamation mark
+- use exclamation marks
+- use the word "just" as a hedge ("just checking", "just wanted")
 - ask more than one question per message
 
 THE THREE MESSAGES, IN ORDER:

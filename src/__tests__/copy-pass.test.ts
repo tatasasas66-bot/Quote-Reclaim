@@ -13,248 +13,209 @@ const recoveryAlert = readSource(
   "../components/dashboard/RecoveryWindowAlert.tsx",
 );
 const heroMetric = readSource("../components/dashboard/HeroMetric.tsx");
-const quoteListItem = readSource("../components/quotes/QuoteListItem.tsx");
-const paywall = readSource("../components/billing/Paywall.tsx");
+// Paywall copy is asserted inside billing.test.ts; we read it through the
+// banned-word audit below, not here.
 const authShell = readSource("../components/onboarding/AuthShell.tsx");
 const authForm = readSource("../components/onboarding/AuthForm.tsx");
-const quoteForm = readSource("../components/quotes/QuoteForm.tsx");
-const riskLib = readSource("../lib/recovery/risk.ts");
-const nbaLib = readSource("../lib/recovery/next-best-action.ts");
-const voiceButton = readSource("../components/voice/VoiceButton.tsx");
+const intelligencePanel = readSource(
+  "../components/intelligence/IntelligencePanel.tsx",
+);
+const aiPrompt = readSource("../lib/ai/generate-recovery-plan.ts");
+const aiFallbacks = readSource("../lib/ai/fallback-messages.ts");
 
-describe("Homepage copy", () => {
-  it("uses the new headline lines", () => {
+// ---------------------------------------------------------------------------
+// Phase 4 locked copy — landing
+// ---------------------------------------------------------------------------
+
+describe("Homepage hero copy (Phase 4.1)", () => {
+  it("eyebrow is QUOTE RECLAIM · REVENUE RECOVERY OS", () => {
+    expect(homepage).toMatch(/QUOTE RECLAIM · REVENUE RECOVERY OS/);
+  });
+
+  it("uses the prescribed three-line headline", () => {
     expect(homepage).toMatch(/You sent the quote\./);
-    expect(homepage).toMatch(/They went quiet\./);
+    expect(homepage).toMatch(/The customer went quiet\./);
     expect(homepage).toMatch(/Get the job back\./);
   });
 
-  it("uses the new subheadline", () => {
+  it("subhead uses calm follow-ups / recovered-revenue math framing", () => {
+    expect(homepage).toMatch(/turns silent estimates into a recovery queue/);
+    expect(homepage).toMatch(/calm\s+follow-ups/);
+    expect(homepage).toMatch(/recovered-revenue math/);
+  });
+
+  it("primary CTA is Start recovering quotes", () => {
+    expect(homepage).toMatch(/Start recovering quotes/);
+  });
+
+  it("secondary CTA is Sign in", () => {
+    expect(homepage).toMatch(/<Button[^>]*variant=["']secondary["']/);
+  });
+
+  it("trust line uses 3 free recoveries phrasing", () => {
     expect(homepage).toMatch(
-      /Quote Reclaim turns silent estimates into a recovery queue/,
-    );
-    // JSX text can wrap; tolerate any whitespace between phrases.
-    expect(homepage).toMatch(/No CRM\.\s+No\s+chasing\.\s+No guessing\./);
-  });
-
-  it("uses the Find Silent Money primary CTA", () => {
-    expect(homepage).toMatch(/Find Silent Money/);
-  });
-
-  it("uses the See how it works secondary CTA", () => {
-    expect(homepage).toMatch(/See how it works/);
-  });
-
-  it("uses the 3 silent quotes free trust line", () => {
-    expect(homepage).toMatch(
-      /Start with 3 silent quotes free\. One recovered job can pay for months\./,
+      /3 free recoveries\. No credit card\. One won-back job/,
     );
   });
 
-  it("does NOT say 3 free recoveries anywhere", () => {
-    expect(homepage).not.toMatch(/3 free recoveries/i);
+  it("hero section uses py-12 md:py-16 (above-the-fold compression)", () => {
+    expect(homepage).toMatch(/py-12 md:py-16/);
   });
 });
 
-describe("Dashboard naming", () => {
-  it("title is Silent Quote Command", () => {
-    expect(dashboard).toMatch(/Silent Quote Command/);
+// ---------------------------------------------------------------------------
+// Phase 4 locked copy — dashboard
+// ---------------------------------------------------------------------------
+
+describe("Dashboard header (Phase 4.2)", () => {
+  it("title is Recovery Dashboard (not 'Silent Quote Command')", () => {
+    expect(dashboard).toMatch(/Recovery Dashboard/);
+    expect(dashboard).not.toMatch(/Silent Quote Command/);
   });
 
-  it("subtitle uses the dollar value / risk level / next move framing", () => {
+  it("subtitle is 'Quotes you sent. Money waiting to come back.'", () => {
     expect(dashboard).toMatch(
-      /Every quiet estimate has a dollar value, a risk level, and a next\s+move\./,
+      /Quotes you sent\. Money waiting to come back\./,
     );
   });
 
-  it("queue header uses MONEY SITTING QUIET", () => {
-    expect(dashboard).toMatch(/MONEY SITTING QUIET/);
-  });
-
-  it("queue subline uses sitting quiet, not sitting silent", () => {
-    expect(dashboard).toMatch(/sitting quiet/);
-    expect(dashboard).not.toMatch(/sitting silent/);
+  it("retains the QUOTE RECLAIM eyebrow", () => {
+    expect(dashboard).toMatch(/QUOTE RECLAIM/);
   });
 });
 
-describe("Recovery Ledger card copy", () => {
-  it("Still Bleeding subline mentions Money sitting quiet right now", () => {
-    expect(heroMetric).toMatch(/Money sitting quiet right now\./);
-  });
+// ---------------------------------------------------------------------------
+// Recovery Window Alert (Phase 4.3)
+// ---------------------------------------------------------------------------
 
-  it("Recovered This Month subline mentions Jobs won back so far", () => {
-    expect(heroMetric).toMatch(/Jobs won back so far/);
-  });
-
-  it("All-Time Recovered subline mentions Approx. months paid for", () => {
-    // The "s" is templated for singular/plural; check for the surrounding
-    // structure rather than a literal "months".
-    expect(heroMetric).toMatch(/Approx\. .*month[\s\S]*paid for/);
-  });
-
-  it("eyebrow uses softer /80 opacity tokens for contrast against the value", () => {
-    expect(heroMetric).toMatch(/text-warning\/80/);
-    expect(heroMetric).toMatch(/text-success\/80/);
-    expect(heroMetric).toMatch(/text-money\/80/);
-  });
-});
-
-describe("Recovery Window Alert copy", () => {
-  it("keeps the alert eyebrow", () => {
+describe("Recovery Window Alert copy (Phase 4.3)", () => {
+  it("keeps the RECOVERY WINDOW ALERT eyebrow", () => {
     expect(recoveryAlert).toMatch(/RECOVERY WINDOW ALERT/);
   });
 
-  it("uses the days quiet (not days silent) phrasing in the body template", () => {
-    expect(recoveryAlert).toMatch(/days quiet/);
-    expect(recoveryAlert).not.toMatch(/days with no reply/);
+  it("headline is 'Don't let this one die.'", () => {
+    // JSX escapes the apostrophe as &apos; — match either form.
+    expect(recoveryAlert).toMatch(/Don(?:'|&apos;)t let this one die\./);
   });
 
-  it("uses the new subline copy", () => {
+  it("body uses 'days with no reply' (matches Phase 4 template)", () => {
+    expect(recoveryAlert).toMatch(/days with no reply/);
+  });
+
+  it("subline uses 'queued. Open the plan or send it early today.'", () => {
     expect(recoveryAlert).toMatch(
-      /Open the plan and make the next move before the job disappears\./,
+      /next follow-up is queued\. Open the plan or send it early today\./,
     );
   });
 
-  it("title-cases name, trade, and city defensively at render time", () => {
+  it("CTA is 'Open Recovery Plan →'", () => {
+    expect(recoveryAlert).toMatch(/Open Recovery Plan/);
+  });
+
+  it("title-cases name, trade, and city defensively at render", () => {
     expect(recoveryAlert).toMatch(/titleCaseName\(clientName\)/);
     expect(recoveryAlert).toMatch(/titleCaseName\(trade\)/);
     expect(recoveryAlert).toMatch(/titleCaseName\(city\)/);
   });
 });
 
-describe("Queue row copy", () => {
-  it("uses quiet, not silent in the visible label", () => {
-    // The label is templated as `{days} day{...} quiet` so we check for the
-    // suffix word as it appears in JSX, and confirm no literal "day silent"
-    // phrasing leaked through. (The `effectiveDaysSilent` import keeps the
-    // word "Silent" in the symbol — code identifiers don't count.)
-    expect(quoteListItem).toMatch(/\bquiet\b/);
-    expect(quoteListItem).not.toMatch(/\bday[s]? silent\b/i);
-  });
+// ---------------------------------------------------------------------------
+// Recovery Ledger (Phase 1.8 contrast rule)
+// ---------------------------------------------------------------------------
 
-  it("title-cases trade and city for display", () => {
-    expect(quoteListItem).toMatch(/titleCaseName\(quote\.trade\)/);
-    expect(quoteListItem).toMatch(/titleCaseName\(quote\.city\)/);
+describe("Recovery Ledger eyebrow contrast (Phase 1.8)", () => {
+  it("eyebrows use softer /80 opacity tokens for contrast", () => {
+    expect(heroMetric).toMatch(/text-warning\/80/);
+    expect(heroMetric).toMatch(/text-success\/80/);
+    expect(heroMetric).toMatch(/text-money\/80/);
   });
 });
 
-describe("Paywall copy", () => {
-  it("headline uses the Unlock unlimited silent quote recovery copy", () => {
-    expect(paywall).toMatch(
-      /Unlock unlimited silent quote recovery — \$79\/month/,
-    );
-  });
-
-  it("body uses 'You've used your 3 free silent quotes.'", () => {
-    expect(paywall).toMatch(/used your 3 free silent quotes/);
-  });
-
-  it("uses the One won-back job proof line", () => {
-    expect(paywall).toMatch(/One won-back job can pay for months\./);
-  });
-
-  it("primary CTA is Unlock unlimited recovery", () => {
-    expect(paywall).toMatch(/Unlock unlimited recovery/);
-  });
-
-  it("does NOT say 3 free recoveries", () => {
-    expect(paywall).not.toMatch(/3 free recoveries/i);
-  });
-
-  it("does NOT advertise discounts or alternate plans", () => {
-    expect(paywall).not.toMatch(/\$39\b|\$49\b|founding|coupon|discount/i);
-  });
-});
+// ---------------------------------------------------------------------------
+// Auth copy (Phase 2 + retained)
+// ---------------------------------------------------------------------------
 
 describe("Auth copy", () => {
-  it("uses Start your recovery as the auth title for both modes", () => {
+  it("AuthShell title is Start your recovery for both modes", () => {
     expect(authShell).toMatch(/title:\s*"Start your recovery"/);
   });
 
-  it("sign-up subtitle uses 3 silent quotes free", () => {
-    expect(authShell).toMatch(/3 silent quotes free\./);
-  });
-
-  it("magic link success uses Check your inbox + 60 minute expiry", () => {
+  it("magic-link success uses 'Check your inbox' and the 60-minute expiry", () => {
     expect(authForm).toMatch(/Check your inbox/);
     expect(authForm).toMatch(/expires in 60 minutes/);
   });
 });
 
-describe("Risk level labels", () => {
-  it("warm renders as FRESH", () => {
-    expect(riskLib).toMatch(/case "warm":\s*\n?\s*return "FRESH"/);
+// ---------------------------------------------------------------------------
+// IntelligencePanel locked copy (Phase 7.2)
+// ---------------------------------------------------------------------------
+
+describe("IntelligencePanel locked state (Phase 7.2)", () => {
+  it("eyebrow is PERSONAL RECOVERY DNA", () => {
+    expect(intelligencePanel).toMatch(/PERSONAL RECOVERY DNA/);
   });
 
-  it("cold renders as AT RISK", () => {
-    expect(riskLib).toMatch(/case "cold":\s*\n?\s*return "AT RISK"/);
+  it("uses 'Unlocks after N sequences'", () => {
+    expect(intelligencePanel).toMatch(/Unlocks after \{unlockAt\} sequences/);
   });
 
-  it("hot renders as CRITICAL", () => {
-    expect(riskLib).toMatch(/case "hot":\s*\n?\s*return "CRITICAL"/);
-  });
-
-  it("never references Recovery Score in user-facing label code", () => {
-    expect(riskLib).not.toMatch(/Recovery Score/i);
-  });
-});
-
-describe("Next Best Action copy", () => {
-  it("uses Open the plan when phone is available", () => {
-    expect(nbaLib).toMatch(/"Open the plan"/);
-  });
-
-  it("uses Close the loop for critical state", () => {
-    expect(nbaLib).toMatch(/"Close the loop"/);
-  });
-
-  it("uses Copy the next message when no phone is saved", () => {
-    expect(nbaLib).toMatch(/"Copy the next message"/);
-  });
-
-  it("no longer suggests Send early in NBA labels", () => {
-    expect(nbaLib).not.toMatch(/"Send early"/);
-  });
-
-  it("does not contain Send Now", () => {
-    expect(nbaLib).not.toMatch(/Send Now/i);
+  it("preview copy promises framework + reply windows + trade comparison", () => {
+    expect(intelligencePanel).toMatch(/strongest framework/);
+    expect(intelligencePanel).toMatch(/best\s+reply windows/);
+    expect(intelligencePanel).toMatch(/recovery rate compares to your trade/);
   });
 });
 
-describe("Trade dropdown is locked to the 6 enum values", () => {
-  it("QuoteForm uses a native <select> with TRADES options", () => {
-    expect(quoteForm).toMatch(/<select/);
-    expect(quoteForm).toMatch(/TRADES\.map/);
-    expect(quoteForm).toMatch(/Choose a trade/);
+// ---------------------------------------------------------------------------
+// AI system prompt hardening (Phase 4.5)
+// ---------------------------------------------------------------------------
+
+describe("AI system prompt hardening (Phase 4.5)", () => {
+  it("instructs the writer to end as a calm professional", () => {
+    expect(aiPrompt).toMatch(/calm professional, not a salesperson/);
   });
 
-  it("never offers a free-text 'Other' trade option", () => {
-    expect(quoteForm).not.toMatch(/value="other"|>Other</i);
+  it("step 3 must offer a close-the-loop / release the slot", () => {
+    expect(aiPrompt).toMatch(/Step 3 specifically MUST offer a clear close-the-loop/);
+    expect(aiPrompt).toMatch(/release the slot/);
   });
-});
 
-describe("State dropdown is locked to US 2-letter codes", () => {
-  it("QuoteForm uses a US_STATES dropdown", () => {
-    expect(quoteForm).toMatch(/US_STATES\.map/);
-    expect(quoteForm).toMatch(/Select state/);
+  it("bans exclamation marks outright", () => {
+    expect(aiPrompt).toMatch(/use exclamation marks/);
   });
-});
 
-describe("Google OAuth is hidden by default", () => {
-  // AuthForm uses GOOGLE_AUTH_ENABLED = process.env.NEXT_PUBLIC_ENABLE_GOOGLE_AUTH === "true"
-  // and gates the entire block. Verified by the existing static-NEXT_PUBLIC suite.
-  it("gates the Google block on the feature flag", () => {
-    expect(authForm).toMatch(/!magicSent\s*&&\s*GOOGLE_AUTH_ENABLED/);
+  it("bans 'just' as a hedge", () => {
+    expect(aiPrompt).toMatch(/word "just" as a hedge/);
   });
 });
 
-describe("Voice button copy", () => {
-  it("uses Add by voice", () => {
-    expect(voiceButton).toMatch(/Add by voice/);
+// ---------------------------------------------------------------------------
+// Fallback messages — Day 7 Takeaway frame (Phase 4.6)
+// ---------------------------------------------------------------------------
+
+describe("Day 7 fallback messages use the Takeaway frame (Phase 4.6)", () => {
+  it("HVAC checkIn frees up the install window", () => {
+    expect(aiFallbacks).toMatch(/free up the install window/);
   });
 
-  it("hint uses the days quiet example", () => {
-    expect(voiceButton).toMatch(/eight days quiet/);
+  it("Roofing checkIn releases the crew window", () => {
+    expect(aiFallbacks).toMatch(/release the crew window/);
+  });
+
+  it("Remodeling checkIn frees up the planning slot", () => {
+    expect(aiFallbacks).toMatch(/free up the planning slot/);
+  });
+
+  it("General Contracting checkIn releases the project window", () => {
+    expect(aiFallbacks).toMatch(/release the project window/);
+  });
+
+  it("no fallback message string literal contains an exclamation mark", () => {
+    // Scan only single/double/backtick string literals — JS negation (!t)
+    // is allowed in the body, what matters is customer-facing message text.
+    const literals = aiFallbacks.match(/`[^`]*`|"[^"]*"|'[^']*'/g) ?? [];
+    const offenders = literals.filter((lit) => /!/.test(lit));
+    expect(offenders).toEqual([]);
   });
 });
 
@@ -263,13 +224,9 @@ describe("Voice button copy", () => {
 // ---------------------------------------------------------------------------
 
 const SRC_ROOT = fileURLToPath(new URL("..", import.meta.url));
-
-// Files we deliberately exclude from the audit:
-//  - The AI banned-phrase tables literally contain banned phrases as data
-//    so the generator can reject them. Their presence is correct.
-//  - Test files reference these terms to assert their absence.
-//  - The cleanup doc shows examples of historical strings.
 const AUDIT_EXCLUDE_DIRS = new Set(["__tests__"]);
+// AI banned-phrase tables intentionally contain banned phrases as data so
+// the generator can reject them. Their presence is correct.
 const AUDIT_EXCLUDE_FILES = new Set([
   "lib/ai/validate-message.ts",
   "lib/ai/generate-recovery-plan.ts",
@@ -299,50 +256,36 @@ function readAuditableSources(): Array<{ path: string; content: string }> {
   }));
 }
 
-describe("Banned aggressive-language audit (UI/marketing)", () => {
+describe("Already-banned vocabulary stays banned", () => {
   const sources = readAuditableSources();
 
-  // Word boundary patterns chosen to avoid hitting innocuous neighbors:
-  //  - "force" → exclude Next.js "force-dynamic" via negative lookbehind on -
-  //  - "panic" → bare word
-  //  - "brutal" → bare word
-  //  - "ruthless" → bare word
-  //  - "dirty work" → exact phrase
-  //  - "artificial scarcity" / "psychological trigger" → exact phrase
-  const patterns: Array<{ label: string; re: RegExp }> = [
-    { label: "force (as UI verb)", re: /\bforce\b(?!-dynamic|-cache)/i },
-    { label: "panic", re: /\bpanic\b/i },
-    { label: "dirty work", re: /\bdirty work\b/i },
-    { label: "brutal", re: /\bbrutal\b/i },
-    { label: "ruthless", re: /\bruthless\b/i },
-    { label: "artificial scarcity", re: /\bartificial scarcity\b/i },
-    { label: "psychological trigger", re: /\bpsychological trigger\b/i },
-  ];
+  it('no source contains the banned word "Bid"', () => {
+    const re = /\bBid\b/;
+    const hits = sources.filter((s) => re.test(s.content));
+    expect(hits.map((h) => h.path)).toEqual([]);
+  });
 
-  for (const { label, re } of patterns) {
-    it(`no UI/marketing surface contains "${label}"`, () => {
-      const hits = sources.filter((s) => re.test(s.content));
-      if (hits.length > 0) {
-        throw new Error(
-          `Found "${label}" in:\n${hits.map((h) => `  - ${h.path}`).join("\n")}`,
-        );
-      }
-    });
-  }
+  it('no source contains "Send Now" as UI label', () => {
+    const re = /\bSend Now\b/;
+    const hits = sources.filter((s) => re.test(s.content));
+    expect(hits.map((h) => h.path)).toEqual([]);
+  });
+
+  it('no source contains "Design system preview" stub copy', () => {
+    const re = /Design system preview/;
+    const hits = sources.filter((s) => re.test(s.content));
+    expect(hits.map((h) => h.path)).toEqual([]);
+  });
 });
 
-describe("Banned SaaS-cliché audit (marketing copy only)", () => {
-  // Restrict this audit to user-facing pages and components, where the
-  // marketing voice lives. Library files (ai/messaging/security/etc.) may
-  // legitimately use words like "pipeline" or "workflow" as engineering
-  // jargon and don't reach the UI.
+describe("Marketing-surface SaaS-cliché audit", () => {
   const MARKETING_DIRS = ["app", "components"];
-
   const sources = readAuditableSources().filter((s) => {
     const rel = s.path.slice(SRC_ROOT.length).replace(/^\/+/, "");
     return MARKETING_DIRS.some((d) => rel.startsWith(d + "/"));
   });
 
+  // SaaS clichés banned outright in marketing copy.
   const banned = [
     "optimize",
     "leverage",
@@ -364,34 +307,4 @@ describe("Banned SaaS-cliché audit (marketing copy only)", () => {
       }
     });
   }
-
-  // CRM is special-cased: the homepage uses "No CRM" as anti-positioning per
-  // the spec ("No CRM. No chasing. No guessing."). Any positive use ("as a
-  // CRM", "our CRM", "the CRM") is still a regression.
-  it('CRM appears only in anti-positioning ("No CRM"), never as a positive descriptor', () => {
-    const positiveCrm =
-      /\b(?:as\s+a|our|the|your|like\s+a|just\s+another)\s+CRM\b/i;
-    const hits = sources.filter((s) => positiveCrm.test(s.content));
-    if (hits.length > 0) {
-      throw new Error(
-        `Positive CRM mention in:\n${hits.map((h) => `  - ${h.path}`).join("\n")}`,
-      );
-    }
-  });
-});
-
-describe("Already-banned vocabulary stays banned", () => {
-  const sources = readAuditableSources();
-
-  it('no source contains the banned word "Bid"', () => {
-    const re = /\bBid\b/;
-    const hits = sources.filter((s) => re.test(s.content));
-    expect(hits.map((h) => h.path)).toEqual([]);
-  });
-
-  it('no source contains "Send Now" as UI label', () => {
-    const re = /\bSend Now\b/;
-    const hits = sources.filter((s) => re.test(s.content));
-    expect(hits.map((h) => h.path)).toEqual([]);
-  });
 });

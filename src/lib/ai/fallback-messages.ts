@@ -31,7 +31,7 @@ const TEMPLATES: Record<string, TradeTemplates> = {
     nextStep: (n) =>
       `Hi ${n}, if the roofing work is still on your list, I can make the next step simple. Want me to walk through a couple scheduling options?`,
     checkIn: (n) =>
-      `Hi ${n}, should I keep this roofing estimate active, or close it out for now? Either way is fine — I just don't want to leave it hanging.`,
+      `Hi ${n}, want me to hold the roofing estimate or close it out and release the crew window? Happy either way — just don't want to leave it open if the timing has shifted.`,
   },
   plumbing: {
     reassurance: (n) =>
@@ -39,7 +39,7 @@ const TEMPLATES: Record<string, TradeTemplates> = {
     nextStep: (n) =>
       `Hi ${n}, if the plumbing work is still on your list, I can make the next step simple. Want me to send the scope summary again?`,
     checkIn: (n) =>
-      `Hi ${n}, should I keep this plumbing estimate active, or close it out for now? Either way is fine — I just don't want to leave it hanging.`,
+      `Hi ${n}, should I keep the plumbing estimate active or close it out for now? Either is fine. Just don't want to leave it hanging if the timing's off.`,
   },
   hvac: {
     reassurance: (n) =>
@@ -47,7 +47,7 @@ const TEMPLATES: Record<string, TradeTemplates> = {
     nextStep: (n) =>
       `Hi ${n}, if the HVAC work is still on your list, I can make the next step simple. Want me to walk through the system options once more?`,
     checkIn: (n) =>
-      `Hi ${n}, should I keep this HVAC estimate active, or close it out for now? Either way is fine — I just don't want to leave it hanging.`,
+      `Hi ${n}, want me to keep the HVAC estimate active or close it out and free up the install window? Happy either way — just don't want to leave it open if the timing isn't right.`,
   },
   electrical: {
     reassurance: (n) =>
@@ -55,7 +55,7 @@ const TEMPLATES: Record<string, TradeTemplates> = {
     nextStep: (n) =>
       `Hi ${n}, if the electrical work is still on your list, I can make the next step simple. Want me to walk through the scope again?`,
     checkIn: (n) =>
-      `Hi ${n}, should I keep this electrical estimate active, or close it out for now? Either way is fine — I just don't want to leave it hanging.`,
+      `Hi ${n}, should I keep the electrical estimate active or close it out for now? Either is fine. Just don't want to leave it open if the timing isn't right.`,
   },
   remodeling: {
     reassurance: (n) =>
@@ -63,7 +63,7 @@ const TEMPLATES: Record<string, TradeTemplates> = {
     nextStep: (n) =>
       `Hi ${n}, if the remodeling work is still on your list, I can make the next step simple. Want me to share a one-page summary you can pass to anyone helping decide?`,
     checkIn: (n) =>
-      `Hi ${n}, should I keep this remodeling estimate active, or close it out for now? Either way is fine — I just don't want to leave it hanging.`,
+      `Hi ${n}, want me to keep the remodeling estimate active or close it out and free up the planning slot? Either is fine. Just don't want to leave it open if the timing has shifted.`,
   },
   "general contracting": {
     reassurance: (n) =>
@@ -71,7 +71,7 @@ const TEMPLATES: Record<string, TradeTemplates> = {
     nextStep: (n) =>
       `Hi ${n}, if the general contracting work is still on your list, I can make the next step simple. Want me to walk through the scope and timeline once more?`,
     checkIn: (n) =>
-      `Hi ${n}, should I keep this general contracting estimate active, or close it out for now? Either way is fine — I just don't want to leave it hanging.`,
+      `Hi ${n}, should I keep the general contracting estimate active or close it out and release the project window? Either is fine — just don't want to leave it open if the timing isn't right.`,
   },
 };
 
@@ -120,7 +120,7 @@ function genericNextStep(firstName: string, trade: string): string {
 }
 
 function genericCheckIn(firstName: string, trade: string): string {
-  return `Hi ${firstName}, should I keep this ${trade} estimate active, or close it out for now? Either way is fine — I just don't want to leave it hanging.`;
+  return `Hi ${firstName}, should I keep the ${trade} estimate active or close it out and release the slot? Either is fine — just don't want to leave it open if the timing isn't right.`;
 }
 
 const FRAMEWORKS: Record<1 | 2 | 3, RecoveryMessage["framework"]> = {

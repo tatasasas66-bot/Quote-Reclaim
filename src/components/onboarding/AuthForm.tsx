@@ -99,12 +99,13 @@ export function AuthForm({ mode }: AuthFormProps) {
       (typeof window !== "undefined"
         ? `${window.location.origin}${CALLBACK_PATH}`
         : CALLBACK_PATH);
-    if (auditToken) {
-      const sep = base.includes("?") ? "&" : "?";
-      const next = encodeURIComponent(`/dashboard?audit_token=${auditToken}`);
-      return `${base}${sep}next=${next}`;
-    }
-    return base;
+    // Always pin ?next= so the callback knows where to land. Audit-flow users
+    // get the audit token threaded through; everyone else lands on /dashboard.
+    const nextPath = auditToken
+      ? `/dashboard?audit_token=${auditToken}`
+      : "/dashboard";
+    const sep = base.includes("?") ? "&" : "?";
+    return `${base}${sep}next=${encodeURIComponent(nextPath)}`;
   }, [auditToken]);
 
   async function handleMagicLink(event: React.FormEvent<HTMLFormElement>) {
@@ -157,7 +158,10 @@ export function AuthForm({ mode }: AuthFormProps) {
       const supabase = createBrowserSupabaseClient();
       const { error } = await supabase.auth.signInWithOAuth({
         provider: "google",
-        options: { redirectTo: callbackUrl },
+        options: {
+          redirectTo: callbackUrl,
+          queryParams: { access_type: "offline", prompt: "consent" },
+        },
       });
       if (error) throw error;
       // Browser is being redirected; keep the loading state.

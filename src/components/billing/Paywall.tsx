@@ -43,22 +43,22 @@ export function Paywall({ silentQuoteValue }: Props) {
     <section className="space-y-5 rounded-xl border border-brand/30 bg-surface-2 p-6">
       <div className="space-y-2">
         <p className="text-xs font-semibold uppercase tracking-widest text-brand">
-          Free plan limit reached
+          FREE RECOVERIES USED
         </p>
         <h2 className="text-2xl font-bold text-ink-strong">
-          Unlock unlimited silent quote recovery — $79/month
+          Unlock unlimited recovery — $79/month
         </h2>
         <p className="text-sm text-ink">
-          You&apos;ve used your 3 free silent quotes. The quiet money is still
-          sitting there.
+          You&apos;ve used your 3 free recovery plans. Your silent quotes are
+          still sitting there.
         </p>
-        <p className="text-sm font-medium text-money">
-          One won-back job can pay for months.
+        <p className="text-sm text-ink">
+          One won-back job typically pays for Quote Reclaim for years.
         </p>
         {hasSilent ? (
-          <p className="text-sm text-ink">
-            You currently have {formatCurrency(silentQuoteValue)} of quiet
-            estimates in your queue.
+          <p className="text-sm font-medium text-money">
+            You currently have {formatCurrency(silentQuoteValue)} of silent
+            quotes in your queue.
           </p>
         ) : null}
       </div>
@@ -76,7 +76,7 @@ export function Paywall({ silentQuoteValue }: Props) {
           href="/dashboard"
           className="text-sm text-ink-muted hover:text-ink-strong"
         >
-          Keep viewing existing recovery plans
+          Not now
         </Link>
       </div>
 
@@ -85,6 +85,10 @@ export function Paywall({ silentQuoteValue }: Props) {
           {error}
         </p>
       ) : null}
+
+      <p className="text-xs text-ink-muted">
+        Cancel anytime. No setup. No contract.
+      </p>
     </section>
   );
 }
