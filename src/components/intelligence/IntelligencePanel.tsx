@@ -9,8 +9,8 @@ export function IntelligencePanel({
 }: IntelligencePanelProps) {
   const unlocked = totalSequences >= unlockAt;
   return (
-    <div className="rounded-xl border border-line-subtle bg-surface-2 p-5">
-      <p className="text-xs font-semibold uppercase tracking-widest text-money/80">
+    <div className="rounded-lg border border-money/25 bg-surface-1 p-5 shadow-[0_18px_54px_rgba(0,0,0,0.22)]">
+      <p className="text-xs font-black uppercase tracking-widest text-money/80">
         PERSONAL RECOVERY DNA
       </p>
       {unlocked ? (
@@ -31,7 +31,7 @@ function LockedBody({
 }) {
   return (
     <>
-      <p className="mt-2 text-base text-ink-strong">
+      <p className="mt-2 text-lg font-bold text-ink-strong">
         Unlocks after {unlockAt} sequences.
       </p>
       <p className="mt-1 text-sm text-ink-muted">
@@ -48,7 +48,7 @@ function LockedBody({
 function UnlockedBody({ totalSequences }: { totalSequences: number }) {
   return (
     <>
-      <p className="mt-2 text-base text-ink-strong">
+      <p className="mt-2 text-lg font-bold text-ink-strong">
         {totalSequences} sequences in.
       </p>
       <p className="mt-1 text-sm text-ink-muted">

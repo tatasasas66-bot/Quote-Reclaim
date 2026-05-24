@@ -9,7 +9,7 @@ type ButtonSize = "sm" | "md" | "lg";
 
 const variantClasses: Record<ButtonVariant, string> = {
   primary:
-    "bg-brand text-ink-strong hover:bg-brand-dark active:bg-brand-dark disabled:bg-brand/40 disabled:text-ink-strong/70",
+    "bg-brand text-canvas shadow-sm shadow-brand/20 hover:bg-brand-dark active:bg-brand-dark disabled:bg-brand/40 disabled:text-canvas/70",
   secondary:
     "bg-surface-2 text-ink-strong border border-line-strong hover:bg-surface-3 disabled:opacity-50",
   ghost:
@@ -17,7 +17,7 @@ const variantClasses: Record<ButtonVariant, string> = {
   danger:
     "bg-danger text-ink-strong hover:bg-danger/90 disabled:opacity-50",
   success:
-    "bg-success text-ink-strong hover:bg-success/90 disabled:opacity-50",
+    "bg-success text-canvas hover:bg-success/90 disabled:opacity-50",
   google:
     "bg-white text-zinc-900 hover:bg-zinc-100 border border-zinc-200 disabled:opacity-50",
 };

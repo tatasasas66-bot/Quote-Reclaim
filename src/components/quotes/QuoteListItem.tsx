@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { ArrowRight, ClipboardList } from "lucide-react";
 import { RiskBadge } from "@/components/dashboard/RiskBadge";
 import { nextBestAction } from "@/lib/quotes/next-best-action";
 import { getRecoveryScore } from "@/lib/quotes/recovery-score";
@@ -30,42 +31,86 @@ export function QuoteListItem({
   const displayTrade = titleCaseName(quote.trade);
   const displayCity = quote.city ? titleCaseName(quote.city) : "";
   const displayState = quote.state ? quote.state.toUpperCase() : "";
+
   return (
     <li>
       <Link
         href={`/quotes/${quote.id}`}
-        className="flex flex-col gap-3 p-4 transition-colors hover:bg-surface-3 focus:bg-surface-3 focus:outline-none sm:flex-row sm:items-center sm:justify-between"
+        className="group block rounded-lg border border-line-subtle bg-surface-1 p-4 shadow-[0_16px_46px_rgba(0,0,0,0.22)] transition-colors hover:border-brand/45 hover:bg-surface-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-focus"
+        aria-label={`Open recovery plan for ${displayName}`}
       >
-        <div className="min-w-0 flex-1 space-y-1.5">
-          <p className="truncate font-semibold text-ink-strong">
-            {displayName}
-          </p>
-          <p className="truncate text-sm text-ink-muted">
-            {displayTrade}
-            {displayCity ? ` · ${displayCity}` : ""}
-            {displayState ? `, ${displayState}` : ""}
-          </p>
-          <div className="flex flex-wrap items-center gap-2 text-xs text-ink-muted">
-            <RiskBadge level={level} />
-            <span>
-              {days} day{days === 1 ? "" : "s"} quiet
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+          <div className="min-w-0 flex-1 space-y-3">
+            <div className="flex flex-wrap items-center gap-2">
+              <RiskBadge level={level} />
+              <span className="rounded-md border border-line-subtle bg-canvas/40 px-2 py-0.5 text-xs font-bold uppercase tracking-widest text-ink-muted">
+                {days} day{days === 1 ? "" : "s"} quiet
+              </span>
+            </div>
+
+            <div className="min-w-0">
+              <p className="truncate text-xl font-black text-ink-strong">
+                {displayName}
+              </p>
+              <p className="truncate text-sm text-ink-muted">
+                {displayTrade}
+                {displayCity ? ` · ${displayCity}` : ""}
+                {displayState ? `, ${displayState}` : ""}
+              </p>
+            </div>
+
+            <div className="grid gap-2 sm:grid-cols-2">
+              <FileStat label="Recovery Priority" value={String(score.score)} />
+              {nba ? (
+                <FileStat
+                  label="Next Best Action"
+                  value={nba.label}
+                  valueClassName={severityClass[nba.severity]}
+                />
+              ) : (
+                <FileStat label="Next Best Action" value="Review plan" />
+              )}
+            </div>
+          </div>
+
+          <div className="flex shrink-0 flex-col gap-3 sm:items-end">
+            <div>
+              <p className="text-xs font-black uppercase tracking-widest text-ink-muted">
+                Amount quiet
+              </p>
+              <p className="mt-1 text-3xl font-black text-ink-strong tabular-nums">
+                {formatCurrency(quote.estimate_amount)}
+              </p>
+            </div>
+            <span className="inline-flex min-h-10 items-center justify-center gap-2 rounded-lg bg-brand px-3 py-2 text-sm font-black text-canvas transition-colors group-hover:bg-brand-dark">
+              <ClipboardList className="h-4 w-4" aria-hidden="true" />
+              Open Recovery Plan
+              <ArrowRight className="h-4 w-4" aria-hidden="true" />
             </span>
           </div>
-          <p className="text-xs text-ink-muted">
-            Recovery Priority: {score.score}
-          </p>
-          {nba ? (
-            <p className={`text-xs font-semibold ${severityClass[nba.severity]}`}>
-              Next Best Action: {nba.label}
-            </p>
-          ) : null}
-        </div>
-        <div className="flex shrink-0 items-center gap-3">
-          <span className="font-semibold tabular-nums text-ink-strong">
-            {formatCurrency(quote.estimate_amount)}
-          </span>
         </div>
       </Link>
     </li>
+  );
+}
+
+function FileStat({
+  label,
+  value,
+  valueClassName = "text-ink-strong",
+}: {
+  label: string;
+  value: string;
+  valueClassName?: string;
+}) {
+  return (
+    <div className="rounded-lg border border-line-subtle bg-canvas/35 px-3 py-2">
+      <p className="text-[10px] font-bold uppercase tracking-widest text-ink-muted">
+        {label}
+      </p>
+      <p className={`mt-1 truncate text-sm font-black ${valueClassName}`}>
+        {value}
+      </p>
+    </div>
   );
 }

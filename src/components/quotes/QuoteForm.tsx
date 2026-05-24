@@ -38,7 +38,11 @@ export function QuoteForm({ mode, initial, action }: Props) {
   const tradeValue = prefill?.trade ?? initialTrade;
 
   return (
-    <form action={formAction} className="space-y-4" noValidate>
+    <form
+      action={formAction}
+      className="space-y-5 rounded-lg border border-line-subtle bg-surface-1 p-5 shadow-[0_22px_70px_rgba(0,0,0,0.3)] sm:p-6"
+      noValidate
+    >
       {mode === "create" ? (
         <VoiceButton onParsed={(result) => setPrefill(result)} />
       ) : null}
@@ -124,7 +128,7 @@ export function QuoteForm({ mode, initial, action }: Props) {
         />
       </div>
 
-      <details className="group rounded-xl border border-line-subtle bg-surface-2 p-4 open:bg-surface-3">
+      <details className="group rounded-lg border border-line-subtle bg-surface-2 p-4 open:bg-surface-3">
         <summary className="cursor-pointer list-none text-sm font-semibold text-ink-strong">
           <span className="inline-flex items-center gap-2">
             Add location &amp; details
@@ -192,7 +196,7 @@ function JobDescriptionField({ defaultValue, error }: JobDescriptionFieldProps) 
         rows={3}
         aria-invalid={error ? true : undefined}
         className={
-          "rounded-lg border border-line-subtle bg-surface-2 px-3 py-2 text-base text-ink-strong focus:border-brand focus:outline-none focus:ring-2 focus:ring-focus/40 disabled:cursor-not-allowed disabled:opacity-50" +
+          "rounded-lg border border-line-subtle bg-surface-2 px-3 py-2 text-base text-ink-strong shadow-inner shadow-black/10 focus:border-brand focus:outline-none focus:ring-2 focus:ring-focus/40 disabled:cursor-not-allowed disabled:opacity-50" +
           (error ? " border-danger focus:border-danger focus:ring-danger/30" : "")
         }
       />
@@ -226,7 +230,7 @@ function TradeSelect({ defaultValue, error }: TradeSelectProps) {
         defaultValue={defaultValue ?? ""}
         aria-invalid={error ? true : undefined}
         className={
-          "h-11 rounded-lg border border-line-subtle bg-surface-2 px-3 text-base text-ink-strong focus:border-brand focus:outline-none focus:ring-2 focus:ring-focus/40 disabled:cursor-not-allowed disabled:opacity-50" +
+          "h-11 rounded-lg border border-line-subtle bg-surface-2 px-3 text-base font-medium text-ink-strong shadow-inner shadow-black/10 focus:border-brand focus:outline-none focus:ring-2 focus:ring-focus/40 disabled:cursor-not-allowed disabled:opacity-50" +
           (error ? " border-danger focus:border-danger focus:ring-danger/30" : "")
         }
       >
@@ -266,7 +270,7 @@ function StateSelect({ defaultValue, error }: StateSelectProps) {
         defaultValue={defaultValue ?? ""}
         aria-invalid={error ? true : undefined}
         className={
-          "h-11 rounded-lg border border-line-subtle bg-surface-2 px-3 text-base text-ink-strong focus:border-brand focus:outline-none focus:ring-2 focus:ring-focus/40 disabled:cursor-not-allowed disabled:opacity-50" +
+          "h-11 rounded-lg border border-line-subtle bg-surface-2 px-3 text-base font-medium text-ink-strong shadow-inner shadow-black/10 focus:border-brand focus:outline-none focus:ring-2 focus:ring-focus/40 disabled:cursor-not-allowed disabled:opacity-50" +
           (error ? " border-danger focus:border-danger focus:ring-danger/30" : "")
         }
       >
@@ -289,7 +293,13 @@ function StateSelect({ defaultValue, error }: StateSelectProps) {
 function SubmitButton({ mode }: { mode: "create" | "edit" }) {
   const { pending } = useFormStatus();
   return (
-    <Button type="submit" fullWidth size="lg" loading={pending}>
+    <Button
+      type="submit"
+      fullWidth
+      size="lg"
+      loading={pending}
+      className="shadow-[0_0_42px_rgba(217,111,50,0.24)]"
+    >
       {pending
         ? mode === "create"
           ? "Saving…"

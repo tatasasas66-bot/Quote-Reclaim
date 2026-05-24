@@ -90,6 +90,7 @@ export function QuoteActions({ quoteId, status }: Props) {
           variant="success"
           loading={pending === "won"}
           disabled={busy}
+          className="shadow-[0_0_30px_rgba(31,169,113,0.2)]"
           onClick={() =>
             run(
               "won",
@@ -98,7 +99,7 @@ export function QuoteActions({ quoteId, status }: Props) {
             )
           }
         >
-          Mark as won
+          Got the Job
         </Button>
 
         <Button

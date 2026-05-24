@@ -19,7 +19,7 @@ describe("Homepage mobile-safe layout", () => {
 
   it("main wrapper is full width within max-width cap", () => {
     expect(homepage).toMatch(/w-full/);
-    expect(homepage).toMatch(/max-w-3xl/);
+    expect(homepage).toMatch(/max-w-6xl/);
   });
 
   it("header uses flex-wrap so the Sign in link wraps below logo on narrow screens", () => {
@@ -36,7 +36,7 @@ describe("Homepage mobile-safe layout", () => {
 
   it("CTA group wraps when buttons exceed viewport width", () => {
     // The CTA flex row already had flex-wrap; this guards against regression.
-    expect(homepage).toMatch(/flex flex-wrap items-center gap-3 pt-2/);
+    expect(homepage).toMatch(/flex flex-wrap items-center gap-3 pt-1/);
   });
 });
 
@@ -65,11 +65,11 @@ describe("AuthShell mobile-safe layout", () => {
   });
 
   it("form card has w-full min-w-0 so it never exceeds the section", () => {
-    expect(authShell).toMatch(/w-full min-w-0 rounded-2xl/);
+    expect(authShell).toMatch(/w-full min-w-0 rounded-lg/);
   });
 
   it("hidden desktop column uses min-w-0", () => {
-    expect(authShell).toMatch(/hidden min-w-0 flex-col gap-8 lg:flex/);
+    expect(authShell).toMatch(/hidden min-w-0 flex-col gap-7 lg:flex/);
   });
 });
 

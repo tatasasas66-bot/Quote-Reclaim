@@ -9,6 +9,7 @@ import {
   type RecoveryStatus,
 } from "@/components/quotes";
 import { requireUser } from "@/lib/auth/require-user";
+import { nextBestAction } from "@/lib/quotes/next-best-action";
 import {
   getProfileStats,
   getQuoteById,
@@ -18,11 +19,12 @@ import {
 } from "@/lib/quotes/repo";
 import { getRecoveryScore } from "@/lib/quotes/recovery-score";
 import { computeStepDisplay } from "@/lib/quotes/step-status";
-import { titleCaseName } from "@/lib/utils/title-case";
+import { effectiveDaysSilent } from "@/lib/recovery/effective-days";
 import { createServiceSupabaseClient } from "@/lib/supabase/service";
 import { formatCurrency } from "@/lib/utils/currency";
+import { titleCaseName } from "@/lib/utils/title-case";
 
-export const metadata: Metadata = { title: "Quote – Quote Reclaim" };
+export const metadata: Metadata = { title: "Quote - Quote Reclaim" };
 export const dynamic = "force-dynamic";
 
 type Params = { id: string };
@@ -81,7 +83,7 @@ export default async function QuoteDetailPage({
   const next = status === "running" ? nextSendAt(reminders) : null;
 
   // Was there any inbound reply for this quote? Used to flip per-step status
-  // to "Paused · customer replied" without flagging the sequence as ended.
+  // to "Paused - customer replied" without flagging the sequence as ended.
   // Reads via service client to bypass RLS on outbound_messages.
   const serviceClient = createServiceSupabaseClient();
   const { data: replyRows } = await serviceClient
@@ -93,24 +95,25 @@ export default async function QuoteDetailPage({
   const hasReplyForQuote = (replyRows ?? []).length > 0;
 
   return (
-    <main className="mx-auto flex min-h-screen max-w-2xl flex-col gap-8 px-6 py-8">
-      <header className="flex items-center justify-between">
+    <main className="mx-auto flex min-h-screen w-full max-w-5xl flex-col gap-8 bg-canvas px-4 py-8 sm:px-6">
+      <header className="flex items-center justify-between border-b border-line-subtle/80 pb-5">
         <Logo showWordmark />
         <Link
           href="/dashboard"
-          className="text-sm text-ink-muted hover:text-ink-strong"
+          className="rounded text-sm font-semibold text-ink-muted hover:text-ink-strong focus:outline-none focus-visible:ring-2 focus-visible:ring-focus"
         >
-          ← Dashboard
+          Dashboard
         </Link>
       </header>
 
-      <QuoteSummary quote={quote} status={status} />
+      <QuoteSummary
+        quote={quote}
+        status={status}
+        hasReplyForQuote={hasReplyForQuote}
+      />
 
       {status === "won" ? (
-        <WinCelebration
-          quote={quote}
-          allTimeRecovered={allTimeRecovered}
-        />
+        <WinCelebration quote={quote} allTimeRecovered={allTimeRecovered} />
       ) : null}
 
       <RecoveryPlanSection
@@ -127,9 +130,11 @@ export default async function QuoteDetailPage({
 function QuoteSummary({
   quote,
   status,
+  hasReplyForQuote,
 }: {
   quote: QuoteRow;
   status: RecoveryStatus;
+  hasReplyForQuote: boolean;
 }) {
   const badge = (() => {
     switch (status) {
@@ -154,47 +159,67 @@ function QuoteSummary({
         : score.tone === "danger"
           ? "danger"
           : "neutral";
+  const daysQuiet = effectiveDaysSilent(quote);
+  const nba = nextBestAction(quote, hasReplyForQuote);
 
   return (
-    <section className="space-y-4 rounded-xl border border-line-subtle bg-surface-2 p-6">
-      <div className="flex items-start justify-between gap-4">
-        <div>
+    <section className="rounded-lg border border-line-subtle bg-surface-1 shadow-[0_24px_74px_rgba(0,0,0,0.32)]">
+      <div className="grid gap-5 border-b border-line-subtle p-5 sm:p-6 lg:grid-cols-[1fr_auto] lg:items-start">
+        <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2">
-            <h1 className="text-2xl font-bold text-ink-strong">
-              {titleCaseName(quote.client_name)}
-            </h1>
             <Badge variant={scoreBadgeVariant}>{score.label}</Badge>
+            <Badge variant={badge.variant}>{badge.label}</Badge>
           </div>
-          <p className="mt-1 text-sm text-ink-muted">
+          <h1 className="mt-3 truncate text-4xl font-black text-ink-strong">
+            {titleCaseName(quote.client_name)}
+          </h1>
+          <p className="mt-2 text-sm text-ink-muted">
             {titleCaseName(quote.trade)}
             {quote.city ? ` · ${titleCaseName(quote.city)}` : ""}
             {quote.state ? `, ${quote.state.toUpperCase()}` : ""}
           </p>
-          <p className="mt-1 text-xs text-ink-muted">
-            Recovery Priority: {score.score} · {score.label}
+        </div>
+
+        <div className="lg:text-right">
+          <p className="text-xs font-black uppercase tracking-widest text-warning">
+            Amount still sitting quiet
+          </p>
+          <p className="mt-2 text-5xl font-black text-ink-strong tabular-nums">
+            {formatCurrency(quote.estimate_amount)}
           </p>
         </div>
-        <Badge variant={badge.variant}>{badge.label}</Badge>
       </div>
 
-      <dl className="grid grid-cols-2 gap-4 sm:grid-cols-3">
-        <Field label="Estimate" value={formatCurrency(quote.estimate_amount)} />
-        <Field label="Days quiet" value={String(quote.days_silent)} />
+      <dl className="grid gap-3 p-5 sm:grid-cols-2 sm:p-6 lg:grid-cols-5">
+        <IntelligenceField
+          label="Amount quiet"
+          value={formatCurrency(quote.estimate_amount)}
+        />
+        <IntelligenceField label="Days quiet" value={String(daysQuiet)} />
+        <IntelligenceField
+          label="Recovery Priority"
+          value={`${score.score} · ${score.label}`}
+        />
+        <IntelligenceField
+          label="Next Best Action"
+          value={nba?.label ?? "Review plan"}
+        />
+        <IntelligenceField label="Status" value={badge.label} />
         {quote.client_email ? (
-          <Field label="Email" value={quote.client_email} />
+          <IntelligenceField label="Email" value={quote.client_email} />
         ) : null}
         {quote.client_phone ? (
-          <Field label="Phone" value={quote.client_phone} />
+          <IntelligenceField label="Phone" value={quote.client_phone} />
         ) : null}
         {quote.job_description ? (
-          <div className="col-span-full">
-            <Field label="Description" value={quote.job_description} />
+          <div className="sm:col-span-2 lg:col-span-3">
+            <IntelligenceField label="Description" value={quote.job_description} />
           </div>
         ) : null}
       </dl>
 
       {status === "running" || status === "paused" ? (
-        <div className="flex flex-wrap items-center gap-3 border-t border-line-subtle pt-4">
+        <div className="flex flex-wrap items-center gap-3 border-t border-line-subtle p-5 sm:p-6">
           <QuoteActions quoteId={quote.id} status={status} />
           <Link href={`/quotes/${quote.id}/edit`}>
             <Button variant="ghost" size="sm">
@@ -207,13 +232,13 @@ function QuoteSummary({
   );
 }
 
-function Field({ label, value }: { label: string; value: string }) {
+function IntelligenceField({ label, value }: { label: string; value: string }) {
   return (
-    <div>
-      <dt className="text-xs font-semibold uppercase tracking-widest text-ink-muted">
+    <div className="min-w-0 rounded-lg border border-line-subtle bg-canvas/35 p-3">
+      <dt className="text-[10px] font-black uppercase tracking-widest text-ink-muted">
         {label}
       </dt>
-      <dd className="mt-0.5 text-sm text-ink-strong">{value}</dd>
+      <dd className="mt-1 truncate text-sm font-bold text-ink-strong">{value}</dd>
     </div>
   );
 }
@@ -228,22 +253,22 @@ function WinCelebration({
   const amount = quote.estimate_amount;
   const months = Math.floor(amount / MONTHLY_PRICE_USD);
   // ROI multiplier: months of subscription paid for by recovered revenue.
-  // monthsSubscribed is not tracked yet, so default to 1 — surfaces the
-  // simplest "months paid for" answer per the spec's formula.
+  // monthsSubscribed is not tracked yet, so default to 1.
   const monthsSubscribed = 1;
   const roiMultiplier = Math.round(
-    allTimeRecovered / Math.max(MONTHLY_PRICE_USD, monthsSubscribed * MONTHLY_PRICE_USD),
+    allTimeRecovered /
+      Math.max(MONTHLY_PRICE_USD, monthsSubscribed * MONTHLY_PRICE_USD),
   );
   return (
     <section
       role="status"
       aria-live="polite"
-      className="rounded-xl border border-success/40 bg-success/10 p-6"
+      className="rounded-lg border border-success/40 bg-success/10 p-6"
     >
-      <p className="text-xs font-semibold uppercase tracking-widest text-success">
+      <p className="text-xs font-black uppercase tracking-widest text-success">
         Quote recovered
       </p>
-      <p className="mt-2 text-3xl font-bold text-ink-strong">
+      <p className="mt-2 text-4xl font-black text-ink-strong">
         +{formatCurrency(amount)} recovered
       </p>
       {months >= 1 ? (
@@ -261,7 +286,7 @@ function WinCelebration({
           <span className="font-semibold text-money">
             {formatCurrency(allTimeRecovered)}
           </span>{" "}
-          lifetime · {roiMultiplier}× return
+          lifetime · {roiMultiplier}x return
         </p>
       ) : null}
     </section>
@@ -282,18 +307,25 @@ function RecoveryPlanSection({
   hasReplyForQuote: boolean;
 }) {
   return (
-    <section className="space-y-3">
-      <div className="flex items-baseline justify-between gap-3">
-        <h2 className="text-lg font-semibold text-ink-strong">Recovery plan</h2>
+    <section className="space-y-4">
+      <div className="flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <p className="text-xs font-black uppercase tracking-widest text-brand">
+            Recovery Messages
+          </p>
+          <h2 className="mt-1 text-2xl font-black text-ink-strong">
+            Recovery plan
+          </h2>
+        </div>
         {status === "running" && nextDate ? (
-          <p className="text-xs text-ink-muted">
+          <p className="rounded-md border border-line-subtle bg-surface-1 px-3 py-2 text-xs font-semibold text-ink-muted">
             Next follow-up sends {formatSendDate(nextDate)}
           </p>
         ) : null}
       </div>
 
       {(status === "running" || status === "paused") && reminders.length > 0 ? (
-        <p className="text-sm text-ink-muted">
+        <p className="max-w-3xl text-sm leading-6 text-ink-muted">
           {status === "running"
             ? "Your recovery plan is ready. Copy a message now, or connect sending automation to let Quote Reclaim handle the chasing."
             : "Recovery is paused. Future reminders won't send until you resume."}
@@ -301,9 +333,11 @@ function RecoveryPlanSection({
       ) : null}
 
       {reminders.length === 0 ? (
-        <p className="text-sm text-ink-muted">No recovery plan generated.</p>
+        <p className="rounded-lg border border-line-subtle bg-surface-1 p-5 text-sm text-ink-muted">
+          No recovery plan generated.
+        </p>
       ) : (
-        <ol className="space-y-3">
+        <ol className="grid gap-3">
           {reminders.map((r) => (
             <ReminderCard
               key={r.id}
@@ -335,7 +369,7 @@ function ReminderCard({
 }) {
   const sendDate = new Date(r.send_at);
   const display = computeStepDisplay(r, allReminders, hasReplyForQuote);
-  // Only one reminder per quote is "due" — the soonest unsent one — so the
+  // Only one reminder per quote is "due" - the soonest unsent one - so the
   // contractor sees one clear next action, never two "Due" badges stacked.
   const statusVariant: "success" | "warning" | "neutral" | "danger" | "brand" =
     display.tone === "rust"
@@ -359,24 +393,24 @@ function ReminderCard({
     !hasPhone;
 
   return (
-    <li className="space-y-3 rounded-xl border border-line-subtle bg-surface-2 p-4">
-      <div className="flex flex-wrap items-center justify-between gap-2">
+    <li className="rounded-lg border border-line-subtle bg-surface-1 shadow-[0_16px_46px_rgba(0,0,0,0.2)]">
+      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-line-subtle px-4 py-3">
         <div className="space-y-0.5">
-          <span className="text-xs font-bold uppercase tracking-widest text-brand">
+          <span className="text-xs font-black uppercase tracking-widest text-brand">
             Follow-up {r.followup_number} · Day {dayLabel}
           </span>
           <p className="text-xs text-ink-muted">
-            {r.framework_used ?? "—"}
+            {r.framework_used ?? "Manual recovery message"}
           </p>
         </div>
         <Badge variant={statusVariant}>{statusLabel}</Badge>
       </div>
 
-      <p className="whitespace-pre-wrap text-sm leading-6 text-ink-strong">
+      <p className="whitespace-pre-wrap px-4 py-4 text-sm leading-7 text-ink-strong">
         {r.message_text}
       </p>
 
-      <div className="flex flex-wrap items-center justify-between gap-2 border-t border-line-subtle pt-3">
+      <div className="flex flex-wrap items-center justify-between gap-2 border-t border-line-subtle px-4 py-3">
         <p className="text-xs text-ink-muted">
           Scheduled {formatSendDate(sendDate)} · {r.message_type.toUpperCase()}
         </p>

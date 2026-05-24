@@ -1,5 +1,12 @@
 import { Suspense } from "react";
+import type { ReactNode } from "react";
 import Link from "next/link";
+import {
+  AlertTriangle,
+  CheckCircle2,
+  ClipboardList,
+  ShieldAlert,
+} from "lucide-react";
 import { Badge, Logo } from "@/components/ui";
 import { formatCurrency } from "@/lib/utils/currency";
 import { AuthForm } from "./AuthForm";
@@ -12,54 +19,100 @@ const COPY = {
   "sign-in": {
     title: "Start your recovery",
     subtitle: "Sign in with Magic Link. No password.",
-    crossLink: { href: "/sign-up", label: "New here? Start free →" },
+    crossLink: { href: "/sign-up", label: "New here? Start free ->" },
   },
   "sign-up": {
     title: "Start your recovery",
     subtitle: "3 silent quotes free. No credit card. No setup.",
     crossLink: {
       href: "/sign-in",
-      label: "Already on Quote Reclaim? Sign in →",
+      label: "Already on Quote Reclaim? Sign in ->",
     },
   },
 } as const;
 
 function PreviewCard() {
   return (
-    <div className="rounded-2xl border border-line-subtle bg-surface-1 p-6 shadow-xl">
-      <div className="mb-4 flex items-center justify-between">
-        <Badge>EXAMPLE PREVIEW · NOT YOUR DATA</Badge>
-        <span className="text-xs uppercase tracking-wide text-ink-muted">
+    <div className="rounded-lg border border-line-subtle bg-surface-1 shadow-[0_28px_90px_rgba(0,0,0,0.38)]">
+      <div className="flex items-center justify-between gap-3 border-b border-line-subtle px-4 py-3">
+        <Badge variant="money">EXAMPLE PREVIEW · NOT YOUR DATA</Badge>
+        <span className="text-xs font-semibold uppercase tracking-widest text-ink-muted">
           Silent Quote Command
         </span>
       </div>
-      <div className="space-y-5">
-        <div>
-          <p className="text-xs uppercase tracking-wide text-ink-muted">
-            Money Sitting Quiet
+      <div className="grid gap-4 p-4">
+        <div className="rounded-lg border border-warning/35 bg-warning/10 p-5">
+          <p className="text-xs font-bold uppercase tracking-widest text-warning">
+            Still Bleeding
           </p>
-          <p className="mt-1 text-5xl font-bold text-money tabular-nums">
+          <p className="mt-2 text-5xl font-black text-ink-strong tabular-nums">
             {formatCurrency(47200)}
           </p>
           <p className="mt-1 text-sm text-ink-muted">
             12 quiet estimates · oldest 14 days
           </p>
         </div>
-        <div className="grid grid-cols-2 gap-3">
-          <div className="rounded-lg border border-line-subtle bg-surface-2 p-3">
-            <p className="text-xs text-ink-muted">Recovery Priority</p>
-            <p className="mt-1 text-2xl font-bold text-warning tabular-nums">
-              High
+
+        <div className="rounded-lg border border-danger/40 bg-danger/10 p-4">
+          <div className="flex items-center gap-2">
+            <ShieldAlert className="h-4 w-4 text-danger" aria-hidden="true" />
+            <p className="text-xs font-bold uppercase tracking-widest text-danger">
+              Recovery Window Alert
             </p>
           </div>
-          <div className="rounded-lg border border-line-subtle bg-surface-2 p-3">
-            <p className="text-xs text-ink-muted">Next Best Action</p>
-            <p className="mt-1 text-2xl font-bold text-success tabular-nums">
-              Today
-            </p>
-          </div>
+          <p className="mt-2 text-lg font-bold text-ink-strong">
+            Open the $8,500 roof plan today.
+          </p>
+          <p className="mt-1 text-sm text-ink-muted">
+            money sitting quiet needs one clear move.
+          </p>
+        </div>
+
+        <div className="grid grid-cols-3 gap-2">
+          <PreviewChip
+            icon={<AlertTriangle className="h-4 w-4" aria-hidden="true" />}
+            label="Recovery Priority"
+            value="High"
+            tone="text-warning"
+          />
+          <PreviewChip
+            icon={<ClipboardList className="h-4 w-4" aria-hidden="true" />}
+            label="Next Best Action"
+            value="Call"
+            tone="text-brand"
+          />
+          <PreviewChip
+            icon={<CheckCircle2 className="h-4 w-4" aria-hidden="true" />}
+            label="Months paid"
+            value="107x"
+            tone="text-success"
+          />
         </div>
       </div>
+    </div>
+  );
+}
+
+function PreviewChip({
+  icon,
+  label,
+  value,
+  tone,
+}: {
+  icon: ReactNode;
+  label: string;
+  value: string;
+  tone: string;
+}) {
+  return (
+    <div className="min-w-0 rounded-lg border border-line-subtle bg-surface-2 p-3">
+      <div className={`flex items-center gap-1.5 ${tone}`}>
+        {icon}
+        <p className="truncate text-[10px] font-bold uppercase tracking-widest">
+          {label}
+        </p>
+      </div>
+      <p className="mt-2 truncate text-lg font-black text-ink-strong">{value}</p>
     </div>
   );
 }
@@ -68,8 +121,8 @@ export function AuthShell({ mode }: AuthShellProps) {
   const { title, subtitle, crossLink } = COPY[mode];
 
   return (
-    <main className="min-h-screen w-full px-4 py-8 sm:px-6 lg:px-10 lg:py-10">
-      <header className="mx-auto mb-8 flex w-full max-w-6xl flex-wrap items-center justify-between gap-3">
+    <main className="min-h-screen w-full bg-canvas px-4 py-8 sm:px-6 lg:px-10 lg:py-10">
+      <header className="mx-auto mb-8 flex w-full max-w-6xl flex-wrap items-center justify-between gap-3 border-b border-line-subtle/80 pb-5">
         <Link
           href="/"
           className="rounded focus:outline-none focus-visible:ring-2 focus-visible:ring-focus"
@@ -79,7 +132,7 @@ export function AuthShell({ mode }: AuthShellProps) {
         </Link>
         <Link
           href={crossLink.href}
-          className="rounded text-sm text-ink-muted hover:text-ink-strong focus:outline-none focus-visible:ring-2 focus-visible:ring-focus"
+          className="rounded text-sm font-semibold text-ink-muted hover:text-ink-strong focus:outline-none focus-visible:ring-2 focus-visible:ring-focus"
         >
           {crossLink.label}
         </Link>
@@ -89,27 +142,27 @@ export function AuthShell({ mode }: AuthShellProps) {
         <p className="text-xs font-semibold uppercase tracking-widest text-brand">
           Silent Quote Command
         </p>
-        <h1 className="mt-2 text-balance text-3xl font-bold leading-tight text-ink-strong">
+        <h1 className="mt-2 text-balance text-3xl font-black leading-tight text-ink-strong">
           You sent the quote.
           <br />
           <span className="text-brand">Get the job back.</span>
         </h1>
       </div>
 
-      <div className="mx-auto grid w-full max-w-6xl min-w-0 items-start gap-12 lg:grid-cols-[3fr_2fr]">
-        <section className="hidden min-w-0 flex-col gap-8 lg:flex">
+      <div className="mx-auto grid w-full max-w-6xl min-w-0 items-start gap-10 lg:grid-cols-[3fr_2fr]">
+        <section className="hidden min-w-0 flex-col gap-7 lg:flex">
           <div className="space-y-4">
             <p className="text-xs font-semibold uppercase tracking-widest text-brand">
               Silent Quote Command
             </p>
-            <h1 className="text-balance text-5xl font-bold leading-tight text-ink-strong">
+            <h1 className="text-balance text-6xl font-black leading-[0.98] text-ink-strong">
               You sent the quote.
               <br />
               They went quiet.
               <br />
               <span className="text-brand">Get the job back.</span>
             </h1>
-            <p className="max-w-md break-words text-lg text-ink">
+            <p className="max-w-md break-words text-lg leading-8 text-ink">
               Every quiet estimate has a dollar value, a risk level, and a next
               move. See the money sitting quiet and decide what happens next.
             </p>
@@ -118,9 +171,9 @@ export function AuthShell({ mode }: AuthShellProps) {
         </section>
 
         <section className="mx-auto flex w-full min-w-0 max-w-md items-start lg:mx-0">
-          <div className="w-full min-w-0 rounded-2xl border border-line-subtle bg-surface-1 p-6 shadow-xl sm:p-8">
+          <div className="w-full min-w-0 rounded-lg border border-line-subtle bg-surface-1 p-6 shadow-[0_28px_90px_rgba(0,0,0,0.36)] sm:p-8">
             <div className="mb-6">
-              <h2 className="text-2xl font-bold text-ink-strong">{title}</h2>
+              <h2 className="text-2xl font-black text-ink-strong">{title}</h2>
               <p className="mt-1 text-sm text-ink-muted">{subtitle}</p>
             </div>
 
@@ -133,7 +186,7 @@ export function AuthShell({ mode }: AuthShellProps) {
                 href="/audit"
                 className="inline-block rounded text-sm text-ink hover:text-ink-strong focus:outline-none focus-visible:ring-2 focus-visible:ring-focus"
               >
-                Try the free Silent Quote Audit first →
+                Try the free Silent Quote Audit first {"->"}
               </Link>
               <p className="text-xs text-ink-muted">
                 No credit card. 3 quotes free. Cancel anytime.

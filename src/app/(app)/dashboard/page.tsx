@@ -60,17 +60,17 @@ export default async function DashboardPage() {
   const priorityQuote = pickPriorityQuote(pending);
 
   return (
-    <main className="mx-auto flex min-h-screen w-full max-w-6xl flex-col gap-8 px-4 py-8 sm:px-6">
-      <header>
+    <main className="mx-auto flex min-h-screen w-full max-w-7xl flex-col gap-8 bg-canvas px-4 py-8 sm:px-6 lg:px-8">
+      <header className="border-b border-line-subtle/80 pb-5">
         <p className="text-xs font-semibold uppercase tracking-widest text-brand">
           QUOTE RECLAIM
         </p>
         <div className="mt-1 flex flex-wrap items-start justify-between gap-3">
           <div className="min-w-0">
-            <h1 className="text-3xl font-bold leading-tight text-ink-strong">
+            <h1 className="text-4xl font-black leading-tight text-ink-strong">
               Silent Quote Command
             </h1>
-            <p className="mt-1 text-base text-ink">
+            <p className="mt-2 max-w-2xl text-base leading-7 text-ink">
               Every quiet estimate has a dollar value, a risk level, and a next
               move.
             </p>
@@ -111,27 +111,27 @@ export default async function DashboardPage() {
         avgDaysToWin={avgDaysToWin}
       />
 
-      <div className="grid gap-8 lg:grid-cols-[2fr_1fr]">
+      <div className="grid gap-8 lg:grid-cols-[minmax(0,2fr)_minmax(280px,0.85fr)]">
         <section className="min-w-0 space-y-4">
-          <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="flex flex-wrap items-end justify-between gap-3">
             <div className="min-w-0">
-              <p className="text-xs font-semibold uppercase tracking-widest text-ink-muted">
+              <p className="text-xs font-black uppercase tracking-widest text-money">
                 MONEY SITTING QUIET
               </p>
-              <p className="text-sm text-ink">
+              <p className="mt-1 text-sm text-ink-muted">
                 {pending.length === 0
                   ? "All caught up."
-                  : `${stillBleedingValue} sitting quiet`}
+                  : `${stillBleedingValue} across ${pending.length} money file${pending.length === 1 ? "" : "s"}`}
               </p>
             </div>
             <Link href="/quotes/new">
-              <Button size="sm">+ Add Silent Quote</Button>
+              <Button size="sm">Add Silent Quote</Button>
             </Link>
           </div>
 
           {pending.length === 0 ? (
-            <div className="rounded-xl border border-dashed border-line-subtle bg-surface-2 px-6 py-10 text-center">
-              <p className="font-medium text-ink">
+            <div className="rounded-lg border border-dashed border-line-subtle bg-surface-1 px-6 py-10 text-center">
+              <p className="font-bold text-ink">
                 {jobsWonLifetime > 0
                   ? "All caught up. Add a quote when the next one goes quiet."
                   : "No silent quotes tracked yet."}
@@ -142,11 +142,11 @@ export default async function DashboardPage() {
                   : "Add one quote and see what revenue is sitting quiet."}
               </p>
               <Link href="/quotes/new" className="mt-4 inline-block">
-                <Button size="sm">+ Add Silent Quote</Button>
+                <Button size="sm">Add Silent Quote</Button>
               </Link>
             </div>
           ) : (
-            <ul className="divide-y divide-line-subtle overflow-hidden rounded-xl border border-line-subtle bg-surface-2">
+            <ul className="grid gap-3">
               {pending.map((q) => (
                 <QuoteListItem key={q.id} quote={q} />
               ))}
@@ -166,7 +166,7 @@ export default async function DashboardPage() {
       <div className="fixed inset-x-3 bottom-3 z-30 sm:hidden">
         <Link
           href="/quotes/new"
-          className="inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-md border border-brand bg-brand px-4 py-3 text-sm font-semibold text-ink-strong shadow-[0_0_36px_rgba(217,111,50,0.35)] active:scale-[0.99]"
+          className="inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-md border border-brand bg-brand px-4 py-3 text-sm font-semibold text-canvas shadow-[0_0_36px_rgba(217,111,50,0.35)] active:scale-[0.99]"
         >
           + Add Silent Quote
         </Link>
