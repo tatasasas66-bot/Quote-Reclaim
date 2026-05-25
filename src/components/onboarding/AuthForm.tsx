@@ -10,6 +10,7 @@ type AuthFormProps = {
 };
 
 const CALLBACK_PATH = "/api/auth/callback";
+const CONFIRM_PATH = "/auth/confirm";
 const RESEND_COOLDOWN_SECONDS = 60;
 
 function normalizeCallbackBase(raw: string): string {
@@ -148,6 +149,18 @@ export function AuthForm({ mode }: AuthFormProps) {
     return `${base}${sep}next=${encodeURIComponent(nextPath)}`;
   }, [auditToken]);
 
+  // Magic links route through the scanner-safe /auth/confirm gate instead of
+  // the direct callback, so a prefetched GET can't consume the one-time token.
+  const magicLinkRedirectTo = React.useMemo(() => {
+    try {
+      const u = new URL(callbackUrl);
+      u.pathname = CONFIRM_PATH;
+      return u.toString();
+    } catch {
+      return callbackUrl;
+    }
+  }, [callbackUrl]);
+
   React.useEffect(() => {
     if (!resendAvailableAt) return undefined;
     const id = window.setInterval(() => setNow(Date.now()), 1000);
@@ -174,7 +187,7 @@ export function AuthForm({ mode }: AuthFormProps) {
       const { error } = await supabase.auth.signInWithOtp({
         email: trimmed,
         options: {
-          emailRedirectTo: callbackUrl,
+          emailRedirectTo: magicLinkRedirectTo,
           shouldCreateUser: true,
         },
       });
@@ -187,10 +200,10 @@ export function AuthForm({ mode }: AuthFormProps) {
       const safe = safeSupabaseError(err);
       const callbackOriginPath = (() => {
         try {
-          const u = new URL(callbackUrl);
+          const u = new URL(magicLinkRedirectTo);
           return u.origin + u.pathname;
         } catch {
-          return callbackUrl.split("?")[0];
+          return magicLinkRedirectTo.split("?")[0];
         }
       })();
       console.error("[auth:magic-link] send failed", {
