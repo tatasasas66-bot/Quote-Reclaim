@@ -69,13 +69,16 @@ describe("AuthForm contract", () => {
 
 describe("Auth callback route", () => {
   const source = readSource("../app/api/auth/callback/route.ts");
+  const redirectSource = readSource("../lib/auth/redirect.ts");
+  const confirmRoute = readSource("../app/api/auth/confirm/route.ts");
+  const confirmPage = readSource("../app/(auth)/auth/confirm/page.tsx");
 
   it("rejects protocol-relative redirects (//evil.com)", () => {
-    expect(source).toContain('next.startsWith("//")');
+    expect(redirectSource).toContain('next.startsWith("//")');
   });
 
   it("falls back to /dashboard for unsafe targets", () => {
-    expect(source).toContain('"/dashboard"');
+    expect(redirectSource).toContain('"/dashboard"');
   });
 
   it("exchanges the code for a session", () => {
@@ -84,6 +87,26 @@ describe("Auth callback route", () => {
 
   it("redirects to /sign-in with error=missing_code when no code is supplied", () => {
     expect(source).toContain("error=missing_code");
+  });
+
+  it("supports a POST-only scanner-safe token_hash confirmation route", () => {
+    expect(confirmRoute).toContain("export async function POST");
+    expect(confirmRoute).toContain("verifyOtp");
+    expect(confirmRoute).toContain("token_hash: tokenHash");
+    expect(confirmPage).toContain('method="post"');
+    expect(confirmPage).toContain('action="/api/auth/confirm"');
+  });
+
+  it("confirm route never logs token hashes or redirect URLs", () => {
+    const consoleCalls =
+      confirmRoute.match(/console\.(?:log|error|warn|info)\([\s\S]*?\);/g) ??
+      [];
+    for (const call of consoleCalls) {
+      expect(call).not.toMatch(/tokenHash/);
+      expect(call).not.toMatch(/token_hash/);
+      expect(call).not.toMatch(/redirectTo/);
+      expect(call).not.toMatch(/redirect_to/);
+    }
   });
 });
 
@@ -188,6 +211,7 @@ describe("safeRedirectPath behavior (replicated for runtime test)", () => {
 describe("Google OAuth contract (Phase 2)", () => {
   const formSource = readSource("../components/onboarding/AuthForm.tsx");
   const callbackSource = readSource("../app/api/auth/callback/route.ts");
+  const redirectSource = readSource("../lib/auth/redirect.ts");
 
   it("AuthForm uses signInWithOtp and signInWithOAuth(google)", () => {
     expect(formSource).toContain("signInWithOtp");
@@ -206,6 +230,7 @@ describe("Google OAuth contract (Phase 2)", () => {
   });
 
   it("auth callback blocks protocol-relative open-redirect targets", () => {
-    expect(callbackSource).toContain('next.startsWith("//")');
+    expect(callbackSource).toContain("safeRedirectPath");
+    expect(redirectSource).toContain('next.startsWith("//")');
   });
 });
