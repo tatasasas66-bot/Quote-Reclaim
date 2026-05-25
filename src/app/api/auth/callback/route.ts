@@ -1,8 +1,22 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
-import { safeRedirectPath } from "@/lib/auth/redirect";
 
 export const dynamic = "force-dynamic";
+
+/**
+ * Rejects open-redirect attempts. Anything that doesn't start with a single
+ * forward slash falls back to /dashboard.
+ *
+ *   ?next=/dashboard         -> /dashboard
+ *   ?next=//evil.com         -> /dashboard  (protocol-relative)
+ *   ?next=https://evil.com   -> /dashboard
+ *   ?next=javascript:alert() -> /dashboard
+ */
+function safeRedirectPath(next: string | null): string {
+  if (!next) return "/dashboard";
+  if (!next.startsWith("/") || next.startsWith("//")) return "/dashboard";
+  return next;
+}
 
 function safeSupabaseError(err: unknown): { name?: string; code?: string; message?: string; status?: number } {
   if (!err || typeof err !== "object") return {};

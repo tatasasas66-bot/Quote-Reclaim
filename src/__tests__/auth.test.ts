@@ -13,9 +13,9 @@ describe("AuthForm contract", () => {
     expect(source).toContain("signInWithOtp");
   });
 
-  it("calls verifyOtp with type email for the 6-digit fallback", () => {
-    expect(source).toContain("verifyOtp");
-    expect(source).toContain('type: "email"');
+  it("does not require verifyOtp in the sign-in UI", () => {
+    expect(source).not.toContain("verifyOtp");
+    expect(source).not.toContain('type: "email"');
   });
 
   it("calls signInWithOAuth with provider google", () => {
@@ -33,33 +33,31 @@ describe("AuthForm contract", () => {
     expect(source).not.toMatch(/type=["']password["']/);
   });
 
-  it("shows safe OTP, expired-link, and rate-limit copy", () => {
+  it("shows safe Magic Link success, expired-link, and rate-limit copy", () => {
     expect(source).toContain(
       "Secure link sent. Open it from your inbox to sign in.",
     );
     expect(source).toContain(
-      "This link expires in 60 minutes and can only be used once.",
+      "This link expires shortly and can only be used once.",
     );
     expect(source).toContain(
-      "Link not working? Enter the 6-digit code from the email.",
+      "That link expired or was already used. Send a fresh sign-in link.",
     );
-    expect(source).toContain("That code or link expired. Send a fresh one.");
     expect(source).toContain(
-      "Too many attempts. Wait a few minutes before sending another code.",
+      "Too many attempts. Wait a few minutes, then try again.",
     );
   });
 
-  it("keeps OTP fallback visually secondary and collapsible", () => {
-    expect(source).toContain("showOtpFallback");
-    expect(source).toContain("aria-expanded={showOtpFallback}");
-    expect(source).toContain("setShowOtpFallback((open) => !open)");
+  it("does not render OTP fallback UI", () => {
+    expect(source).not.toContain("6-digit code");
+    expect(source).not.toContain("Link not working?");
+    expect(source).not.toContain("showOtpFallback");
   });
 
-  it("does not log OTP tokens or secrets", () => {
+  it("does not log auth tokens or secrets", () => {
     const consoleCalls =
       source.match(/console\.(?:log|error|warn|info)\([\s\S]*?\);/g) ?? [];
     for (const call of consoleCalls) {
-      expect(call).not.toMatch(/\botpToken\b/);
       expect(call).not.toMatch(/\btoken\b/);
       expect(call).not.toMatch(/SUPABASE_SERVICE_ROLE_KEY/);
       expect(call).not.toMatch(/NEXT_PUBLIC_SUPABASE_ANON_KEY/);
@@ -69,16 +67,13 @@ describe("AuthForm contract", () => {
 
 describe("Auth callback route", () => {
   const source = readSource("../app/api/auth/callback/route.ts");
-  const redirectSource = readSource("../lib/auth/redirect.ts");
-  const confirmRoute = readSource("../app/api/auth/confirm/route.ts");
-  const confirmPage = readSource("../app/(auth)/auth/confirm/page.tsx");
 
   it("rejects protocol-relative redirects (//evil.com)", () => {
-    expect(redirectSource).toContain('next.startsWith("//")');
+    expect(source).toContain('next.startsWith("//")');
   });
 
   it("falls back to /dashboard for unsafe targets", () => {
-    expect(redirectSource).toContain('"/dashboard"');
+    expect(source).toContain('"/dashboard"');
   });
 
   it("exchanges the code for a session", () => {
@@ -87,26 +82,6 @@ describe("Auth callback route", () => {
 
   it("redirects to /sign-in with error=missing_code when no code is supplied", () => {
     expect(source).toContain("error=missing_code");
-  });
-
-  it("supports a POST-only scanner-safe token_hash confirmation route", () => {
-    expect(confirmRoute).toContain("export async function POST");
-    expect(confirmRoute).toContain("verifyOtp");
-    expect(confirmRoute).toContain("token_hash: tokenHash");
-    expect(confirmPage).toContain('method="post"');
-    expect(confirmPage).toContain('action="/api/auth/confirm"');
-  });
-
-  it("confirm route never logs token hashes or redirect URLs", () => {
-    const consoleCalls =
-      confirmRoute.match(/console\.(?:log|error|warn|info)\([\s\S]*?\);/g) ??
-      [];
-    for (const call of consoleCalls) {
-      expect(call).not.toMatch(/tokenHash/);
-      expect(call).not.toMatch(/token_hash/);
-      expect(call).not.toMatch(/redirectTo/);
-      expect(call).not.toMatch(/redirect_to/);
-    }
   });
 });
 
@@ -211,7 +186,6 @@ describe("safeRedirectPath behavior (replicated for runtime test)", () => {
 describe("Google OAuth contract (Phase 2)", () => {
   const formSource = readSource("../components/onboarding/AuthForm.tsx");
   const callbackSource = readSource("../app/api/auth/callback/route.ts");
-  const redirectSource = readSource("../lib/auth/redirect.ts");
 
   it("AuthForm uses signInWithOtp and signInWithOAuth(google)", () => {
     expect(formSource).toContain("signInWithOtp");
@@ -231,6 +205,6 @@ describe("Google OAuth contract (Phase 2)", () => {
 
   it("auth callback blocks protocol-relative open-redirect targets", () => {
     expect(callbackSource).toContain("safeRedirectPath");
-    expect(redirectSource).toContain('next.startsWith("//")');
+    expect(callbackSource).toContain('next.startsWith("//")');
   });
 });

@@ -150,8 +150,9 @@ describe("Auth copy", () => {
 
   it("magic-link success keeps secure link as the primary path", () => {
     expect(authForm).toMatch(/Secure link sent\. Open it from your inbox to sign in\./);
-    expect(authForm).toMatch(/This link expires in 60 minutes and can only be used once\./);
-    expect(authForm).toMatch(/Link not working\? Enter the 6-digit code from the email\./);
+    expect(authForm).toMatch(/This link expires shortly and can only be used once\./);
+    expect(authForm).not.toMatch(/Link not working\?/);
+    expect(authForm).not.toMatch(/6-digit code/);
   });
 });
 

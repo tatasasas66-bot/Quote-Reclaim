@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import { Button, Input } from "@/components/ui";
 import { createBrowserSupabaseClient } from "@/lib/supabase/browser";
 
@@ -11,7 +11,6 @@ type AuthFormProps = {
 
 const CALLBACK_PATH = "/api/auth/callback";
 const RESEND_COOLDOWN_SECONDS = 60;
-const OTP_LENGTH = 6;
 
 function normalizeCallbackBase(raw: string): string {
   const trimmed = raw.trim();
@@ -62,7 +61,7 @@ function describeCallbackError(code: string | null): string | null {
   switch (code) {
     case "link_expired":
     case "missing_code":
-      return "That code or link expired. Send a fresh one.";
+      return "That link expired or was already used. Send a fresh sign-in link.";
     case "auth_callback_failed":
       return "We couldn't finish signing you in. Try the link again or request a new one.";
     default:
@@ -97,11 +96,11 @@ function isRateLimitError(err: unknown): boolean {
   );
 }
 
-function userFacingOtpError(err: unknown): string {
+function userFacingMagicLinkError(err: unknown): string {
   const { code, message = "" } = safeSupabaseError(err);
   const lower = message.toLowerCase();
   if (isRateLimitError(err)) {
-    return "Too many attempts. Wait a few minutes before sending another code.";
+    return "Too many attempts. Wait a few minutes, then try again.";
   }
   if (code === "email_not_confirmed") {
     return "Secure link sent. Open it from your inbox to sign in.";
@@ -112,44 +111,20 @@ function userFacingOtpError(err: unknown): string {
   return "Could not send the link. Try again or contact support.";
 }
 
-function userFacingVerifyError(err: unknown): string {
-  const { code, message = "", status } = safeSupabaseError(err);
-  const lower = message.toLowerCase();
-  if (
-    code === "otp_expired" ||
-    code === "email_otp_expired" ||
-    code === "invalid_otp" ||
-    status === 403 ||
-    lower.includes("expired") ||
-    lower.includes("invalid")
-  ) {
-    return "That code or link expired. Send a fresh one.";
-  }
-  if (isRateLimitError(err)) {
-    return "Too many attempts. Wait a few minutes before sending another code.";
-  }
-  return "Could not verify that code. Send a fresh one.";
-}
-
 const GOOGLE_AUTH_ENABLED =
   process.env.NEXT_PUBLIC_ENABLE_GOOGLE_AUTH === "true";
 
 export function AuthForm({ mode }: AuthFormProps) {
-  const router = useRouter();
   const searchParams = useSearchParams();
   const callbackError = describeCallbackError(searchParams.get("error"));
   const auditToken = searchParams.get("audit_token") ?? undefined;
 
   const [email, setEmail] = React.useState("");
   const [sentEmail, setSentEmail] = React.useState("");
-  const [otpToken, setOtpToken] = React.useState("");
   const [magicLoading, setMagicLoading] = React.useState(false);
-  const [verifyLoading, setVerifyLoading] = React.useState(false);
   const [googleLoading, setGoogleLoading] = React.useState(false);
   const [magicSent, setMagicSent] = React.useState(false);
-  const [showOtpFallback, setShowOtpFallback] = React.useState(false);
   const [formError, setFormError] = React.useState<string | null>(null);
-  const [verifyError, setVerifyError] = React.useState<string | null>(null);
   const [resendAvailableAt, setResendAvailableAt] = React.useState<
     number | null
   >(null);
@@ -185,29 +160,9 @@ export function AuthForm({ mode }: AuthFormProps) {
     setNow(Date.now());
   }
 
-  async function sendSignInEmail(targetEmail: string) {
-    const supabase = createBrowserSupabaseClient();
-    const { error } = await supabase.auth.signInWithOtp({
-      email: targetEmail,
-      options: {
-        emailRedirectTo: callbackUrl,
-        shouldCreateUser: true,
-      },
-    });
-    if (error) throw error;
-    setSentEmail(targetEmail);
-    setMagicSent(true);
-    setShowOtpFallback(false);
-    setOtpToken("");
-    setVerifyError(null);
-    setFormError(null);
-    startResendCooldown();
-  }
-
   async function handleMagicLink(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setFormError(null);
-    setVerifyError(null);
     const trimmed = email.trim();
     if (!trimmed) {
       setFormError("Enter your work email.");
@@ -215,7 +170,19 @@ export function AuthForm({ mode }: AuthFormProps) {
     }
     setMagicLoading(true);
     try {
-      await sendSignInEmail(trimmed);
+      const supabase = createBrowserSupabaseClient();
+      const { error } = await supabase.auth.signInWithOtp({
+        email: trimmed,
+        options: {
+          emailRedirectTo: callbackUrl,
+          shouldCreateUser: true,
+        },
+      });
+      if (error) throw error;
+      setSentEmail(trimmed);
+      setMagicSent(true);
+      setFormError(null);
+      startResendCooldown();
     } catch (err) {
       const safe = safeSupabaseError(err);
       const callbackOriginPath = (() => {
@@ -226,77 +193,17 @@ export function AuthForm({ mode }: AuthFormProps) {
           return callbackUrl.split("?")[0];
         }
       })();
-      console.error("[auth:magic-link] OTP send failed", {
+      console.error("[auth:magic-link] send failed", {
         name: safe.name,
         code: safe.code,
         message: safe.message,
         status: safe.status,
         callbackOriginPath,
       });
-      setFormError(userFacingOtpError(err));
-      startResendCooldown();
+      setFormError(userFacingMagicLinkError(err));
+      if (isRateLimitError(err)) startResendCooldown();
     } finally {
       setMagicLoading(false);
-    }
-  }
-
-  async function handleResend() {
-    if (!sentEmail || cooldownRemaining > 0) return;
-    setFormError(null);
-    setVerifyError(null);
-    setMagicLoading(true);
-    try {
-      await sendSignInEmail(sentEmail);
-    } catch (err) {
-      const safe = safeSupabaseError(err);
-      console.error("[auth:magic-link] OTP resend failed", {
-        name: safe.name,
-        code: safe.code,
-        message: safe.message,
-        status: safe.status,
-      });
-      setFormError(userFacingOtpError(err));
-      startResendCooldown();
-    } finally {
-      setMagicLoading(false);
-    }
-  }
-
-  async function handleVerifyOtp(event: React.FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    setFormError(null);
-    setVerifyError(null);
-    const token = otpToken.trim();
-    if (!sentEmail) {
-      setFormError("Send a fresh code first.");
-      return;
-    }
-    if (!new RegExp(`^\\d{${OTP_LENGTH}}$`).test(token)) {
-      setVerifyError("Enter the 6-digit code from your email.");
-      return;
-    }
-    setVerifyLoading(true);
-    try {
-      const supabase = createBrowserSupabaseClient();
-      const { error } = await supabase.auth.verifyOtp({
-        email: sentEmail,
-        token,
-        type: "email",
-      });
-      if (error) throw error;
-      router.replace("/dashboard");
-      router.refresh();
-    } catch (err) {
-      const safe = safeSupabaseError(err);
-      console.error("[auth:otp-code] OTP verify failed", {
-        name: safe.name,
-        code: safe.code,
-        message: safe.message,
-        status: safe.status,
-      });
-      setVerifyError(userFacingVerifyError(err));
-    } finally {
-      setVerifyLoading(false);
     }
   }
 
@@ -358,92 +265,22 @@ export function AuthForm({ mode }: AuthFormProps) {
             Secure link sent. Open it from your inbox to sign in.
           </p>
           <p className="mt-1 text-ink">
-            This link expires in 60 minutes and can only be used once.
+            This link expires shortly and can only be used once.
           </p>
           <p className="mt-1 text-xs text-ink-muted">
             Sent to <span className="font-medium">{sentEmail}</span>
           </p>
-
-          <div className="mt-4 rounded-lg border border-line-subtle bg-surface-2/70 p-3">
-            <button
-              type="button"
-              className="w-full rounded text-left text-sm font-semibold text-ink hover:text-ink-strong focus:outline-none focus-visible:ring-2 focus-visible:ring-focus"
-              aria-expanded={showOtpFallback}
-              onClick={() => setShowOtpFallback((open) => !open)}
-            >
-              Link not working? Enter the 6-digit code from the email.
-            </button>
-
-            {showOtpFallback ? (
-              <form
-                onSubmit={handleVerifyOtp}
-                noValidate
-                className="mt-3 space-y-3 border-t border-line-subtle pt-3"
-              >
-                <Input
-                  label="6-digit code"
-                  type="text"
-                  value={otpToken}
-                  onChange={(e) =>
-                    setOtpToken(
-                      e.target.value.replace(/\D/g, "").slice(0, OTP_LENGTH),
-                    )
-                  }
-                  placeholder="123456"
-                  required
-                  autoComplete="one-time-code"
-                  inputMode="numeric"
-                  pattern="[0-9]*"
-                  maxLength={OTP_LENGTH}
-                  disabled={verifyLoading || magicLoading}
-                  error={verifyError ?? undefined}
-                />
-                <Button
-                  type="submit"
-                  fullWidth
-                  size="lg"
-                  variant="secondary"
-                  loading={verifyLoading}
-                  disabled={magicLoading || otpToken.length !== OTP_LENGTH}
-                >
-                  Verify code
-                </Button>
-              </form>
-            ) : null}
-          </div>
-
-          <div className="mt-3 flex flex-col gap-2 sm:flex-row">
-            <Button
-              type="button"
-              variant="secondary"
-              size="sm"
-              fullWidth
-              loading={magicLoading}
-              disabled={verifyLoading || cooldownRemaining > 0}
-              onClick={handleResend}
-            >
-              {cooldownRemaining > 0
-                ? `Send fresh code in ${cooldownRemaining}s`
-                : "Send a fresh one"}
-            </Button>
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              fullWidth
-              disabled={magicLoading || verifyLoading}
-              onClick={() => {
-                setMagicSent(false);
-                setShowOtpFallback(false);
-                setSentEmail("");
-                setOtpToken("");
-                setFormError(null);
-                setVerifyError(null);
-              }}
-            >
-              Use a different email
-            </Button>
-          </div>
+          <button
+            type="button"
+            className="mt-3 text-xs text-ink-muted underline hover:text-ink-strong"
+            onClick={() => {
+              setMagicSent(false);
+              setSentEmail("");
+              setFormError(null);
+            }}
+          >
+            Use a different email
+          </button>
         </div>
       ) : (
         <form onSubmit={handleMagicLink} noValidate className="space-y-3">
@@ -468,7 +305,7 @@ export function AuthForm({ mode }: AuthFormProps) {
             {magicLoading
               ? "Sending secure link..."
               : cooldownRemaining > 0
-                ? `Send secure link in ${cooldownRemaining}s`
+                ? `Try again in ${cooldownRemaining}s`
                 : mode === "sign-up"
                   ? "Send secure link"
                   : "Send secure link"}
