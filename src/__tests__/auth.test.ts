@@ -35,12 +35,24 @@ describe("AuthForm contract", () => {
 
   it("shows safe OTP, expired-link, and rate-limit copy", () => {
     expect(source).toContain(
-      "Check your inbox. Enter the 6-digit code or use the secure link.",
+      "Secure link sent. Open it from your inbox to sign in.",
+    );
+    expect(source).toContain(
+      "This link expires in 60 minutes and can only be used once.",
+    );
+    expect(source).toContain(
+      "Link not working? Enter the 6-digit code from the email.",
     );
     expect(source).toContain("That code or link expired. Send a fresh one.");
     expect(source).toContain(
       "Too many attempts. Wait a few minutes before sending another code.",
     );
+  });
+
+  it("keeps OTP fallback visually secondary and collapsible", () => {
+    expect(source).toContain("showOtpFallback");
+    expect(source).toContain("aria-expanded={showOtpFallback}");
+    expect(source).toContain("setShowOtpFallback((open) => !open)");
   });
 
   it("does not log OTP tokens or secrets", () => {

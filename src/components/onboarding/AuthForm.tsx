@@ -104,7 +104,7 @@ function userFacingOtpError(err: unknown): string {
     return "Too many attempts. Wait a few minutes before sending another code.";
   }
   if (code === "email_not_confirmed") {
-    return "Check your inbox. Enter the 6-digit code or use the secure link.";
+    return "Secure link sent. Open it from your inbox to sign in.";
   }
   if (lower.includes("invalid api key") || lower.includes("invalid project")) {
     return "Service configuration error. Contact support if this persists.";
@@ -147,6 +147,7 @@ export function AuthForm({ mode }: AuthFormProps) {
   const [verifyLoading, setVerifyLoading] = React.useState(false);
   const [googleLoading, setGoogleLoading] = React.useState(false);
   const [magicSent, setMagicSent] = React.useState(false);
+  const [showOtpFallback, setShowOtpFallback] = React.useState(false);
   const [formError, setFormError] = React.useState<string | null>(null);
   const [verifyError, setVerifyError] = React.useState<string | null>(null);
   const [resendAvailableAt, setResendAvailableAt] = React.useState<
@@ -196,6 +197,7 @@ export function AuthForm({ mode }: AuthFormProps) {
     if (error) throw error;
     setSentEmail(targetEmail);
     setMagicSent(true);
+    setShowOtpFallback(false);
     setOtpToken("");
     setVerifyError(null);
     setFormError(null);
@@ -353,43 +355,62 @@ export function AuthForm({ mode }: AuthFormProps) {
           className="rounded-lg border border-success/40 bg-success/10 p-4 text-sm"
         >
           <p className="font-semibold text-success">
-            Check your inbox. Enter the 6-digit code or use the secure link.
+            Secure link sent. Open it from your inbox to sign in.
           </p>
           <p className="mt-1 text-ink">
-            Sent to{" "}
-            <span className="font-medium text-ink-strong">{sentEmail}</span>.
-            The secure link expires in 60 minutes.
+            This link expires in 60 minutes and can only be used once.
+          </p>
+          <p className="mt-1 text-xs text-ink-muted">
+            Sent to <span className="font-medium">{sentEmail}</span>
           </p>
 
-          <form onSubmit={handleVerifyOtp} noValidate className="mt-4 space-y-3">
-            <Input
-              label="6-digit code"
-              type="text"
-              value={otpToken}
-              onChange={(e) =>
-                setOtpToken(
-                  e.target.value.replace(/\D/g, "").slice(0, OTP_LENGTH),
-                )
-              }
-              placeholder="123456"
-              required
-              autoComplete="one-time-code"
-              inputMode="numeric"
-              pattern="[0-9]*"
-              maxLength={OTP_LENGTH}
-              disabled={verifyLoading || magicLoading}
-              error={verifyError ?? undefined}
-            />
-            <Button
-              type="submit"
-              fullWidth
-              size="lg"
-              loading={verifyLoading}
-              disabled={magicLoading || otpToken.length !== OTP_LENGTH}
+          <div className="mt-4 rounded-lg border border-line-subtle bg-surface-2/70 p-3">
+            <button
+              type="button"
+              className="w-full rounded text-left text-sm font-semibold text-ink hover:text-ink-strong focus:outline-none focus-visible:ring-2 focus-visible:ring-focus"
+              aria-expanded={showOtpFallback}
+              onClick={() => setShowOtpFallback((open) => !open)}
             >
-              Verify code
-            </Button>
-          </form>
+              Link not working? Enter the 6-digit code from the email.
+            </button>
+
+            {showOtpFallback ? (
+              <form
+                onSubmit={handleVerifyOtp}
+                noValidate
+                className="mt-3 space-y-3 border-t border-line-subtle pt-3"
+              >
+                <Input
+                  label="6-digit code"
+                  type="text"
+                  value={otpToken}
+                  onChange={(e) =>
+                    setOtpToken(
+                      e.target.value.replace(/\D/g, "").slice(0, OTP_LENGTH),
+                    )
+                  }
+                  placeholder="123456"
+                  required
+                  autoComplete="one-time-code"
+                  inputMode="numeric"
+                  pattern="[0-9]*"
+                  maxLength={OTP_LENGTH}
+                  disabled={verifyLoading || magicLoading}
+                  error={verifyError ?? undefined}
+                />
+                <Button
+                  type="submit"
+                  fullWidth
+                  size="lg"
+                  variant="secondary"
+                  loading={verifyLoading}
+                  disabled={magicLoading || otpToken.length !== OTP_LENGTH}
+                >
+                  Verify code
+                </Button>
+              </form>
+            ) : null}
+          </div>
 
           <div className="mt-3 flex flex-col gap-2 sm:flex-row">
             <Button
@@ -413,6 +434,7 @@ export function AuthForm({ mode }: AuthFormProps) {
               disabled={magicLoading || verifyLoading}
               onClick={() => {
                 setMagicSent(false);
+                setShowOtpFallback(false);
                 setSentEmail("");
                 setOtpToken("");
                 setFormError(null);

@@ -44,8 +44,17 @@ async function submitEmail(email = "jane@example.com") {
   });
   fireEvent.click(screen.getByRole("button", { name: /send secure link/i }));
   await screen.findByText(
-    "Check your inbox. Enter the 6-digit code or use the secure link.",
+    "Secure link sent. Open it from your inbox to sign in.",
   );
+}
+
+async function openOtpFallback() {
+  fireEvent.click(
+    screen.getByRole("button", {
+      name: "Link not working? Enter the 6-digit code from the email.",
+    }),
+  );
+  await screen.findByLabelText(/6-digit code/i);
 }
 
 beforeEach(() => {
@@ -61,13 +70,19 @@ afterEach(() => {
 });
 
 describe("AuthForm OTP fallback", () => {
-  it("shows OTP input after email submit while keeping Magic Link available", async () => {
+  it("makes Magic Link success copy primary after email submit", async () => {
     render(<AuthForm mode="sign-in" />);
 
     await submitEmail();
 
-    expect(screen.getByLabelText(/6-digit code/i)).toBeTruthy();
-    expect(screen.getByText(/secure link expires in 60 minutes/i)).toBeTruthy();
+    expect(
+      screen.getByText("Secure link sent. Open it from your inbox to sign in."),
+    ).toBeTruthy();
+    expect(
+      screen.getByText(
+        "This link expires in 60 minutes and can only be used once.",
+      ),
+    ).toBeTruthy();
     expect(mocks.signInWithOtp).toHaveBeenCalledWith(
       expect.objectContaining({
         email: "jane@example.com",
@@ -76,10 +91,28 @@ describe("AuthForm OTP fallback", () => {
     );
   });
 
+  it("keeps OTP as a secondary fallback instead of the main path", async () => {
+    render(<AuthForm mode="sign-in" />);
+
+    await submitEmail();
+
+    expect(screen.queryByLabelText(/6-digit code/i)).toBeNull();
+    expect(screen.queryByRole("button", { name: /verify code/i })).toBeNull();
+    expect(
+      screen.getByRole("button", {
+        name: "Link not working? Enter the 6-digit code from the email.",
+      }),
+    ).toBeTruthy();
+
+    await openOtpFallback();
+    expect(screen.getByLabelText(/6-digit code/i)).toBeTruthy();
+  });
+
   it("verifies the 6-digit code with Supabase type email", async () => {
     render(<AuthForm mode="sign-in" />);
 
     await submitEmail();
+    await openOtpFallback();
     fireEvent.change(screen.getByLabelText(/6-digit code/i), {
       target: { value: "123456" },
     });
@@ -106,6 +139,7 @@ describe("AuthForm OTP fallback", () => {
     render(<AuthForm mode="sign-in" />);
 
     await submitEmail();
+    await openOtpFallback();
     fireEvent.change(screen.getByLabelText(/6-digit code/i), {
       target: { value: "123456" },
     });

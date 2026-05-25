@@ -148,9 +148,10 @@ describe("Auth copy", () => {
     expect(authShell).not.toMatch(/Revenue Recovery OS/);
   });
 
-  it("magic-link success uses 'Check your inbox' and the 60-minute expiry", () => {
-    expect(authForm).toMatch(/Check your inbox/);
-    expect(authForm).toMatch(/expires in 60 minutes/);
+  it("magic-link success keeps secure link as the primary path", () => {
+    expect(authForm).toMatch(/Secure link sent\. Open it from your inbox to sign in\./);
+    expect(authForm).toMatch(/This link expires in 60 minutes and can only be used once\./);
+    expect(authForm).toMatch(/Link not working\? Enter the 6-digit code from the email\./);
   });
 });
 
