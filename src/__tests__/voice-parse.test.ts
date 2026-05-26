@@ -1,5 +1,10 @@
-import { describe, expect, it } from "vitest";
+/**
+ * @vitest-environment happy-dom
+ */
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { act, renderHook } from "@testing-library/react";
 import { parseSpeechLocal } from "@/lib/voice/parse-local";
+import { useSpeechRecognition } from "@/hooks/useSpeechRecognition";
 
 describe("parseSpeechLocal — full sentences", () => {
   it('parses "Tom roofing eighty five hundred eight days silent Miami Florida"', () => {
@@ -130,5 +135,158 @@ describe("parseSpeechLocal — dollar formats", () => {
     expect(
       parseSpeechLocal("tom roofing 8500 dollars 8 days").estimate_amount,
     ).toBe(8500);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// useSpeechRecognition — contractor-controlled start/stop (no auto-stop)
+// ---------------------------------------------------------------------------
+
+type MockRecognition = {
+  start: ReturnType<typeof vi.fn>;
+  stop: ReturnType<typeof vi.fn>;
+  abort: ReturnType<typeof vi.fn>;
+  continuous: boolean;
+  interimResults: boolean;
+  lang: string;
+  onresult: ((event: unknown) => void) | null;
+  onend: (() => void) | null;
+  onerror: ((event: unknown) => void) | null;
+};
+
+function installMockSpeech(): MockRecognition[] {
+  const instances: MockRecognition[] = [];
+  class Recognition implements MockRecognition {
+    start = vi.fn();
+    stop = vi.fn();
+    abort = vi.fn();
+    continuous = false;
+    interimResults = false;
+    lang = "";
+    onresult: ((event: unknown) => void) | null = null;
+    onend: (() => void) | null = null;
+    onerror: ((event: unknown) => void) | null = null;
+    constructor() {
+      instances.push(this);
+    }
+  }
+  Object.defineProperty(window, "SpeechRecognition", {
+    configurable: true,
+    value: Recognition,
+  });
+  Object.defineProperty(window, "webkitSpeechRecognition", {
+    configurable: true,
+    value: undefined,
+  });
+  Object.defineProperty(window, "isSecureContext", {
+    configurable: true,
+    value: true,
+  });
+  return instances;
+}
+
+/** Build a Web-Speech-style result list with the `isFinal` flag attached. */
+function resultEvent(transcript: string, isFinal: boolean) {
+  const result = Object.assign([{ transcript }], { isFinal });
+  return { resultIndex: 0, results: [result] };
+}
+
+describe("useSpeechRecognition — manual stop control", () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it("does NOT auto-stop on silence — onend restarts the same session", () => {
+    vi.spyOn(console, "info").mockImplementation(() => undefined);
+    const instances = installMockSpeech();
+    const { result } = renderHook(() => useSpeechRecognition());
+
+    act(() => result.current.start());
+    expect(instances).toHaveLength(1);
+    const rec = instances[0];
+    expect(rec.start).toHaveBeenCalledTimes(1);
+    expect(result.current.isListening).toBe(true);
+
+    // The engine ends the session after a silence pause.
+    act(() => rec.onend?.());
+
+    // The mic must keep listening: same instance restarted, no new instance.
+    expect(instances).toHaveLength(1);
+    expect(rec.start).toHaveBeenCalledTimes(2);
+    expect(result.current.isListening).toBe(true);
+
+    // Another silence pause — still restarts.
+    act(() => rec.onend?.());
+    expect(rec.start).toHaveBeenCalledTimes(3);
+    expect(result.current.isListening).toBe(true);
+  });
+
+  it("stops only when the contractor presses stop (no restart after stop)", () => {
+    vi.spyOn(console, "info").mockImplementation(() => undefined);
+    const instances = installMockSpeech();
+    const { result } = renderHook(() => useSpeechRecognition());
+
+    act(() => result.current.start());
+    const rec = instances[0];
+    expect(rec.start).toHaveBeenCalledTimes(1);
+
+    act(() => result.current.stop());
+    expect(rec.stop).toHaveBeenCalledTimes(1);
+
+    // The engine fires onend after stop(); the hook must NOT restart.
+    act(() => rec.onend?.());
+    expect(rec.start).toHaveBeenCalledTimes(1);
+    expect(result.current.isListening).toBe(false);
+  });
+
+  it("treats no-speech and aborted errors as non-fatal (keeps listening)", () => {
+    vi.spyOn(console, "info").mockImplementation(() => undefined);
+    const instances = installMockSpeech();
+    const { result } = renderHook(() => useSpeechRecognition());
+
+    act(() => result.current.start());
+    const rec = instances[0];
+
+    act(() => rec.onerror?.({ error: "no-speech" }));
+    expect(result.current.error).toBeNull();
+    expect(result.current.isListening).toBe(true);
+
+    // onend after a no-speech error still restarts the mic.
+    act(() => rec.onend?.());
+    expect(rec.start).toHaveBeenCalledTimes(2);
+    expect(result.current.isListening).toBe(true);
+  });
+
+  it("surfaces permission-denied as a fatal error and does not restart", () => {
+    vi.spyOn(console, "info").mockImplementation(() => undefined);
+    const instances = installMockSpeech();
+    const { result } = renderHook(() => useSpeechRecognition());
+
+    act(() => result.current.start());
+    const rec = instances[0];
+
+    act(() => rec.onerror?.({ error: "not-allowed" }));
+    expect(result.current.error).toBe("permission-denied");
+    expect(result.current.isListening).toBe(false);
+
+    act(() => rec.onend?.());
+    expect(rec.start).toHaveBeenCalledTimes(1);
+  });
+
+  it("accumulates finalized transcript across restarts", () => {
+    vi.spyOn(console, "info").mockImplementation(() => undefined);
+    const instances = installMockSpeech();
+    const { result } = renderHook(() => useSpeechRecognition());
+
+    act(() => result.current.start());
+    const rec = instances[0];
+
+    act(() => rec.onresult?.(resultEvent("tom roofing", true)));
+    expect(result.current.transcript).toBe("tom roofing");
+
+    // Silence pause ends and restarts the session (results list resets).
+    act(() => rec.onend?.());
+    act(() => rec.onresult?.(resultEvent("eight thousand", true)));
+    expect(result.current.transcript).toBe("tom roofing eight thousand");
   });
 });

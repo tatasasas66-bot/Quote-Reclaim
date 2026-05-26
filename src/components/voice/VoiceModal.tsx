@@ -219,10 +219,21 @@ function ListeningBody({
 }) {
   return (
     <div className="mt-4 space-y-4">
-      <div className="flex items-center justify-center">
+      <div className="flex flex-col items-center gap-2">
         <div className="flex h-20 w-20 items-center justify-center rounded-full bg-brand/15">
           <Mic className="h-10 w-10 animate-pulse text-brand" aria-hidden="true" />
         </div>
+        <p
+          role="status"
+          aria-live="polite"
+          className="flex items-center gap-2 text-sm font-semibold text-brand"
+        >
+          <span
+            aria-hidden="true"
+            className="h-2 w-2 animate-pulse rounded-full bg-brand"
+          />
+          Listening…
+        </p>
       </div>
       {transcript ? (
         <p className="rounded-lg border border-line-subtle bg-surface-2 p-3 text-sm text-ink">
@@ -234,19 +245,28 @@ function ListeningBody({
           many days they&apos;ve been silent.
         </p>
       )}
-      <div className="flex flex-col gap-2 sm:flex-row sm:gap-3">
-        <Button type="button" fullWidth onClick={onStop} loading={parsing}>
-          {parsing ? "Parsing…" : "Stop & Review"}
-        </Button>
+      <p className="text-center text-xs text-ink-muted">
+        Take your time. Press Stop &amp; Review when done.
+      </p>
+      <div className="space-y-3">
         <Button
           type="button"
           fullWidth
-          variant="ghost"
+          size="lg"
+          className="min-h-14"
+          onClick={onStop}
+          loading={parsing}
+        >
+          {parsing ? "Parsing…" : "Stop & Review"}
+        </Button>
+        <button
+          type="button"
           onClick={onCancel}
           disabled={parsing}
+          className="block w-full text-center text-xs text-ink-muted underline hover:text-ink-strong focus:outline-none disabled:opacity-50"
         >
           Cancel
-        </Button>
+        </button>
       </div>
     </div>
   );

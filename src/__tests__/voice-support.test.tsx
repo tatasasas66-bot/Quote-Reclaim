@@ -146,7 +146,9 @@ describe("VoiceModal support states", () => {
     render(<VoiceModal onClose={vi.fn()} onApprove={vi.fn()} />);
 
     await waitFor(() => {
-      expect(screen.getByText(/Listening/)).toBeTruthy();
+      expect(
+        screen.getByRole("heading", { name: /Listening/ }),
+      ).toBeTruthy();
     });
     expect(instances).toHaveLength(1);
     expect(instances[0].start).toHaveBeenCalledTimes(1);
@@ -160,7 +162,9 @@ describe("VoiceModal support states", () => {
     render(<VoiceModal onClose={vi.fn()} onApprove={vi.fn()} />);
 
     await waitFor(() => {
-      expect(screen.getByText(/Listening/)).toBeTruthy();
+      expect(
+        screen.getByRole("heading", { name: /Listening/ }),
+      ).toBeTruthy();
     });
     expect(instances).toHaveLength(1);
     expect(instances[0].start).toHaveBeenCalledTimes(1);
