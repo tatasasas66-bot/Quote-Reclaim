@@ -19,6 +19,8 @@ const TRADE_OPTIONS = [
   "Electrical",
   "Remodeling",
   "General Contracting",
+  "Painting",
+  "Landscaping",
   "Other",
 ] as const;
 export type Trade = (typeof TRADE_OPTIONS)[number];

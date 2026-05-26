@@ -112,14 +112,17 @@ export async function getProfileStats(
 }
 
 export type WonQuoteSummary = {
+  id: string;
+  client_name: string;
+  trade: string;
   estimate_amount: number;
   won_at: string;
   created_at: string;
 };
 
 /**
- * Lifetime won quotes with the fields needed to compute avg days to win.
- * Used by the dashboard MetricCards.
+ * Lifetime won quotes with the fields needed to compute avg days to win and
+ * to render the "Jobs Won Back" gallery. Used by the dashboard.
  */
 export async function listWonQuotes(
   supabase: SupabaseClient,
@@ -127,12 +130,16 @@ export async function listWonQuotes(
 ): Promise<WonQuoteSummary[]> {
   const { data, error } = await supabase
     .from("quotes")
-    .select("estimate_amount, won_at, created_at")
+    .select("id, client_name, trade, estimate_amount, won_at, created_at")
     .eq("user_id", userId)
     .eq("outcome", "won")
-    .not("won_at", "is", null);
+    .not("won_at", "is", null)
+    .order("won_at", { ascending: false });
   if (error) throw new Error(`listWonQuotes failed: ${error.message}`);
   return (data ?? []).map((q) => ({
+    id: String(q.id),
+    client_name: String(q.client_name ?? ""),
+    trade: String(q.trade ?? ""),
     estimate_amount: Number(q.estimate_amount ?? 0),
     won_at: String(q.won_at),
     created_at: String(q.created_at),

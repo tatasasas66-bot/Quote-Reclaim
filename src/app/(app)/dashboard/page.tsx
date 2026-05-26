@@ -6,6 +6,7 @@ import { QuoteListItem } from "@/components/quotes";
 import { HeroMetric } from "@/components/dashboard/HeroMetric";
 import { MetricCards } from "@/components/dashboard/MetricCards";
 import { RecoveryWindowAlert } from "@/components/dashboard/RecoveryWindowAlert";
+import { WonJobsGallery } from "@/components/dashboard/WonJobsGallery";
 import { IntelligencePanel } from "@/components/intelligence/IntelligencePanel";
 import { requireUser } from "@/lib/auth/require-user";
 import {
@@ -50,6 +51,7 @@ export default async function DashboardPage() {
     0,
   );
   const jobsWonThisMonth = monthWon.length;
+  const wonTotal = wonQuotes.reduce((sum, q) => sum + q.estimate_amount, 0);
 
   const avgDaysToWin = computeAvgDaysToWin(wonQuotes);
   const atRiskCount = pending.filter((q) => effectiveDaysSilent(q) >= 7).length;
@@ -161,6 +163,8 @@ export default async function DashboardPage() {
           />
         </aside>
       </div>
+
+      <WonJobsGallery wonQuotes={wonQuotes} totalWon={wonTotal} />
 
       {/* Mobile-only sticky CTA so the primary action stays in reach. */}
       <div className="fixed inset-x-3 bottom-3 z-30 sm:hidden">

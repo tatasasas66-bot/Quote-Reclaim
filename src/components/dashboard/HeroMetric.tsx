@@ -1,6 +1,6 @@
 import { CheckCircle2, CircleDollarSign, TrendingDown } from "lucide-react";
 import type { ReactNode } from "react";
-import { formatCurrency } from "@/lib/utils/currency";
+import { CountUp } from "./CountUp";
 
 const MONTHLY_PRICE_USD = 79;
 
@@ -35,7 +35,7 @@ export function HeroMetric({
             </span>
           </div>
           <p className="mt-4 text-6xl font-black tracking-tight text-ink-strong tabular-nums sm:text-7xl lg:text-8xl">
-            {formatCurrency(stillBleeding)}
+            <CountUp value={stillBleeding} />
           </p>
           <p className="mt-3 max-w-xl text-base leading-7 text-ink">
             {pendingCount === 0
@@ -48,7 +48,7 @@ export function HeroMetric({
           <LedgerSideStat
             icon={<CheckCircle2 className="h-5 w-5" aria-hidden="true" />}
             label="RECOVERED THIS MONTH"
-            value={`+${formatCurrency(recoveredThisMonth)}`}
+            value={<CountUp value={recoveredThisMonth} prefix="+" />}
             subline={
               jobsWonThisMonth === 0
                 ? "No wins recorded yet this month."
@@ -60,7 +60,11 @@ export function HeroMetric({
             icon={<CircleDollarSign className="h-5 w-5" aria-hidden="true" />}
             label="MONTHS PAID FOR"
             value={`${monthsPaidFor}x`}
-            subline={`${formatCurrency(allTimeRecovered)} recovered all time.`}
+            subline={
+              <>
+                <CountUp value={allTimeRecovered} /> recovered all time.
+              </>
+            }
             tone="money"
           />
         </div>
@@ -78,8 +82,8 @@ function LedgerSideStat({
 }: {
   icon: ReactNode;
   label: string;
-  value: string;
-  subline: string;
+  value: ReactNode;
+  subline: ReactNode;
   tone: "success" | "money";
 }) {
   const toneClass =

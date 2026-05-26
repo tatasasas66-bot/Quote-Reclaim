@@ -28,6 +28,13 @@ const ALIASES: Record<string, string> = {
   contractor: "general contracting",
   "general contractor": "general contracting",
   gc: "general contracting",
+  painter: "painting",
+  painters: "painting",
+  paint: "painting",
+  landscaper: "landscaping",
+  landscapers: "landscaping",
+  landscape: "landscaping",
+  lawn: "landscaping",
 };
 
 const CANONICAL_PROJECTS = [
@@ -37,6 +44,8 @@ const CANONICAL_PROJECTS = [
   "electrical",
   "remodeling",
   "general contracting",
+  "painting",
+  "landscaping",
 ] as const;
 
 const FRAMEWORKS: Record<1 | 2 | 3, RecoveryMessage["framework"]> = {
@@ -54,6 +63,8 @@ export function projectLabel(trade: string): string {
   const raw = trade.trim();
   const lower = raw.toLowerCase();
   if (!lower) return "project";
+  // "Other" has no industry noun — fall back to neutral "project" phrasing.
+  if (lower === "other") return "project";
 
   for (const canonical of CANONICAL_PROJECTS) {
     if (lower === canonical.toLowerCase()) return canonical;
