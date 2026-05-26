@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ShieldAlert } from "lucide-react";
+import { AlertTriangle } from "lucide-react";
 import { formatCurrency } from "@/lib/utils/currency";
 import { titleCaseName } from "@/lib/utils/title-case";
 
@@ -39,12 +39,13 @@ export function RecoveryWindowAlert({
 
   return (
     <aside
+      id="recovery-window-alert"
       role="alert"
-      className="rounded-lg border border-warning/45 bg-warning/10 shadow-[0_20px_60px_rgba(226,166,59,0.12)]"
+      className="scroll-mt-8 rounded-lg border border-warning/45 bg-warning/10 shadow-[0_20px_60px_rgba(226,166,59,0.12)]"
     >
       <div className="grid gap-4 p-5 sm:grid-cols-[auto_1fr_auto] sm:items-center sm:p-6">
         <div className="flex h-12 w-12 items-center justify-center rounded-lg border border-warning/40 bg-warning/15 text-warning">
-          <ShieldAlert className="h-6 w-6" aria-hidden="true" />
+          <AlertTriangle className="h-6 w-6" aria-hidden="true" />
         </div>
 
         <div className="min-w-0">

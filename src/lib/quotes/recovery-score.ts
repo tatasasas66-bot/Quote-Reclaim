@@ -49,3 +49,31 @@ export function getRecoveryScore(quote: QuoteRow): RecoveryScore {
   const score = Math.max(0, Math.round(54 - (days - 14) * 2));
   return { score, band: "critical", label: "CRITICAL", tone: "danger" };
 }
+
+export type PriorityLabel = "LOW" | "MEDIUM" | "HIGH" | "CRITICAL";
+
+/**
+ * Maps a 0-100 recovery score to a labeled urgency band for the queue row.
+ * Higher score = healthier = lower urgency. Bands mirror getRecoveryScore:
+ * fresh→LOW, cooling→MEDIUM, at_risk→HIGH, critical→CRITICAL.
+ */
+export function recoveryPriority(score: number): {
+  label: PriorityLabel;
+  labelClass: string;
+  barClass: string;
+} {
+  if (score >= 86) {
+    return { label: "LOW", labelClass: "text-ink-muted", barClass: "bg-money" };
+  }
+  if (score >= 72) {
+    return {
+      label: "MEDIUM",
+      labelClass: "text-ink-strong",
+      barClass: "bg-warning",
+    };
+  }
+  if (score >= 55) {
+    return { label: "HIGH", labelClass: "text-warning", barClass: "bg-warning" };
+  }
+  return { label: "CRITICAL", labelClass: "text-danger", barClass: "bg-danger" };
+}

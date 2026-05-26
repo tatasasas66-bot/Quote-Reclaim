@@ -123,14 +123,24 @@ describe("Recovery Window Alert copy (Phase 4.3)", () => {
 });
 
 // ---------------------------------------------------------------------------
-// Recovery Ledger (Phase 1.8 contrast rule)
+// Recovery Ledger contrast + v0.4 color discipline
 // ---------------------------------------------------------------------------
 
-describe("Recovery Ledger eyebrow contrast (Phase 1.8)", () => {
-  it("eyebrows use softer /80 opacity tokens for contrast", () => {
+describe("Recovery Ledger eyebrow contrast + color discipline (v0.4)", () => {
+  it("STILL BLEEDING keeps the softer warning/80 token", () => {
     expect(heroMetric).toMatch(/text-warning\/80/);
+  });
+
+  it("RECOVERED THIS MONTH keeps success/80 for the won state", () => {
     expect(heroMetric).toMatch(/text-success\/80/);
-    expect(heroMetric).toMatch(/text-money\/80/);
+  });
+
+  it("MONTHS PAID FOR is demoted off gold (v0.4 — gold lives only on STILL BLEEDING)", () => {
+    expect(heroMetric).not.toMatch(/text-money\/80/);
+  });
+
+  it("removes the decorative LIVE LEDGER badge", () => {
+    expect(heroMetric).not.toMatch(/live ledger/i);
   });
 });
 

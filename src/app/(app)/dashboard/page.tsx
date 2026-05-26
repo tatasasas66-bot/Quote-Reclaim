@@ -7,6 +7,7 @@ import { HeroMetric } from "@/components/dashboard/HeroMetric";
 import { MetricCards } from "@/components/dashboard/MetricCards";
 import { RecoveryWindowAlert } from "@/components/dashboard/RecoveryWindowAlert";
 import { WonJobsGallery } from "@/components/dashboard/WonJobsGallery";
+import { ActivityFeed } from "@/components/dashboard/ActivityFeed";
 import { IntelligencePanel } from "@/components/intelligence/IntelligencePanel";
 import { requireUser } from "@/lib/auth/require-user";
 import {
@@ -45,12 +46,18 @@ export default async function DashboardPage() {
   });
 
   const monthStart = monthStartUtc();
+  const prevMonthStart = prevMonthStartUtc();
   const monthWon = wonQuotes.filter((q) => Date.parse(q.won_at) >= monthStart);
   const recoveredThisMonth = monthWon.reduce(
     (sum, q) => sum + q.estimate_amount,
     0,
   );
-  const jobsWonThisMonth = monthWon.length;
+  const lastMonthRecovered = wonQuotes
+    .filter((q) => {
+      const t = Date.parse(q.won_at);
+      return t >= prevMonthStart && t < monthStart;
+    })
+    .reduce((sum, q) => sum + q.estimate_amount, 0);
   const wonTotal = wonQuotes.reduce((sum, q) => sum + q.estimate_amount, 0);
 
   const avgDaysToWin = computeAvgDaysToWin(wonQuotes);
@@ -89,7 +96,7 @@ export default async function DashboardPage() {
         stillBleeding={stillBleeding}
         pendingCount={pending.length}
         recoveredThisMonth={recoveredThisMonth}
-        jobsWonThisMonth={jobsWonThisMonth}
+        lastMonthRecovered={lastMonthRecovered}
         allTimeRecovered={allTimeRecovered}
       />
 
@@ -117,13 +124,13 @@ export default async function DashboardPage() {
         <section className="min-w-0 space-y-4">
           <div className="flex flex-wrap items-end justify-between gap-3">
             <div className="min-w-0">
-              <p className="text-xs font-black uppercase tracking-widest text-money">
-                MONEY SITTING QUIET
+              <p className="text-xs font-black uppercase tracking-widest text-ink-muted">
+                IN THE QUEUE
               </p>
               <p className="mt-1 text-sm text-ink-muted">
                 {pending.length === 0
                   ? "All caught up."
-                  : `${stillBleedingValue} across ${pending.length} money file${pending.length === 1 ? "" : "s"}`}
+                  : `${stillBleedingValue} across ${pending.length} quote${pending.length === 1 ? "" : "s"}`}
               </p>
             </div>
             <Link href="/quotes/new">
@@ -156,11 +163,12 @@ export default async function DashboardPage() {
           )}
         </section>
 
-        <aside className="min-w-0 lg:sticky lg:top-8 lg:self-start">
+        <aside className="flex min-w-0 flex-col gap-6 lg:sticky lg:top-8 lg:self-start">
           <IntelligencePanel
             totalSequences={pending.length + jobsWonLifetime}
             unlockAt={5}
           />
+          <ActivityFeed userId={user.id} />
         </aside>
       </div>
 
@@ -183,6 +191,14 @@ function monthStartUtc(): number {
   const d = new Date();
   d.setUTCDate(1);
   d.setUTCHours(0, 0, 0, 0);
+  return d.getTime();
+}
+
+function prevMonthStartUtc(): number {
+  const d = new Date();
+  d.setUTCDate(1);
+  d.setUTCHours(0, 0, 0, 0);
+  d.setUTCMonth(d.getUTCMonth() - 1);
   return d.getTime();
 }
 

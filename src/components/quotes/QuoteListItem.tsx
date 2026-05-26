@@ -2,9 +2,8 @@ import Link from "next/link";
 import { ArrowRight, ClipboardList } from "lucide-react";
 import { RiskBadge } from "@/components/dashboard/RiskBadge";
 import { nextBestAction } from "@/lib/quotes/next-best-action";
-import { getRecoveryScore } from "@/lib/quotes/recovery-score";
+import { getRecoveryScore, recoveryPriority } from "@/lib/quotes/recovery-score";
 import type { QuoteRow } from "@/lib/quotes/repo";
-import { effectiveDaysSilent } from "@/lib/recovery/effective-days";
 import { riskLevel } from "@/lib/recovery/risk";
 import { formatCurrency } from "@/lib/utils/currency";
 import { titleCaseName } from "@/lib/utils/title-case";
@@ -24,8 +23,8 @@ export function QuoteListItem({
   hasReply?: boolean;
 }) {
   const level = riskLevel(quote);
-  const days = effectiveDaysSilent(quote);
   const score = getRecoveryScore(quote);
+  const priority = recoveryPriority(score.score);
   const nba = nextBestAction(quote, hasReply);
   const displayName = titleCaseName(quote.client_name);
   const displayTrade = titleCaseName(quote.trade);
@@ -43,9 +42,6 @@ export function QuoteListItem({
           <div className="min-w-0 flex-1 space-y-3">
             <div className="flex flex-wrap items-center gap-2">
               <RiskBadge level={level} />
-              <span className="rounded-md border border-line-subtle bg-canvas/40 px-2 py-0.5 text-xs font-bold uppercase tracking-widest text-ink-muted">
-                {days} day{days === 1 ? "" : "s"} quiet
-              </span>
             </div>
 
             <div className="min-w-0">
@@ -60,15 +56,31 @@ export function QuoteListItem({
             </div>
 
             <div className="grid gap-2 sm:grid-cols-2">
-              <FileStat label="Recovery Priority" value={String(score.score)} />
+              <div className="grid gap-2 rounded-lg border border-line-subtle bg-canvas/35 px-3 py-2">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-[10px] font-bold uppercase tracking-widest text-ink-muted">
+                    Recovery Priority
+                  </span>
+                  <span className={`text-xs font-bold ${priority.labelClass}`}>
+                    {priority.label}
+                  </span>
+                </div>
+                <div className="h-1.5 w-full overflow-hidden rounded-full bg-surface-2">
+                  <div
+                    className={`h-full ${priority.barClass} transition-[width] duration-500`}
+                    style={{ width: `${100 - score.score}%` }}
+                    aria-label={`Priority score ${score.score} of 100`}
+                  />
+                </div>
+              </div>
               {nba ? (
-                <FileStat
+                <QuoteStat
                   label="Next Best Action"
                   value={nba.label}
                   valueClassName={severityClass[nba.severity]}
                 />
               ) : (
-                <FileStat label="Next Best Action" value="Review plan" />
+                <QuoteStat label="Next Best Action" value="Review plan" />
               )}
             </div>
           </div>
@@ -94,7 +106,7 @@ export function QuoteListItem({
   );
 }
 
-function FileStat({
+function QuoteStat({
   label,
   value,
   valueClassName = "text-ink-strong",

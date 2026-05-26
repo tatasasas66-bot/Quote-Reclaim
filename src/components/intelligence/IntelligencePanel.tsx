@@ -37,6 +37,21 @@ function LockedBody({
       <p className="mt-1 text-sm text-ink-muted">
         You have {totalSequences}.
       </p>
+      <div className="mt-3 grid gap-2">
+        <div className="h-1.5 w-full overflow-hidden rounded-full bg-surface-2">
+          <div
+            className="h-full bg-money transition-[width] duration-700"
+            style={{
+              width: `${Math.min(100, (totalSequences / unlockAt) * 100)}%`,
+            }}
+            aria-label={`${totalSequences} of ${unlockAt} sequences captured`}
+          />
+        </div>
+        <p className="text-xs text-ink-muted">
+          {Math.max(0, unlockAt - totalSequences)}{" "}
+          {unlockAt - totalSequences === 1 ? "sequence" : "sequences"} to go
+        </p>
+      </div>
       <p className="mt-3 text-xs text-ink-muted">
         Once unlocked, Quote Reclaim shows your strongest framework, your best
         reply windows, and how your recovery rate compares to your trade.

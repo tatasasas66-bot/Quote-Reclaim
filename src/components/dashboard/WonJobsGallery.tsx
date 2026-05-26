@@ -23,11 +23,17 @@ function relativeWonDate(iso: string): string {
 
 export function WonJobsGallery({ wonQuotes, totalWon }: WonJobsGalleryProps) {
   const wonCount = wonQuotes.length;
+  const chipClass =
+    wonCount > 0
+      ? "border-money/30 bg-money/10 text-money"
+      : "border-line-subtle bg-surface-2 text-ink-muted";
 
   return (
     <section className="space-y-4">
       <div className="flex flex-wrap items-center gap-3">
-        <span className="inline-flex items-center gap-2 rounded-md border border-money/30 bg-money/10 px-2.5 py-1 text-xs font-black uppercase tracking-widest text-money">
+        <span
+          className={`inline-flex items-center gap-2 rounded-md border px-2.5 py-1 text-xs font-black uppercase tracking-widest ${chipClass}`}
+        >
           <Trophy className="h-3.5 w-3.5" aria-hidden="true" />
           Jobs Won Back
         </span>

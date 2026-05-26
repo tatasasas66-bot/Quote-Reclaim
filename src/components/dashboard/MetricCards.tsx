@@ -48,7 +48,7 @@ export function MetricCards({
   return (
     <section className="grid w-full min-w-0 grid-cols-2 gap-3 sm:grid-cols-4">
       <MetricCard
-        label="COLDEST FILE"
+        label="COLDEST QUOTE"
         value={coldestDays == null ? "--" : `${coldestDays}d`}
         hint={coldestTrade ?? "Longest quiet estimate"}
         tone="warning"
@@ -63,7 +63,7 @@ export function MetricCards({
         label="JOBS WON"
         value={String(jobsWonLifetime)}
         hint="Lifetime recoveries"
-        tone="success"
+        tone={jobsWonLifetime > 0 ? "success" : "default"}
       />
       <MetricCard
         label="AVG DAYS TO WIN"
