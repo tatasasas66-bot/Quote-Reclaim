@@ -91,34 +91,35 @@ describe("Dashboard header (Phase 4.2)", () => {
 // Recovery Window Alert (Phase 4.3)
 // ---------------------------------------------------------------------------
 
-describe("Recovery Window Alert copy (Phase 4.3)", () => {
-  it("keeps the RECOVERY WINDOW ALERT eyebrow", () => {
-    expect(recoveryAlert).toMatch(/RECOVERY WINDOW ALERT/);
+describe("Recovery Window Alert copy (Value Proof v0.5)", () => {
+  it("uses the directive 'DO THIS TODAY' eyebrow", () => {
+    expect(recoveryAlert).toMatch(/DO THIS TODAY/);
+    expect(recoveryAlert).not.toMatch(/RECOVERY WINDOW ALERT/);
   });
 
-  it("headline is 'Don't let this one die.'", () => {
-    // JSX escapes the apostrophe as &apos; — match either form.
-    expect(recoveryAlert).toMatch(/Don(?:'|&apos;)t let this one die\./);
+  it("headline coaches the contractor to open the recovery plan", () => {
+    expect(recoveryAlert).toMatch(/Open \{displayName\}/);
+    expect(recoveryAlert).toMatch(/recovery plan\./);
+    expect(recoveryAlert).not.toMatch(/Don(?:'|&apos;)t let this one die/);
   });
 
-  it("body uses 'days with no reply' (matches Phase 4 template)", () => {
-    expect(recoveryAlert).toMatch(/days with no reply/);
+  it("subline reads amount · days quiet · urgency", () => {
+    expect(recoveryAlert).toMatch(/days quiet/);
+    expect(recoveryAlert).toMatch(/\{urgencyLabel\}/);
   });
 
-  it("subline uses 'queued. Open the plan or send it early today.'", () => {
-    expect(recoveryAlert).toMatch(
-      /next follow-up is queued\. Open the plan or send it early today\./,
-    );
+  it("derives the urgency label from recoveryPriority", () => {
+    expect(recoveryAlert).toMatch(/recoveryPriority\(score\)/);
   });
 
-  it("CTA is 'Open Recovery Plan →'", () => {
-    expect(recoveryAlert).toMatch(/Open Recovery Plan/);
+  it("CTA is 'Send the next follow-up →'", () => {
+    expect(recoveryAlert).toMatch(/Send the next follow-up/);
+    expect(recoveryAlert).not.toMatch(/Open Recovery Plan/);
   });
 
-  it("title-cases name, trade, and city defensively at render", () => {
+  it("title-cases name and trade defensively at render", () => {
     expect(recoveryAlert).toMatch(/titleCaseName\(clientName\)/);
     expect(recoveryAlert).toMatch(/titleCaseName\(trade\)/);
-    expect(recoveryAlert).toMatch(/titleCaseName\(city\)/);
   });
 });
 

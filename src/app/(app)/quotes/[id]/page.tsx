@@ -29,8 +29,15 @@ export const dynamic = "force-dynamic";
 
 type Params = { id: string };
 
-const MONTHLY_PRICE_USD = 79;
 const CADENCE_DAYS: Record<1 | 2 | 3, number> = { 1: 1, 2: 3, 3: 7 };
+
+// Research rationale shown under each step so the contractor trusts the
+// message instead of seeing "AI text". Keyed by follow-up number.
+const WHY_THIS_WORKS: Record<1 | 2 | 3, string> = {
+  1: "Surfaces real objections — scope, materials, price — without begging.",
+  2: "Schedule scarcity flips the dynamic. You're the prize, not the supplicant.",
+  3: "A 'No' answer feels safer than ignoring. That's how silent quotes break.",
+};
 
 function computeStatus(
   quote: QuoteRow,
@@ -110,11 +117,8 @@ export default async function QuoteDetailPage({
         quote={quote}
         status={status}
         hasReplyForQuote={hasReplyForQuote}
+        allTimeRecovered={allTimeRecovered}
       />
-
-      {status === "won" ? (
-        <WinCelebration quote={quote} allTimeRecovered={allTimeRecovered} />
-      ) : null}
 
       <RecoveryPlanSection
         reminders={reminders}
@@ -131,10 +135,12 @@ function QuoteSummary({
   quote,
   status,
   hasReplyForQuote,
+  allTimeRecovered,
 }: {
   quote: QuoteRow;
   status: RecoveryStatus;
   hasReplyForQuote: boolean;
+  allTimeRecovered: number;
 }) {
   const badge = (() => {
     switch (status) {
@@ -220,7 +226,12 @@ function QuoteSummary({
 
       {status === "running" || status === "paused" ? (
         <div className="flex flex-wrap items-center gap-3 border-t border-line-subtle p-5 sm:p-6">
-          <QuoteActions quoteId={quote.id} status={status} />
+          <QuoteActions
+            quoteId={quote.id}
+            status={status}
+            amount={quote.estimate_amount}
+            allTimeRecovered={allTimeRecovered}
+          />
           <Link href={`/quotes/${quote.id}/edit`}>
             <Button variant="ghost" size="sm">
               Edit quote
@@ -240,56 +251,6 @@ function IntelligenceField({ label, value }: { label: string; value: string }) {
       </dt>
       <dd className="mt-1 truncate text-sm font-bold text-ink-strong">{value}</dd>
     </div>
-  );
-}
-
-function WinCelebration({
-  quote,
-  allTimeRecovered,
-}: {
-  quote: QuoteRow;
-  allTimeRecovered: number;
-}) {
-  const amount = quote.estimate_amount;
-  const months = Math.floor(amount / MONTHLY_PRICE_USD);
-  // ROI multiplier: months of subscription paid for by recovered revenue.
-  // monthsSubscribed is not tracked yet, so default to 1.
-  const monthsSubscribed = 1;
-  const roiMultiplier = Math.round(
-    allTimeRecovered /
-      Math.max(MONTHLY_PRICE_USD, monthsSubscribed * MONTHLY_PRICE_USD),
-  );
-  return (
-    <section
-      role="status"
-      aria-live="polite"
-      className="rounded-lg border border-success/40 bg-success/10 p-6"
-    >
-      <p className="text-xs font-black uppercase tracking-widest text-success">
-        Quote recovered
-      </p>
-      <p className="mt-2 text-4xl font-black text-ink-strong">
-        +{formatCurrency(amount)} recovered
-      </p>
-      {months >= 1 ? (
-        <p className="mt-2 text-sm text-ink">
-          This one job pays for Quote Reclaim for{" "}
-          <span className="font-semibold text-ink-strong">
-            {months} {months === 1 ? "month" : "months"}
-          </span>
-          .
-        </p>
-      ) : null}
-      {allTimeRecovered > 0 ? (
-        <p className="mt-4 text-xs text-ink-muted">
-          Quote Reclaim has now saved you{" "}
-          <span className="font-semibold text-money">
-            {formatCurrency(allTimeRecovered)}
-          </span>{" "}
-          lifetime · {roiMultiplier}x return
-        </p>
-      ) : null}
-    </section>
   );
 }
 
@@ -406,8 +367,13 @@ function ReminderCard({
         <Badge variant={statusVariant}>{statusLabel}</Badge>
       </div>
 
-      <p className="whitespace-pre-wrap px-4 py-4 text-sm leading-7 text-ink-strong">
+      <p className="whitespace-pre-wrap px-4 pt-4 text-sm leading-7 text-ink-strong">
         {r.message_text}
+      </p>
+
+      <p className="mt-3 px-4 pb-4 text-xs italic text-ink-muted">
+        <span className="font-semibold not-italic">Why this works:</span>{" "}
+        {WHY_THIS_WORKS[r.followup_number as 1 | 2 | 3]}
       </p>
 
       <div className="flex flex-wrap items-center justify-between gap-2 border-t border-line-subtle px-4 py-3">

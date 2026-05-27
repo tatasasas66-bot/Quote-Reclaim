@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { AlertTriangle } from "lucide-react";
 import { formatCurrency } from "@/lib/utils/currency";
+import { recoveryPriority } from "@/lib/quotes/recovery-score";
 import { titleCaseName } from "@/lib/utils/title-case";
 
 type RecoveryWindowAlertProps = {
@@ -8,9 +9,8 @@ type RecoveryWindowAlertProps = {
   amount: number;
   trade: string;
   clientName: string;
-  city: string | null;
-  state: string | null;
   daysSilent: number;
+  score: number;
 };
 
 export function RecoveryWindowAlert({
@@ -18,24 +18,20 @@ export function RecoveryWindowAlert({
   amount,
   trade,
   clientName,
-  city,
-  state,
   daysSilent,
+  score,
 }: RecoveryWindowAlertProps) {
   // Defensive normalization so legacy/lowercase data still reads cleanly.
   const displayName = titleCaseName(clientName);
   const displayTrade = titleCaseName(trade);
-  const displayCity = city ? titleCaseName(city) : "";
-  const displayState = state ? state.toUpperCase() : "";
 
-  const locationFragment =
-    displayCity && displayState
-      ? ` in ${displayCity}, ${displayState}`
-      : displayCity
-        ? ` in ${displayCity}`
-        : displayState
-          ? ` in ${displayState}`
-          : "";
+  const { label: priority } = recoveryPriority(score);
+  const urgencyLabel =
+    priority === "CRITICAL"
+      ? "Critical"
+      : priority === "HIGH"
+        ? "At Risk"
+        : "Cooling";
 
   return (
     <aside
@@ -50,20 +46,16 @@ export function RecoveryWindowAlert({
 
         <div className="min-w-0">
           <p className="text-xs font-black uppercase tracking-widest text-warning">
-            RECOVERY WINDOW ALERT
+            DO THIS TODAY
           </p>
           <p className="mt-1 text-2xl font-black text-ink-strong">
-            Don&apos;t let this one die.
+            Open {displayName}&apos;s {displayTrade.toLowerCase()} recovery plan.
           </p>
           <p className="mt-1 text-sm leading-6 text-ink">
             <span className="font-bold text-ink-strong">
               {formatCurrency(amount)}
             </span>{" "}
-            {displayTrade.toLowerCase()} quote · {displayName}
-            {locationFragment} · {daysSilent} days with no reply.
-          </p>
-          <p className="mt-1 text-sm text-ink-muted">
-            The next follow-up is queued. Open the plan or send it early today.
+            · {daysSilent} days quiet · {urgencyLabel}
           </p>
         </div>
 
@@ -71,7 +63,7 @@ export function RecoveryWindowAlert({
           href={`/quotes/${quoteId}`}
           className="inline-flex min-h-11 items-center justify-center rounded-lg bg-warning px-4 py-2 text-sm font-black text-canvas shadow-[0_0_34px_rgba(226,166,59,0.24)] transition-colors hover:bg-warning/90 focus:outline-none focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2 focus-visible:ring-offset-canvas"
         >
-          Open Recovery Plan
+          Send the next follow-up →
         </Link>
       </div>
     </aside>

@@ -60,10 +60,16 @@ describe("Recovery Plan UI: /quotes/[id]", () => {
     expect(detailPage).toMatch(/Estimate|Quote/);
   });
 
-  it("renders the Win Celebration when outcome is won", () => {
-    expect(detailPage).toContain("WinCelebration");
-    expect(detailPage).toContain("recovered");
-    expect(detailPage).toContain("pays for Quote Reclaim");
+  it("replaces the static Win Celebration with the Win Moment overlay", () => {
+    // v0.5: the win is now an animated overlay triggered from QuoteActions.
+    expect(detailPage).not.toContain("WinCelebration");
+    expect(quoteActions).toContain("WinMomentOverlay");
+    expect(quoteActions).toMatch(/label === "won"[\s\S]*?setShowWinMoment/);
+  });
+
+  it("renders 'Why this works' rationale under every step", () => {
+    expect(detailPage).toContain("Why this works:");
+    expect(detailPage).toContain("WHY_THIS_WORKS");
   });
 
   it("hides Pause/Resume/Mark Won when outcome is won or closed", () => {

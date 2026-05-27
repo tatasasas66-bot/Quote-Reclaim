@@ -3,6 +3,7 @@
 import * as React from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui";
+import { WinMomentOverlay } from "@/components/dashboard/WinMomentOverlay";
 import {
   closeQuoteAction,
   markQuoteWonAction,
@@ -18,12 +19,20 @@ type Pending = "won" | "close" | "pause" | "resume" | null;
 type Props = {
   quoteId: string;
   status: RecoveryStatus;
+  amount: number;
+  allTimeRecovered: number;
 };
 
-export function QuoteActions({ quoteId, status }: Props) {
+export function QuoteActions({
+  quoteId,
+  status,
+  amount,
+  allTimeRecovered,
+}: Props) {
   const router = useRouter();
   const [pending, setPending] = React.useState<Pending>(null);
   const [error, setError] = React.useState<string | null>(null);
+  const [showWinMoment, setShowWinMoment] = React.useState(false);
 
   function run(
     label: Exclude<Pending, null>,
@@ -36,6 +45,7 @@ export function QuoteActions({ quoteId, status }: Props) {
     fn()
       .then((result) => {
         if (!result.ok) setError(result.error);
+        else if (label === "won") setShowWinMoment(true);
         else router.refresh();
       })
       .catch((e: unknown) => {
@@ -50,6 +60,13 @@ export function QuoteActions({ quoteId, status }: Props) {
 
   return (
     <div className="space-y-2">
+      {showWinMoment ? (
+        <WinMomentOverlay
+          amount={amount}
+          allTimeRecovered={allTimeRecovered}
+          onDismiss={() => router.push("/dashboard")}
+        />
+      ) : null}
       <div className="flex flex-wrap gap-2">
         {status === "running" ? (
           <Button

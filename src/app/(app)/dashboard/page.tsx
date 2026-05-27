@@ -17,6 +17,7 @@ import {
   type QuoteRow,
 } from "@/lib/quotes/repo";
 import { effectiveDaysSilent } from "@/lib/recovery/effective-days";
+import { getRecoveryScore } from "@/lib/quotes/recovery-score";
 import { formatCurrency } from "@/lib/utils/currency";
 
 export const metadata: Metadata = { title: "Dashboard – Quote Reclaim" };
@@ -106,9 +107,8 @@ export default async function DashboardPage() {
           amount={Number(priorityQuote.estimate_amount)}
           trade={priorityQuote.trade}
           clientName={priorityQuote.client_name}
-          city={priorityQuote.city}
-          state={priorityQuote.state}
           daysSilent={effectiveDaysSilent(priorityQuote)}
+          score={getRecoveryScore(priorityQuote).score}
         />
       ) : null}
 
