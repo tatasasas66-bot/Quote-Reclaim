@@ -212,11 +212,11 @@ describe("IntelligencePanel locked state (Phase 7.2)", () => {
 // ---------------------------------------------------------------------------
 
 describe("AI system prompt hardening (Phase 4.5)", () => {
-  it("uses the uploaded SMS research dossier as the source of truth", () => {
+  it("uses the research-backed voice and tone guidance", () => {
     expect(aiPrompt).toMatch(
-      /Engineering a 3-Step SMS Sequence for High-Ticket Home Service Contractors/,
+      /You generate SMS follow-up messages for US home-service contractors/,
     );
-    expect(aiPrompt).toMatch(/Do not reinterpret the strategy/);
+    expect(aiPrompt).toMatch(/VOICE AND TONE/);
   });
 
   it("locks the three research frameworks", () => {
@@ -226,12 +226,12 @@ describe("AI system prompt hardening (Phase 4.5)", () => {
   });
 
   it("bans exclamation marks outright", () => {
-    expect(aiPrompt).toMatch(/use exclamation marks/);
+    expect(aiPrompt).toMatch(/No exclamation marks/);
   });
 
-  it("allows only the source-framework Day 7 use of Just", () => {
-    expect(aiPrompt).toMatch(/exact Day 7 sentence/);
-    expect(aiPrompt).toMatch(/Do not use "just" anywhere else/);
+  it("Day 7 uses Voss takeaway close structure", () => {
+    expect(aiPrompt).toMatch(/Voss Takeaway Close/);
+    expect(aiPrompt).toMatch(/Have you given up on/);
   });
 });
 
@@ -245,12 +245,12 @@ describe("Fallback messages use the uploaded SMS research sequence", () => {
   });
 
   it("Day 3 uses schedule and slot framing", () => {
-    expect(aiFallbacks).toMatch(/putting next week's \$\{project\} install schedule together/);
+    expect(aiFallbacks).toMatch(/putting next week's schedule together/);
     expect(aiFallbacks).toMatch(/holding a slot for you or releasing it/);
   });
 
   it("Day 7 uses the no-oriented closeout", () => {
-    expect(aiFallbacks).toMatch(/Have you given up on the \$\{project\}/);
+    expect(aiFallbacks).toMatch(/Have you given up on \$\{project\}/);
     expect(aiFallbacks).toMatch(/Just need a yes or no so I can clear it from my list/);
   });
 

@@ -140,7 +140,7 @@ describe("research framework fallback sequence", () => {
     const ctx = SCENARIOS[0].ctx;
     const sequence = researchSequenceMessages(ctx);
     expect(sequence.day1).toBe(
-      "Hey Jane — Mike here. Looked back at your roofing estimate. Anything on it that didn't make sense, or any number you want me to walk through?",
+      "Hey Jane — Mike here. Looked back at the roofing estimate. Anything on it that didn't make sense, or any number you want me to walk through?",
     );
     expect(sequence.day1.startsWith("Hey Jane —")).toBe(true);
     expect(sequence.day1).not.toMatch(/just checking in/i);
@@ -150,7 +150,7 @@ describe("research framework fallback sequence", () => {
     const ctx = SCENARIOS[0].ctx;
     const sequence = researchSequenceMessages(ctx);
     expect(sequence.day3).toBe(
-      "Jane, putting next week's roofing install schedule together. Need to know if I'm holding a slot for you or releasing it. What works?",
+      "Jane, putting next week's schedule together. Need to know if I'm holding a slot for you or releasing it. What works?",
     );
     expect(sequence.day3.startsWith("Jane,")).toBe(true);
     expect(sequence.day3).not.toMatch(/^(Hi|Hey)\b/);
@@ -160,7 +160,7 @@ describe("research framework fallback sequence", () => {
     const ctx = SCENARIOS[0].ctx;
     const sequence = researchSequenceMessages(ctx);
     expect(sequence.day7).toBe(
-      "Have you given up on the roofing? If so, I'll close out the file — no problem either way. Just need a yes or no so I can clear it from my list.",
+      "Have you given up on the roofing estimate? If so, I'll close the file — no problem either way. Just need a yes or no so I can clear it from my list.",
     );
     expect(sequence.day7).not.toMatch(/^Jane\b/);
     expect(sequence.day7).not.toMatch(/^(Hi|Hey)\b/);
@@ -212,11 +212,12 @@ describe("research framework fallback sequence", () => {
         );
       });
 
-      it("includes the project/trade keyword in every message", () => {
+      it("includes the project label in Day 1 and Day 7", () => {
         const project = projectLabel(ctx.trade).toLowerCase();
-        for (const message of plan.map((m) => m.message.toLowerCase())) {
-          expect(message).toContain(project.toLowerCase());
-        }
+        const messages = plan.map((m) => m.message.toLowerCase());
+        expect(messages[0]).toContain(project);
+        expect(messages[2]).toContain(project);
+        // Day 3 uses a schedule/slot frame intentionally without the project label
       });
 
       it("passes validation, scores above the fallback floor, and stays concise", () => {

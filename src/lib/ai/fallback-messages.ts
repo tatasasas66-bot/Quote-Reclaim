@@ -1,11 +1,11 @@
+import { titleCase } from "@/lib/utils/normalize";
 import type { RecoveryMessage, RecoveryContext } from "./generate-recovery-plan";
 
 /**
- * Deterministic fallback templates from:
- * "Engineering a 3-Step SMS Sequence for High-Ticket Home Service Contractors:
- * Research Dossier & Framework"
- *
- * This file is the source of truth when AI is unavailable or rejected.
+ * Deterministic fallback templates backed by:
+ * Hatch 163,212-campaign study · Chris Voss (Never Split the Difference)
+ * Oren Klaff Prize Frame (Pitch Anything) · Bryan Kreuzberger 76% template
+ * Proven blue-collar contractor tone (ContractorTalk)
  */
 
 const ALIASES: Record<string, string> = {
@@ -37,16 +37,18 @@ const ALIASES: Record<string, string> = {
   lawn: "landscaping",
 };
 
-const CANONICAL_PROJECTS = [
-  "roofing",
-  "plumbing",
-  "HVAC",
-  "electrical",
-  "remodeling",
-  "general contracting",
-  "painting",
-  "landscaping",
-] as const;
+// Full "the X estimate" phrase used directly in message templates.
+const PROJECT_LABELS: Record<string, string> = {
+  roofing: "the roofing estimate",
+  plumbing: "the plumbing estimate",
+  hvac: "the HVAC estimate",
+  electrical: "the electrical estimate",
+  remodeling: "the remodel estimate",
+  "general contracting": "the project estimate",
+  painting: "the painting estimate",
+  landscaping: "the landscaping estimate",
+  other: "the estimate",
+};
 
 const FRAMEWORKS: Record<1 | 2 | 3, RecoveryMessage["framework"]> = {
   1: "Casual Pattern Interrupt",
@@ -56,29 +58,31 @@ const FRAMEWORKS: Record<1 | 2 | 3, RecoveryMessage["framework"]> = {
 
 function cleanName(value: string | null | undefined, fallback: string): string {
   const first = (value ?? "").trim().split(/\s+/)[0] ?? "";
-  return first.replace(/[.,]/g, "") || fallback;
+  return titleCase(first.replace(/[.,]/g, "")) || fallback;
 }
 
 export function projectLabel(trade: string): string {
-  const raw = trade.trim();
-  const lower = raw.toLowerCase();
-  if (!lower) return "project";
-  // "Other" has no industry noun — fall back to neutral "project" phrasing.
-  if (lower === "other") return "project";
+  const lower = trade.trim().toLowerCase();
+  if (!lower) return "the estimate";
 
-  for (const canonical of CANONICAL_PROJECTS) {
-    if (lower === canonical.toLowerCase()) return canonical;
+  if (PROJECT_LABELS[lower]) return PROJECT_LABELS[lower];
+
+  const aliasMatch = ALIASES[lower];
+  if (aliasMatch && PROJECT_LABELS[aliasMatch.toLowerCase()]) {
+    return PROJECT_LABELS[aliasMatch.toLowerCase()];
   }
 
-  if (ALIASES[lower]) return ALIASES[lower];
   for (const [alias, canonical] of Object.entries(ALIASES)) {
-    if (lower.includes(alias)) return canonical;
-  }
-  for (const canonical of CANONICAL_PROJECTS) {
-    if (lower.includes(canonical.toLowerCase())) return canonical;
+    if (lower.includes(alias) && PROJECT_LABELS[canonical.toLowerCase()]) {
+      return PROJECT_LABELS[canonical.toLowerCase()];
+    }
   }
 
-  return lower;
+  for (const [key, label] of Object.entries(PROJECT_LABELS)) {
+    if (lower.includes(key)) return label;
+  }
+
+  return `the ${lower} estimate`;
 }
 
 export function researchSequenceMessages(ctx: RecoveryContext): {
@@ -91,9 +95,22 @@ export function researchSequenceMessages(ctx: RecoveryContext): {
   const project = projectLabel(ctx.trade);
 
   return {
-    day1: `Hey ${firstName} — ${contractorFirstName} here. Looked back at your ${project} estimate. Anything on it that didn't make sense, or any number you want me to walk through?`,
-    day3: `${firstName}, putting next week's ${project} install schedule together. Need to know if I'm holding a slot for you or releasing it. What works?`,
-    day7: `Have you given up on the ${project}? If so, I'll close out the file — no problem either way. Just need a yes or no so I can clear it from my list.`,
+    // Day 1 — Pattern Interrupt: "Hey" used only here. Peer-to-peer opener.
+    // "Looked back at" = soft Prize Frame (contractor reviews = busy, demanded).
+    // Surfaces two real objections: confusion + price anxiety.
+    day1: `Hey ${firstName} — ${contractorFirstName} here. Looked back at ${project}. Anything on it that didn't make sense, or any number you want me to walk through?`,
+
+    // Day 3 — Time Frame + Prize Frame: NO greeting, name only.
+    // "Holding a slot or releasing it" = loss aversion + scarcity.
+    // "What works?" = decisional question; their control.
+    day3: `${firstName}, putting next week's schedule together. Need to know if I'm holding a slot for you or releasing it. What works?`,
+
+    // Day 7 — Voss Takeaway Close: NO name, NO greeting, maximum detachment.
+    // "Have you given up on" = no-oriented question (safe to answer "No").
+    // "Close the file" = explicit withdrawal → loss aversion.
+    // "No problem either way" paradoxically lowers defensiveness.
+    // Kreuzberger reports 76% response rate on this exact structure.
+    day7: `Have you given up on ${project}? If so, I'll close the file — no problem either way. Just need a yes or no so I can clear it from my list.`,
   };
 }
 

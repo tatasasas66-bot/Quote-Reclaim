@@ -86,6 +86,15 @@ const CORPORATE_WORDS: readonly string[] = [
   "value proposition",
 ];
 
+// Some project labels deliberately use different words than the raw trade keyword
+// (e.g., "Remodeling" → "the remodel estimate"; "General Contracting" → "the project
+// estimate"). This map lets the trade check pass when a recognised synonym appears.
+const TRADE_KEYWORD_SYNONYMS: Record<string, string[]> = {
+  remodeling: ["remodel"],
+  general: ["project"],
+  contracting: ["project"],
+};
+
 // Detect emoji without the `/u` flag for TS target compatibility:
 //   - surrogate pairs cover modern emoji blocks
 //   - U+2600..U+27BF covers basic-plane misc symbols / dingbats
@@ -241,10 +250,15 @@ export function validateMessage(
     reasons.push("missing client first name");
   }
 
-  // Trade / context anchor
-  if (ctx.trade && ctx.trade.length > 0) {
+  // Trade / context anchor — Day 3 (followupNumber 2) uses a schedule/slot
+  // frame intentionally free of the trade keyword; exempt it from this check.
+  if (ctx.trade && ctx.trade.length > 0 && ctx.followupNumber !== 2) {
     const kws = tradeKeywords(ctx.trade);
-    const hasAny = kws.some((k) => lower.includes(k));
+    const hasAny = kws.some(
+      (k) =>
+        lower.includes(k) ||
+        (TRADE_KEYWORD_SYNONYMS[k] ?? []).some((s) => lower.includes(s)),
+    );
     if (!hasAny) reasons.push("missing trade/job context");
   }
 

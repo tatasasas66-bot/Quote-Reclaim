@@ -8,6 +8,7 @@ import {
 import { isWriterAvailable } from "./router";
 import { scoreMessage, MIN_AI_SCORE } from "./score-message";
 import { validateMessage } from "./validate-message";
+import { titleCase } from "@/lib/utils/normalize";
 
 export type RecoveryFramework =
   | "Casual Pattern Interrupt"
@@ -67,47 +68,63 @@ function buildPrompt(ctx: RecoveryContext): ChatMessage[] {
   const project = projectLabel(ctx.trade);
   const contractorFirstName =
     (ctx.contractorFirstName ?? "").trim().split(/\s+/)[0] || "Contractor";
-  const sequence = researchSequenceMessages(ctx);
+  const name = titleCase(ctx.firstName ?? "");
 
-  const system = `You write SMS recovery plans for high-ticket home service contractors after a homeowner has gone quiet on an estimate.
+  const system = `You generate SMS follow-up messages for US home-service contractors chasing silent estimates. Each message must:
 
-SOURCE OF TRUTH:
-"Engineering a 3-Step SMS Sequence for High-Ticket Home Service Contractors: Research Dossier & Framework"
+VOICE AND TONE:
+- Sound like a confident, busy tradesperson — not a salesperson
+- Blue-collar direct: short declarative sentences, no qualifiers
+- Never needy, never apologetic, never explain why you're following up
+- The contractor is highly demanded — this homeowner is one of many
 
-Do not reinterpret the strategy. Return the exact three-step sequence with the provided variables inserted.
+FORMAT RULES (non-negotiable):
+- Under 220 characters total
+- No exclamation marks
+- No emoji
+- No "just", "wanted to", "hope you're doing well", "circling back"
+- No company name — contractor first name only
+- No tracking links
 
-MESSAGE STRATEGY:
-1. Casual Pattern Interrupt - warm-direct. Confirm receipt, disarm defensiveness, surface hidden objections around clarity and price.
-2. Authority & Status Squeeze - cold-confident. Use the contractor schedule / slot frame exactly. No greeting, no apology, no begging, no discount.
-3. Professional Closeout - emotionless-final. No name, no greeting. Use the no-oriented closeout question exactly.
+DAY 1 — Pattern Interrupt:
+Start with "Hey {firstName} —" (only use Hey on Day 1).
+Identify yourself by first name.
+Reference the specific trade/project.
+Surface ONE objection: scope confusion OR price concern.
+End with an easy, open-ended question.
+Target: 150-180 characters.
 
-VARIABLE RULES:
-- {FirstName} comes from the homeowner first name.
-- {ContractorFirstName} comes from the contractor first name when available; otherwise use the supplied fallback.
-- {project} is the trade/project label and must appear in every message.
-- Day 1 starts with "Hey {FirstName} —".
-- Day 3 starts with "{FirstName}," and does not use "Hey" or "Hi".
-- Day 7 starts with "Have you given up on the {project}?" and uses no name or greeting.
+DAY 3 — Authority Frame:
+Start with "{firstName}," (name only, no greeting word).
+Invoke your schedule/calendar as the scarce resource.
+Create a binary choice: hold their slot or release it.
+End with "What works?" or equivalent decisional question.
+Target: 120-150 characters.
+NEVER offer a discount. NEVER apologize for the timeline.
 
-NEVER use disqualifying patterns:
-"Hi {Name}, just checking in", "just checking in", "following up", "touching base", "circle back", "circling back", "hope this finds you well", "hope you're doing great", "leave it hanging", "make the next step simple", "before you decide", emojis, exclamation marks, unsolicited discounts, guilt language, generic company signatures, "The Team at", tracking links, or manufactured price-drop urgency.
+DAY 7 — Voss Takeaway Close:
+NO name. NO greeting. Start directly with the question.
+Use Chris Voss no-oriented structure: "Have you given up on..."
+Explicitly withdraw: "I'll close the file."
+Offer relief: "no problem either way."
+Force binary: "just need a yes or no."
+Target: 140-165 characters.
+This must feel like a foreman clearing a job board — zero emotion.
 
-NEVER use exclamation marks.
-
-The exact Day 7 sentence "Just need a yes or no so I can clear it from my list." is allowed because it is part of the source framework. Do not use "just" anywhere else.
+NEVER use: "just checking in", "following up", "touching base", "circling back", "hope this finds you well", "hope you're doing great", "leave it hanging", "make the next step simple", "before you decide", emojis, exclamation marks, unsolicited discounts, guilt language, generic company signatures, tracking links.
 
 Return JSON only, no markdown, no commentary:
 {
   "messages": [
-    { "followup_number": 1, "framework": "Casual Pattern Interrupt", "message": "${sequence.day1}", "cta_type": "question", "confidence": 1 },
-    { "followup_number": 2, "framework": "Authority & Status Squeeze", "message": "${sequence.day3}", "cta_type": "question", "confidence": 1 },
-    { "followup_number": 3, "framework": "Professional Closeout", "message": "${sequence.day7}", "cta_type": "question", "confidence": 1 }
+    { "followup_number": 1, "framework": "Casual Pattern Interrupt", "message": "...", "cta_type": "question", "confidence": 1 },
+    { "followup_number": 2, "framework": "Authority & Status Squeeze", "message": "...", "cta_type": "question", "confidence": 1 },
+    { "followup_number": 3, "framework": "Professional Closeout", "message": "...", "cta_type": "question", "confidence": 1 }
   ]
 }`;
 
   const user = `Generate the exact three-message recovery sequence.
 
-firstName: ${ctx.firstName}
+firstName: ${name}
 contractorFirstName: ${contractorFirstName}
 trade: ${ctx.trade}
 project: ${project}
