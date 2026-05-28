@@ -138,6 +138,32 @@ describe("parseSpeechLocal — dollar formats", () => {
   });
 });
 
+describe("parseSpeechLocal — teen-hundred spoken amounts", () => {
+  it('parses "twelve hundred" as 1200', () => {
+    expect(
+      parseSpeechLocal("Sara roofing twelve hundred 5 days").estimate_amount,
+    ).toBe(1200);
+  });
+
+  it('parses "fifteen hundred" as 1500', () => {
+    expect(
+      parseSpeechLocal("Dave plumbing fifteen hundred 3 days").estimate_amount,
+    ).toBe(1500);
+  });
+
+  it('parses "eleven hundred" as 1100', () => {
+    expect(
+      parseSpeechLocal("Mike electrical eleven hundred 7 days").estimate_amount,
+    ).toBe(1100);
+  });
+
+  it('parses "nineteen hundred" as 1900', () => {
+    expect(
+      parseSpeechLocal("Ann HVAC nineteen hundred 10 days").estimate_amount,
+    ).toBe(1900);
+  });
+});
+
 // ---------------------------------------------------------------------------
 // useSpeechRecognition — contractor-controlled start/stop (no auto-stop)
 // ---------------------------------------------------------------------------

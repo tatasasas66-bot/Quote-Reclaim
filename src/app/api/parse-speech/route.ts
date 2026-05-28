@@ -43,23 +43,28 @@ function buildPrompt(transcript: string): string {
 The contractor is dictating one silent quote.
 
 Required fields (must extract or mark missing):
-- client_name (first name)
-- trade (one of: HVAC, Plumbing, Roofing, Electrical, Remodeling, General Contracting)
+- client_name (first name only)
+- trade (one of: HVAC, Plumbing, Roofing, Electrical, Remodeling, General Contracting, Painting, Landscaping)
 - estimate_amount (USD integer)
 - days_silent (integer)
 
 Optional fields (extract if spoken):
 - city, state (2-letter), client_phone, client_email, job_description
 
-Number rules:
+Number rules (spoken → integer):
+"twelve hundred" = 1200
+"fifteen hundred" = 1500
 "eighty five hundred" = 8500
 "twenty four hundred" = 2400
 "seven thousand nine hundred" = 7900
 "forty two hundred" = 4200
+"eleven hundred" = 1100
+"nineteen hundred" = 1900
 "a hundred" never means 100 when context is "days silent"
 
 Date rules:
 "yesterday" = days_silent: 1
+"a week ago" = days_silent: 7
 "last Tuesday" = compute days from today's Tuesday
 "six days ago" = days_silent: 6
 
@@ -70,7 +75,7 @@ CRITICAL: If a field was not spoken, return null, do not invent
 Return JSON only, no markdown:
 {
   "client_name": string|null,
-  "trade": "HVAC"|"Plumbing"|"Roofing"|"Electrical"|"Remodeling"|"General Contracting"|null,
+  "trade": "HVAC"|"Plumbing"|"Roofing"|"Electrical"|"Remodeling"|"General Contracting"|"Painting"|"Landscaping"|null,
   "estimate_amount": number|null,
   "days_silent": number|null,
   "city": string|null,

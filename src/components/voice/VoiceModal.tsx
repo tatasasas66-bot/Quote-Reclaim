@@ -4,6 +4,7 @@ import * as React from "react";
 import { Mic, X } from "lucide-react";
 import { Button } from "@/components/ui";
 import { useSpeechRecognition } from "@/hooks/useSpeechRecognition";
+import { parseSpeechLocal } from "@/lib/voice/parse-local";
 import type { VoiceParseResult } from "@/lib/voice/types";
 
 type VoiceModalProps = {
@@ -62,6 +63,9 @@ export function VoiceModal({ onClose, onApprove }: VoiceModalProps) {
   async function runParser(transcript: string) {
     setParsing(true);
     setParseError(null);
+
+    let result: VoiceParseResult | null = null;
+
     try {
       const response = await fetch("/api/parse-speech", {
         method: "POST",
@@ -70,16 +74,32 @@ export function VoiceModal({ onClose, onApprove }: VoiceModalProps) {
       });
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
       const body = (await response.json()) as { data?: VoiceParseResult };
-      if (!body.data) throw new Error("Empty parse result");
-      setParsed({ ...body.data, _key: String(Date.now()) });
-      const missing = body.data.missing_required ?? [];
-      setPhase(missing.length > 0 ? "clarify" : "review");
-    } catch (err) {
-      setParseError(err instanceof Error ? err.message : "Parse failed");
-      setPhase("error");
-    } finally {
-      setParsing(false);
+      if (body.data) result = body.data;
+    } catch {
+      // Network or server error — fall through to local parser below.
     }
+
+    // If the API was unreachable or returned nothing, run the local regex
+    // parser client-side as a safety net before reaching the error state.
+    if (!result) {
+      result = parseSpeechLocal(transcript);
+    }
+
+    // Only go to the error phase when every required field is still missing
+    // (i.e. even local parsing produced nothing useful).
+    const missing = result.missing_required ?? [];
+    const allMissing = missing.length === 4; // client_name, trade, estimate_amount, days_silent
+    if (allMissing) {
+      setParseError(
+        "Voice input stopped. You can type the quote below or try again.",
+      );
+      setPhase("error");
+    } else {
+      setParsed({ ...result, _key: String(Date.now()) });
+      setPhase(missing.length > 0 ? "clarify" : "review");
+    }
+
+    setParsing(false);
   }
 
   function stopAndReview() {

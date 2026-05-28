@@ -270,9 +270,10 @@ function extractEstimateAmount(lowerNoDays: string): number | null {
     if (Number.isFinite(n) && n > 0) return Math.round(n);
   }
 
-  // 3. Word form: "eighty five hundred", "forty two hundred", etc.
+  // 3. Word form: "eighty five hundred", "twelve hundred", "fifteen hundred", etc.
+  //    Covers teens (eleven–nineteen) and tens (twenty–ninety) × 100.
   const compoundHundred = lowerNoDays.match(
-    /\b((?:twenty|thirty|forty|fifty|sixty|seventy|eighty|ninety)(?:[- ](?:one|two|three|four|five|six|seven|eight|nine))?)\s+hundred\b/,
+    /\b((?:eleven|twelve|thirteen|fourteen|fifteen|sixteen|seventeen|eighteen|nineteen|twenty|thirty|forty|fifty|sixty|seventy|eighty|ninety)(?:[- ](?:one|two|three|four|five|six|seven|eight|nine))?)\s+hundred\b/,
   );
   if (compoundHundred) {
     const tens = compoundHundred[1].replace(/-/g, " ");
