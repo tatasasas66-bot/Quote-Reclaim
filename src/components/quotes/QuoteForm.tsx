@@ -3,10 +3,8 @@
 import * as React from "react";
 import { useFormState, useFormStatus } from "react-dom";
 import { Button, Input } from "@/components/ui";
-import { VoiceButton } from "@/components/voice/VoiceButton";
 import type { ActionResult } from "@/lib/quotes/actions";
 import type { QuoteRow } from "@/lib/quotes/repo";
-import type { VoiceParseResult } from "@/lib/voice/types";
 import { TRADES, US_STATES } from "@/lib/utils/normalize";
 
 type FormAction = (
@@ -25,7 +23,6 @@ export function QuoteForm({ mode, initial, action }: Props) {
     action,
     null,
   );
-  const [prefill, setPrefill] = React.useState<VoiceParseResult | null>(null);
 
   const isError = state && state.ok === false;
   const fieldError = (key: string): string | undefined => {
@@ -34,19 +31,12 @@ export function QuoteForm({ mode, initial, action }: Props) {
   };
   const topLevelError = isError && !state.fieldErrors ? state.error : null;
 
-  const initialTrade = initial?.trade ?? "";
-  const tradeValue = prefill?.trade ?? initialTrade;
-
   return (
     <form
       action={formAction}
       className="space-y-5 rounded-lg border border-line-subtle bg-surface-1 p-5 shadow-[0_22px_70px_rgba(0,0,0,0.3)] sm:p-6"
       noValidate
     >
-      {mode === "create" ? (
-        <VoiceButton onParsed={(result) => setPrefill(result)} />
-      ) : null}
-
       {topLevelError ? (
         <div
           role="alert"
@@ -61,14 +51,13 @@ export function QuoteForm({ mode, initial, action }: Props) {
         label="Client name"
         name="client_name"
         required
-        defaultValue={prefill?.client_name ?? initial?.client_name ?? ""}
-        key={`client_name-${prefill?._key ?? "initial"}`}
+        defaultValue={initial?.client_name ?? ""}
         error={fieldError("client_name")}
         autoComplete="off"
+        autoFocus={mode === "create"}
       />
       <TradeSelect
-        defaultValue={tradeValue}
-        key={`trade-${prefill?._key ?? "initial"}`}
+        defaultValue={initial?.trade ?? ""}
         error={fieldError("trade")}
       />
       <div className="grid gap-4 sm:grid-cols-2">
@@ -80,12 +69,7 @@ export function QuoteForm({ mode, initial, action }: Props) {
           min="1"
           step="0.01"
           required
-          defaultValue={
-            prefill?.estimate_amount?.toString() ??
-            initial?.estimate_amount?.toString() ??
-            ""
-          }
-          key={`estimate_amount-${prefill?._key ?? "initial"}`}
+          defaultValue={initial?.estimate_amount?.toString() ?? ""}
           error={fieldError("estimate_amount")}
         />
         <Input
@@ -96,11 +80,7 @@ export function QuoteForm({ mode, initial, action }: Props) {
           min="0"
           step="1"
           required
-          defaultValue={
-            prefill?.days_silent?.toString() ??
-            (initial?.days_silent ?? 0).toString()
-          }
-          key={`days_silent-${prefill?._key ?? "initial"}`}
+          defaultValue={(initial?.days_silent ?? 0).toString()}
           hint="0 = sent today"
           error={fieldError("days_silent")}
         />
@@ -121,8 +101,7 @@ export function QuoteForm({ mode, initial, action }: Props) {
           name="client_phone"
           type="tel"
           inputMode="tel"
-          defaultValue={prefill?.client_phone ?? initial?.client_phone ?? ""}
-          key={`client_phone-${prefill?._key ?? "initial"}`}
+          defaultValue={initial?.client_phone ?? ""}
           error={fieldError("client_phone")}
           autoComplete="off"
         />
@@ -145,22 +124,17 @@ export function QuoteForm({ mode, initial, action }: Props) {
             <Input
               label="City"
               name="city"
-              defaultValue={prefill?.city ?? initial?.city ?? ""}
-              key={`city-${prefill?._key ?? "initial"}`}
+              defaultValue={initial?.city ?? ""}
               error={fieldError("city")}
               autoComplete="off"
             />
             <StateSelect
-              defaultValue={prefill?.state ?? initial?.state ?? ""}
-              key={`state-${prefill?._key ?? "initial"}`}
+              defaultValue={initial?.state ?? ""}
               error={fieldError("state")}
             />
           </div>
           <JobDescriptionField
-            defaultValue={
-              prefill?.job_description ?? initial?.job_description ?? ""
-            }
-            key={`job_description-${prefill?._key ?? "initial"}`}
+            defaultValue={initial?.job_description ?? ""}
             error={fieldError("job_description")}
           />
         </div>
