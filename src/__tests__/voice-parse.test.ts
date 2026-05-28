@@ -165,183 +165,207 @@ describe("parseSpeechLocal — teen-hundred spoken amounts", () => {
 });
 
 // ---------------------------------------------------------------------------
-// useSpeechRecognition — MediaRecorder-based audio capture
+// useSpeechRecognition — Web Speech API, manual-stop only (no auto-stop)
 // ---------------------------------------------------------------------------
 
-type MockMediaRecorder = {
+type MockRecognition = {
   start: ReturnType<typeof vi.fn>;
   stop: ReturnType<typeof vi.fn>;
-  ondataavailable: ((event: unknown) => void) | null;
-  onstop: (() => void) | null;
-  state: "inactive" | "recording" | "paused";
+  continuous: boolean;
+  interimResults: boolean;
+  lang: string;
+  onresult: ((event: unknown) => void) | null;
+  onend: (() => void) | null;
+  onerror: ((event: unknown) => void) | null;
 };
 
-type MockStream = {
-  getTracks: ReturnType<typeof vi.fn>;
-};
-
-function installMockMediaRecorder(options?: {
-  shouldFail?: boolean;
-}): { recorders: MockMediaRecorder[]; streams: MockStream[] } {
-  const recorders: MockMediaRecorder[] = [];
-  const streams: MockStream[] = [];
-  const mockTracks: { stop: ReturnType<typeof vi.fn> }[] = [];
-
-  class MockMediaRecorder implements MockMediaRecorder {
+function installMockSpeech(): MockRecognition[] {
+  const instances: MockRecognition[] = [];
+  class Recognition implements MockRecognition {
     start = vi.fn();
     stop = vi.fn();
-    ondataavailable: ((event: unknown) => void) | null = null;
-    onstop: (() => void) | null = null;
-    state: "inactive" | "recording" | "paused" = "recording";
-
-    constructor(stream: MockStream) {
-      recorders.push(this);
-      this.start.mockImplementation(() => {
-        this.state = "recording";
-      });
-      this.stop.mockImplementation(() => {
-        this.state = "inactive";
-        this.ondataavailable?.({ data: new Blob() });
-        this.onstop?.();
-      });
-    }
-  }
-
-  class MockStream implements MockStream {
-    getTracks = vi.fn(() => [{ stop: vi.fn() }]);
-
+    continuous = false;
+    interimResults = false;
+    lang = "";
+    onresult: ((event: unknown) => void) | null = null;
+    onend: (() => void) | null = null;
+    onerror: ((event: unknown) => void) | null = null;
     constructor() {
-      streams.push(this);
+      instances.push(this);
     }
   }
-
-  Object.defineProperty(window, "MediaRecorder", {
+  Object.defineProperty(window, "SpeechRecognition", {
     configurable: true,
-    value: options?.shouldFail ? undefined : MockMediaRecorder,
+    value: Recognition,
   });
-
-  Object.defineProperty(navigator, "mediaDevices", {
+  Object.defineProperty(window, "webkitSpeechRecognition", {
     configurable: true,
-    value: options?.shouldFail
-      ? undefined
-      : {
-          getUserMedia: vi
-            .fn()
-            .mockResolvedValue(new MockStream()),
-        },
+    value: undefined,
   });
-
-  return { recorders, streams };
+  return instances;
 }
 
-describe("useSpeechRecognition — MediaRecorder audio capture", () => {
+function clearSpeech() {
+  Object.defineProperty(window, "SpeechRecognition", {
+    configurable: true,
+    value: undefined,
+  });
+  Object.defineProperty(window, "webkitSpeechRecognition", {
+    configurable: true,
+    value: undefined,
+  });
+}
+
+/** Build a Web-Speech-style result list with the `isFinal` flag attached. */
+function resultEvent(transcript: string, isFinal: boolean) {
+  const result = Object.assign([{ transcript }], { isFinal });
+  return { resultIndex: 0, results: [result] };
+}
+
+describe("useSpeechRecognition — support detection", () => {
   afterEach(() => {
     vi.restoreAllMocks();
+    clearSpeech();
   });
 
-  it("detects MediaRecorder + getUserMedia support", async () => {
-    vi.spyOn(console, "info").mockImplementation(() => undefined);
-    installMockMediaRecorder();
+  it("detects the Web Speech API as supported", () => {
+    const instances = installMockSpeech();
     const { result } = renderHook(() => useSpeechRecognition());
-
-    await act(async () => {
-      // Wait for support detection
-      await new Promise((r) => setTimeout(r, 10));
-    });
-
     expect(result.current.supportChecked).toBe(true);
     expect(result.current.supported).toBe(true);
+    expect(instances).toHaveLength(1);
   });
 
-  it("reports unsupported when MediaRecorder is missing", async () => {
-    vi.spyOn(console, "info").mockImplementation(() => undefined);
-    installMockMediaRecorder({ shouldFail: true });
+  it("reports unsupported when no SpeechRecognition global exists", () => {
+    clearSpeech();
     const { result } = renderHook(() => useSpeechRecognition());
-
-    await act(async () => {
-      await new Promise((r) => setTimeout(r, 10));
-    });
-
     expect(result.current.supportChecked).toBe(true);
     expect(result.current.supported).toBe(false);
   });
+});
 
-  it("start() requests microphone permission and begins recording", async () => {
-    vi.spyOn(console, "info").mockImplementation(() => undefined);
-    const { recorders } = installMockMediaRecorder();
-    const { result } = renderHook(() => useSpeechRecognition());
-
-    await act(async () => {
-      await result.current.start();
-    });
-
-    expect(result.current.isListening).toBe(true);
-    expect(recorders).toHaveLength(1);
-    expect(recorders[0].start).toHaveBeenCalled();
+describe("useSpeechRecognition — manual stop control", () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+    clearSpeech();
   });
 
-  it("stop() stops recording and produces audioBlob", async () => {
-    vi.spyOn(console, "info").mockImplementation(() => undefined);
-    const { recorders } = installMockMediaRecorder();
+  it("start() resets transcript and begins listening", () => {
+    const instances = installMockSpeech();
     const { result } = renderHook(() => useSpeechRecognition());
 
-    await act(async () => {
-      await result.current.start();
-    });
-
+    act(() => result.current.start());
     expect(result.current.isListening).toBe(true);
-
-    await act(async () => {
-      await result.current.stop();
-    });
-
-    expect(result.current.isListening).toBe(false);
-    expect(recorders[0].stop).toHaveBeenCalled();
-    expect(result.current.audioBlob).toBeInstanceOf(Blob);
+    expect(instances[0].start).toHaveBeenCalledTimes(1);
+    expect(result.current.transcript).toBe("");
   });
 
-  it("reset() cleans up streams and state", async () => {
-    vi.spyOn(console, "info").mockImplementation(() => undefined);
-    installMockMediaRecorder();
+  it("does NOT auto-stop on silence — onend restarts the same session", () => {
+    const instances = installMockSpeech();
     const { result } = renderHook(() => useSpeechRecognition());
 
-    await act(async () => {
-      await result.current.start();
-    });
-
+    act(() => result.current.start());
+    const rec = instances[0];
+    expect(rec.start).toHaveBeenCalledTimes(1);
     expect(result.current.isListening).toBe(true);
 
-    act(() => {
-      result.current.reset();
-    });
+    // The engine ends the session after a silence pause.
+    act(() => rec.onend?.());
+    expect(rec.start).toHaveBeenCalledTimes(2);
+    expect(result.current.isListening).toBe(true);
 
+    // Another silence pause — still restarts.
+    act(() => rec.onend?.());
+    expect(rec.start).toHaveBeenCalledTimes(3);
+    expect(result.current.isListening).toBe(true);
+  });
+
+  it("stops only when the contractor presses stop (no restart after stop)", () => {
+    const instances = installMockSpeech();
+    const { result } = renderHook(() => useSpeechRecognition());
+
+    act(() => result.current.start());
+    const rec = instances[0];
+    expect(rec.start).toHaveBeenCalledTimes(1);
+
+    act(() => result.current.stop());
+    expect(rec.stop).toHaveBeenCalledTimes(1);
+
+    // The engine fires onend after stop(); the hook must NOT restart.
+    act(() => rec.onend?.());
+    expect(rec.start).toHaveBeenCalledTimes(1);
     expect(result.current.isListening).toBe(false);
-    expect(result.current.audioBlob).toBeNull();
+  });
+
+  it("accumulates finalized transcript across restarts", () => {
+    const instances = installMockSpeech();
+    const { result } = renderHook(() => useSpeechRecognition());
+
+    act(() => result.current.start());
+    const rec = instances[0];
+
+    act(() => rec.onresult?.(resultEvent("tom roofing", true)));
+    expect(result.current.transcript).toBe("tom roofing");
+
+    // Silence pause ends and restarts the session (results list resets).
+    act(() => rec.onend?.());
+    act(() => rec.onresult?.(resultEvent("eight thousand", true)));
+    expect(result.current.transcript).toBe("tom roofing eight thousand");
+  });
+});
+
+describe("useSpeechRecognition — error handling", () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+    clearSpeech();
+  });
+
+  it("treats no-speech and aborted errors as non-fatal (keeps listening)", () => {
+    const instances = installMockSpeech();
+    const { result } = renderHook(() => useSpeechRecognition());
+
+    act(() => result.current.start());
+    const rec = instances[0];
+
+    act(() => rec.onerror?.({ error: "no-speech" }));
     expect(result.current.error).toBeNull();
+    expect(result.current.isListening).toBe(true);
+
+    // onend after a no-speech error still restarts the mic.
+    act(() => rec.onend?.());
+    expect(rec.start).toHaveBeenCalledTimes(2);
+    expect(result.current.isListening).toBe(true);
   });
 
-  it("handles permission denial gracefully", async () => {
-    vi.spyOn(console, "info").mockImplementation(() => undefined);
-    Object.defineProperty(navigator, "mediaDevices", {
-      configurable: true,
-      value: {
-        getUserMedia: vi
-          .fn()
-          .mockRejectedValue(new DOMException("denied", "NotAllowedError")),
-      },
-    });
-    Object.defineProperty(window, "MediaRecorder", {
-      configurable: true,
-      value: class MockMediaRecorder {},
-    });
-
+  it("maps a network error to the friendly type-instead message", () => {
+    const instances = installMockSpeech();
     const { result } = renderHook(() => useSpeechRecognition());
 
-    await act(async () => {
-      await result.current.start();
-    });
+    act(() => result.current.start());
+    const rec = instances[0];
 
-    expect(result.current.error).toBe("permission-denied");
+    act(() => rec.onerror?.({ error: "network" }));
+    expect(result.current.error).toBe(
+      "Voice service unreachable. Type the quote instead.",
+    );
+    expect(result.current.isListening).toBe(false);
+
+    // A fatal error must NOT auto-restart on the following onend.
+    act(() => rec.onend?.());
+    expect(rec.start).toHaveBeenCalledTimes(1);
+  });
+
+  it("maps not-allowed to a microphone permission message", () => {
+    const instances = installMockSpeech();
+    const { result } = renderHook(() => useSpeechRecognition());
+
+    act(() => result.current.start());
+    const rec = instances[0];
+
+    act(() => rec.onerror?.({ error: "not-allowed" }));
+    expect(result.current.error).toBe(
+      "Microphone permission denied. Enable it in browser settings.",
+    );
     expect(result.current.isListening).toBe(false);
   });
 });

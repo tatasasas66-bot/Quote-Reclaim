@@ -12,28 +12,15 @@ type VoiceModalProps = {
   onApprove: (result: VoiceParseResult) => void;
 };
 
-type Phase =
-  | "checking"
-  | "listening"
-  | "review"
-  | "clarify"
-  | "unsupported"
-  | "permission-denied"
-  | "error";
-
-// "recognition" = the browser's STT engine failed before any transcript;
-// "parse"       = we got a transcript but couldn't extract the required fields.
-type ErrorSource = "recognition" | "parse" | null;
+type Phase = "checking" | "listening" | "review" | "unsupported" | "error";
 
 export function VoiceModal({ onClose, onApprove }: VoiceModalProps) {
   const speech = useSpeechRecognition();
   const [phase, setPhase] = React.useState<Phase>("checking");
   const [parsed, setParsed] = React.useState<VoiceParseResult | null>(null);
-  const [parseError, setParseError] = React.useState<string | null>(null);
   const [parsing, setParsing] = React.useState(false);
-  const [errorSource, setErrorSource] = React.useState<ErrorSource>(null);
-  const [manualEntry, setManualEntry] = React.useState("");
   const startAttemptedRef = React.useRef(false);
+  const wasListeningRef = React.useRef(false);
 
   // Initial state: wait for client-side support detection before deciding.
   React.useEffect(() => {
@@ -41,132 +28,72 @@ export function VoiceModal({ onClose, onApprove }: VoiceModalProps) {
     if (speech.supported && !startAttemptedRef.current) {
       startAttemptedRef.current = true;
       setPhase("listening");
-      void speech.start();
+      speech.start();
     } else if (!speech.supported) {
       setPhase("unsupported");
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [speech.supportChecked, speech.supported]);
 
-  // The browser's mic engine fired an error — audio never captured.
+  // A fatal recognition error (network, permission, etc.) routes to the error
+  // screen, which offers a clean exit so the contractor can type instead.
   React.useEffect(() => {
-    if (!speech.error) return;
-    if (speech.error === "permission-denied") {
-      setPhase("permission-denied");
-    } else {
-      // "audio-capture-failed" or "recording-failed" — the mic engine
-      // itself failed, not the parser. Give the user a text entry instead.
-      setErrorSource("recognition");
-      setParseError(
-        speech.error === "audio-capture-failed"
-          ? "Couldn't access the microphone. Try again or type below."
-          : "Recording failed unexpectedly. Try again or type below.",
-      );
-      setPhase("error");
-    }
+    if (speech.error) setPhase("error");
   }, [speech.error]);
 
-  // When audio recording ends, transcribe it and then parse.
+  // When listening stops (falling edge) the final transcript has landed — ship
+  // it to the parser. Guarded so it fires once per recording, never on error.
   React.useEffect(() => {
-    if (!speech.isListening && speech.audioBlob && phase === "listening") {
-      void transcribeAndParse(speech.audioBlob);
+    const was = wasListeningRef.current;
+    wasListeningRef.current = speech.isListening;
+    if (was && !speech.isListening && phase === "listening" && !speech.error) {
+      void runParser(speech.transcript);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [speech.isListening, speech.audioBlob, phase]);
-
-  async function transcribeAndParse(audioBlob: Blob) {
-    setParsing(true);
-    setParseError(null);
-
-    try {
-      // POST audio to transcription endpoint
-      const formData = new FormData();
-      formData.append("audio", audioBlob, "recording.webm");
-
-      const transcribeResponse = await fetch("/api/transcribe-speech", {
-        method: "POST",
-        body: formData,
-      });
-
-      if (!transcribeResponse.ok) {
-        const error = await transcribeResponse.json();
-        throw new Error(
-          error.error || `Transcription failed: ${transcribeResponse.status}`,
-        );
-      }
-
-      const { transcript } = (await transcribeResponse.json()) as {
-        transcript: string;
-      };
-
-      // Run the existing parse flow on the transcript
-      await runParser(transcript);
-    } catch (err) {
-      setErrorSource("recognition");
-      setParseError(
-        err instanceof Error
-          ? err.message
-          : "Could not transcribe audio. Try again or type below.",
-      );
-      setPhase("error");
-      setParsing(false);
-    }
-  }
+  }, [speech.isListening, speech.error, phase]);
 
   async function runParser(transcript: string) {
     setParsing(true);
-    setParseError(null);
+    const text = transcript.trim();
+
+    // Empty recording — drop straight into review with blank fields.
+    if (!text) {
+      setParsed(emptyResult());
+      setPhase("review");
+      setParsing(false);
+      return;
+    }
 
     let result: VoiceParseResult | null = null;
-
     try {
       const response = await fetch("/api/parse-speech", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ transcript }),
+        body: JSON.stringify({ transcript: text }),
       });
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
       const body = (await response.json()) as { data?: VoiceParseResult };
       if (body.data) result = body.data;
     } catch {
-      // Network or server error — fall through to local parser below.
+      // Network or server error — fall back to the local regex parser.
     }
 
-    // If the API was unreachable or returned nothing, run the local regex
-    // parser client-side as a safety net before reaching the error state.
-    if (!result) {
-      result = parseSpeechLocal(transcript);
-    }
+    if (!result) result = parseSpeechLocal(text);
 
-    const missing = result.missing_required ?? [];
-    if (missing.length === 4) {
-      // Every required field is still null — nothing useful was extracted.
-      setErrorSource("parse");
-      setParseError(
-        "Couldn't make sense of that. Try again or type the details below.",
-      );
-      setPhase("error");
-    } else {
-      setParsed({ ...result, _key: String(Date.now()) });
-      setPhase(missing.length > 0 ? "clarify" : "review");
-    }
-
+    setParsed({ ...result, _key: String(Date.now()) });
+    setPhase("review");
     setParsing(false);
   }
 
-  async function stopAndReview() {
-    await speech.stop();
+  function stopAndReview() {
+    speech.stop();
   }
 
   function recordAgain() {
-    speech.reset();
     setParsed(null);
-    setParseError(null);
-    setErrorSource(null);
-    setManualEntry("");
     setPhase("listening");
     startAttemptedRef.current = true;
-    void speech.start();
+    speech.start();
   }
 
   function patchField<K extends keyof VoiceParseResult>(
@@ -180,13 +107,6 @@ export function VoiceModal({ onClose, onApprove }: VoiceModalProps) {
     if (!parsed) return;
     onApprove(parsed);
   }
-
-  const errorTitle =
-    phase === "error"
-      ? errorSource === "recognition"
-        ? "Type it instead"
-        : "Couldn't parse that"
-      : null;
 
   return (
     <div
@@ -204,16 +124,12 @@ export function VoiceModal({ onClose, onApprove }: VoiceModalProps) {
             {phase === "checking"
               ? "Checking voice support"
               : phase === "listening"
-              ? "Listening…"
-              : phase === "review"
-                ? "Here's what I heard"
-                : phase === "clarify"
-                  ? "Almost there"
+                ? "Listening…"
+                : phase === "review"
+                  ? "Here's what I heard"
                   : phase === "unsupported"
                     ? "Type the quote details"
-                    : phase === "permission-denied"
-                      ? "Microphone blocked"
-                      : (errorTitle ?? "Couldn't parse that")}
+                    : "Couldn't capture that"}
           </h2>
           <button
             type="button"
@@ -233,6 +149,7 @@ export function VoiceModal({ onClose, onApprove }: VoiceModalProps) {
 
         {phase === "listening" ? (
           <ListeningBody
+            transcript={speech.transcript}
             onStop={stopAndReview}
             onCancel={onClose}
             parsing={parsing}
@@ -248,38 +165,27 @@ export function VoiceModal({ onClose, onApprove }: VoiceModalProps) {
           />
         ) : null}
 
-        {phase === "clarify" && parsed ? (
-          <ClarifyBody
-            parsed={parsed}
-            onPatch={patchField}
-            onContinue={() => setPhase("review")}
-            onRecordAgain={recordAgain}
-          />
+        {phase === "unsupported" ? (
+          <div className="mt-3 space-y-3">
+            <p className="rounded-lg border border-line-subtle bg-surface-2 p-3 text-sm text-ink-muted">
+              Voice entry is not supported in this browser. Close this and type
+              the quote details on the form.
+            </p>
+            <Button type="button" fullWidth variant="ghost" onClick={onClose}>
+              Cancel
+            </Button>
+          </div>
         ) : null}
 
-        {/* "unsupported" and "error" share the same manual-entry fallback UI. */}
-        {phase === "unsupported" || phase === "error" ? (
-          <ManualEntryBody
-            hint={
-              phase === "unsupported"
-                ? "Voice entry is not supported in this browser."
-                : (parseError ?? "Couldn't parse that.")
-            }
-            manualEntry={manualEntry}
-            onManualEntry={setManualEntry}
-            onSubmit={() => {
-              if (manualEntry.trim()) void runParser(manualEntry.trim());
-            }}
-            onRecordAgain={phase === "error" ? recordAgain : undefined}
-            parsing={parsing}
-          />
-        ) : null}
-
-        {phase === "permission-denied" ? (
-          <p className="mt-3 rounded-lg border border-warning/30 bg-warning/10 p-3 text-sm text-ink">
-            Microphone permission was blocked. You can enable it in your browser
-            settings or type the quote below.
-          </p>
+        {phase === "error" ? (
+          <div className="mt-3 space-y-3">
+            <p className="rounded-lg border border-warning/30 bg-warning/10 p-3 text-sm text-ink">
+              {speech.error ?? "Voice recognition error. Type the quote instead."}
+            </p>
+            <Button type="button" fullWidth variant="ghost" onClick={onClose}>
+              Cancel
+            </Button>
+          </div>
         ) : null}
       </div>
     </div>
@@ -287,10 +193,12 @@ export function VoiceModal({ onClose, onApprove }: VoiceModalProps) {
 }
 
 function ListeningBody({
+  transcript,
   onStop,
   onCancel,
   parsing,
 }: {
+  transcript: string;
   onStop: () => void;
   onCancel: () => void;
   parsing: boolean;
@@ -310,15 +218,21 @@ function ListeningBody({
             aria-hidden="true"
             className="h-2 w-2 animate-pulse rounded-full bg-brand"
           />
-          Recording…
+          Listening…
         </p>
       </div>
-      <p className="text-center text-sm text-ink-muted">
-        Say the client&apos;s first name, the trade, the estimate, and how
-        many days they&apos;ve been silent.
-      </p>
+      {transcript ? (
+        <p className="rounded-lg border border-line-subtle bg-surface-2 p-3 text-sm text-ink">
+          {transcript}
+        </p>
+      ) : (
+        <p className="text-center text-sm text-ink-muted">
+          Say the client&apos;s first name, the trade, the estimate, and how
+          many days they&apos;ve been silent.
+        </p>
+      )}
       <p className="text-center text-xs text-ink-muted">
-        Take your time. Press Stop when done.
+        Take your time. Press Stop &amp; Review when done.
       </p>
       <div className="space-y-3">
         <Button
@@ -329,7 +243,7 @@ function ListeningBody({
           onClick={onStop}
           loading={parsing}
         >
-          {parsing ? "Transcribing…" : "Stop"}
+          {parsing ? "Parsing…" : "Stop & Review"}
         </Button>
         <button
           type="button"
@@ -340,58 +254,6 @@ function ListeningBody({
           Cancel
         </button>
       </div>
-    </div>
-  );
-}
-
-function ManualEntryBody({
-  hint,
-  manualEntry,
-  onManualEntry,
-  onSubmit,
-  onRecordAgain,
-  parsing,
-}: {
-  hint: string;
-  manualEntry: string;
-  onManualEntry: (v: string) => void;
-  onSubmit: () => void;
-  onRecordAgain?: () => void;
-  parsing: boolean;
-}) {
-  return (
-    <div className="mt-3 space-y-3">
-      <p className="text-sm text-ink-muted">{hint}</p>
-      <label className="flex flex-col gap-1">
-        <span className="text-[10px] font-black uppercase tracking-widest text-ink-muted">
-          Type the quote details
-        </span>
-        <textarea
-          rows={3}
-          value={manualEntry}
-          onChange={(e) => onManualEntry(e.target.value)}
-          placeholder='e.g. "Tom roofing 8500 9 days"'
-          className="w-full resize-none rounded-lg border border-line-subtle bg-surface-2 px-3 py-2 text-sm text-ink-strong placeholder:text-ink-muted focus:border-brand focus:outline-none focus:ring-2 focus:ring-focus/40"
-        />
-      </label>
-      <Button
-        type="button"
-        fullWidth
-        disabled={!manualEntry.trim() || parsing}
-        loading={parsing}
-        onClick={onSubmit}
-      >
-        {parsing ? "Parsing…" : "Parse it"}
-      </Button>
-      {onRecordAgain ? (
-        <button
-          type="button"
-          onClick={onRecordAgain}
-          className="block w-full text-center text-xs text-ink-muted underline hover:text-ink-strong focus:outline-none"
-        >
-          Record again
-        </button>
-      ) : null}
     </div>
   );
 }
@@ -463,80 +325,6 @@ function ReviewBody({
   );
 }
 
-function ClarifyBody({
-  parsed,
-  onPatch,
-  onContinue,
-  onRecordAgain,
-}: {
-  parsed: VoiceParseResult;
-  onPatch: <K extends keyof VoiceParseResult>(
-    key: K,
-    value: VoiceParseResult[K],
-  ) => void;
-  onContinue: () => void;
-  onRecordAgain: () => void;
-}) {
-  const missing = parsed.missing_required ?? [];
-  const nextField = missing[0];
-
-  return (
-    <div className="mt-4 space-y-4">
-      <p className="text-sm text-ink">
-        I caught most of it, but{" "}
-        <span className="font-semibold text-warning">
-          {missing.length} field{missing.length === 1 ? "" : "s"}
-        </span>{" "}
-        still need{missing.length === 1 ? "s" : ""} you.
-      </p>
-      {nextField === "estimate_amount" ? (
-        <FieldRow
-          label="How much was the estimate?"
-          prefix="$"
-          type="number"
-          value={parsed.estimate_amount?.toString() ?? ""}
-          onChange={(v) => onPatch("estimate_amount", v ? Number(v) : null)}
-          autoFocus
-        />
-      ) : null}
-      {nextField === "days_silent" ? (
-        <FieldRow
-          label="How many days quiet?"
-          type="number"
-          value={parsed.days_silent?.toString() ?? ""}
-          onChange={(v) => onPatch("days_silent", v ? Number(v) : null)}
-          autoFocus
-        />
-      ) : null}
-      {nextField === "trade" ? (
-        <FieldRow
-          label="Which trade?"
-          value={parsed.trade ?? ""}
-          onChange={(v) => onPatch("trade", (v || null) as VoiceParseResult["trade"])}
-          autoFocus
-        />
-      ) : null}
-      {nextField === "client_name" ? (
-        <FieldRow
-          label="Client name?"
-          value={parsed.client_name ?? ""}
-          onChange={(v) => onPatch("client_name", v || null)}
-          autoFocus
-        />
-      ) : null}
-
-      <div className="flex flex-col gap-2 sm:flex-row sm:gap-3">
-        <Button type="button" fullWidth onClick={onContinue}>
-          Continue
-        </Button>
-        <Button type="button" fullWidth variant="ghost" onClick={onRecordAgain}>
-          Record again
-        </Button>
-      </div>
-    </div>
-  );
-}
-
 function FieldRow({
   label,
   value,
@@ -544,7 +332,6 @@ function FieldRow({
   prefix,
   type,
   maxLength,
-  autoFocus,
 }: {
   label: string;
   value: string;
@@ -552,7 +339,6 @@ function FieldRow({
   prefix?: string;
   type?: "text" | "number";
   maxLength?: number;
-  autoFocus?: boolean;
 }) {
   return (
     <label className="flex flex-col gap-1">
@@ -566,10 +352,30 @@ function FieldRow({
           value={value}
           onChange={(e) => onChange(e.target.value)}
           maxLength={maxLength}
-          autoFocus={autoFocus}
           className="h-10 flex-1 rounded-lg border border-line-subtle bg-surface-2 px-3 text-base text-ink-strong focus:border-brand focus:outline-none focus:ring-2 focus:ring-focus/40"
         />
       </span>
     </label>
   );
+}
+
+function emptyResult(): VoiceParseResult {
+  return {
+    client_name: null,
+    trade: null,
+    estimate_amount: null,
+    days_silent: null,
+    city: null,
+    state: null,
+    client_phone: null,
+    client_email: null,
+    job_description: null,
+    missing_required: [
+      "client_name",
+      "trade",
+      "estimate_amount",
+      "days_silent",
+    ],
+    _key: String(Date.now()),
+  };
 }

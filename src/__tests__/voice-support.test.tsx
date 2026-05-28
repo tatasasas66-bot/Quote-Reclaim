@@ -2,164 +2,149 @@
  * @vitest-environment happy-dom
  */
 import * as React from "react";
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { VoiceModal } from "@/components/voice/VoiceModal";
-import {
-  getSpeechRecognitionConstructor,
-  getVoiceSupport,
-} from "@/hooks/useSpeechRecognition";
 
-type MockMediaRecorder = {
+type MockRecognition = {
   start: ReturnType<typeof vi.fn>;
   stop: ReturnType<typeof vi.fn>;
-  ondataavailable: ((event: unknown) => void) | null;
-  onstop: (() => void) | null;
-  state: "inactive" | "recording" | "paused";
+  continuous: boolean;
+  interimResults: boolean;
+  lang: string;
+  onresult: ((event: unknown) => void) | null;
+  onend: (() => void) | null;
+  onerror: ((event: unknown) => void) | null;
 };
 
-function setMediaRecorderMock(options?: { shouldFail?: boolean }) {
-  if (options?.shouldFail) {
-    Object.defineProperty(window, "MediaRecorder", {
-      configurable: true,
-      value: undefined,
-    });
-    Object.defineProperty(navigator, "mediaDevices", {
-      configurable: true,
-      value: undefined,
-    });
-    return;
+function installMockSpeech(target: "standard" | "webkit" = "standard"): MockRecognition[] {
+  const instances: MockRecognition[] = [];
+  class Recognition implements MockRecognition {
+    start = vi.fn();
+    stop = vi.fn();
+    continuous = false;
+    interimResults = false;
+    lang = "";
+    onresult: ((event: unknown) => void) | null = null;
+    onend: (() => void) | null = null;
+    onerror: ((event: unknown) => void) | null = null;
+    constructor() {
+      instances.push(this);
+    }
   }
-
-  class MockMediaRecorder {
-    ondataavailable: ((event: unknown) => void) | null = null;
-    onstop: (() => void) | null = null;
-    state: "inactive" | "recording" | "paused" = "recording";
-    start = vi.fn(() => {
-      this.state = "recording";
-    });
-    stop = vi.fn(() => {
-      this.state = "inactive";
-      this.ondataavailable?.({ data: new Blob() });
-      setTimeout(() => this.onstop?.(), 0);
-    });
-  }
-
-  Object.defineProperty(window, "MediaRecorder", {
+  Object.defineProperty(window, "SpeechRecognition", {
     configurable: true,
-    value: MockMediaRecorder,
+    value: target === "standard" ? Recognition : undefined,
   });
-
-  const mockStream = {
-    getTracks: vi.fn(() => [{ stop: vi.fn() }]),
-  };
-
-  Object.defineProperty(navigator, "mediaDevices", {
+  Object.defineProperty(window, "webkitSpeechRecognition", {
     configurable: true,
-    value: {
-      getUserMedia: vi.fn().mockResolvedValue(mockStream),
-    },
+    value: target === "webkit" ? Recognition : undefined,
+  });
+  return instances;
+}
+
+function clearSpeech() {
+  Object.defineProperty(window, "SpeechRecognition", {
+    configurable: true,
+    value: undefined,
+  });
+  Object.defineProperty(window, "webkitSpeechRecognition", {
+    configurable: true,
+    value: undefined,
   });
 }
 
 afterEach(() => {
   cleanup();
   vi.restoreAllMocks();
-  setMediaRecorderMock({ shouldFail: true });
-});
-
-describe("voice support detection", () => {
-  it("MediaRecorder + getUserMedia is treated as supported", () => {
-    setMediaRecorderMock();
-    expect(getSpeechRecognitionConstructor()).toBe(true);
-    const support = getVoiceSupport();
-    expect(support.mediaRecorder).toBe(true);
-    expect(support.getUserMedia).toBe(true);
-  });
-
-  it("reports unsupported when MediaRecorder is missing", () => {
-    setMediaRecorderMock({ shouldFail: true });
-    // After setting to fail, check the result
-    const isSupported = getSpeechRecognitionConstructor();
-    expect(isSupported).toBe(false);
-  });
-
-  it("no window on SSR does not crash", () => {
-    expect(() => getSpeechRecognitionConstructor()).not.toThrow();
-    expect(() => getVoiceSupport()).not.toThrow();
-  });
+  clearSpeech();
 });
 
 describe("VoiceModal support states", () => {
-  it("unsupported browser shows text-entry fallback", async () => {
-    vi.spyOn(console, "info").mockImplementation(() => undefined);
-    setMediaRecorderMock({ shouldFail: true });
+  it("unsupported browser shows the type-instead fallback", async () => {
+    clearSpeech();
 
     render(<VoiceModal onClose={vi.fn()} onApprove={vi.fn()} />);
 
     await waitFor(() => {
       expect(
-        screen.getByText(/Voice entry is not supported in this browser\./),
+        screen.getByText(/Voice entry is not supported in this browser/),
       ).toBeTruthy();
     });
-    // A textarea must be present so the user can type the quote details.
-    const textarea = screen.getByRole("textbox");
-    expect(textarea).toBeTruthy();
-    expect(screen.getByText(/Parse it/)).toBeTruthy();
+    expect(screen.getByText(/Cancel/)).toBeTruthy();
   });
 
-  it("permission denied shows microphone permission message", async () => {
-    vi.spyOn(console, "info").mockImplementation(() => undefined);
-
-    Object.defineProperty(window, "MediaRecorder", {
-      configurable: true,
-      value: class {
-        start() {}
-        stop() {}
-        ondataavailable: null = null;
-        onstop: null = null;
-      },
-    });
-    Object.defineProperty(navigator, "mediaDevices", {
-      configurable: true,
-      value: {
-        getUserMedia: vi
-          .fn()
-          .mockRejectedValue(new DOMException("denied", "NotAllowedError")),
-      },
-    });
+  it("supported browser opens the listening flow", async () => {
+    const instances = installMockSpeech("standard");
 
     render(<VoiceModal onClose={vi.fn()} onApprove={vi.fn()} />);
+
+    await waitFor(() => {
+      expect(
+        screen.getByRole("heading", { name: /Listening/ }),
+      ).toBeTruthy();
+    });
+    expect(instances).toHaveLength(1);
+    expect(instances[0].start).toHaveBeenCalledTimes(1);
+  });
+
+  it("webkitSpeechRecognition opens the listening flow in Chrome", async () => {
+    const instances = installMockSpeech("webkit");
+
+    render(<VoiceModal onClose={vi.fn()} onApprove={vi.fn()} />);
+
+    await waitFor(() => {
+      expect(
+        screen.getByRole("heading", { name: /Listening/ }),
+      ).toBeTruthy();
+    });
+    expect(instances).toHaveLength(1);
+    expect(instances[0].start).toHaveBeenCalledTimes(1);
+  });
+
+  it("network error shows the friendly type-instead message", async () => {
+    const instances = installMockSpeech("standard");
+
+    render(<VoiceModal onClose={vi.fn()} onApprove={vi.fn()} />);
+
+    await waitFor(() => {
+      expect(
+        screen.getByRole("heading", { name: /Listening/ }),
+      ).toBeTruthy();
+    });
+
+    act(() => {
+      instances[0].onerror?.({ error: "network" });
+    });
 
     await waitFor(() => {
       expect(
         screen.getByText(
-          /Microphone permission was blocked\. You can enable it in your browser settings or type the quote below\./,
+          /Voice service unreachable\. Type the quote instead\./,
         ),
       ).toBeTruthy();
     });
   });
 
-  it("supported browser initializes without crashing", async () => {
-    vi.spyOn(console, "info").mockImplementation(() => undefined);
-    setMediaRecorderMock();
+  it("permission denied shows the microphone permission message", async () => {
+    const instances = installMockSpeech("standard");
 
-    const { container } = render(
-      <VoiceModal onClose={vi.fn()} onApprove={vi.fn()} />,
-    );
+    render(<VoiceModal onClose={vi.fn()} onApprove={vi.fn()} />);
 
-    // The modal should render without errors and eventually show either
-    // "Checking" or "Recording" or the listening prompt
     await waitFor(() => {
-      expect(container.querySelector('[role="dialog"]')).toBeTruthy();
+      expect(
+        screen.getByRole("heading", { name: /Listening/ }),
+      ).toBeTruthy();
     });
 
-    // Check that some listening-related text exists
-    const text = container.textContent || "";
-    expect(
-      text.includes("Checking") ||
-        text.includes("Recording") ||
-        text.includes("Listening"),
-    ).toBe(true);
+    act(() => {
+      instances[0].onerror?.({ error: "not-allowed" });
+    });
+
+    await waitFor(() => {
+      expect(
+        screen.getByText(/Microphone permission denied/),
+      ).toBeTruthy();
+    });
   });
 });
