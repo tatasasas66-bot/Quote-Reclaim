@@ -105,7 +105,7 @@ describe("voice support detection", () => {
 });
 
 describe("VoiceModal support states", () => {
-  it("unsupported browser shows muted fallback", async () => {
+  it("unsupported browser shows text-entry fallback", async () => {
     vi.spyOn(console, "info").mockImplementation(() => undefined);
     setSpeechConstructors({});
 
@@ -113,11 +113,12 @@ describe("VoiceModal support states", () => {
 
     await waitFor(() => {
       expect(
-        screen.getByText(
-          /Voice entry is not supported in this browser\. You can still type the quote below\./,
-        ),
+        screen.getByText(/Voice entry is not supported in this browser\./),
       ).toBeTruthy();
     });
+    // A textarea must be present so the user can type the quote details.
+    expect(screen.getByRole("textbox")).toBeTruthy();
+    expect(screen.getByText(/Parse it/)).toBeTruthy();
   });
 
   it("permission denied shows microphone permission message", async () => {

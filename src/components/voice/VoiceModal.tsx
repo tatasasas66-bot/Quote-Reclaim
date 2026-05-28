@@ -21,12 +21,18 @@ type Phase =
   | "permission-denied"
   | "error";
 
+// "recognition" = the browser's STT engine failed before any transcript;
+// "parse"       = we got a transcript but couldn't extract the required fields.
+type ErrorSource = "recognition" | "parse" | null;
+
 export function VoiceModal({ onClose, onApprove }: VoiceModalProps) {
   const speech = useSpeechRecognition();
   const [phase, setPhase] = React.useState<Phase>("checking");
   const [parsed, setParsed] = React.useState<VoiceParseResult | null>(null);
   const [parseError, setParseError] = React.useState<string | null>(null);
   const [parsing, setParsing] = React.useState(false);
+  const [errorSource, setErrorSource] = React.useState<ErrorSource>(null);
+  const [manualEntry, setManualEntry] = React.useState("");
   const startAttemptedRef = React.useRef(false);
 
   // Initial state: wait for client-side support detection before deciding.
@@ -42,12 +48,20 @@ export function VoiceModal({ onClose, onApprove }: VoiceModalProps) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [speech.supportChecked, speech.supported]);
 
+  // The browser's STT engine fired an error — speech never captured.
   React.useEffect(() => {
     if (!speech.error) return;
     if (speech.error === "permission-denied") {
       setPhase("permission-denied");
     } else {
-      setParseError("Voice input stopped. You can type the quote below or try again.");
+      // "network", "audio-capture", "start-failed", etc. — the mic engine
+      // itself failed, not the parser. Give the user a text entry instead.
+      setErrorSource("recognition");
+      setParseError(
+        speech.error === "start-failed"
+          ? "Microphone couldn't start in this browser."
+          : "Voice recognition stopped unexpectedly.",
+      );
       setPhase("error");
     }
   }, [speech.error]);
@@ -85,13 +99,12 @@ export function VoiceModal({ onClose, onApprove }: VoiceModalProps) {
       result = parseSpeechLocal(transcript);
     }
 
-    // Only go to the error phase when every required field is still missing
-    // (i.e. even local parsing produced nothing useful).
     const missing = result.missing_required ?? [];
-    const allMissing = missing.length === 4; // client_name, trade, estimate_amount, days_silent
-    if (allMissing) {
+    if (missing.length === 4) {
+      // Every required field is still null — nothing useful was extracted.
+      setErrorSource("parse");
       setParseError(
-        "Voice input stopped. You can type the quote below or try again.",
+        "Couldn't make sense of that. Try again or type the details below.",
       );
       setPhase("error");
     } else {
@@ -110,6 +123,8 @@ export function VoiceModal({ onClose, onApprove }: VoiceModalProps) {
     speech.reset();
     setParsed(null);
     setParseError(null);
+    setErrorSource(null);
+    setManualEntry("");
     setPhase("listening");
     startAttemptedRef.current = true;
     speech.start();
@@ -126,6 +141,13 @@ export function VoiceModal({ onClose, onApprove }: VoiceModalProps) {
     if (!parsed) return;
     onApprove(parsed);
   }
+
+  const errorTitle =
+    phase === "error"
+      ? errorSource === "recognition"
+        ? "Type it instead"
+        : "Couldn't parse that"
+      : null;
 
   return (
     <div
@@ -149,10 +171,10 @@ export function VoiceModal({ onClose, onApprove }: VoiceModalProps) {
                 : phase === "clarify"
                   ? "Almost there"
                   : phase === "unsupported"
-                    ? "Type the quote below"
+                    ? "Type the quote details"
                     : phase === "permission-denied"
                       ? "Microphone blocked"
-                      : "Couldn't parse that"}
+                      : (errorTitle ?? "Couldn't parse that")}
           </h2>
           <button
             type="button"
@@ -197,11 +219,22 @@ export function VoiceModal({ onClose, onApprove }: VoiceModalProps) {
           />
         ) : null}
 
-        {phase === "unsupported" ? (
-          <p className="mt-3 rounded-lg border border-line-subtle bg-surface-2 p-3 text-sm text-ink-muted">
-            Voice entry is not supported in this browser. You can still type the
-            quote below.
-          </p>
+        {/* "unsupported" and "error" share the same manual-entry fallback UI. */}
+        {phase === "unsupported" || phase === "error" ? (
+          <ManualEntryBody
+            hint={
+              phase === "unsupported"
+                ? "Voice entry is not supported in this browser."
+                : (parseError ?? "Couldn't parse that.")
+            }
+            manualEntry={manualEntry}
+            onManualEntry={setManualEntry}
+            onSubmit={() => {
+              if (manualEntry.trim()) void runParser(manualEntry.trim());
+            }}
+            onRecordAgain={phase === "error" ? recordAgain : undefined}
+            parsing={parsing}
+          />
         ) : null}
 
         {phase === "permission-denied" ? (
@@ -209,17 +242,6 @@ export function VoiceModal({ onClose, onApprove }: VoiceModalProps) {
             Microphone permission was blocked. You can enable it in your browser
             settings or type the quote below.
           </p>
-        ) : null}
-
-        {phase === "error" ? (
-          <div className="mt-3 space-y-3">
-            <p className="text-sm text-danger">
-              {parseError ?? "Couldn't parse that."}
-            </p>
-            <Button type="button" fullWidth onClick={recordAgain}>
-              Record again
-            </Button>
-          </div>
         ) : null}
       </div>
     </div>
@@ -288,6 +310,58 @@ function ListeningBody({
           Cancel
         </button>
       </div>
+    </div>
+  );
+}
+
+function ManualEntryBody({
+  hint,
+  manualEntry,
+  onManualEntry,
+  onSubmit,
+  onRecordAgain,
+  parsing,
+}: {
+  hint: string;
+  manualEntry: string;
+  onManualEntry: (v: string) => void;
+  onSubmit: () => void;
+  onRecordAgain?: () => void;
+  parsing: boolean;
+}) {
+  return (
+    <div className="mt-3 space-y-3">
+      <p className="text-sm text-ink-muted">{hint}</p>
+      <label className="flex flex-col gap-1">
+        <span className="text-[10px] font-black uppercase tracking-widest text-ink-muted">
+          Type the quote details
+        </span>
+        <textarea
+          rows={3}
+          value={manualEntry}
+          onChange={(e) => onManualEntry(e.target.value)}
+          placeholder='e.g. "Tom roofing 8500 9 days"'
+          className="w-full resize-none rounded-lg border border-line-subtle bg-surface-2 px-3 py-2 text-sm text-ink-strong placeholder:text-ink-muted focus:border-brand focus:outline-none focus:ring-2 focus:ring-focus/40"
+        />
+      </label>
+      <Button
+        type="button"
+        fullWidth
+        disabled={!manualEntry.trim() || parsing}
+        loading={parsing}
+        onClick={onSubmit}
+      >
+        {parsing ? "Parsing…" : "Parse it"}
+      </Button>
+      {onRecordAgain ? (
+        <button
+          type="button"
+          onClick={onRecordAgain}
+          className="block w-full text-center text-xs text-ink-muted underline hover:text-ink-strong focus:outline-none"
+        >
+          Record again
+        </button>
+      ) : null}
     </div>
   );
 }
