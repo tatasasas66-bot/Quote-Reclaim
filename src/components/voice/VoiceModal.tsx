@@ -41,38 +41,77 @@ export function VoiceModal({ onClose, onApprove }: VoiceModalProps) {
     if (speech.supported && !startAttemptedRef.current) {
       startAttemptedRef.current = true;
       setPhase("listening");
-      speech.start();
+      void speech.start();
     } else if (!speech.supported) {
       setPhase("unsupported");
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [speech.supportChecked, speech.supported]);
 
-  // The browser's STT engine fired an error — speech never captured.
+  // The browser's mic engine fired an error — audio never captured.
   React.useEffect(() => {
     if (!speech.error) return;
     if (speech.error === "permission-denied") {
       setPhase("permission-denied");
     } else {
-      // "network", "audio-capture", "start-failed", etc. — the mic engine
+      // "audio-capture-failed" or "recording-failed" — the mic engine
       // itself failed, not the parser. Give the user a text entry instead.
       setErrorSource("recognition");
       setParseError(
-        speech.error === "start-failed"
-          ? "Microphone couldn't start in this browser."
-          : "Voice recognition stopped unexpectedly.",
+        speech.error === "audio-capture-failed"
+          ? "Couldn't access the microphone. Try again or type below."
+          : "Recording failed unexpectedly. Try again or type below.",
       );
       setPhase("error");
     }
   }, [speech.error]);
 
-  // When listening ends, ship the transcript to the parser.
+  // When audio recording ends, transcribe it and then parse.
   React.useEffect(() => {
-    if (!speech.isListening && speech.transcript && phase === "listening") {
-      void runParser(speech.transcript);
+    if (!speech.isListening && speech.audioBlob && phase === "listening") {
+      void transcribeAndParse(speech.audioBlob);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [speech.isListening, speech.transcript, phase]);
+  }, [speech.isListening, speech.audioBlob, phase]);
+
+  async function transcribeAndParse(audioBlob: Blob) {
+    setParsing(true);
+    setParseError(null);
+
+    try {
+      // POST audio to transcription endpoint
+      const formData = new FormData();
+      formData.append("audio", audioBlob, "recording.webm");
+
+      const transcribeResponse = await fetch("/api/transcribe-speech", {
+        method: "POST",
+        body: formData,
+      });
+
+      if (!transcribeResponse.ok) {
+        const error = await transcribeResponse.json();
+        throw new Error(
+          error.error || `Transcription failed: ${transcribeResponse.status}`,
+        );
+      }
+
+      const { transcript } = (await transcribeResponse.json()) as {
+        transcript: string;
+      };
+
+      // Run the existing parse flow on the transcript
+      await runParser(transcript);
+    } catch (err) {
+      setErrorSource("recognition");
+      setParseError(
+        err instanceof Error
+          ? err.message
+          : "Could not transcribe audio. Try again or type below.",
+      );
+      setPhase("error");
+      setParsing(false);
+    }
+  }
 
   async function runParser(transcript: string) {
     setParsing(true);
@@ -115,8 +154,8 @@ export function VoiceModal({ onClose, onApprove }: VoiceModalProps) {
     setParsing(false);
   }
 
-  function stopAndReview() {
-    speech.stop();
+  async function stopAndReview() {
+    await speech.stop();
   }
 
   function recordAgain() {
@@ -127,7 +166,7 @@ export function VoiceModal({ onClose, onApprove }: VoiceModalProps) {
     setManualEntry("");
     setPhase("listening");
     startAttemptedRef.current = true;
-    speech.start();
+    void speech.start();
   }
 
   function patchField<K extends keyof VoiceParseResult>(
@@ -194,7 +233,6 @@ export function VoiceModal({ onClose, onApprove }: VoiceModalProps) {
 
         {phase === "listening" ? (
           <ListeningBody
-            transcript={speech.transcript}
             onStop={stopAndReview}
             onCancel={onClose}
             parsing={parsing}
@@ -249,12 +287,10 @@ export function VoiceModal({ onClose, onApprove }: VoiceModalProps) {
 }
 
 function ListeningBody({
-  transcript,
   onStop,
   onCancel,
   parsing,
 }: {
-  transcript: string;
   onStop: () => void;
   onCancel: () => void;
   parsing: boolean;
@@ -274,21 +310,15 @@ function ListeningBody({
             aria-hidden="true"
             className="h-2 w-2 animate-pulse rounded-full bg-brand"
           />
-          Listening…
+          Recording…
         </p>
       </div>
-      {transcript ? (
-        <p className="rounded-lg border border-line-subtle bg-surface-2 p-3 text-sm text-ink">
-          {transcript}
-        </p>
-      ) : (
-        <p className="text-center text-sm text-ink-muted">
-          Say the client&apos;s first name, the trade, the estimate, and how
-          many days they&apos;ve been silent.
-        </p>
-      )}
+      <p className="text-center text-sm text-ink-muted">
+        Say the client&apos;s first name, the trade, the estimate, and how
+        many days they&apos;ve been silent.
+      </p>
       <p className="text-center text-xs text-ink-muted">
-        Take your time. Press Stop &amp; Review when done.
+        Take your time. Press Stop when done.
       </p>
       <div className="space-y-3">
         <Button
@@ -299,7 +329,7 @@ function ListeningBody({
           onClick={onStop}
           loading={parsing}
         >
-          {parsing ? "Parsing…" : "Stop & Review"}
+          {parsing ? "Transcribing…" : "Stop"}
         </Button>
         <button
           type="button"

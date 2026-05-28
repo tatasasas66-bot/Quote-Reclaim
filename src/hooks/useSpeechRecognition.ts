@@ -2,106 +2,52 @@
 
 import * as React from "react";
 
-type SpeechAlternativeLike = { transcript: string };
-type SpeechResultLike = ArrayLike<SpeechAlternativeLike> & { isFinal: boolean };
-type SpeechRecognitionEventLike = {
-  resultIndex: number;
-  results: ArrayLike<SpeechResultLike>;
-};
+type VoiceError = "permission-denied" | "audio-capture-failed" | "recording-failed";
 
-type SpeechRecognitionLike = {
-  start(): void;
-  stop(): void;
-  abort(): void;
-  continuous: boolean;
-  interimResults: boolean;
-  lang: string;
-  onresult: ((event: SpeechRecognitionEventLike) => void) | null;
-  onend: (() => void) | null;
-  onerror: ((event: unknown) => void) | null;
-};
-
-type SpeechRecognitionCtor = new () => SpeechRecognitionLike;
-type VoiceError = "permission-denied" | "start-failed" | "recognition-error";
-
-type WindowWithSpeech = Window & {
-  SpeechRecognition?: SpeechRecognitionCtor;
-  webkitSpeechRecognition?: SpeechRecognitionCtor;
-};
-
-export function getSpeechRecognitionConstructor(
-  source: WindowWithSpeech | undefined | null,
-): SpeechRecognitionCtor | null {
-  if (!source) return null;
-  return source.SpeechRecognition ?? source.webkitSpeechRecognition ?? null;
+export function getSpeechRecognitionConstructor(): boolean {
+  if (typeof window === "undefined") return false;
+  return "MediaRecorder" in window && navigator.mediaDevices?.getUserMedia != null;
 }
 
-export function getVoiceSupport(
-  source: WindowWithSpeech | undefined | null,
-): {
-  speechRecognition: boolean;
-  webkitSpeechRecognition: boolean;
+export function getVoiceSupport(): {
+  mediaRecorder: boolean;
+  getUserMedia: boolean;
   isSecureContext: boolean;
 } {
   return {
-    speechRecognition: Boolean(source?.SpeechRecognition),
-    webkitSpeechRecognition: Boolean(source?.webkitSpeechRecognition),
-    isSecureContext: Boolean(source?.isSecureContext),
+    mediaRecorder: typeof window !== "undefined" && "MediaRecorder" in window,
+    getUserMedia: typeof window !== "undefined" && navigator.mediaDevices?.getUserMedia != null,
+    isSecureContext: typeof window !== "undefined" ? Boolean((window as any).isSecureContext) : false,
   };
 }
 
-function errorName(event: unknown): string {
-  return typeof event === "object" && event !== null && "error" in event
-    ? String((event as { error?: unknown }).error)
-    : "";
-}
-
-function isPermissionDenied(event: unknown): boolean {
-  const error = errorName(event);
-  return error === "not-allowed" || error === "service-not-allowed";
-}
-
 /**
- * Errors the engine raises on its own during normal use. "no-speech" fires
- * after a silence pause and "aborted" fires when we call stop()/abort() — both
- * must be ignored so the mic keeps listening until the contractor stops it.
- */
-function isNonFatalError(event: unknown): boolean {
-  const error = errorName(event);
-  return error === "no-speech" || error === "aborted";
-}
-
-/**
- * Web Speech API wrapper. Returns a tiny imperative API so the modal can drive
- * start/stop without re-render churn. `supported` is detected on mount, never
- * at module load (avoids SSR `window` access).
+ * Browser MediaRecorder wrapper for capturing microphone audio.
+ * Records continuously while the contractor speaks and packages audio as a
+ * Blob when stop() is called. The parent component POSTs the blob to the
+ * backend transcription endpoint.
  *
- * The mic is contractor-controlled: it keeps listening across silence pauses
- * (each engine-initiated `onend` immediately restarts the same session) and
- * only stops when `stop()` is called or a fatal error occurs.
+ * The mic is contractor-controlled: starts on demand, stops on demand,
+ * and only fails on permission denial or hardware failure.
  */
 export function useSpeechRecognition(): {
   supportChecked: boolean;
   supported: boolean;
   isListening: boolean;
-  transcript: string;
+  audioBlob: Blob | null;
   error: VoiceError | null;
-  start: () => void;
-  stop: () => void;
+  start: () => Promise<void>;
+  stop: () => Promise<void>;
   reset: () => void;
 } {
   const [supportChecked, setSupportChecked] = React.useState(false);
   const [supported, setSupported] = React.useState(false);
   const [isListening, setIsListening] = React.useState(false);
-  const [transcript, setTranscript] = React.useState("");
+  const [audioBlob, setAudioBlob] = React.useState<Blob | null>(null);
   const [error, setError] = React.useState<VoiceError | null>(null);
-  const recognitionRef = React.useRef<SpeechRecognitionLike | null>(null);
-  // True only when the contractor (or a fatal error) ended the session — gates
-  // the auto-restart in onend so silence never closes the mic.
-  const userStoppedRef = React.useRef(false);
-  // Finalized text accumulated across restarts. Each restart resets the
-  // engine's own results list, so we keep our own running transcript here.
-  const transcriptRef = React.useRef("");
+  const mediaRecorderRef = React.useRef<MediaRecorder | null>(null);
+  const streamRef = React.useRef<MediaStream | null>(null);
+  const chunksRef = React.useRef<BlobPart[]>([]);
 
   React.useEffect(() => {
     if (typeof window === "undefined") {
@@ -109,113 +55,124 @@ export function useSpeechRecognition(): {
       setSupported(false);
       return;
     }
-    const w = window as WindowWithSpeech;
-    const Ctor = getSpeechRecognitionConstructor(w);
-    setSupported(Boolean(Ctor));
+    const isSupported = getSpeechRecognitionConstructor();
+    setSupported(isSupported);
     setSupportChecked(true);
 
     if (process.env.NODE_ENV !== "production") {
-      // Debug-safe: support flags only, never transcripts or customer data.
-      console.info("voiceSupport:", getVoiceSupport(w));
+      console.info("voiceSupport:", getVoiceSupport());
     }
   }, []);
 
-  const stop = React.useCallback(() => {
-    userStoppedRef.current = true;
-    try {
-      recognitionRef.current?.stop();
-    } catch {
-      // browser may throw if not started yet — ignore
-    }
-  }, []);
-
-  const start = React.useCallback(() => {
+  const start = React.useCallback(async () => {
     if (typeof window === "undefined") return;
-    const w = window as WindowWithSpeech;
-    const Ctor = getSpeechRecognitionConstructor(w);
-    if (!Ctor) return;
-    const recognition = new Ctor();
-    recognition.lang = "en-US";
-    recognition.continuous = true;
-    recognition.interimResults = true;
+    if (!("MediaRecorder" in window)) return;
+
     setError(null);
-    userStoppedRef.current = false;
-    transcriptRef.current = "";
+    chunksRef.current = [];
+    setAudioBlob(null);
 
-    recognition.onresult = (event) => {
-      let finalChunk = "";
-      let interimChunk = "";
-      for (let i = event.resultIndex; i < event.results.length; i++) {
-        const res = event.results[i];
-        const alt = res[0];
-        if (!alt) continue;
-        if (res.isFinal) finalChunk += alt.transcript;
-        else interimChunk += alt.transcript;
-      }
-      if (finalChunk) {
-        transcriptRef.current = `${transcriptRef.current} ${finalChunk}`.trim();
-      }
-      setTranscript(`${transcriptRef.current} ${interimChunk}`.trim());
-    };
-
-    recognition.onerror = (event) => {
-      // Silence and self-triggered aborts are non-fatal — keep listening.
-      if (isNonFatalError(event)) return;
-      userStoppedRef.current = true;
-      setIsListening(false);
-      setError(
-        isPermissionDenied(event) ? "permission-denied" : "recognition-error",
-      );
-    };
-
-    recognition.onend = () => {
-      // A newer session replaced this one — let it own the state.
-      if (recognitionRef.current !== recognition) return;
-      // The engine ends the session on silence. Unless the contractor pressed
-      // stop (or a fatal error fired), restart so the mic stays open.
-      if (userStoppedRef.current) {
-        setIsListening(false);
-        return;
-      }
-      try {
-        recognition.start();
-      } catch {
-        // already running — ignore
-      }
-    };
-
-    recognitionRef.current = recognition;
-    setTranscript("");
-    setIsListening(true);
     try {
-      recognition.start();
-    } catch {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      streamRef.current = stream;
+
+      const mediaRecorder = new MediaRecorder(stream, { mimeType: "audio/webm" });
+      mediaRecorderRef.current = mediaRecorder;
+
+      mediaRecorder.ondataavailable = (event) => {
+        if (event.data.size > 0) {
+          chunksRef.current.push(event.data);
+        }
+      };
+
+      mediaRecorder.start();
+      setIsListening(true);
+    } catch (err) {
       setIsListening(false);
-      setError("start-failed");
+      if ((err as DOMException).name === "NotAllowedError") {
+        setError("permission-denied");
+      } else {
+        setError("audio-capture-failed");
+      }
     }
+  }, []);
+
+  const stop = React.useCallback(async () => {
+    const recorder = mediaRecorderRef.current;
+    const stream = streamRef.current;
+
+    if (!recorder) {
+      setIsListening(false);
+      return;
+    }
+
+    return new Promise<void>((resolve) => {
+      recorder.onstop = () => {
+        const blob = new Blob(chunksRef.current, { type: "audio/webm" });
+        setAudioBlob(blob);
+        setIsListening(false);
+
+        if (stream) {
+          for (const track of stream.getTracks()) {
+            track.stop();
+          }
+        }
+        streamRef.current = null;
+        mediaRecorderRef.current = null;
+        resolve();
+      };
+
+      try {
+        recorder.stop();
+      } catch {
+        setIsListening(false);
+        setError("recording-failed");
+        resolve();
+      }
+    });
   }, []);
 
   const reset = React.useCallback(() => {
-    userStoppedRef.current = true;
-    try {
-      recognitionRef.current?.abort();
-    } catch {
-      // ignore
+    const recorder = mediaRecorderRef.current;
+    const stream = streamRef.current;
+
+    if (recorder && recorder.state !== "inactive") {
+      try {
+        recorder.stop();
+      } catch {
+        // ignore
+      }
     }
-    recognitionRef.current = null;
-    transcriptRef.current = "";
-    setTranscript("");
+    if (stream) {
+      for (const track of stream.getTracks()) {
+        track.stop();
+      }
+    }
+
+    mediaRecorderRef.current = null;
+    streamRef.current = null;
+    chunksRef.current = [];
     setIsListening(false);
+    setAudioBlob(null);
     setError(null);
   }, []);
 
   React.useEffect(() => {
     return () => {
-      userStoppedRef.current = true;
-      try {
-        recognitionRef.current?.abort();
-      } catch {
-        // ignore
+      const recorder = mediaRecorderRef.current;
+      const stream = streamRef.current;
+
+      if (recorder && recorder.state !== "inactive") {
+        try {
+          recorder.stop();
+        } catch {
+          // ignore
+        }
+      }
+      if (stream) {
+        for (const track of stream.getTracks()) {
+          track.stop();
+        }
       }
     };
   }, []);
@@ -224,10 +181,11 @@ export function useSpeechRecognition(): {
     supportChecked,
     supported,
     isListening,
-    transcript,
+    audioBlob,
     error,
     start,
     stop,
     reset,
   };
 }
+
