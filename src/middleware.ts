@@ -1,5 +1,6 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { createServerClient, type CookieOptions } from "@supabase/ssr";
+import { withPersistentSessionCookie } from "@/lib/supabase/cookie-options";
 
 /**
  * Refreshes the Supabase auth session on each request so cookies stay valid
@@ -30,7 +31,11 @@ export async function middleware(request: NextRequest) {
         }
         response = NextResponse.next({ request });
         for (const { name, value, options } of toSet) {
-          response.cookies.set(name, value, options);
+          response.cookies.set(
+            name,
+            value,
+            withPersistentSessionCookie(value, options),
+          );
         }
       },
     },

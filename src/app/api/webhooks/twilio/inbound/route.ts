@@ -5,6 +5,7 @@ import {
   verifyTwilioSignature,
 } from "@/lib/messaging/twilio-signature";
 import { maskPhone, phoneCandidates } from "@/lib/messaging/phone";
+import { classifyReply } from "@/lib/ai/classify-reply";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -172,6 +173,17 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     .eq("sent", false)
     .is("paused_at", null);
 
+  // Reply Radar: classify the reply intent up front. recovery_events is
+  // append-only (no UPDATE), so the classification must be written with the
+  // insert. classifyReply never throws and degrades to a keyword heuristic
+  // when the fast model is unconfigured, so this never blocks reply capture.
+  let replyIntent: string | null = null;
+  try {
+    replyIntent = await classifyReply(truncatedBody);
+  } catch {
+    replyIntent = null;
+  }
+
   const { error: evtError } = await supabase.from("recovery_events").insert({
     user_id: quote.user_id,
     sequence_id: quote.sequence_id,
@@ -184,6 +196,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     estimate_amount: quote.estimate_amount,
     channel: "sms",
     reply_text: truncatedBody,
+    reply_intent: replyIntent,
   });
   if (evtError && evtError.code !== "23505") {
     console.error(

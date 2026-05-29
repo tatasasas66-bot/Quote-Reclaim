@@ -5,9 +5,13 @@ import { Badge, Button, Logo } from "@/components/ui";
 import {
   CopyButton,
   QuoteActions,
+  ReplyRadarCard,
   SendEarlyButton,
   type RecoveryStatus,
+  type ReplyRadarData,
 } from "@/components/quotes";
+import { isReplyIntent } from "@/lib/ai/classify-reply";
+import { suggestResponse } from "@/lib/ai/suggest-response";
 import { requireUser } from "@/lib/auth/require-user";
 import { nextBestAction } from "@/lib/quotes/next-best-action";
 import {
@@ -101,6 +105,33 @@ export default async function QuoteDetailPage({
     .limit(1);
   const hasReplyForQuote = (replyRows ?? []).length > 0;
 
+  // Reply Radar: the most recent classified inbound reply for this quote.
+  // recovery_events is append-only, so reply_intent was written at capture
+  // time by the inbound webhook. Reads via the service client (RLS-bypassing)
+  // exactly like the replied-status probe above.
+  const { data: replyEventRows } = await serviceClient
+    .from("recovery_events")
+    .select("reply_text, reply_intent, created_at")
+    .eq("quote_id", quote.id)
+    .eq("user_id", user.id)
+    .eq("event_type", "reply_received")
+    .order("created_at", { ascending: false })
+    .limit(1);
+  const replyEvent = (replyEventRows ?? [])[0];
+  const replyRadar: ReplyRadarData | null =
+    replyEvent && isReplyIntent(replyEvent.reply_intent)
+      ? {
+          clientName: titleCaseName(quote.client_name),
+          replyText: String(replyEvent.reply_text ?? ""),
+          suggestion: suggestResponse({
+            intent: replyEvent.reply_intent,
+            trade: quote.trade,
+            estimateAmount: quote.estimate_amount,
+            clientName: quote.client_name,
+          }),
+        }
+      : null;
+
   return (
     <main className="mx-auto flex min-h-screen w-full max-w-5xl flex-col gap-8 bg-canvas px-4 py-8 sm:px-6">
       <header className="flex items-center justify-between border-b border-line-subtle/80 pb-5">
@@ -119,6 +150,8 @@ export default async function QuoteDetailPage({
         hasReplyForQuote={hasReplyForQuote}
         allTimeRecovered={allTimeRecovered}
       />
+
+      <ReplyRadarCard reply={replyRadar} />
 
       <RecoveryPlanSection
         reminders={reminders}

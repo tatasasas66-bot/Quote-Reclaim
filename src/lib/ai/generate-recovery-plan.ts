@@ -32,6 +32,10 @@ export type RecoveryContext = {
   jobDescription?: string | null;
   city?: string | null;
   state?: string | null;
+  // Seeds deterministic variant selection so the same quote always renders the
+  // same phrasing while different quotes vary (anti-repetition). Optional so
+  // server-side previews and unit tests fall back to the canonical template.
+  quoteId?: string | null;
 };
 
 const FRAMEWORK_BY_NUMBER: Record<1 | 2 | 3, RecoveryFramework> = {
@@ -71,6 +75,9 @@ function buildPrompt(ctx: RecoveryContext): ChatMessage[] {
   const name = titleCase(ctx.firstName ?? "");
 
   const system = `You generate SMS follow-up messages for US home-service contractors chasing silent estimates. Each message must:
+
+VARIATION (anti-repetition):
+Generate a DIFFERENT phrasing each time while strictly preserving the day's psychological frame (Day 1 Pattern Interrupt, Day 3 Authority Frame, Day 7 Voss Takeaway). Never reuse the exact same sentence across clients. Vary verbs, sentence structure, and opening — keep the strategy identical.
 
 VOICE AND TONE:
 - Sound like a confident, busy tradesperson — not a salesperson

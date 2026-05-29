@@ -85,32 +85,107 @@ export function projectLabel(trade: string): string {
   return `the ${lower} estimate`;
 }
 
+export type VariantVars = {
+  firstName: string;
+  contractorFirstName: string;
+  project: string;
+};
+
+/**
+ * Four phrasings per day. Each preserves the per-day psychological frame but
+ * varies verbs, structure, and opening so two different quotes do not read
+ * identically (anti-repetition).
+ *
+ * INVARIANT: index 0 is the canonical research template and must stay
+ * verbatim — the AI exact-match gate in generate-recovery-plan and the locked
+ * fallback tests both pin it. Every variant must pass validateMessage:
+ * under 220 chars, exactly one question mark, no exclamation, no emoji, no
+ * banned phrase, and the per-day start pattern (Hey name / name comma / none).
+ */
+const DAY1_VARIANTS: ReadonlyArray<(v: VariantVars) => string> = [
+  // v1 — Pattern Interrupt (canonical). Surfaces confusion + price anxiety.
+  ({ firstName, contractorFirstName, project }) =>
+    `Hey ${firstName} — ${contractorFirstName} here. Looked back at ${project}. Anything on it that didn't make sense, or any number you want me to walk through?`,
+  ({ firstName, project }) =>
+    `Hey ${firstName} — quick one on ${project}. Was the scope clear, or is there a line you want me to break down?`,
+  ({ firstName, contractorFirstName, project }) =>
+    `Hey ${firstName} — ${contractorFirstName}. Circling on ${project} — anything in the numbers or the timeline you'd want me to clarify?`,
+  ({ firstName, project }) =>
+    `Hey ${firstName} — about ${project}: did everything land right, or is there a detail you'd want me to walk through first?`,
+];
+
+const DAY3_VARIANTS: ReadonlyArray<(v: VariantVars) => string> = [
+  // v1 — Authority/Prize Frame (canonical). Schedule scarcity + loss aversion.
+  ({ firstName }) =>
+    `${firstName}, putting next week's schedule together. Need to know if I'm holding a slot for you or releasing it. What works?`,
+  ({ firstName }) =>
+    `${firstName}, finalizing next week's bookings. Want me to keep your spot, or let it go to the next job? Your call.`,
+  ({ firstName }) =>
+    `${firstName}, locking in the schedule for the week. Should I hold your slot or open it up? Let me know either way.`,
+  ({ firstName }) =>
+    `${firstName}, mapping out next week's crew. Hold your spot or release it? Just need a direction.`,
+];
+
+const DAY7_VARIANTS: ReadonlyArray<(v: VariantVars) => string> = [
+  // v1 — Voss Takeaway (canonical). No name, no greeting, binary close.
+  ({ project }) =>
+    `Have you given up on ${project}? If so, I'll close the file — no problem either way. Just need a yes or no so I can clear it from my list.`,
+  ({ project }) =>
+    `Should I close out ${project} for now? A yes or no is all I need — no pressure either way.`,
+  ({ project }) =>
+    `Are you moving in a different direction on ${project}? Either way is fine, I just need to clear my list.`,
+  ({ project }) =>
+    `Closing out files this week. Is ${project} still alive, or should I let it go? One word works.`,
+];
+
+/**
+ * All variant builders keyed by day. Exported so tests can enumerate and
+ * validate all 12 (3 days × 4 variants).
+ */
+export const SEQUENCE_VARIANTS: Record<
+  1 | 3 | 7,
+  ReadonlyArray<(v: VariantVars) => string>
+> = {
+  1: DAY1_VARIANTS,
+  3: DAY3_VARIANTS,
+  7: DAY7_VARIANTS,
+};
+
+/**
+ * Deterministic variant index (0-3) for a quote + day. The same quote always
+ * maps to the same phrasing (stable across reloads and regenerations); two
+ * different quotes spread across the four phrasings.
+ *
+ * An empty/missing quoteId returns 0 — the canonical template — which keeps
+ * server-side previews and the locked exact-match tests stable.
+ */
+export function pickVariant(quoteId: string | null | undefined, day: 1 | 3 | 7): number {
+  if (!quoteId) return 0;
+  let hash = 0;
+  const seed = `${quoteId}:${day}`;
+  for (let i = 0; i < seed.length; i++) {
+    // FNV-ish rolling hash; >>> 0 keeps it an unsigned 32-bit int.
+    hash = (hash * 31 + seed.charCodeAt(i)) >>> 0;
+  }
+  return hash % 4;
+}
+
 export function researchSequenceMessages(ctx: RecoveryContext): {
   day1: string;
   day3: string;
   day7: string;
 } {
-  const firstName = cleanName(ctx.firstName, "there");
-  const contractorFirstName = cleanName(ctx.contractorFirstName, "Contractor");
-  const project = projectLabel(ctx.trade);
+  const vars: VariantVars = {
+    firstName: cleanName(ctx.firstName, "there"),
+    contractorFirstName: cleanName(ctx.contractorFirstName, "Contractor"),
+    project: projectLabel(ctx.trade),
+  };
+  const quoteId = ctx.quoteId ?? "";
 
   return {
-    // Day 1 — Pattern Interrupt: "Hey" used only here. Peer-to-peer opener.
-    // "Looked back at" = soft Prize Frame (contractor reviews = busy, demanded).
-    // Surfaces two real objections: confusion + price anxiety.
-    day1: `Hey ${firstName} — ${contractorFirstName} here. Looked back at ${project}. Anything on it that didn't make sense, or any number you want me to walk through?`,
-
-    // Day 3 — Time Frame + Prize Frame: NO greeting, name only.
-    // "Holding a slot or releasing it" = loss aversion + scarcity.
-    // "What works?" = decisional question; their control.
-    day3: `${firstName}, putting next week's schedule together. Need to know if I'm holding a slot for you or releasing it. What works?`,
-
-    // Day 7 — Voss Takeaway Close: NO name, NO greeting, maximum detachment.
-    // "Have you given up on" = no-oriented question (safe to answer "No").
-    // "Close the file" = explicit withdrawal → loss aversion.
-    // "No problem either way" paradoxically lowers defensiveness.
-    // Kreuzberger reports 76% response rate on this exact structure.
-    day7: `Have you given up on ${project}? If so, I'll close the file — no problem either way. Just need a yes or no so I can clear it from my list.`,
+    day1: DAY1_VARIANTS[pickVariant(quoteId, 1)](vars),
+    day3: DAY3_VARIANTS[pickVariant(quoteId, 3)](vars),
+    day7: DAY7_VARIANTS[pickVariant(quoteId, 7)](vars),
   };
 }
 

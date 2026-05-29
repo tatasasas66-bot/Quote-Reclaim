@@ -150,8 +150,9 @@ async function reconcileReminders(params: {
     return;
   }
 
-  // No reminders sent — regenerate message text + schedule.
-  const plan = await generateRecoveryPlan(recovery);
+  // No reminders sent — regenerate message text + schedule. Seed variant
+  // selection with the quote id so phrasing stays stable for this quote.
+  const plan = await generateRecoveryPlan({ ...recovery, quoteId });
   const valid = plan.filter(
     (m) =>
       validateMessage(m.message, {
@@ -283,6 +284,7 @@ export async function createQuoteAction(
     jobDescription: input.job_description || null,
     city: input.city || null,
     state: input.state || null,
+    quoteId,
   });
 
   const reminderRows = plan

@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { Button } from "@/components/ui";
+import { UpgradeButton } from "@/components/billing";
 import { QuoteListItem } from "@/components/quotes";
 import { HeroMetric } from "@/components/dashboard/HeroMetric";
 import { MetricCards } from "@/components/dashboard/MetricCards";
@@ -85,11 +86,19 @@ export default async function DashboardPage() {
               move.
             </p>
           </div>
-          <form action="/api/auth/sign-out" method="post">
-            <Button type="submit" variant="ghost" size="sm">
-              Sign out
-            </Button>
-          </form>
+          <div className="flex items-center gap-3">
+            <UpgradeButton />
+            <form action="/api/auth/sign-out" method="post">
+              <Button
+                type="submit"
+                variant="ghost"
+                size="sm"
+                className="text-ink-muted hover:text-ink-strong"
+              >
+                Sign out
+              </Button>
+            </form>
+          </div>
         </div>
       </header>
 

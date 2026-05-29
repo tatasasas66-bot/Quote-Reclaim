@@ -1,6 +1,7 @@
 import { cookies } from "next/headers";
 import { createServerClient, type CookieOptions } from "@supabase/ssr";
 import { requireEnv } from "@/lib/utils/env";
+import { withPersistentSessionCookie } from "./cookie-options";
 
 /**
  * Cookie-aware Supabase client for server components, server actions, and
@@ -22,7 +23,7 @@ export function createServerSupabaseClient() {
         setAll(toSet: { name: string; value: string; options: CookieOptions }[]) {
           try {
             for (const { name, value, options } of toSet) {
-              cookieStore.set(name, value, options);
+              cookieStore.set(name, value, withPersistentSessionCookie(value, options));
             }
           } catch {
             // setAll is a no-op from Server Components (cookies are read-only).
