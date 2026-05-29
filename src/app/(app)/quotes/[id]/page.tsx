@@ -125,6 +125,7 @@ export default async function QuoteDetailPage({
         status={status}
         nextDate={next}
         hasPhone={Boolean(quote.client_phone)}
+        hasEmail={Boolean(quote.client_email)}
         hasReplyForQuote={hasReplyForQuote}
       />
     </main>
@@ -259,14 +260,22 @@ function RecoveryPlanSection({
   status,
   nextDate,
   hasPhone,
+  hasEmail,
   hasReplyForQuote,
 }: {
   reminders: ReminderRow[];
   status: RecoveryStatus;
   nextDate: Date | null;
   hasPhone: boolean;
+  hasEmail: boolean;
   hasReplyForQuote: boolean;
 }) {
+  // Email channel = automated via Resend on the cron schedule.
+  // No email = copy mode (contractor sends manually from their phone).
+  const runningIntro = hasEmail
+    ? "Quote Reclaim sends these follow-ups by email on schedule. Step in when they reply or the job comes back."
+    : "Your recovery plan is ready. Copy each message and send it from your phone — Quote Reclaim tracks the timing for you.";
+
   return (
     <section className="space-y-4">
       <div className="flex flex-wrap items-end justify-between gap-3">
@@ -288,7 +297,7 @@ function RecoveryPlanSection({
       {(status === "running" || status === "paused") && reminders.length > 0 ? (
         <p className="max-w-3xl text-sm leading-6 text-ink-muted">
           {status === "running"
-            ? "Your recovery plan is ready. Copy a message now, or connect sending automation to let Quote Reclaim handle the chasing."
+            ? runningIntro
             : "Recovery is paused. Future reminders won't send until you resume."}
         </p>
       ) : null}
@@ -305,6 +314,7 @@ function RecoveryPlanSection({
               reminder={r}
               recoveryStatus={status}
               hasPhone={hasPhone}
+              hasEmail={hasEmail}
               allReminders={reminders}
               hasReplyForQuote={hasReplyForQuote}
             />
@@ -319,12 +329,14 @@ function ReminderCard({
   reminder: r,
   recoveryStatus,
   hasPhone,
+  hasEmail,
   allReminders,
   hasReplyForQuote,
 }: {
   reminder: ReminderRow;
   recoveryStatus: RecoveryStatus;
   hasPhone: boolean;
+  hasEmail: boolean;
   allReminders: ReminderRow[];
   hasReplyForQuote: boolean;
 }) {
@@ -347,11 +359,18 @@ function ReminderCard({
   const dayLabel =
     CADENCE_DAYS[r.followup_number as 1 | 2 | 3] ?? r.followup_number;
 
+  const messageType: "email" | "sms" = r.message_type === "email" ? "email" : "sms";
+  const hasRecipientForChannel = messageType === "email" ? hasEmail : hasPhone;
+
   const sendEarlyDisabled =
     r.sent ||
     r.paused_at !== null ||
     recoveryStatus !== "running" ||
-    !hasPhone;
+    !hasRecipientForChannel;
+
+  // Copy-only mode (no email, no phone): hide Send early entirely so Copy is
+  // the only obvious action.
+  const showSendEarly = hasEmail || hasPhone;
 
   return (
     <li className="rounded-lg border border-line-subtle bg-surface-1 shadow-[0_16px_46px_rgba(0,0,0,0.2)]">
@@ -382,7 +401,13 @@ function ReminderCard({
         </p>
         <div className="flex items-center gap-1">
           <CopyButton text={r.message_text} />
-          <SendEarlyButton reminderId={r.id} disabled={sendEarlyDisabled} />
+          {showSendEarly ? (
+            <SendEarlyButton
+              reminderId={r.id}
+              disabled={sendEarlyDisabled}
+              messageType={messageType}
+            />
+          ) : null}
         </div>
       </div>
     </li>

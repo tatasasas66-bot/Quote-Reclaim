@@ -2,14 +2,18 @@
 
 import * as React from "react";
 import { Button } from "@/components/ui";
-import { sendReminderManualAction } from "@/lib/quotes/actions";
+import {
+  sendReminderManualAction,
+  sendReminderManualEmailAction,
+} from "@/lib/quotes/actions";
 
 type Props = {
   reminderId: string;
   disabled: boolean;
+  messageType?: "email" | "sms";
 };
 
-export function SendEarlyButton({ reminderId, disabled }: Props) {
+export function SendEarlyButton({ reminderId, disabled, messageType = "sms" }: Props) {
   const [state, setState] = React.useState<"idle" | "pending" | "sent" | "error">("idle");
   const [errorMsg, setErrorMsg] = React.useState<string | null>(null);
 
@@ -17,7 +21,10 @@ export function SendEarlyButton({ reminderId, disabled }: Props) {
     if (disabled || state !== "idle") return;
     setState("pending");
     try {
-      const result = await sendReminderManualAction(reminderId);
+      const result =
+        messageType === "email"
+          ? await sendReminderManualEmailAction(reminderId)
+          : await sendReminderManualAction(reminderId);
       if (result.ok) {
         setState("sent");
       } else {

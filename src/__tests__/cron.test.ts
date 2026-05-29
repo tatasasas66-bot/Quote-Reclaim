@@ -146,14 +146,23 @@ describe("/api/cron/send route", () => {
     );
   });
 
-  it("uses the messaging service (no direct Twilio import)", () => {
-    expect(sendRoute).toContain("getMessagingService");
-    expect(sendRoute).not.toMatch(/from\s+["']twilio["']/);
+  it("sends email via Resend (sendRecoveryEmail helper)", () => {
+    expect(sendRoute).toContain("sendRecoveryEmail");
+    expect(sendRoute).not.toMatch(/from\s+["']resend["']/);
   });
 
-  it("fails closed (503) when the messaging service is unavailable in production", () => {
+  it("keeps the Twilio path dormant behind SMS_ENABLED (default off)", () => {
+    expect(sendRoute).toContain("getMessagingService");
+    expect(sendRoute).not.toMatch(/from\s+["']twilio["']/);
+    expect(sendRoute).toMatch(/SMS_ENABLED\s*=\s*process\.env\.SMS_ENABLED\s*===\s*"true"/);
+    expect(sendRoute).toMatch(/if \(SMS_ENABLED\)[\s\S]*?smsProvider = getMessagingService\(\)/);
+  });
+
+  it("fails closed (503) only when SMS is enabled and Twilio is unavailable", () => {
+    // The SMS provider is now resolved INSIDE the `if (SMS_ENABLED)` guard so
+    // an email-only deploy never 503s for missing Twilio config.
     expect(sendRoute).toMatch(
-      /provider = getMessagingService\(\)[\s\S]*?catch[\s\S]*?status:\s*503/,
+      /if \(SMS_ENABLED\)[\s\S]*?smsProvider = getMessagingService\(\)[\s\S]*?catch[\s\S]*?status:\s*503/,
     );
   });
 
@@ -161,21 +170,34 @@ describe("/api/cron/send route", () => {
     expect(sendRoute).toContain("createServiceSupabaseClient");
   });
 
-  it("normalizes the recipient phone before sending", () => {
+  it("normalizes the recipient phone before sending SMS", () => {
     expect(sendRoute).toContain("normalizePhone");
   });
 
-  it("only handles SMS in Phase 10 (email channel skipped)", () => {
-    expect(sendRoute).toMatch(/message_type\s*!==\s*"sms"/);
+  it("routes by message_type: email is primary, sms is the dormant branch", () => {
+    expect(sendRoute).toMatch(/r\.message_type === "email"/);
+    expect(sendRoute).toMatch(/r\.message_type !== "sms"\s*\|\|\s*!SMS_ENABLED/);
   });
 
-  it("skips when the recipient phone is missing/invalid (defensive)", () => {
+  it("skips email rows with no recipient_email (defensive)", () => {
+    expect(sendRoute).toMatch(
+      /message_type === "email"[\s\S]*?if \(!to\)[\s\S]*?skipped\+\+/,
+    );
+  });
+
+  it("skips when the recipient phone is missing/invalid in the sms branch", () => {
     expect(sendRoute).toMatch(/if \(!phone\)[\s\S]*?skipped\+\+/);
   });
 
-  it("inserts a row into outbound_messages with status sent or failed", () => {
+  it("inserts a row into outbound_messages with channel=email when sending email", () => {
     expect(sendRoute).toMatch(
-      /from\("outbound_messages"\)\.insert\(\{[\s\S]*?status:[\s\S]*?"sent"[\s\S]*?"failed"/,
+      /from\("outbound_messages"\)\.insert\(\{[\s\S]*?channel:\s*"email"[\s\S]*?status:[\s\S]*?emailResult\.ok/,
+    );
+  });
+
+  it("inserts a row into outbound_messages with channel=sms when sending SMS", () => {
+    expect(sendRoute).toMatch(
+      /from\("outbound_messages"\)\.insert\(\{[\s\S]*?channel:\s*"sms"[\s\S]*?status:[\s\S]*?smsResult\.ok/,
     );
   });
 
@@ -185,30 +207,36 @@ describe("/api/cron/send route", () => {
     );
   });
 
-  it("marks reminder.sent=true only on success", () => {
+  it("marks reminder.sent=true only on send success (both branches)", () => {
     expect(sendRoute).toMatch(
-      /smsResult\.ok[\s\S]{0,400}from\("reminders"\)\s*\.update\(\{ sent: true,/,
+      /emailResult\.ok[\s\S]{0,800}from\("reminders"\)\s*\.update\(\{ sent: true,/,
+    );
+    expect(sendRoute).toMatch(
+      /smsResult\.ok[\s\S]{0,800}from\("reminders"\)\s*\.update\(\{ sent: true,/,
     );
   });
 
   it("releases the claim on send failure so the next run can retry", () => {
-    expect(sendRoute).toMatch(
-      /!smsResult\.ok[\s\S]*?releaseClaim/,
-    );
+    expect(sendRoute).toMatch(/!emailResult\.ok[\s\S]*?releaseClaim/);
+    expect(sendRoute).toMatch(/!smsResult\.ok[\s\S]*?releaseClaim/);
     expect(sendRoute).toMatch(
       /releaseClaim[\s\S]*?claimed_by:\s*null[\s\S]*?claimed_at:\s*null/,
     );
   });
 
-  it("releases the claim when the row is skipped (opt-out, wrong channel, bad phone)", () => {
-    // Three branches before the send: opted-out, non-sms, no phone.
+  it("releases the claim when the row is skipped (opt-out / bad recipient / wrong-channel)", () => {
     expect(sendRoute).toMatch(/client_opted_out[\s\S]*?releaseClaim/);
-    expect(sendRoute).toMatch(/message_type[\s\S]{0,80}releaseClaim/);
+    expect(sendRoute).toMatch(/message_type[\s\S]{0,160}releaseClaim/);
   });
 
-  it("emits a message_sent recovery_event on success", () => {
+  it("emits message_sent recovery_event on success (with provider id as source_event_id)", () => {
     expect(sendRoute).toMatch(/event_type:\s*"message_sent"/);
-    expect(sendRoute).toMatch(/source_event_id:\s*smsResult\.providerMessageId/);
+    expect(sendRoute).toMatch(
+      /source_event_id:\s*emailResult\.providerMessageId/,
+    );
+    expect(sendRoute).toMatch(
+      /source_event_id:\s*smsResult\.providerMessageId/,
+    );
   });
 
   it("creates a cron_runs row at start and finalizes it at end", () => {
@@ -300,47 +328,58 @@ describe("/api/cron/send — per-user send cap", () => {
     expect(sendRoute).toMatch(/perUserAttempts\.get\(r\.user_id\)/);
   });
 
-  it("releases the claim when a user hits the cap so the next tick can retry", () => {
+  it("releases the claim when a user hits the cap (both channels) so the next tick retries", () => {
     expect(sendRoute).toMatch(
       /attempts\s*>=\s*PER_USER_SEND_CAP_PER_RUN[\s\S]*?releaseClaim\(supabase,\s*r\.reminder_id\)/,
     );
   });
 
   it("does NOT mark cap-released rows as 'failed' (counts them as capDeferred)", () => {
-    // The cap branch must increment capDeferred, not failed.
     expect(sendRoute).toMatch(
       /attempts\s*>=\s*PER_USER_SEND_CAP_PER_RUN[\s\S]{0,300}capDeferred\+\+/,
     );
-    // And capDeferred MUST be a separate counter from failed.
     expect(sendRoute).toMatch(/let capDeferred = 0/);
   });
 
-  it("skip-then-cap order: opt-out / wrong-channel / bad-phone do NOT consume the cap", () => {
-    // The cap check must come AFTER the three early-skip branches so that
-    // a user with 10 opted-out reminders still gets 5 valid attempts. Use
-    // tokens that only appear once in the loop body to avoid matching
-    // the constant declarations at the top of the file.
+  it("skip-then-cap order: opt-out and missing recipient do NOT consume the cap (email branch)", () => {
+    // Within the email branch, the recipient_email guard comes before the
+    // per-user cap so a user with 10 missing-email rows still gets 5 valid sends.
     const optOutIdx = sendRoute.indexOf("if (r.client_opted_out)");
-    const channelIdx = sendRoute.indexOf('if (r.message_type !== "sms")');
-    const phoneIdx = sendRoute.indexOf("if (!phone)");
-    const capIdx = sendRoute.indexOf("attempts >= PER_USER_SEND_CAP_PER_RUN");
+    const emailBranchIdx = sendRoute.indexOf('r.message_type === "email"');
+    const noToIdx = sendRoute.indexOf("if (!to)");
+    const emailCapIdx = sendRoute.indexOf("attempts >= PER_USER_SEND_CAP_PER_RUN");
     expect(optOutIdx).toBeGreaterThan(0);
-    expect(channelIdx).toBeGreaterThan(optOutIdx);
-    expect(phoneIdx).toBeGreaterThan(channelIdx);
-    expect(capIdx).toBeGreaterThan(phoneIdx);
+    expect(emailBranchIdx).toBeGreaterThan(optOutIdx);
+    expect(noToIdx).toBeGreaterThan(emailBranchIdx);
+    expect(emailCapIdx).toBeGreaterThan(noToIdx);
+  });
+
+  it("skip-then-cap order: bad phone in the sms branch does NOT consume the cap", () => {
+    const smsBranchIdx = sendRoute.indexOf('r.message_type !== "sms"');
+    const phoneIdx = sendRoute.indexOf("if (!phone)");
+    const smsCapIdx = sendRoute.indexOf(
+      "attempts >= PER_USER_SEND_CAP_PER_RUN",
+      phoneIdx,
+    );
+    expect(smsBranchIdx).toBeGreaterThan(0);
+    expect(phoneIdx).toBeGreaterThan(smsBranchIdx);
+    expect(smsCapIdx).toBeGreaterThan(phoneIdx);
   });
 
   it("increments the per-user counter only on rows that reach the provider", () => {
-    // perUserAttempts must be incremented INSIDE the if-not-over-cap branch,
-    // before calling provider.send, and never inside the skip branches.
+    // Email branch: incremented just before sendRecoveryEmail.
     expect(sendRoute).toMatch(
-      /perUserAttempts\.set\(r\.user_id,\s*attempts\s*\+\s*1\)[\s\S]{0,300}smsResult\s*=\s*await provider\.send/,
+      /perUserAttempts\.set\(r\.user_id,\s*attempts\s*\+\s*1\)[\s\S]{0,400}sendRecoveryEmail/,
+    );
+    // SMS branch: incremented just before smsProvider.send.
+    expect(sendRoute).toMatch(
+      /perUserAttempts\.set\(r\.user_id,\s*attempts\s*\+\s*1\)[\s\S]{0,400}smsProvider\.send/,
     );
   });
 
   it("counts attempts (not successes) so failed sends still consume cap", () => {
-    // The cap is bumped BEFORE we know smsResult.ok, so a failure still
-    // costs one slot. Comments explain the rationale.
+    // The cap is bumped BEFORE we know the send result, so a failure still
+    // costs one slot. Comment in the route explains the rationale.
     expect(sendRoute).toMatch(/bounds per-tenant SMS burst/i);
   });
 
@@ -405,10 +444,12 @@ describe("/api/cron/weekly-briefing route", () => {
 // Production-safety invariants
 // ---------------------------------------------------------------------------
 
-describe("Production safety: production without Twilio never silently simulates", () => {
-  it("send route catches the messaging-service throw and records a failed run", () => {
+describe("Production safety: SMS-enabled production without Twilio never silently simulates", () => {
+  it("send route catches the messaging-service throw inside the SMS_ENABLED guard and records a failed run", () => {
+    // The fail-closed-503 path applies only when SMS is enabled. Email-only
+    // deploys (SMS_ENABLED=false) MUST NOT 503 for missing Twilio config.
     expect(sendRoute).toMatch(
-      /provider = getMessagingService\(\)[\s\S]*?catch[\s\S]*?finalizeCronRun[\s\S]*?"failed"[\s\S]*?status:\s*503/,
+      /if \(SMS_ENABLED\)[\s\S]*?smsProvider = getMessagingService\(\)[\s\S]*?catch[\s\S]*?finalizeCronRun[\s\S]*?"failed"[\s\S]*?status:\s*503/,
     );
   });
 

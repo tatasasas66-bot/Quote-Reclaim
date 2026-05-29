@@ -5,6 +5,8 @@ import { redirect } from "next/navigation";
 import { generateRecoveryPlan } from "@/lib/ai/generate-recovery-plan";
 import { validateMessage } from "@/lib/ai/validate-message";
 import { emitRecoveryEvent } from "@/lib/intelligence/event-emitter";
+import { sendRecoveryEmail } from "@/lib/messaging/email-provider";
+import { recoveryEmailSubject } from "@/lib/messaging/select-channel";
 import { normalizePhone } from "@/lib/messaging/phone";
 import { getMessagingService } from "@/lib/messaging/service";
 import type { SmsResult } from "@/lib/messaging/types";
@@ -264,7 +266,11 @@ export async function createQuoteAction(
   }
 
   const quoteId = insertResult.data.id;
-  const channel: "sms" | "email" = input.client_phone ? "sms" : "email";
+  // Email is primary; SMS is a fallback for phone-only quotes when Twilio
+  // is wired up. With SMS_ENABLED off (default), phone-only quotes generate
+  // sms reminders that the cron skips — the contractor uses Copy or "Send
+  // early" instead.
+  const channel: "sms" | "email" = input.client_email ? "email" : "sms";
   const quoteSentAt = quoteSentAtFromDaysSilent(input.days_silent);
   const firstName = firstNameOf(normalizedClientName);
   const contractorFirstName = contractorFirstNameOf(userData.user);
@@ -392,7 +398,7 @@ export async function updateQuoteAction(
     userId: userData.user.id,
     quoteId: id,
     newQuoteSentAt,
-    channel: input.client_phone ? "sms" : "email",
+    channel: input.client_email ? "email" : "sms",
     recovery: {
       firstName: firstNameOf(input.client_name),
       contractorFirstName: contractorFirstNameOf(userData.user),
@@ -660,6 +666,136 @@ export async function sendReminderManualAction(
     .update({ sent: true, sent_at: now })
     .eq("id", reminderId)
     .eq("user_id", userId);
+
+  revalidatePath(`/quotes/${quote.id}`);
+  return { ok: true };
+}
+
+type QuoteForEmailSend = {
+  id: string;
+  user_id: string;
+  outcome: string;
+  client_email: string | null;
+  client_opted_out: boolean;
+  trade: string;
+};
+
+/**
+ * Manual "Send early" for email-channel reminders.
+ *
+ * Mirrors sendReminderManualAction's safety pattern: re-authenticate, load
+ * via service client, check sent/paused/outcome/opt-out, claim atomically
+ * via claim_reminder_manual, send through Resend, write outbound_messages,
+ * release claim on failure.
+ */
+export async function sendReminderManualEmailAction(
+  reminderId: string,
+): Promise<ActionResult> {
+  const userClient = createServerSupabaseClient();
+  const { data: userData } = await userClient.auth.getUser();
+  if (!userData.user) return { ok: false, error: "Not signed in" };
+
+  const userId = userData.user.id;
+  const serviceClient = createServiceSupabaseClient();
+
+  const { data: reminderData, error: reminderError } = await serviceClient
+    .from("reminders")
+    .select("id, user_id, quote_id, sent, paused_at, message_text, message_type")
+    .eq("id", reminderId)
+    .eq("user_id", userId)
+    .maybeSingle();
+
+  if (reminderError || !reminderData) {
+    return { ok: false, error: "Reminder not found" };
+  }
+  const reminder = reminderData as ReminderForSend;
+
+  if (reminder.sent) return { ok: false, error: "Already sent" };
+  if (reminder.paused_at) return { ok: false, error: "Sequence is paused" };
+
+  const { data: quoteData, error: quoteError } = await serviceClient
+    .from("quotes")
+    .select("id, user_id, outcome, client_email, client_opted_out, trade")
+    .eq("id", reminder.quote_id)
+    .eq("user_id", userId)
+    .maybeSingle();
+
+  if (quoteError || !quoteData) {
+    return { ok: false, error: "Quote not found" };
+  }
+  const quote = quoteData as QuoteForEmailSend;
+
+  if (quote.outcome !== "pending") {
+    return { ok: false, error: "Quote is no longer active" };
+  }
+  if (!quote.client_email) {
+    return { ok: false, error: "No email saved for this client" };
+  }
+  if (quote.client_opted_out) {
+    return { ok: false, error: "Client has opted out of messages" };
+  }
+
+  // Atomic claim — prevents double send even under concurrent requests.
+  const { data: claimed, error: claimError } = await serviceClient.rpc(
+    "claim_reminder_manual",
+    { p_reminder_id: reminderId, p_user_id: userId },
+  );
+  if (claimError) {
+    return { ok: false, error: `Could not claim reminder: ${claimError.message}` };
+  }
+  if (!claimed) {
+    return {
+      ok: false,
+      error: "Send already in progress — check if it was sent recently",
+    };
+  }
+
+  const emailResult = await sendRecoveryEmail({
+    to: quote.client_email,
+    subject: recoveryEmailSubject(quote.trade),
+    body: reminder.message_text,
+  });
+
+  const now = new Date().toISOString();
+
+  await serviceClient.from("outbound_messages").insert({
+    user_id: userId,
+    quote_id: quote.id,
+    reminder_id: reminderId,
+    channel: "email",
+    recipient: quote.client_email,
+    message_text: reminder.message_text,
+    status: emailResult.ok ? "sent" : "failed",
+    provider_msg_id: emailResult.ok ? emailResult.providerMessageId : null,
+    failure_reason: emailResult.ok ? null : emailResult.error,
+    sent_at: emailResult.ok ? now : null,
+    idempotency_key: `manual:${reminderId}:${userId}`,
+  });
+
+  if (!emailResult.ok) {
+    await serviceClient
+      .from("reminders")
+      .update({ claimed_by: null, claimed_at: null })
+      .eq("id", reminderId)
+      .eq("user_id", userId);
+    return { ok: false, error: `Send failed: ${emailResult.error}` };
+  }
+
+  await serviceClient
+    .from("reminders")
+    .update({ sent: true, sent_at: now })
+    .eq("id", reminderId)
+    .eq("user_id", userId);
+
+  await emitRecoveryEvent({
+    userId,
+    sequenceId: quote.id,
+    quoteId: quote.id,
+    eventType: "message_sent",
+    trade: quote.trade,
+    channel: "email",
+    sourceEventId: emailResult.providerMessageId,
+  });
 
   revalidatePath(`/quotes/${quote.id}`);
   return { ok: true };

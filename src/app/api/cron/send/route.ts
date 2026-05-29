@@ -2,6 +2,8 @@ import { randomUUID } from "node:crypto";
 import { type NextRequest, NextResponse } from "next/server";
 import { createServiceSupabaseClient } from "@/lib/supabase/service";
 import { requireCronAuth } from "@/lib/security/require-cron";
+import { sendRecoveryEmail } from "@/lib/messaging/email-provider";
+import { recoveryEmailSubject } from "@/lib/messaging/select-channel";
 import { getMessagingService } from "@/lib/messaging/service";
 import { normalizePhone } from "@/lib/messaging/phone";
 import type { SmsProvider, SmsResult } from "@/lib/messaging/types";
@@ -24,9 +26,11 @@ const STALE_CLAIM_MAX_AGE_MS = 30 * 60 * 1000;
  * Maximum reminders a single contractor can attempt to send in one cron
  * tick. Bounds per-tenant SMS burst regardless of how many quotes are
  * simultaneously due. Excess rows are released so the next tick picks
- * them up.
+ * them up. The same cap applies to email so cost stays bounded too.
  */
 const PER_USER_SEND_CAP_PER_RUN = 5;
+
+const SMS_ENABLED = process.env.SMS_ENABLED === "true";
 
 type ClaimedReminder = {
   reminder_id: string;
@@ -111,21 +115,24 @@ async function handleSend(request: NextRequest): Promise<NextResponse> {
     status: "running",
   });
 
-  // Resolve the messaging provider up front. In production with no Twilio
-  // config this throws — record a failed run rather than silently simulate.
-  let provider: SmsProvider;
-  try {
-    provider = getMessagingService();
-  } catch (err) {
-    const message = err instanceof Error ? err.message : "Messaging unavailable";
-    await finalizeCronRun(supabase, cronRunId, {
-      status: "failed",
-      errors: [{ stage: "provider", error: message }],
-    });
-    return NextResponse.json(
-      { error: "Messaging unavailable", cron_run_id: cronRunId },
-      { status: 503 },
-    );
+  // SMS provider is resolved up front only when SMS_ENABLED. With SMS off
+  // (the default), an email-only deploy must not require Twilio. When SMS
+  // is on and Twilio isn't configured, fail closed — never silently simulate.
+  let smsProvider: SmsProvider | null = null;
+  if (SMS_ENABLED) {
+    try {
+      smsProvider = getMessagingService();
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Messaging unavailable";
+      await finalizeCronRun(supabase, cronRunId, {
+        status: "failed",
+        errors: [{ stage: "provider", error: message }],
+      });
+      return NextResponse.json(
+        { error: "Messaging unavailable", cron_run_id: cronRunId },
+        { status: 503 },
+      );
+    }
   }
 
   // Self-heal: free any reminders that were claimed by a prior run that
@@ -160,8 +167,8 @@ async function handleSend(request: NextRequest): Promise<NextResponse> {
   const errors: Array<{ reminder_id: string; error: string }> = [];
   // Per-user attempt counter. We count anything that reaches the provider,
   // not only successes, so the per-user cap bounds outbound load even when
-  // sends fail. Skipped rows (opt-out / wrong channel / bad phone) do not
-  // consume the cap.
+  // sends fail. Skipped rows (opt-out / wrong channel / bad recipient) do
+  // not consume the cap.
   const perUserAttempts = new Map<string, number>();
 
   for (const r of claimed) {
@@ -173,8 +180,112 @@ async function handleSend(request: NextRequest): Promise<NextResponse> {
       continue;
     }
 
-    // Phase 10 only sends SMS. Email channel is reserved for later.
-    if (r.message_type !== "sms") {
+    // Route by message_type. Email is the primary path. SMS only runs when
+    // SMS_ENABLED is on AND the row was generated as an sms reminder.
+    if (r.message_type === "email") {
+      const to = r.recipient_email?.trim();
+      if (!to) {
+        await releaseClaim(supabase, r.reminder_id);
+        skipped++;
+        continue;
+      }
+
+      const attempts = perUserAttempts.get(r.user_id) ?? 0;
+      if (attempts >= PER_USER_SEND_CAP_PER_RUN) {
+        await releaseClaim(supabase, r.reminder_id);
+        capDeferred++;
+        continue;
+      }
+      perUserAttempts.set(r.user_id, attempts + 1);
+
+      const emailResult = await sendRecoveryEmail({
+        to,
+        subject: recoveryEmailSubject(r.trade ?? "your"),
+        body: r.message_text,
+      });
+
+      const now = new Date().toISOString();
+
+      await supabase.from("outbound_messages").insert({
+        user_id: r.user_id,
+        quote_id: r.quote_id,
+        reminder_id: r.reminder_id,
+        channel: "email",
+        recipient: to,
+        message_text: r.message_text,
+        status: emailResult.ok ? "sent" : "failed",
+        provider_msg_id: emailResult.ok ? emailResult.providerMessageId : null,
+        failure_reason: emailResult.ok ? null : emailResult.error,
+        sent_at: emailResult.ok ? now : null,
+        idempotency_key: `cron:${r.reminder_id}:${cronRunId}`,
+      });
+
+      if (!emailResult.ok) {
+        await releaseClaim(supabase, r.reminder_id);
+        failed++;
+        errors.push({ reminder_id: r.reminder_id, error: emailResult.error });
+        continue;
+      }
+
+      await supabase
+        .from("reminders")
+        .update({ sent: true, sent_at: now })
+        .eq("id", r.reminder_id);
+
+      const { error: evtError } = await supabase.from("recovery_events").insert({
+        user_id: r.user_id,
+        sequence_id: r.sequence_id,
+        quote_id: r.quote_id,
+        event_type: "message_sent",
+        source_event_id: emailResult.providerMessageId,
+        trade: r.trade,
+        city: r.city,
+        state: r.state,
+        estimate_amount: r.estimate_amount,
+        channel: "email",
+        message_text: r.message_text,
+        framework_used: r.framework_used,
+        cta_type: r.cta_type,
+        followup_number: r.followup_number,
+        message_type: r.message_type,
+      });
+      if (evtError && evtError.code !== "23505") {
+        console.error(
+          "[cron:send] message_sent event insert failed",
+          evtError.message,
+        );
+      }
+
+      if (r.followup_number === 3) {
+        const { error: closedErr } = await supabase
+          .from("recovery_events")
+          .insert({
+            user_id: r.user_id,
+            sequence_id: r.sequence_id,
+            quote_id: r.quote_id,
+            event_type: "sequence_closed",
+            source_event_id: `${r.sequence_id}:closed`,
+            trade: r.trade,
+            city: r.city,
+            state: r.state,
+            estimate_amount: r.estimate_amount,
+            channel: "email",
+          });
+        if (closedErr && closedErr.code !== "23505") {
+          console.error(
+            "[cron:send] sequence_closed event insert failed",
+            closedErr.message,
+          );
+        }
+      }
+
+      sent++;
+      continue;
+    }
+
+    // SMS branch — kept dormant behind SMS_ENABLED so the Twilio code path
+    // stays exercised but doesn't run by default.
+    if (r.message_type !== "sms" || !SMS_ENABLED || !smsProvider) {
       await releaseClaim(supabase, r.reminder_id);
       skipped++;
       continue;
@@ -198,7 +309,10 @@ async function handleSend(request: NextRequest): Promise<NextResponse> {
 
     let smsResult: SmsResult;
     try {
-      smsResult = await provider.send({ to: phone, body: r.message_text });
+      smsResult = await smsProvider.send({
+        to: phone,
+        body: r.message_text,
+      });
     } catch (err) {
       smsResult = {
         ok: false,
@@ -236,7 +350,6 @@ async function handleSend(request: NextRequest): Promise<NextResponse> {
       .update({ sent: true, sent_at: now })
       .eq("id", r.reminder_id);
 
-    // Emit message_sent event (idempotent via unique (source_event_id, event_type)).
     const { error: evtError } = await supabase.from("recovery_events").insert({
       user_id: r.user_id,
       sequence_id: r.sequence_id,
@@ -255,12 +368,12 @@ async function handleSend(request: NextRequest): Promise<NextResponse> {
       message_type: r.message_type,
     });
     if (evtError && evtError.code !== "23505") {
-      console.error("[cron:send] message_sent event insert failed", evtError.message);
+      console.error(
+        "[cron:send] message_sent event insert failed",
+        evtError.message,
+      );
     }
 
-    // Emit sequence_closed when the last scheduled follow-up has just been sent.
-    // The reminder cadence is fixed at 3 (followup_number 1..3); after the
-    // third send, the planned sequence is complete.
     if (r.followup_number === 3) {
       const { error: closedErr } = await supabase.from("recovery_events").insert({
         user_id: r.user_id,
@@ -307,6 +420,7 @@ async function handleSend(request: NextRequest): Promise<NextResponse> {
       stale_release_error: staleRelease.error ?? null,
       per_user_cap: PER_USER_SEND_CAP_PER_RUN,
       stale_claim_max_age_ms: STALE_CLAIM_MAX_AGE_MS,
+      sms_enabled: SMS_ENABLED,
     },
   });
 

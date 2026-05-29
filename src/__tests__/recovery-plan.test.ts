@@ -28,11 +28,16 @@ describe("Recovery Plan UI: /quotes/[id]", () => {
     expect(detailPage).toContain("Next follow-up sends");
   });
 
-  it("contains the copy/send-manually reassurance sentence", () => {
+  it("renders both channel-aware intro variants (automated email + manual copy)", () => {
+    // Email channel: automated via Resend on the cron schedule.
     expect(detailPage).toContain(
-      "Your recovery plan is ready",
+      "Quote Reclaim sends these follow-ups by email on schedule",
     );
-    expect(detailPage).toContain("connect sending automation");
+    // Copy mode (no email): contractor sends manually.
+    expect(detailPage).toContain("Your recovery plan is ready");
+    expect(detailPage).toContain(
+      "Copy each message and send it from your phone",
+    );
   });
 
   it("never shows the words 'Send Now'", () => {
