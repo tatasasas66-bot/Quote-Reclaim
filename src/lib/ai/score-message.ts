@@ -8,7 +8,7 @@ export type ScoringContext = {
   firstName?: string;
   trade?: string;
   ctaType?: string;
-  followupNumber?: 1 | 2 | 3;
+  followupNumber?: 1 | 2 | 3 | 4 | 5;
 };
 
 /**
@@ -99,7 +99,9 @@ export function scoreMessage(
 
   // CTA count
   const questions = (trimmed.match(/\?/g) ?? []).length;
-  if (questions === 0) score -= 8;
+  // Day 30 (Final Breakup) is declarative on purpose; do not penalize it for
+  // having zero questions.
+  if (questions === 0 && ctx.followupNumber !== 5) score -= 8;
   if (questions > 1) score -= 25;
 
   // Pressure

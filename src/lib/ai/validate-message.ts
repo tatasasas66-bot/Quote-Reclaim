@@ -7,7 +7,7 @@
 export type ValidationContext = {
   firstName?: string;
   trade?: string;
-  followupNumber?: 1 | 2 | 3;
+  followupNumber?: 1 | 2 | 3 | 4 | 5;
 };
 
 export type ValidationResult = {
@@ -194,7 +194,16 @@ export function validateMessage(
 
   // CTA / question count
   const questions = (trimmed.match(/\?/g) ?? []).length;
-  if (questions !== 1) reasons.push(`must have exactly one question (${questions})`);
+  // Day 30 (followupNumber 5) is the Final Breakup — intentionally a
+  // declarative withdrawal of the offer with no question. Every other day
+  // still requires exactly one.
+  if (ctx.followupNumber === 5) {
+    if (questions !== 0) {
+      reasons.push(`day 30 must be declarative (no question, got ${questions})`);
+    }
+  } else if (questions !== 1) {
+    reasons.push(`must have exactly one question (${questions})`);
+  }
 
   // Exclamations
   const exclamations = (trimmed.match(/!/g) ?? []).length;
@@ -240,11 +249,11 @@ export function validateMessage(
   }
 
   if (ctx.followupNumber === 3) {
+    // Day 7 (Voss Takeaway). The canonical v0 omits the name entirely; v1/v3
+    // lead with the name. Both are valid — the rule is "no greeting", not
+    // "no name".
     if (/^(hi|hey)\b/i.test(trimmed)) {
       reasons.push("day 3 must not start with a greeting");
-    }
-    if (firstNameLower && containsWholeWord(lower, firstNameLower)) {
-      reasons.push("day 3 must not include the client first name");
     }
   } else if (firstNameLower && !containsWholeWord(lower, firstNameLower)) {
     reasons.push("missing client first name");

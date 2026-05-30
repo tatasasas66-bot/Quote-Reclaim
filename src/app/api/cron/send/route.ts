@@ -256,7 +256,7 @@ async function handleSend(request: NextRequest): Promise<NextResponse> {
         );
       }
 
-      if (r.followup_number === 3) {
+      if (r.followup_number === 5) {
         const { error: closedErr } = await supabase
           .from("recovery_events")
           .insert({

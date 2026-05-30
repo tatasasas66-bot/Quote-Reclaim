@@ -141,10 +141,18 @@ describe("Sequence detail 'Why this works' rationale", () => {
     expect(detailPage).toContain("Why this works:");
   });
 
-  it("provides distinct rationale for all three follow-up steps", () => {
-    expect(detailPage).toMatch(/Surfaces real objections/);
-    expect(detailPage).toMatch(/Schedule scarcity flips the dynamic/);
-    expect(detailPage).toMatch(/feels safer than ignoring/);
+  it("provides distinct rationale for all five follow-up steps", () => {
+    // Day 1 — Pattern Interrupt
+    expect(detailPage).toMatch(/flips you from chaser to helper/);
+    // Day 3 — Authority / Prize Frame
+    expect(detailPage).toMatch(/Schedule scarcity makes you the prize/);
+    // Day 7 — Voss Takeaway
+    expect(detailPage).toMatch(/Giving permission to say no/);
+    // Day 14 — Value Re-frame (phasing, never a price drop)
+    expect(detailPage).toMatch(/stall on price, not interest/);
+    expect(detailPage).toMatch(/phased path/);
+    // Day 30 — Final Breakup
+    expect(detailPage).toMatch(/Withdrawing the offer triggers reactance/);
   });
 
   it("keys the rationale by follow-up number", () => {

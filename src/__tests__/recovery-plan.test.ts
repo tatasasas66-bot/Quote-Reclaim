@@ -178,8 +178,10 @@ describe("updateQuoteAction: reminder reconciliation", () => {
     expect(slice).toMatch(/newQuoteSentAt\s*[,:}]/);
   });
 
-  it("uses the correct cadence (1, 3, 7 days)", () => {
-    expect(actions).toMatch(/CADENCE_DAYS\s*:\s*Record<1 \| 2 \| 3,\s*number>\s*=\s*\{\s*1:\s*1,\s*2:\s*3,\s*3:\s*7\s*\}/);
+  it("uses the 5-touch cadence (1, 3, 7, 14, 30 days)", () => {
+    expect(actions).toMatch(
+      /CADENCE_DAYS\s*:\s*Record<1 \| 2 \| 3 \| 4 \| 5,\s*number>\s*=\s*\{[\s\S]*?1:\s*1,[\s\S]*?2:\s*3,[\s\S]*?3:\s*7,[\s\S]*?4:\s*14,[\s\S]*?5:\s*30/,
+    );
   });
 });
 
@@ -218,21 +220,21 @@ describe("reconcileReminders behavior", () => {
 });
 
 // ---------------------------------------------------------------------------
-// 3-reminder maximum / no duplicate followup_number guarantee
+// 5-reminder maximum / no duplicate followup_number guarantee
 // ---------------------------------------------------------------------------
 
-describe("3-reminder maximum invariant", () => {
-  it("createQuoteAction only inserts when exactly 3 valid messages are produced", () => {
-    expect(actions).toMatch(/reminderRows\.length\s*===\s*3/);
+describe("5-reminder maximum invariant", () => {
+  it("createQuoteAction only inserts when exactly 5 valid messages are produced", () => {
+    expect(actions).toMatch(/reminderRows\.length\s*===\s*5/);
   });
 
-  it("CADENCE_DAYS table has exactly 3 entries: 1, 2, 3", () => {
+  it("CADENCE_DAYS table has exactly 5 entries: 1, 2, 3, 4, 5", () => {
     const m = actions.match(/CADENCE_DAYS\s*:[^=]*=\s*(\{[^}]*\})/);
     expect(m).not.toBeNull();
     if (m) {
       const literal = m[1];
-      const keys = (literal.match(/[123]:/g) ?? []).length;
-      expect(keys).toBe(3);
+      const keys = (literal.match(/[12345]:/g) ?? []).length;
+      expect(keys).toBe(5);
     }
   });
 

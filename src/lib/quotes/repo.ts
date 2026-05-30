@@ -63,7 +63,7 @@ export type ReminderRow = {
   id: string;
   user_id: string;
   quote_id: string;
-  followup_number: 1 | 2 | 3;
+  followup_number: 1 | 2 | 3 | 4 | 5;
   message_type: string;
   message_text: string;
   framework_used: string | null;

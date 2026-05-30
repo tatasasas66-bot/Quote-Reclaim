@@ -35,7 +35,13 @@ const NAMES: Array<{ firstName: string; contractor: string }> = [
 ];
 
 // followupNumber the validator expects for each calendar day.
-const DAY_TO_FOLLOWUP: Record<1 | 3 | 7, 1 | 2 | 3> = { 1: 1, 3: 2, 7: 3 };
+const DAY_TO_FOLLOWUP: Record<1 | 3 | 7 | 14 | 30, 1 | 2 | 3 | 4 | 5> = {
+  1: 1,
+  3: 2,
+  7: 3,
+  14: 4,
+  30: 5,
+};
 
 // ---------------------------------------------------------------------------
 // pickVariant — deterministic selection
@@ -44,7 +50,7 @@ const DAY_TO_FOLLOWUP: Record<1 | 3 | 7, 1 | 2 | 3> = { 1: 1, 3: 2, 7: 3 };
 describe("pickVariant", () => {
   it("is deterministic: same quoteId + day always yields the same index", () => {
     const id = "11111111-2222-3333-4444-555555555555";
-    for (const day of [1, 3, 7] as const) {
+    for (const day of [1, 3, 7, 14, 30] as const) {
       const a = pickVariant(id, day);
       const b = pickVariant(id, day);
       expect(a).toBe(b);
@@ -107,11 +113,11 @@ describe("researchSequenceMessages variant selection", () => {
 });
 
 // ---------------------------------------------------------------------------
-// All 12 variants (3 days × 4) pass length / ban / emoji / structure checks
+// All 20 variants (5 days × 4) pass length / ban / emoji / structure checks
 // ---------------------------------------------------------------------------
 
-describe("all 12 message variants pass validation", () => {
-  for (const day of [1, 3, 7] as const) {
+describe("all 20 message variants pass validation", () => {
+  for (const day of [1, 3, 7, 14, 30] as const) {
     const builders = SEQUENCE_VARIANTS[day];
 
     it(`day ${day} exposes exactly 4 variants`, () => {
@@ -137,19 +143,120 @@ describe("all 12 message variants pass validation", () => {
             expect(result.reasons).toEqual([]);
             expect(result.ok).toBe(true);
 
-            // Explicit length / ban / emoji / single-question guarantees.
+            // Explicit length / ban / emoji / question-count guarantees.
             expect(message.length).toBeLessThanOrEqual(MAX_MESSAGE_CHARS);
             expect(message).not.toMatch(/!/);
             expect(message).not.toMatch(
               /[\uD83C-\uD83E][\uDC00-\uDFFF]|[☀-➿]/,
             );
-            expect((message.match(/\?/g) ?? []).length).toBe(1);
+            // Day 30 (Final Breakup) is declarative — 0 question marks by design.
+            const expectedQuestions = day === 30 ? 0 : 1;
+            expect((message.match(/\?/g) ?? []).length).toBe(expectedQuestions);
             expect(message).not.toMatch(/\bbid\b/i);
           });
         }
       }
     }
   }
+});
+
+// ---------------------------------------------------------------------------
+// Cadence: schedule is 1/3/7/14/30 days (5 reminders per sequence)
+// ---------------------------------------------------------------------------
+
+describe("schedule is the 5-touch cadence", () => {
+  const actionsSrc = readSource("../lib/quotes/actions.ts");
+  const detailSrc = readSource("../app/(app)/quotes/[id]/page.tsx");
+
+  it("actions.ts CADENCE_DAYS uses +1/+3/+7/+14/+30", () => {
+    expect(actionsSrc).toMatch(
+      /CADENCE_DAYS[^=]*=\s*\{\s*1:\s*1,\s*2:\s*3,\s*3:\s*7,\s*4:\s*14,\s*5:\s*30/,
+    );
+  });
+
+  it("quote detail page CADENCE_DAYS matches", () => {
+    expect(detailSrc).toMatch(
+      /CADENCE_DAYS[^=]*=\s*\{\s*1:\s*1,\s*2:\s*3,\s*3:\s*7,\s*4:\s*14,\s*5:\s*30/,
+    );
+  });
+
+  it("createQuoteAction now inserts 5 reminders (not 3)", () => {
+    expect(actionsSrc).toMatch(/reminderRows\.length\s*===\s*5/);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Day 14 — Value Re-frame: phasing/scope only, never a discount/% off
+// Day 30 — Final Breakup: declarative breakup signal
+// ---------------------------------------------------------------------------
+
+describe("Day 14 stays on phasing/scope (NO price drop) and Day 30 is a clean breakup", () => {
+  const day14 = SEQUENCE_VARIANTS[14];
+  const day30 = SEQUENCE_VARIANTS[30];
+  const sampleVars: VariantVars = {
+    firstName: "Jane",
+    contractorFirstName: "Mike",
+    project: projectLabel("Roofing"),
+  };
+
+  it("Day 14 contains phasing/scope language and never uses discount/sale/% off", () => {
+    for (let i = 0; i < day14.length; i++) {
+      const msg = day14[i](sampleVars).toLowerCase();
+      // Each variant must mention either phasing or scope — the value re-frame.
+      expect(/phase|phased|scope|rework|leaner/.test(msg)).toBe(true);
+      // No discount language whatsoever.
+      expect(msg).not.toMatch(/\b(discount|sale|deal|coupon|promo)\b/);
+      expect(msg).not.toMatch(/\d+\s?%\s?off/);
+      expect(msg).not.toMatch(/drop the price|lower the price/);
+    }
+  });
+
+  it("Day 30 carries a clear breakup signal (closing / won't reach out again)", () => {
+    for (let i = 0; i < day30.length; i++) {
+      const msg = day30[i](sampleVars).toLowerCase();
+      expect(
+        /closing|close the file|close .* out|let .* go|won't reach out|wont reach out/.test(
+          msg,
+        ),
+      ).toBe(true);
+    }
+  });
+
+  it("Day 30 is declarative (no question mark) — that's the takeaway", () => {
+    for (let i = 0; i < day30.length; i++) {
+      expect((day30[i](sampleVars).match(/\?/g) ?? []).length).toBe(0);
+    }
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Day 1/3/7 variant 0 still equals the canonical text (AI exact-match gate)
+// ---------------------------------------------------------------------------
+
+describe("v0 of Day 1/3/7 stays verbatim — AI exact-match gate intact", () => {
+  const vars: VariantVars = {
+    firstName: "Jane",
+    contractorFirstName: "Mike",
+    project: projectLabel("Roofing"),
+  };
+
+  it("Day 1 v0 is the canonical Pattern Interrupt", () => {
+    expect(SEQUENCE_VARIANTS[1][0](vars)).toBe(
+      "Hey Jane — Mike here. Looked back at the roofing estimate. Anything on it that didn't make sense, or any number you want me to walk through?",
+    );
+  });
+
+  it("Day 3 v0 is the canonical Authority Frame", () => {
+    expect(SEQUENCE_VARIANTS[3][0](vars)).toBe(
+      "Jane, putting next week's schedule together. Need to know if I'm holding a slot for you or releasing it. What works?",
+    );
+  });
+
+  it("Day 7 v0 is the canonical Voss Takeaway", () => {
+    expect(SEQUENCE_VARIANTS[7][0](vars)).toBe(
+      "Have you given up on the roofing estimate? If so, I'll close the file — no problem either way. Just need a yes or no so I can clear it from my list.",
+    );
+  });
 });
 
 // ---------------------------------------------------------------------------

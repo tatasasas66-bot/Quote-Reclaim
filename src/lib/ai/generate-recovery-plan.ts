@@ -13,10 +13,12 @@ import { titleCase } from "@/lib/utils/normalize";
 export type RecoveryFramework =
   | "Casual Pattern Interrupt"
   | "Authority & Status Squeeze"
-  | "Professional Closeout";
+  | "Professional Closeout"
+  | "Value Re-frame"
+  | "Final Breakup";
 
 export type RecoveryMessage = {
-  followup_number: 1 | 2 | 3;
+  followup_number: 1 | 2 | 3 | 4 | 5;
   framework: RecoveryFramework;
   message: string;
   cta_type: string;
@@ -38,34 +40,44 @@ export type RecoveryContext = {
   quoteId?: string | null;
 };
 
-const FRAMEWORK_BY_NUMBER: Record<1 | 2 | 3, RecoveryFramework> = {
+const FRAMEWORK_BY_NUMBER: Record<1 | 2 | 3 | 4 | 5, RecoveryFramework> = {
   1: "Casual Pattern Interrupt",
   2: "Authority & Status Squeeze",
   3: "Professional Closeout",
+  4: "Value Re-frame",
+  5: "Final Breakup",
 };
 
 const aiResponseSchema = z.object({
   messages: z
     .array(
       z.object({
-        followup_number: z.union([z.literal(1), z.literal(2), z.literal(3)]),
+        followup_number: z.union([
+          z.literal(1),
+          z.literal(2),
+          z.literal(3),
+          z.literal(4),
+          z.literal(5),
+        ]),
         framework: z.string().optional(),
         message: z.string().min(1),
         cta_type: z.string().optional(),
         confidence: z.number().optional(),
       }),
     )
-    .length(3),
+    .length(5),
 });
 
 function expectedMessage(
   ctx: RecoveryContext,
-  followupNumber: 1 | 2 | 3,
+  followupNumber: 1 | 2 | 3 | 4 | 5,
 ): string {
   const sequence = researchSequenceMessages(ctx);
   if (followupNumber === 1) return sequence.day1;
   if (followupNumber === 2) return sequence.day3;
-  return sequence.day7;
+  if (followupNumber === 3) return sequence.day7;
+  if (followupNumber === 4) return sequence.day14;
+  return sequence.day30;
 }
 
 function buildPrompt(ctx: RecoveryContext): ChatMessage[] {
@@ -77,7 +89,7 @@ function buildPrompt(ctx: RecoveryContext): ChatMessage[] {
   const system = `You generate SMS follow-up messages for US home-service contractors chasing silent estimates. Each message must:
 
 VARIATION (anti-repetition):
-Generate a DIFFERENT phrasing each time while strictly preserving the day's psychological frame (Day 1 Pattern Interrupt, Day 3 Authority Frame, Day 7 Voss Takeaway). Never reuse the exact same sentence across clients. Vary verbs, sentence structure, and opening — keep the strategy identical.
+Generate a DIFFERENT phrasing each time while strictly preserving each day's psychological frame (Day 1 Pattern Interrupt, Day 3 Authority/Prize Frame, Day 7 Voss Takeaway, Day 14 Value Re-frame, Day 30 Final Breakup). Never reuse the exact same sentence across clients. Vary verbs, sentence structure, and opening — keep the strategy identical.
 
 VOICE AND TONE:
 - Sound like a confident, busy tradesperson — not a salesperson
@@ -101,7 +113,7 @@ Surface ONE objection: scope confusion OR price concern.
 End with an easy, open-ended question.
 Target: 150-180 characters.
 
-DAY 3 — Authority Frame:
+DAY 3 — Authority/Prize Frame:
 Start with "{firstName}," (name only, no greeting word).
 Invoke your schedule/calendar as the scarce resource.
 Create a binary choice: hold their slot or release it.
@@ -110,13 +122,28 @@ Target: 120-150 characters.
 NEVER offer a discount. NEVER apologize for the timeline.
 
 DAY 7 — Voss Takeaway Close:
-NO name. NO greeting. Start directly with the question.
-Use Chris Voss no-oriented structure: "Have you given up on..."
-Explicitly withdraw: "I'll close the file."
-Offer relief: "no problem either way."
-Force binary: "just need a yes or no."
+NO greeting word. Use Chris Voss no-oriented structure: "Have you given up on..." or "Should I close...".
+Either omit the name OR lead with "{firstName},"; both are valid.
+Explicitly withdraw: "I'll close the file" / "take it off my board".
+Offer relief: "no problem either way" / "no hard feelings".
+Force binary: "yes or no" / "one word".
 Target: 140-165 characters.
 This must feel like a foreman clearing a job board — zero emotion.
+
+DAY 14 — Value Re-frame (phasing/scope, NEVER a price drop):
+Start with "{firstName},". Acknowledge that silence usually means price shock, not rejection.
+Offer a path forward via phasing the work or trimming scope — never a discount, never a sale.
+End with a low-pressure open question ("Want me to put an option together?").
+Target: 150-175 characters.
+NEVER use the words "discount", "sale", "deal", or any specific percentage off.
+
+DAY 30 — Final Breakup (withdraw the offer):
+Start with "{firstName},". This is the takeaway — declarative, no question mark.
+Explicitly close the file: "closing", "let it go", "won't reach out again".
+Leave the door open: "if anything changes", "save my number", "door's open".
+No begging, no apology, no guilt language.
+Target: 140-170 characters.
+This is the highest-leverage touch in the sequence — keep it calm and final.
 
 NEVER use: "just checking in", "following up", "touching base", "circling back", "hope this finds you well", "hope you're doing great", "leave it hanging", "make the next step simple", "before you decide", emojis, exclamation marks, unsolicited discounts, guilt language, generic company signatures, tracking links.
 
@@ -125,11 +152,13 @@ Return JSON only, no markdown, no commentary:
   "messages": [
     { "followup_number": 1, "framework": "Casual Pattern Interrupt", "message": "...", "cta_type": "question", "confidence": 1 },
     { "followup_number": 2, "framework": "Authority & Status Squeeze", "message": "...", "cta_type": "question", "confidence": 1 },
-    { "followup_number": 3, "framework": "Professional Closeout", "message": "...", "cta_type": "question", "confidence": 1 }
+    { "followup_number": 3, "framework": "Professional Closeout", "message": "...", "cta_type": "question", "confidence": 1 },
+    { "followup_number": 4, "framework": "Value Re-frame", "message": "...", "cta_type": "question", "confidence": 1 },
+    { "followup_number": 5, "framework": "Final Breakup", "message": "...", "cta_type": "statement", "confidence": 1 }
   ]
 }`;
 
-  const user = `Generate the exact three-message recovery sequence.
+  const user = `Generate the exact five-message recovery sequence.
 
 firstName: ${name}
 contractorFirstName: ${contractorFirstName}
@@ -169,7 +198,15 @@ async function attemptAI(ctx: RecoveryContext): Promise<RecoveryMessage[] | null
     (a, b) => a.followup_number - b.followup_number,
   );
   const numbers = ordered.map((m) => m.followup_number);
-  if (numbers[0] !== 1 || numbers[1] !== 2 || numbers[2] !== 3) return null;
+  if (
+    numbers[0] !== 1 ||
+    numbers[1] !== 2 ||
+    numbers[2] !== 3 ||
+    numbers[3] !== 4 ||
+    numbers[4] !== 5
+  ) {
+    return null;
+  }
 
   const out: RecoveryMessage[] = [];
   for (const m of ordered) {

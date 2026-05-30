@@ -181,43 +181,51 @@ describe("research framework fallback sequence", () => {
       const expected = researchSequenceMessages(ctx);
       const plan = fallbackMessages(ctx);
 
-      it("has exactly 3 messages numbered 1/2/3", () => {
-        expect(plan).toHaveLength(3);
-        expect(plan.map((m) => m.followup_number)).toEqual([1, 2, 3]);
+      it("has exactly 5 messages numbered 1..5", () => {
+        expect(plan).toHaveLength(5);
+        expect(plan.map((m) => m.followup_number)).toEqual([1, 2, 3, 4, 5]);
       });
 
-      it("uses the research frameworks in order", () => {
+      it("uses the research frameworks in order (5 touches)", () => {
         expect(plan.map((m) => m.framework)).toEqual([
           "Casual Pattern Interrupt",
           "Authority & Status Squeeze",
           "Professional Closeout",
+          "Value Re-frame",
+          "Final Breakup",
         ]);
       });
 
-      it("returns the exact fallback sequence", () => {
+      it("returns the exact fallback sequence (5 days)", () => {
         expect(plan.map((m) => m.message)).toEqual([
           expected.day1,
           expected.day3,
           expected.day7,
+          expected.day14,
+          expected.day30,
         ]);
       });
 
-      it("keeps the asymmetrical naming pattern", () => {
+      it("keeps the asymmetrical naming pattern across the new 5 touches", () => {
         expect(plan[0].message.startsWith(`Hey ${ctx.firstName} —`)).toBe(
           true,
         );
         expect(plan[1].message.startsWith(`${ctx.firstName},`)).toBe(true);
-        expect(plan[2].message).not.toMatch(
-          new RegExp(`^(Hi|Hey|${ctx.firstName})\\b`, "i"),
-        );
+        // Day 7 v0 (canonical) starts with "Have you given up on" — no name, no greeting.
+        expect(plan[2].message).not.toMatch(new RegExp(`^(Hi|Hey)\\b`, "i"));
+        // Day 14 + Day 30 lead with the client name like Day 3.
+        expect(plan[3].message.startsWith(`${ctx.firstName},`)).toBe(true);
+        expect(plan[4].message.startsWith(`${ctx.firstName},`)).toBe(true);
       });
 
-      it("includes the project label in Day 1 and Day 7", () => {
+      it("includes the project label in Day 1, Day 7, Day 14, and Day 30", () => {
         const project = projectLabel(ctx.trade).toLowerCase();
         const messages = plan.map((m) => m.message.toLowerCase());
-        expect(messages[0]).toContain(project);
-        expect(messages[2]).toContain(project);
-        // Day 3 uses a schedule/slot frame intentionally without the project label
+        expect(messages[0]).toContain(project); // Day 1
+        expect(messages[2]).toContain(project); // Day 7
+        expect(messages[3]).toContain(project); // Day 14
+        expect(messages[4]).toContain(project); // Day 30
+        // Day 3 uses a schedule/slot frame intentionally without the project label.
       });
 
       it("passes validation, scores above the fallback floor, and stays concise", () => {
@@ -226,7 +234,10 @@ describe("research framework fallback sequence", () => {
           expect(item.validation.reasons).toEqual([]);
           expect(item.score).toBeGreaterThanOrEqual(FALLBACK_FLOOR_SCORE);
           expect(item.message.length).toBeLessThanOrEqual(MAX_MESSAGE_CHARS);
-          expect((item.message.match(/\?/g) ?? []).length).toBe(1);
+          // Day 30 (followup_number 5) is the Final Breakup — declarative, 0 questions.
+          // Every other day must carry exactly one.
+          const expectedQuestions = item.followup_number === 5 ? 0 : 1;
+          expect((item.message.match(/\?/g) ?? []).length).toBe(expectedQuestions);
         }
       });
 
@@ -363,16 +374,16 @@ describe("tradeKeywords and scoring", () => {
 });
 
 describe("generateRecoveryPlan", () => {
-  it("returns 3 fallback messages and never throws when no writer key is configured", async () => {
+  it("returns 5 fallback messages and never throws when no writer key is configured", async () => {
     const plan = await generateRecoveryPlan(SCENARIOS[0].ctx);
-    expect(plan).toHaveLength(3);
+    expect(plan).toHaveLength(5);
     expect(plan.every((m) => m.source === "fallback")).toBe(true);
     expect(plan.map((m) => m.message)).toEqual(
       Object.values(researchSequenceMessages(SCENARIOS[0].ctx)),
     );
   });
 
-  it("accepts AI output only when it matches the exact research sequence", async () => {
+  it("accepts AI output only when it matches the exact research sequence (5 messages)", async () => {
     vi.stubEnv("GROQ_API_KEY", "test-key-not-real");
     const ctx = SCENARIOS[0].ctx;
     const sequence = researchSequenceMessages(ctx);
@@ -405,6 +416,20 @@ describe("generateRecoveryPlan", () => {
                       cta_type: "question",
                       confidence: 1,
                     },
+                    {
+                      followup_number: 4,
+                      framework: "Value Re-frame",
+                      message: sequence.day14,
+                      cta_type: "question",
+                      confidence: 1,
+                    },
+                    {
+                      followup_number: 5,
+                      framework: "Final Breakup",
+                      message: sequence.day30,
+                      cta_type: "statement",
+                      confidence: 1,
+                    },
                   ],
                 }),
               },
@@ -416,7 +441,7 @@ describe("generateRecoveryPlan", () => {
     );
 
     const plan = await generateRecoveryPlan(ctx);
-    expect(plan).toHaveLength(3);
+    expect(plan).toHaveLength(5);
     expect(plan.every((m) => m.source === "ai")).toBe(true);
     expect(plan.map((m) => m.message)).toEqual(Object.values(sequence));
   });

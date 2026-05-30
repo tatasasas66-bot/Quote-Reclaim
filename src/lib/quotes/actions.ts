@@ -21,7 +21,13 @@ export type ActionResult =
 
 type RawForm = Record<string, FormDataEntryValue>;
 
-const CADENCE_DAYS: Record<1 | 2 | 3, number> = { 1: 1, 2: 3, 3: 7 };
+const CADENCE_DAYS: Record<1 | 2 | 3 | 4 | 5, number> = {
+  1: 1,
+  2: 3,
+  3: 7,
+  4: 14,
+  5: 30,
+};
 
 function readForm(formData: FormData): RawForm {
   return Object.fromEntries(formData.entries());
@@ -139,7 +145,7 @@ async function reconcileReminders(params: {
 
   if (anySent) {
     for (const r of existing.filter((x) => !x.sent)) {
-      const fn = r.followup_number as 1 | 2 | 3;
+      const fn = r.followup_number as 1 | 2 | 3 | 4 | 5;
       if (!CADENCE_DAYS[fn]) continue;
       const sendAt = sendAtFromBase(newQuoteSentAt, CADENCE_DAYS[fn]);
       await serviceClient
@@ -161,7 +167,7 @@ async function reconcileReminders(params: {
         followupNumber: m.followup_number,
       }).ok,
   );
-  if (valid.length !== 3) return;
+  if (valid.length !== 5) return;
 
   if (existing.length === 0) {
     const rows = valid.map((m) => ({
@@ -306,7 +312,7 @@ export async function createQuoteAction(
       send_at: sendAtFromBase(quoteSentAt, CADENCE_DAYS[m.followup_number]),
     }));
 
-  if (reminderRows.length === 3) {
+  if (reminderRows.length === 5) {
     await serviceClient.from("reminders").insert(reminderRows);
   }
 

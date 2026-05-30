@@ -33,14 +33,24 @@ export const dynamic = "force-dynamic";
 
 type Params = { id: string };
 
-const CADENCE_DAYS: Record<1 | 2 | 3, number> = { 1: 1, 2: 3, 3: 7 };
+type FollowupStep = 1 | 2 | 3 | 4 | 5;
+
+const CADENCE_DAYS: Record<FollowupStep, number> = {
+  1: 1,
+  2: 3,
+  3: 7,
+  4: 14,
+  5: 30,
+};
 
 // Research rationale shown under each step so the contractor trusts the
 // message instead of seeing "AI text". Keyed by follow-up number.
-const WHY_THIS_WORKS: Record<1 | 2 | 3, string> = {
-  1: "Surfaces real objections — scope, materials, price — without begging.",
-  2: "Schedule scarcity flips the dynamic. You're the prize, not the supplicant.",
-  3: "A 'No' answer feels safer than ignoring. That's how silent quotes break.",
+const WHY_THIS_WORKS: Record<FollowupStep, string> = {
+  1: "Asking what didn't land flips you from chaser to helper — and surfaces the real objection instead of begging for a reply.",
+  2: "Schedule scarcity makes you the prize. The homeowner now weighs losing access to you, not whether to spend.",
+  3: "Giving permission to say no feels safer than being pushed — so they rarely take it. 'Should I close it' triggers loss aversion.",
+  4: "Most quiet quotes stall on price, not interest. Offering a phased path removes the real barrier without ever dropping your number.",
+  5: "The takeaway. Withdrawing the offer triggers reactance — this final close often pulls the reply the first four couldn't.",
 };
 
 function computeStatus(
@@ -406,7 +416,7 @@ function ReminderCard({
   const statusLabel = display.label;
 
   const dayLabel =
-    CADENCE_DAYS[r.followup_number as 1 | 2 | 3] ?? r.followup_number;
+    CADENCE_DAYS[r.followup_number as FollowupStep] ?? r.followup_number;
 
   const messageType: "email" | "sms" = r.message_type === "email" ? "email" : "sms";
   const hasRecipientForChannel = messageType === "email" ? hasEmail : hasPhone;
@@ -441,7 +451,7 @@ function ReminderCard({
 
       <p className="mt-3 px-4 pb-4 text-xs italic text-ink-muted">
         <span className="font-semibold not-italic">Why this works:</span>{" "}
-        {WHY_THIS_WORKS[r.followup_number as 1 | 2 | 3]}
+        {WHY_THIS_WORKS[r.followup_number as FollowupStep]}
       </p>
 
       <div className="flex flex-wrap items-center justify-between gap-2 border-t border-line-subtle px-4 py-3">

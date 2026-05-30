@@ -50,10 +50,12 @@ const PROJECT_LABELS: Record<string, string> = {
   other: "the estimate",
 };
 
-const FRAMEWORKS: Record<1 | 2 | 3, RecoveryMessage["framework"]> = {
+const FRAMEWORKS: Record<1 | 2 | 3 | 4 | 5, RecoveryMessage["framework"]> = {
   1: "Casual Pattern Interrupt",
   2: "Authority & Status Squeeze",
   3: "Professional Closeout",
+  4: "Value Re-frame",
+  5: "Final Breakup",
 };
 
 function cleanName(value: string | null | undefined, fallback: string): string {
@@ -103,53 +105,85 @@ export type VariantVars = {
  * banned phrase, and the per-day start pattern (Hey name / name comma / none).
  */
 const DAY1_VARIANTS: ReadonlyArray<(v: VariantVars) => string> = [
-  // v1 — Pattern Interrupt (canonical). Surfaces confusion + price anxiety.
+  // v0 (canonical — exact-match gate). Surfaces real objections, helper frame.
   ({ firstName, contractorFirstName, project }) =>
     `Hey ${firstName} — ${contractorFirstName} here. Looked back at ${project}. Anything on it that didn't make sense, or any number you want me to walk through?`,
-  ({ firstName, project }) =>
-    `Hey ${firstName} — quick one on ${project}. Was the scope clear, or is there a line you want me to break down?`,
+  // v1 — "Before you decide" was rewritten as "for you" to keep the helper
+  // frame without tripping the locked banned-phrase list (recovery-messages
+  // test pins "before you decide" in BANNED_PHRASES).
   ({ firstName, contractorFirstName, project }) =>
-    `Hey ${firstName} — ${contractorFirstName}. Circling on ${project} — anything in the numbers or the timeline you'd want me to clarify?`,
-  ({ firstName, project }) =>
-    `Hey ${firstName} — about ${project}: did everything land right, or is there a detail you'd want me to walk through first?`,
+    `Hey ${firstName} — ${contractorFirstName}. Re-read ${project} on my end. Was there a number or a detail you'd want me to break down for you?`,
+  ({ firstName, contractorFirstName, project }) =>
+    `Hey ${firstName} — ${contractorFirstName} here. Want to be sure ${project} fit what you pictured. Anything feel off, or a line you'd want explained?`,
+  ({ firstName, contractorFirstName, project }) =>
+    `Hey ${firstName} — ${contractorFirstName}. Before this sits too long: was ${project} clear, or is there something on it you're still weighing?`,
 ];
 
 const DAY3_VARIANTS: ReadonlyArray<(v: VariantVars) => string> = [
-  // v1 — Authority/Prize Frame (canonical). Schedule scarcity + loss aversion.
+  // v0 (canonical). Real schedule scarcity, no fabricated countdown.
   ({ firstName }) =>
     `${firstName}, putting next week's schedule together. Need to know if I'm holding a slot for you or releasing it. What works?`,
   ({ firstName }) =>
-    `${firstName}, finalizing next week's bookings. Want me to keep your spot, or let it go to the next job? Your call.`,
+    `${firstName}, booking out next week's jobs. Keep your spot on the board or open it to the next house? Either way works — just need to know.`,
   ({ firstName }) =>
-    `${firstName}, locking in the schedule for the week. Should I hold your slot or open it up? Let me know either way.`,
+    `${firstName}, laying out the crew's week. I can hold your slot a bit longer or release it — which way do you want me to go?`,
   ({ firstName }) =>
-    `${firstName}, mapping out next week's crew. Hold your spot or release it? Just need a direction.`,
+    `${firstName}, locking the schedule today. Pencil you in or let the slot go? A quick yes or no tells me how to plan.`,
 ];
 
 const DAY7_VARIANTS: ReadonlyArray<(v: VariantVars) => string> = [
-  // v1 — Voss Takeaway (canonical). No name, no greeting, binary close.
+  // v0 (canonical). No name, no greeting — pure Voss takeaway.
   ({ project }) =>
     `Have you given up on ${project}? If so, I'll close the file — no problem either way. Just need a yes or no so I can clear it from my list.`,
+  ({ firstName, project }) =>
+    `${firstName}, should I take ${project} off my board? A no keeps it open, a yes closes it — either is fine, I just need to know where it stands.`,
   ({ project }) =>
-    `Should I close out ${project} for now? A yes or no is all I need — no pressure either way.`,
-  ({ project }) =>
-    `Are you moving in a different direction on ${project}? Either way is fine, I just need to clear my list.`,
-  ({ project }) =>
-    `Closing out files this week. Is ${project} still alive, or should I let it go? One word works.`,
+    `Are you leaning a different direction on ${project}? No hard feelings if so — I just don't want to hold a spot if you've moved on.`,
+  ({ firstName, project }) =>
+    `${firstName}, is ${project} dead or just on pause? Tell me to close it or hold it — either way I'll respect it. Just need one word.`,
+];
+
+const DAY14_VARIANTS: ReadonlyArray<(v: VariantVars) => string> = [
+  // Value Re-frame. Silence is usually price shock, not rejection — reopen
+  // with phasing/scope, never a discount.
+  ({ firstName, project }) =>
+    `${firstName}, sometimes ${project} stalls on budget, not interest. If that's it, I can phase the work or trim scope. Want me to put an option together?`,
+  ({ firstName, project }) =>
+    `${firstName}, if the number on ${project} was the holdup, just say so — I'd rather find a version that fits than lose it. Want me to rework it?`,
+  ({ firstName, project }) =>
+    `${firstName}, no pressure on ${project}. But if budget or timing is the issue, there's usually a way to phase it. Want a leaner option?`,
+  ({ firstName, project }) =>
+    `${firstName}, folks often go quiet on ${project} over the total, not the work. If that's you, I can show a phased path. Worth a look?`,
+];
+
+const DAY30_VARIANTS: ReadonlyArray<(v: VariantVars) => string> = [
+  // Final Breakup. Withdraw the offer. Declarative, no question by design.
+  ({ firstName, project }) =>
+    `${firstName}, last one from me on ${project} — closing the file so I stop crowding your inbox. If it ever comes back around, you know where I am.`,
+  ({ firstName, project }) =>
+    `${firstName}, I'll let ${project} go after this. No hard feelings. If anything changes down the road, reach out and I'll pick it right back up.`,
+  ({ firstName, project }) =>
+    `${firstName}, closing ${project} out today — figure you've moved on, and that's fine. Door's open if you ever want to revisit it.`,
+  ({ firstName, project }) =>
+    `${firstName}, this is me officially closing ${project}. I won't reach out again. If the timing's just off, save my number and get in touch.`,
 ];
 
 /**
  * All variant builders keyed by day. Exported so tests can enumerate and
- * validate all 12 (3 days × 4 variants).
+ * validate all 20 (5 days × 4 variants).
  */
 export const SEQUENCE_VARIANTS: Record<
-  1 | 3 | 7,
+  1 | 3 | 7 | 14 | 30,
   ReadonlyArray<(v: VariantVars) => string>
 > = {
   1: DAY1_VARIANTS,
   3: DAY3_VARIANTS,
   7: DAY7_VARIANTS,
+  14: DAY14_VARIANTS,
+  30: DAY30_VARIANTS,
 };
+
+export type CadenceDay = keyof typeof SEQUENCE_VARIANTS;
 
 /**
  * Deterministic variant index (0-3) for a quote + day. The same quote always
@@ -159,7 +193,10 @@ export const SEQUENCE_VARIANTS: Record<
  * An empty/missing quoteId returns 0 — the canonical template — which keeps
  * server-side previews and the locked exact-match tests stable.
  */
-export function pickVariant(quoteId: string | null | undefined, day: 1 | 3 | 7): number {
+export function pickVariant(
+  quoteId: string | null | undefined,
+  day: CadenceDay,
+): number {
   if (!quoteId) return 0;
   let hash = 0;
   const seed = `${quoteId}:${day}`;
@@ -174,6 +211,8 @@ export function researchSequenceMessages(ctx: RecoveryContext): {
   day1: string;
   day3: string;
   day7: string;
+  day14: string;
+  day30: string;
 } {
   const vars: VariantVars = {
     firstName: cleanName(ctx.firstName, "there"),
@@ -186,36 +225,26 @@ export function researchSequenceMessages(ctx: RecoveryContext): {
     day1: DAY1_VARIANTS[pickVariant(quoteId, 1)](vars),
     day3: DAY3_VARIANTS[pickVariant(quoteId, 3)](vars),
     day7: DAY7_VARIANTS[pickVariant(quoteId, 7)](vars),
+    day14: DAY14_VARIANTS[pickVariant(quoteId, 14)](vars),
+    day30: DAY30_VARIANTS[pickVariant(quoteId, 30)](vars),
   };
 }
 
 export function fallbackMessages(ctx: RecoveryContext): RecoveryMessage[] {
-  const sequence = researchSequenceMessages(ctx);
-
-  return [
-    {
-      followup_number: 1,
-      framework: FRAMEWORKS[1],
-      message: sequence.day1,
-      cta_type: "question",
-      source: "fallback",
-      score: 0,
-    },
-    {
-      followup_number: 2,
-      framework: FRAMEWORKS[2],
-      message: sequence.day3,
-      cta_type: "question",
-      source: "fallback",
-      score: 0,
-    },
-    {
-      followup_number: 3,
-      framework: FRAMEWORKS[3],
-      message: sequence.day7,
-      cta_type: "question",
-      source: "fallback",
-      score: 0,
-    },
+  const seq = researchSequenceMessages(ctx);
+  const rows: Array<[1 | 2 | 3 | 4 | 5, string]> = [
+    [1, seq.day1],
+    [2, seq.day3],
+    [3, seq.day7],
+    [4, seq.day14],
+    [5, seq.day30],
   ];
+  return rows.map(([n, message]) => ({
+    followup_number: n,
+    framework: FRAMEWORKS[n],
+    message,
+    cta_type: n === 5 ? "statement" : "question",
+    source: "fallback",
+    score: 0,
+  }));
 }
