@@ -121,7 +121,7 @@ export default async function QuoteDetailPage({
   // exactly like the replied-status probe above.
   const { data: replyEventRows } = await serviceClient
     .from("recovery_events")
-    .select("reply_text, reply_intent, created_at")
+    .select("reply_text, reply_intent, channel, created_at")
     .eq("quote_id", quote.id)
     .eq("user_id", user.id)
     .eq("event_type", "reply_received")
@@ -133,6 +133,10 @@ export default async function QuoteDetailPage({
       ? {
           clientName: titleCaseName(quote.client_name),
           replyText: String(replyEvent.reply_text ?? ""),
+          channel:
+            replyEvent.channel === "sms" || replyEvent.channel === "email"
+              ? replyEvent.channel
+              : undefined,
           suggestion: suggestResponse({
             intent: replyEvent.reply_intent,
             trade: quote.trade,

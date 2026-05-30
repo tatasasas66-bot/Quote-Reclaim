@@ -2,10 +2,17 @@ import { Badge } from "@/components/ui";
 import { CopyButton } from "./CopyButton";
 import type { SuggestedResponse, SuggestTone } from "@/lib/ai/suggest-response";
 
+export type ReplyChannel = "sms" | "email";
+
 export type ReplyRadarData = {
   clientName: string;
   replyText: string;
   suggestion: SuggestedResponse;
+  /**
+   * Channel the reply arrived on. Undefined for legacy rows captured before
+   * channel was recorded — the card simply omits the tag in that case.
+   */
+  channel?: ReplyChannel;
 };
 
 const toneCard: Record<SuggestTone, string> = {
@@ -14,6 +21,11 @@ const toneCard: Record<SuggestTone, string> = {
   neutral: "border-line-subtle",
   danger: "border-danger/40",
   brand: "border-brand/40",
+};
+
+const channelLabel: Record<ReplyChannel, string> = {
+  sms: "via SMS",
+  email: "via email",
 };
 
 /**
@@ -26,7 +38,7 @@ const toneCard: Record<SuggestTone, string> = {
 export function ReplyRadarCard({ reply }: { reply: ReplyRadarData | null }) {
   if (!reply) return null;
 
-  const { clientName, replyText, suggestion } = reply;
+  const { clientName, replyText, suggestion, channel } = reply;
   const name = clientName.trim() || "Customer";
 
   return (
@@ -42,6 +54,11 @@ export function ReplyRadarCard({ reply }: { reply: ReplyRadarData | null }) {
           <h2 className="mt-1 text-2xl font-black text-ink-strong">
             {name} replied — {suggestion.label}
           </h2>
+          {channel ? (
+            <p className="mt-1 text-xs font-semibold uppercase tracking-wider text-ink-muted">
+              {channelLabel[channel]}
+            </p>
+          ) : null}
         </div>
         <Badge variant={suggestion.tone}>{suggestion.badgeLabel}</Badge>
       </div>
