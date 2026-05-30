@@ -3,6 +3,8 @@
 import * as React from "react";
 import { useFormState, useFormStatus } from "react-dom";
 import { Button, Input } from "@/components/ui";
+import { VoiceButton } from "@/components/voice/VoiceButton";
+import type { VoicePrefill } from "@/lib/voice/parse-transcript";
 import type { ActionResult } from "@/lib/quotes/actions";
 import type { QuoteRow } from "@/lib/quotes/repo";
 import { TRADES, US_STATES } from "@/lib/utils/normalize";
@@ -31,8 +33,26 @@ export function QuoteForm({ mode, initial, action }: Props) {
   };
   const topLevelError = isError && !state.fieldErrors ? state.error : null;
 
+  // Voice is enhancement-only. When the contractor confirms a voice capture we
+  // seed the (uncontrolled) fields by remounting the form with new
+  // defaultValues — anything voice could not parse stays blank for typing.
+  const [voice, setVoice] = React.useState<VoicePrefill | null>(null);
+  const [formKey, setFormKey] = React.useState(0);
+  const applyVoice = React.useCallback((parsed: VoicePrefill) => {
+    setVoice(parsed);
+    setFormKey((k) => k + 1);
+  }, []);
+
+  const clientName = voice?.client_name || initial?.client_name || "";
+  const trade = voice?.trade || initial?.trade || "";
+  const amount = voice?.estimate_amount || initial?.estimate_amount?.toString() || "";
+  const daysSilent = voice?.days_silent || (initial?.days_silent ?? 0).toString();
+  const city = voice?.city || initial?.city || "";
+  const stateCode = voice?.state || initial?.state || "";
+
   return (
     <form
+      key={formKey}
       action={formAction}
       className="space-y-5 rounded-lg border border-line-subtle bg-surface-1 p-5 shadow-[0_22px_70px_rgba(0,0,0,0.3)] sm:p-6"
       noValidate
@@ -47,19 +67,18 @@ export function QuoteForm({ mode, initial, action }: Props) {
         </div>
       ) : null}
 
+      {mode === "create" ? <VoiceButton onComplete={applyVoice} /> : null}
+
       <Input
         label="Client name"
         name="client_name"
         required
-        defaultValue={initial?.client_name ?? ""}
+        defaultValue={clientName}
         error={fieldError("client_name")}
         autoComplete="off"
         autoFocus={mode === "create"}
       />
-      <TradeSelect
-        defaultValue={initial?.trade ?? ""}
-        error={fieldError("trade")}
-      />
+      <TradeSelect defaultValue={trade} error={fieldError("trade")} />
       <div className="grid gap-4 sm:grid-cols-2">
         <Input
           label="Estimate amount (USD)"
@@ -69,7 +88,7 @@ export function QuoteForm({ mode, initial, action }: Props) {
           min="1"
           step="0.01"
           required
-          defaultValue={initial?.estimate_amount?.toString() ?? ""}
+          defaultValue={amount}
           error={fieldError("estimate_amount")}
         />
         <Input
@@ -80,7 +99,7 @@ export function QuoteForm({ mode, initial, action }: Props) {
           min="0"
           step="1"
           required
-          defaultValue={(initial?.days_silent ?? 0).toString()}
+          defaultValue={daysSilent}
           hint="0 = sent today"
           error={fieldError("days_silent")}
         />
@@ -124,14 +143,11 @@ export function QuoteForm({ mode, initial, action }: Props) {
             <Input
               label="City"
               name="city"
-              defaultValue={initial?.city ?? ""}
+              defaultValue={city}
               error={fieldError("city")}
               autoComplete="off"
             />
-            <StateSelect
-              defaultValue={initial?.state ?? ""}
-              error={fieldError("state")}
-            />
+            <StateSelect defaultValue={stateCode} error={fieldError("state")} />
           </div>
           <JobDescriptionField
             defaultValue={initial?.job_description ?? ""}
