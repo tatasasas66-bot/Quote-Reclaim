@@ -49,9 +49,12 @@ export function RecoveryWindowAlert({
             DO THIS TODAY
           </p>
           <p className="mt-1 text-2xl font-black text-ink-strong">
-            Open {displayName}&apos;s {displayTrade.toLowerCase()} recovery plan.
+            Start with the highest-value quiet quote that still has a real shot.
+            Work that one before you chase anything new.
           </p>
           <p className="mt-1 text-sm leading-6 text-ink">
+            <span className="font-bold text-ink-strong">{displayName}</span> ·{" "}
+            {displayTrade} ·{" "}
             <span className="font-bold text-ink-strong">
               {formatCurrency(amount)}
             </span>{" "}
@@ -63,7 +66,7 @@ export function RecoveryWindowAlert({
           href={`/quotes/${quoteId}`}
           className="inline-flex min-h-11 items-center justify-center rounded-lg bg-warning px-4 py-2 text-sm font-black text-canvas shadow-[0_0_34px_rgba(226,166,59,0.24)] transition-colors hover:bg-warning/90 focus:outline-none focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2 focus-visible:ring-offset-canvas"
         >
-          Send the next follow-up →
+          Work this quote →
         </Link>
       </div>
     </aside>

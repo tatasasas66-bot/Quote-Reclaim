@@ -143,9 +143,7 @@ export function AuthShell({ mode }: AuthShellProps) {
           Silent Quote Command
         </p>
         <h1 className="mt-2 text-balance text-3xl font-black leading-tight text-ink-strong">
-          You sent the quote.
-          <br />
-          <span className="text-brand">Get the job back.</span>
+          The money isn&apos;t always in the next lead.
         </h1>
       </div>
 
@@ -155,16 +153,16 @@ export function AuthShell({ mode }: AuthShellProps) {
             <p className="text-xs font-semibold uppercase tracking-widest text-brand">
               Silent Quote Command
             </p>
-            <h1 className="text-balance text-6xl font-black leading-[0.98] text-ink-strong">
-              You sent the quote.
-              <br />
-              They went quiet.
-              <br />
-              <span className="text-brand">Get the job back.</span>
+            <h1 className="text-balance text-5xl font-black leading-[1.02] text-ink-strong">
+              The money isn&apos;t always in the next lead.
             </h1>
             <p className="max-w-md break-words text-lg leading-8 text-ink">
-              Every quiet estimate has a dollar value, a risk level, and a next
-              move. See the money sitting quiet and decide what happens next.
+              Sometimes it&apos;s sitting in the quotes you already drove out,
+              scoped, and sent. Quote Reclaim helps you work the right quiet
+              estimates before they go cold.
+            </p>
+            <p className="text-sm font-medium text-ink-muted">
+              Silent Quote Command for serious contractors.
             </p>
           </div>
           <PreviewCard />

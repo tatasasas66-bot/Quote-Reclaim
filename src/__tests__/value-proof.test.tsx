@@ -39,17 +39,17 @@ describe("RecoveryWindowAlert (Do This Today)", () => {
     expect(screen.getByText("DO THIS TODAY")).toBeTruthy();
   });
 
-  it("headline contains 'Open' + title-cased client name + 'recovery plan'", () => {
+  it("coaches the highest-value-first frame and shows the real quote context", () => {
     const { container } = renderAlert(60);
     const text = container.textContent ?? "";
-    expect(text).toContain("Open");
+    expect(text).toContain("highest-value quiet quote");
     expect(text).toContain("Jane Doe");
-    expect(text).toContain("recovery plan");
+    expect(text).toContain("days quiet");
   });
 
-  it("CTA reads 'Send the next follow-up'", () => {
+  it("CTA reads 'Work this quote'", () => {
     renderAlert(60);
-    expect(screen.getByText(/Send the next follow-up/)).toBeTruthy();
+    expect(screen.getByText(/Work this quote/)).toBeTruthy();
   });
 
   it("maps the recovery score to an urgency label", () => {

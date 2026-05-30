@@ -43,22 +43,21 @@ export function Paywall({ silentQuoteValue }: Props) {
     <section className="space-y-5 rounded-xl border border-brand/30 bg-surface-2 p-6">
       <div className="space-y-2">
         <p className="text-xs font-semibold uppercase tracking-widest text-brand">
-          FREE RECOVERIES USED
+          FOUNDING CONTRACTOR
         </p>
         <h2 className="text-2xl font-bold text-ink-strong">
-          Unlock unlimited recovery — $79/month
+          Don&apos;t let good quotes die quiet.
         </h2>
         <p className="text-sm text-ink">
-          You&apos;ve used your 3 free recovery plans. Your silent quotes are
-          still sitting there.
-        </p>
-        <p className="text-sm text-ink">
-          One won-back job typically pays for Quote Reclaim for years.
+          Quote Reclaim shows which silent estimates still matter, what
+          they&apos;re worth, and follows up by email automatically. At
+          $79/month — about 1.5% of a single $5,000 job — it doesn&apos;t take
+          many recovered jobs to look like a smart line item.
         </p>
         {hasSilent ? (
           <p className="text-sm font-medium text-money">
-            You currently have {formatCurrency(silentQuoteValue)} of silent
-            quotes in your queue.
+            You have {formatCurrency(silentQuoteValue)} of quiet estimates
+            sitting in your queue right now.
           </p>
         ) : null}
       </div>
@@ -70,7 +69,7 @@ export function Paywall({ silentQuoteValue }: Props) {
           loading={pending}
           disabled={pending}
         >
-          Unlock unlimited recovery
+          Unlock Silent Quote Command — $79/month
         </Button>
         <Link
           href="/dashboard"
@@ -87,7 +86,8 @@ export function Paywall({ silentQuoteValue }: Props) {
       ) : null}
 
       <p className="text-xs text-ink-muted">
-        Cancel anytime. No setup. No contract.
+        Lock in early access. Cancel anytime. Built for US home-service
+        contractors. Not another CRM.
       </p>
     </section>
   );

@@ -144,6 +144,16 @@ export default async function QuoteDetailPage({
         </Link>
       </header>
 
+      <div>
+        <p className="text-xs font-semibold uppercase tracking-widest text-brand">
+          Silent Quote Command
+        </p>
+        <p className="mt-2 max-w-2xl text-base leading-7 text-ink">
+          This estimate went quiet. Here&apos;s what it&apos;s worth, how much is
+          at risk, and the next move that makes the most sense right now.
+        </p>
+      </div>
+
       <QuoteSummary
         quote={quote}
         status={status}

@@ -21,34 +21,36 @@ export default function HomePage() {
           <div className="grid gap-8 lg:grid-cols-[0.9fr_1.1fr] lg:items-end">
             <div className="min-w-0 space-y-6">
               <p className="text-xs font-semibold uppercase tracking-widest text-brand">
-                QUOTE RECLAIM · SILENT QUOTE COMMAND
+                Silent Quote Command
               </p>
               <h1 className="max-w-2xl text-balance text-5xl font-black leading-[0.98] text-ink-strong sm:text-6xl lg:text-7xl">
-                You sent the quote.
+                You did the drive, the takeoff, the math.
                 <br />
-                They went quiet.
-                <br />
-                <span className="text-brand">Get the job back.</span>
+                <span className="text-brand">
+                  Don&apos;t let the money die quiet.
+                </span>
               </h1>
               <p className="max-w-xl break-words text-lg leading-8 text-ink sm:text-xl">
-                Quote Reclaim turns silent estimates into a recovery queue with
-                clear next moves, risk signals, and recovered-revenue tracking.
-                No CRM. No chasing. No guessing.
+                Quote Reclaim shows which silent estimates still have money in
+                them, what they&apos;re worth, and the next move — then follows
+                up by email automatically so quoted work doesn&apos;t drift
+                cold.
               </p>
               <div className="flex flex-wrap items-center gap-3 pt-1">
                 <Link href="/sign-up">
                   <Button size="lg" className="shadow-[0_0_42px_rgba(217,111,50,0.28)]">
-                    Find Silent Money
+                    See What&apos;s Sitting Quiet
                   </Button>
                 </Link>
-                <Link href="/sign-in">
+                <Link href="#how-it-works">
                   <Button size="lg" variant="secondary">
-                    Sign in
+                    See How It Works
                   </Button>
                 </Link>
               </div>
               <p className="max-w-md text-sm font-medium text-ink-muted">
-                Start with 3 silent quotes free. One recovered job can pay for months.
+                Built for US home-service contractors. $79/month. Not another
+                CRM.
               </p>
             </div>
 
@@ -62,7 +64,10 @@ export default function HomePage() {
 
 function ProductPreview() {
   return (
-    <div className="min-w-0 rounded-lg border border-line-subtle bg-surface-1 shadow-[0_28px_90px_rgba(0,0,0,0.42)]">
+    <div
+      id="how-it-works"
+      className="min-w-0 scroll-mt-8 rounded-lg border border-line-subtle bg-surface-1 shadow-[0_28px_90px_rgba(0,0,0,0.42)]"
+    >
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-line-subtle px-4 py-3 sm:px-5">
         <Badge variant="money">EXAMPLE PREVIEW · NOT YOUR DATA</Badge>
         <span className="text-xs font-semibold uppercase tracking-widest text-ink-muted">

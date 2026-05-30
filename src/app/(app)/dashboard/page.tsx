@@ -19,7 +19,6 @@ import {
 } from "@/lib/quotes/repo";
 import { effectiveDaysSilent } from "@/lib/recovery/effective-days";
 import { getRecoveryScore } from "@/lib/quotes/recovery-score";
-import { formatCurrency } from "@/lib/utils/currency";
 
 export const metadata: Metadata = { title: "Dashboard – Quote Reclaim" };
 export const dynamic = "force-dynamic";
@@ -149,18 +148,18 @@ export default async function DashboardPage() {
 
           {pending.length === 0 ? (
             <div className="rounded-lg border border-dashed border-line-subtle bg-surface-1 px-6 py-10 text-center">
-              <p className="font-bold text-ink">
-                {jobsWonLifetime > 0
-                  ? "All caught up. Add a quote when the next one goes quiet."
-                  : "No silent quotes tracked yet."}
+              <p className="text-lg font-bold text-ink-strong">
+                No quiet quotes right now.
               </p>
-              <p className="mt-1 text-sm text-ink-muted">
-                {jobsWonLifetime > 0
-                  ? `${jobsWonLifetime} job${jobsWonLifetime === 1 ? "" : "s"} won back · ${formatCurrency(allTimeRecovered)} recovered so far.`
-                  : "Add one quote and see what revenue is sitting quiet."}
+              <p className="mx-auto mt-1 max-w-md text-sm text-ink-muted">
+                Good. When an estimate goes quiet, it shows up here ranked by
+                dollars, risk, age, and next move — so you know what deserves
+                action and what to leave alone.
               </p>
-              <Link href="/quotes/new" className="mt-4 inline-block">
-                <Button size="sm">Add Silent Quote</Button>
+              <Link href="#recent-quotes" className="mt-4 inline-block">
+                <Button size="sm" variant="secondary">
+                  View recent quotes
+                </Button>
               </Link>
             </div>
           ) : (
@@ -181,7 +180,9 @@ export default async function DashboardPage() {
         </aside>
       </div>
 
-      <WonJobsGallery wonQuotes={wonQuotes} totalWon={wonTotal} />
+      <div id="recent-quotes" className="scroll-mt-8">
+        <WonJobsGallery wonQuotes={wonQuotes} totalWon={wonTotal} />
+      </div>
 
       {/* Mobile-only sticky CTA so the primary action stays in reach. */}
       <div className="fixed inset-x-3 bottom-3 z-30 sm:hidden">

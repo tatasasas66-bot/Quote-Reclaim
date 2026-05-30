@@ -42,14 +42,15 @@ describe("Pricing invariants", () => {
     expect(FREE_PLAN_LIMIT).toBe(3);
   });
 
-  it("Paywall UI shows only $79/month — no $39, no $49, no 'founding', no 'discount'", () => {
+  it("Paywall UI shows only $79/month — no $39/$49, no discount/sale/fake urgency", () => {
     expect(paywall).toContain("$79/month");
     expect(paywall).not.toMatch(/\$39\b/);
     expect(paywall).not.toMatch(/\$49\b/);
-    expect(paywall).not.toMatch(/founding/i);
     expect(paywall).not.toMatch(/discount/i);
     expect(paywall).not.toMatch(/\bsale\b/i);
     expect(paywall).not.toMatch(/limited.time/i);
+    // Founding-contractor framing is intentional and honest (no fake countdown).
+    expect(paywall).toMatch(/FOUNDING CONTRACTOR/);
   });
 
   it("no Lemon paywall surface uses the word 'Bid'", () => {
@@ -356,16 +357,17 @@ describe("Paywall component", () => {
     expect(paywall).toContain("/api/lemonsqueezy/checkout");
   });
 
-  it("displays the prescribed copy (Phase 4 locked strings)", () => {
-    expect(paywall).toContain("FREE RECOVERIES USED");
-    expect(paywall).toContain("Unlock unlimited recovery — $79/month");
-    expect(paywall).toContain("3 free recovery plans");
-    // JSX wraps long lines — match with a whitespace-tolerant regex.
-    expect(paywall).toMatch(/Your silent quotes are\s+still/);
-    expect(paywall).toContain("One won-back job typically pays for");
-    expect(paywall).toContain("Unlock unlimited recovery");
+  it("displays the founding-contractor copy with honest real price math", () => {
+    expect(paywall).toContain("FOUNDING CONTRACTOR");
+    expect(paywall).toMatch(/Don&apos;t let good quotes die quiet\./);
+    // The only honest automation claim: email auto-send (Resend) is real.
+    expect(paywall).toMatch(/follows\s+up by email automatically/);
+    // The only allowed ROI proof is the real price math.
+    expect(paywall).toMatch(/1\.5% of a single \$5,000 job/);
+    expect(paywall).toContain("Unlock Silent Quote Command — $79/month");
     expect(paywall).toContain("Not now");
-    expect(paywall).toContain("Cancel anytime. No setup. No contract.");
+    expect(paywall).toMatch(/Lock in early access\. Cancel anytime\./);
+    expect(paywall).toMatch(/Not another\s+CRM\./);
   });
 
   it("shows a loading state and shows checkout errors inline", () => {

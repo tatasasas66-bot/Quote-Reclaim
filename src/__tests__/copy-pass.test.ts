@@ -30,35 +30,39 @@ const aiFallbacks = readSource("../lib/ai/fallback-messages.ts");
 // Phase 4 locked copy — landing
 // ---------------------------------------------------------------------------
 
-describe("Homepage hero copy (Phase 4.1)", () => {
-  it("eyebrow is QUOTE RECLAIM · SILENT QUOTE COMMAND", () => {
-    expect(homepage).toMatch(/QUOTE RECLAIM · SILENT QUOTE COMMAND/);
+describe("Homepage hero copy (honest conversion rewrite)", () => {
+  it("eyebrow is Silent Quote Command", () => {
+    expect(homepage).toMatch(/Silent Quote Command/);
+    expect(homepage).not.toMatch(/QUOTE RECLAIM · SILENT QUOTE COMMAND/);
   });
 
-  it("uses the prescribed three-line headline", () => {
-    expect(homepage).toMatch(/You sent the quote\./);
-    expect(homepage).toMatch(/They went quiet\./);
-    expect(homepage).toMatch(/Get the job back\./);
+  it("uses the loss-framed contractor-labor headline", () => {
+    expect(homepage).toMatch(/You did the drive, the takeoff, the math\./);
+    expect(homepage).toMatch(/let the money die quiet\./);
   });
 
-  it("subhead uses silent-money recovery queue framing", () => {
-    expect(homepage).toMatch(/turns silent estimates into a recovery queue/);
-    expect(homepage).toMatch(/clear\s+next moves, risk signals/);
-    expect(homepage).toMatch(/No CRM\. No\s+chasing\. No guessing\./);
+  it("subhead is honest about email auto-send (no SMS overclaim)", () => {
+    expect(homepage).toMatch(/which silent estimates still have money in/);
+    expect(homepage).toMatch(/follows\s+up by email automatically/);
+    expect(homepage).toMatch(/drift\s+cold\./);
   });
 
-  it("primary CTA is Find Silent Money", () => {
-    expect(homepage).toMatch(/Find Silent Money/);
+  it("primary CTA is See What's Sitting Quiet", () => {
+    expect(homepage).toMatch(/Sitting Quiet/);
+    expect(homepage).not.toMatch(/Find Silent Money/);
   });
 
-  it("secondary CTA is Sign in", () => {
+  it("secondary CTA is See How It Works (links to the product preview)", () => {
     expect(homepage).toMatch(/<Button[^>]*variant=["']secondary["']/);
+    expect(homepage).toMatch(/See How It Works/);
+    expect(homepage).toMatch(/href="#how-it-works"/);
+    expect(homepage).toMatch(/id="how-it-works"/);
   });
 
-  it("trust line uses 3 silent quotes free phrasing", () => {
-    expect(homepage).toMatch(
-      /Start with 3 silent quotes free\. One recovered job can pay for months\./,
-    );
+  it("trust line names the audience, the price, and 'Not another CRM'", () => {
+    expect(homepage).toMatch(/Built for US home-service contractors\./);
+    expect(homepage).toContain("$79/month");
+    expect(homepage).toMatch(/Not another\s+CRM\./);
   });
 
   it("hero section uses py-12 md:py-16 (above-the-fold compression)", () => {
@@ -97,23 +101,25 @@ describe("Recovery Window Alert copy (Value Proof v0.5)", () => {
     expect(recoveryAlert).not.toMatch(/RECOVERY WINDOW ALERT/);
   });
 
-  it("headline coaches the contractor to open the recovery plan", () => {
-    expect(recoveryAlert).toMatch(/Open \{displayName\}/);
-    expect(recoveryAlert).toMatch(/recovery plan\./);
-    expect(recoveryAlert).not.toMatch(/Don(?:'|&apos;)t let this one die/);
+  it("headline coaches the contractor to work the highest-value quote first", () => {
+    expect(recoveryAlert).toMatch(/highest-value quiet quote that still has a real shot/);
+    expect(recoveryAlert).toMatch(/before you chase anything new/);
+    expect(recoveryAlert).not.toMatch(/Open \{displayName\}/);
   });
 
-  it("subline reads amount · days quiet · urgency", () => {
+  it("subline reads name · trade · amount · days quiet · urgency", () => {
     expect(recoveryAlert).toMatch(/days quiet/);
     expect(recoveryAlert).toMatch(/\{urgencyLabel\}/);
+    expect(recoveryAlert).toMatch(/\{displayName\}/);
   });
 
   it("derives the urgency label from recoveryPriority", () => {
     expect(recoveryAlert).toMatch(/recoveryPriority\(score\)/);
   });
 
-  it("CTA is 'Send the next follow-up →'", () => {
-    expect(recoveryAlert).toMatch(/Send the next follow-up/);
+  it("CTA is 'Work this quote →'", () => {
+    expect(recoveryAlert).toMatch(/Work this quote/);
+    expect(recoveryAlert).not.toMatch(/Send the next follow-up/);
     expect(recoveryAlert).not.toMatch(/Open Recovery Plan/);
   });
 
