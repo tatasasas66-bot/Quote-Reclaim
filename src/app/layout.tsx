@@ -24,6 +24,10 @@ export const metadata: Metadata = {
   },
   description:
     "Quote Reclaim turns silent estimates into a recovery queue with clear next moves, risk signals, and recovered-revenue tracking.",
+  icons: {
+    icon: "/icon.svg",
+    apple: "/icon.svg",
+  },
 };
 
 export const viewport: Viewport = {

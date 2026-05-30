@@ -3,6 +3,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { Button } from "@/components/ui";
 import { UpgradeButton } from "@/components/billing";
+import { LogoMark } from "@/components/brand/Logo";
 import { QuoteListItem } from "@/components/quotes";
 import { HeroMetric } from "@/components/dashboard/HeroMetric";
 import { MetricCards } from "@/components/dashboard/MetricCards";
@@ -148,6 +149,7 @@ export default async function DashboardPage() {
 
           {pending.length === 0 ? (
             <div className="rounded-lg border border-dashed border-line-subtle bg-surface-1 px-6 py-10 text-center">
+              <LogoMark className="mx-auto mb-3 h-10 w-10" />
               <p className="text-lg font-bold text-ink-strong">
                 No quiet quotes right now.
               </p>

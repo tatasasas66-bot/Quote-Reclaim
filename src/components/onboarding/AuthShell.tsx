@@ -8,6 +8,7 @@ import {
   ShieldAlert,
 } from "lucide-react";
 import { Badge, Logo } from "@/components/ui";
+import { LogoStacked } from "@/components/brand/Logo";
 import { formatCurrency } from "@/lib/utils/currency";
 import { AuthForm } from "./AuthForm";
 
@@ -149,6 +150,7 @@ export function AuthShell({ mode }: AuthShellProps) {
 
       <div className="mx-auto grid w-full max-w-6xl min-w-0 items-start gap-10 lg:grid-cols-[3fr_2fr]">
         <section className="hidden min-w-0 flex-col gap-7 lg:flex">
+          <LogoStacked className="items-start text-left" />
           <div className="space-y-4">
             <p className="text-xs font-semibold uppercase tracking-widest text-brand">
               Silent Quote Command
