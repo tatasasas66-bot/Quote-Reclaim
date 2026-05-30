@@ -71,7 +71,7 @@ export default async function DashboardPage() {
   const priorityQuote = pickPriorityQuote(pending);
 
   return (
-    <main className="mx-auto flex min-h-screen w-full max-w-7xl flex-col gap-8 bg-canvas px-4 py-8 sm:px-6 lg:px-8">
+    <main className="mx-auto flex min-h-screen w-full max-w-7xl flex-col gap-8 bg-canvas px-4 pt-8 pb-[calc(6rem+env(safe-area-inset-bottom))] sm:px-6 sm:pb-8 lg:px-8">
       <header className="border-b border-line-subtle/80 pb-5">
         <p className="text-xs font-semibold uppercase tracking-widest text-brand">
           QUOTE RECLAIM

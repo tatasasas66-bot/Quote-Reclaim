@@ -84,7 +84,7 @@ function ProductPreview() {
             <p className="mt-2 text-5xl font-black tracking-tight text-ink-strong tabular-nums sm:text-6xl">
               $47,200
             </p>
-            <p className="mt-2 max-w-sm text-sm text-ink-muted">
+            <p className="mt-2 break-words text-sm text-ink-muted sm:max-w-sm">
               Twelve quiet estimates still have a dollar value and a next move.
             </p>
           </div>
@@ -96,10 +96,10 @@ function ProductPreview() {
                 Recovery Window Alert
               </p>
             </div>
-            <p className="mt-3 text-2xl font-black text-ink-strong">
+            <p className="mt-3 break-words text-2xl font-black text-ink-strong">
               $8,500 roof quote is cooling fast.
             </p>
-            <p className="mt-2 text-sm text-ink-muted">
+            <p className="mt-2 break-words text-sm text-ink-muted">
               9 days quiet. Open the plan before the job goes cold.
             </p>
           </div>
@@ -111,7 +111,7 @@ function ProductPreview() {
               <p className="text-xs font-bold uppercase tracking-widest text-ink-muted">
                 Sample Quote Card
               </p>
-              <h2 className="mt-1 truncate text-xl font-bold text-ink-strong">
+              <h2 className="mt-1 break-words text-base font-bold text-ink-strong sm:text-xl">
                 Martin Alvarez · Roofing · Tampa, FL
               </h2>
               <p className="mt-1 text-sm text-ink-muted">9 days quiet · $8,500</p>

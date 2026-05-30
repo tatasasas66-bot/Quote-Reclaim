@@ -45,10 +45,10 @@ export function QuoteListItem({
             </div>
 
             <div className="min-w-0">
-              <p className="truncate text-xl font-black text-ink-strong">
+              <p className="break-words text-xl font-black text-ink-strong sm:truncate">
                 {displayName}
               </p>
-              <p className="truncate text-sm text-ink-muted">
+              <p className="break-words text-sm text-ink-muted">
                 {displayTrade}
                 {displayCity ? ` · ${displayCity}` : ""}
                 {displayState ? `, ${displayState}` : ""}
@@ -120,7 +120,7 @@ function QuoteStat({
       <p className="text-[10px] font-bold uppercase tracking-widest text-ink-muted">
         {label}
       </p>
-      <p className={`mt-1 truncate text-sm font-black ${valueClassName}`}>
+      <p className={`mt-1 break-words text-sm font-black sm:truncate ${valueClassName}`}>
         {value}
       </p>
     </div>

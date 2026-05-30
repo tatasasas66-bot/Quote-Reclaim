@@ -49,7 +49,7 @@ function PreviewCard() {
           <p className="mt-2 text-5xl font-black text-ink-strong tabular-nums">
             {formatCurrency(47200)}
           </p>
-          <p className="mt-1 text-sm text-ink-muted">
+          <p className="mt-1 break-words text-sm text-ink-muted">
             12 quiet estimates · oldest 14 days
           </p>
         </div>
@@ -61,10 +61,10 @@ function PreviewCard() {
               Recovery Window Alert
             </p>
           </div>
-          <p className="mt-2 text-lg font-bold text-ink-strong">
+          <p className="mt-2 break-words text-lg font-bold text-ink-strong">
             Open the $8,500 roof plan today.
           </p>
-          <p className="mt-1 text-sm text-ink-muted">
+          <p className="mt-1 break-words text-sm text-ink-muted">
             money sitting quiet needs one clear move.
           </p>
         </div>
