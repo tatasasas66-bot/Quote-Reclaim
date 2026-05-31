@@ -57,6 +57,25 @@ export default function HomePage() {
             <ProductPreview />
           </div>
         </section>
+
+        <footer className="flex flex-wrap items-center justify-between gap-3 border-t border-line-subtle/80 py-6 text-sm text-ink-muted">
+          <p>© {new Date().getFullYear()} Quote Reclaim</p>
+          <nav className="flex items-center gap-3">
+            <Link
+              href="/terms"
+              className="rounded hover:text-ink-strong focus:outline-none focus-visible:ring-2 focus-visible:ring-focus"
+            >
+              Terms
+            </Link>
+            <span aria-hidden="true">·</span>
+            <Link
+              href="/privacy"
+              className="rounded hover:text-ink-strong focus:outline-none focus-visible:ring-2 focus-visible:ring-focus"
+            >
+              Privacy
+            </Link>
+          </nav>
+        </footer>
       </div>
     </main>
   );

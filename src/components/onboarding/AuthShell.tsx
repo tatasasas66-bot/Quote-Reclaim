@@ -195,6 +195,22 @@ export function AuthShell({ mode }: AuthShellProps) {
           </div>
         </section>
       </div>
+
+      <footer className="mx-auto mt-10 flex w-full max-w-6xl flex-wrap items-center justify-center gap-3 border-t border-line-subtle/80 pt-6 text-sm text-ink-muted">
+        <Link
+          href="/terms"
+          className="rounded hover:text-ink-strong focus:outline-none focus-visible:ring-2 focus-visible:ring-focus"
+        >
+          Terms
+        </Link>
+        <span aria-hidden="true">·</span>
+        <Link
+          href="/privacy"
+          className="rounded hover:text-ink-strong focus:outline-none focus-visible:ring-2 focus-visible:ring-focus"
+        >
+          Privacy
+        </Link>
+      </footer>
     </main>
   );
 }
