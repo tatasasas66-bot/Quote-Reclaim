@@ -125,11 +125,147 @@ export function tradeWord(trade: string): string {
   return resolveTrade(trade, TRADE_WORDS, lower);
 }
 
+/**
+ * Per-trade job-noun dictionary. Each entry is an ordered list of
+ * [pattern, label]. The label is a hand-curated noun phrase that reads
+ * naturally in "the {trade} estimate for the {label}" — e.g. "water heater",
+ * "panel upgrade", "metal roof". Ordering matters: the most specific /
+ * primary scope wins, so list the headline noun first.
+ *
+ * This is intentionally high-precision and fail-closed: jobDetail only returns
+ * a label when a curated pattern matches, otherwise null. A missing detail
+ * simply falls back to the generic (already strong) trade phrasing, so the
+ * generator can never emit an awkward auto-extracted fragment.
+ */
+const JOB_NOUNS: Record<string, ReadonlyArray<[RegExp, string]>> = {
+  roofing: [
+    [/\bmetal\b/, "metal roof"],
+    [/\b(flat roof|tpo|epdm)\b/, "flat roof"],
+    [/\bgutter/, "gutters"],
+    [/\bshingle/, "shingle roof"],
+    [/\b(tear[- ]?off|re-?roof|reroof|new roof|full roof|replace)\b/, "roof replacement"],
+    [/\b(leak|repair)\b/, "roof repair"],
+  ],
+  plumbing: [
+    [/\b(water heater|tankless)\b/, "water heater"],
+    [/\bre-?pipe\b/, "repipe"],
+    [/\bsewer\b/, "sewer line"],
+    [/\bdrain\b/, "drain work"],
+    [/\b(faucet|fixture|sink|toilet|shower)\b/, "fixture work"],
+    [/\bleak\b/, "leak repair"],
+  ],
+  hvac: [
+    [/\bheat pump\b/, "heat pump"],
+    [/\bmini[- ]?split\b/, "mini-split"],
+    [/\bfurnace\b/, "furnace"],
+    [/\b(a\/c|\bac\b|air ?condition)\b/, "AC"],
+    [/\bduct/, "ductwork"],
+  ],
+  electrical: [
+    [/\bpanel\b/, "panel upgrade"],
+    [/\bre-?wir|wiring\b/, "rewire"],
+    [/\bgenerator\b/, "generator"],
+    [/\b(ev\b|charger)/, "EV charger"],
+    [/\b(outlet|circuit|breaker)\b/, "outlet work"],
+  ],
+  remodeling: [
+    [/\bkitchen\b/, "kitchen"],
+    [/\bbath/, "bathroom"],
+    [/\bbasement\b/, "basement"],
+    [/\bmaster\b/, "master suite"],
+  ],
+  "general contracting": [
+    [/\bdeck\b/, "deck"],
+    [/\bsunroom\b/, "sunroom"],
+    [/\bgarage\b/, "garage"],
+    [/\bporch\b/, "porch"],
+    [/\baddition\b/, "addition"],
+  ],
+  painting: [
+    [/\bexterior\b/, "exterior"],
+    [/\binterior\b/, "interior"],
+    [/\bcabinet/, "cabinets"],
+    [/\bfence\b/, "fence"],
+    [/\btrim\b/, "trim"],
+  ],
+  landscaping: [
+    [/\bretaining\b/, "retaining wall"],
+    [/\bpatio\b/, "patio"],
+    [/\bpaver/, "pavers"],
+    [/\b(irrigation|sprinkler)\b/, "irrigation"],
+    [/\b(sod|lawn|grass)\b/, "lawn"],
+  ],
+  concrete: [
+    [/\bdriveway\b/, "driveway"],
+    [/\bpatio\b/, "patio"],
+    [/\bfoundation\b/, "foundation"],
+    [/\bslab\b/, "slab"],
+    [/\b(walkway|sidewalk)\b/, "walkway"],
+    [/\b(step|stair)\b/, "steps"],
+  ],
+};
+
+/** Resolve a freeform trade string to the canonical JOB_NOUNS / PROJECT_LABELS key. */
+function canonicalTradeKey(trade: string): string {
+  const lower = trade.trim().toLowerCase();
+  if (!lower) return "other";
+  if (PROJECT_LABELS[lower]) return lower;
+  const aliasMatch = ALIASES[lower];
+  if (aliasMatch) return aliasMatch.toLowerCase();
+  for (const [alias, canonical] of Object.entries(ALIASES)) {
+    if (lower.includes(alias)) return canonical.toLowerCase();
+  }
+  for (const key of Object.keys(PROJECT_LABELS)) {
+    if (lower.includes(key)) return key;
+  }
+  return "other";
+}
+
+/**
+ * Extract a specific, natural job noun from the contractor-entered job
+ * description (e.g. "Replace water heater" -> "water heater"; "Panel upgrade
+ * to 200A" -> "panel upgrade"). Pure, deterministic, and fail-closed: returns
+ * null whenever nothing curated matches, so callers degrade to the generic
+ * trade phrasing instead of risking an awkward fragment.
+ */
+export function jobDetail(
+  trade: string,
+  jobDescription: string | null | undefined,
+): string | null {
+  const desc = (jobDescription ?? "").toLowerCase().trim();
+  if (!desc) return null;
+  const patterns = JOB_NOUNS[canonicalTradeKey(trade)];
+  if (!patterns) return null;
+  for (const [pattern, label] of patterns) {
+    if (pattern.test(desc)) return label;
+  }
+  return null;
+}
+
+/**
+ * The detail-aware project phrase. When a specific job noun is known, it reads
+ * "the roofing estimate for the metal roof" — keeping the trade keyword (so the
+ * validator passes unchanged) while proving the contractor remembers the exact
+ * job. Falls back to the plain project phrase when no detail is available.
+ */
+export function projectDetailPhrase(
+  project: string,
+  detail: string | null,
+): string {
+  return detail ? `${project} for the ${detail}` : project;
+}
+
 export type VariantVars = {
   firstName: string;
   contractorFirstName: string;
   /** Full "the X estimate" noun phrase. */
   project: string;
+  /**
+   * Detail-aware project phrase: "the X estimate for the {job noun}" when the
+   * job is known, otherwise identical to `project`. Used on the touches where
+   * job specificity converts (Day 1, Day 14, Day 30).
+   */
+  projectDetail: string;
   /** Bare trade modifier ("roofing", "HVAC", "project", "concrete"). */
   tradeWord: string;
 };
@@ -146,15 +282,17 @@ export type VariantVars = {
  */
 
 // DAY 1 — Estimate Check. Helpful, direct. "Hey {FirstName} — ..." opener.
+// Uses projectDetail so a known job ("the roofing estimate for the metal roof")
+// shows the contractor remembers the specific job on the very first touch.
 const DAY1_VARIANTS: ReadonlyArray<(v: VariantVars) => string> = [
-  ({ firstName, contractorFirstName, project }) =>
-    `Hey ${firstName} — ${contractorFirstName} here. I looked back over ${project}. Was there a number, timing question, or detail you wanted me to break down?`,
-  ({ firstName, project }) =>
-    `Hey ${firstName} — I went back through ${project}. Anything in the scope, timing, or total you want me to clarify?`,
-  ({ firstName, project }) =>
-    `Hey ${firstName}, I reviewed ${project} again on my end. Was anything unclear, or is there a part you want me to walk through?`,
-  ({ firstName, project }) =>
-    `Hey ${firstName}, I looked over ${project} again. Any questions on the work, timing, or total before you make a call?`,
+  ({ firstName, contractorFirstName, projectDetail }) =>
+    `Hey ${firstName} — ${contractorFirstName} here. I looked back over ${projectDetail}. Was there a number, timing question, or detail you wanted me to break down?`,
+  ({ firstName, projectDetail }) =>
+    `Hey ${firstName} — I went back through ${projectDetail}. Anything in the scope, timing, or total you want me to clarify?`,
+  ({ firstName, projectDetail }) =>
+    `Hey ${firstName}, I reviewed ${projectDetail} again on my end. Was anything unclear, or is there a part you want me to walk through?`,
+  ({ firstName, projectDetail }) =>
+    `Hey ${firstName}, I had another look at ${projectDetail}. If a number or a detail is in the way, I can break it down — what is the holdup?`,
 ];
 
 // DAY 3 — Schedule Check. "{FirstName}, ..." opener, no greeting word.
@@ -183,28 +321,31 @@ const DAY7_VARIANTS: ReadonlyArray<(v: VariantVars) => string> = [
     `Do you still want me to keep ${project} on the board, or should I close it out for now?`,
 ];
 
-// DAY 14 — Options Check. Useful, never discounting. Phasing/scope frame.
+// DAY 14 — Options Check. Useful, never discounting. Options/scope frame.
+// Job-aware via projectDetail. v1 deliberately drops the list-of-three for a
+// single concrete offer so the four variants do not share one shape.
 const DAY14_VARIANTS: ReadonlyArray<(v: VariantVars) => string> = [
-  ({ firstName, project }) =>
-    `${firstName}, if the total, timing, or scope on ${project} is what's holding this up, I can walk through options without cutting corners. Worth a look?`,
-  ({ firstName, project }) =>
-    `${firstName}, if ${project} is stuck on timing, scope, or total, want me to walk through the options without changing the quality of the work?`,
-  ({ firstName, project }) =>
-    `${firstName}, sometimes these estimates stall over timing or details. If that's the case here, want me to walk through ${project} with you?`,
-  ({ firstName, project }) =>
-    `${firstName}, if there's one part of ${project} holding things up, want me to walk through it so you know where it stands?`,
+  ({ firstName, projectDetail }) =>
+    `${firstName}, if the total, timing, or scope on ${projectDetail} is what's holding this up, I can walk through options without cutting corners. Worth a look?`,
+  ({ firstName, projectDetail }) =>
+    `${firstName}, if it's the number on ${projectDetail} giving you pause, I can lay out a couple of ways to handle it without cutting corners. Worth a look?`,
+  ({ firstName, projectDetail }) =>
+    `${firstName}, sometimes these stall over timing or one detail. If that's the case with ${projectDetail}, want me to walk through the options with you?`,
+  ({ firstName, projectDetail }) =>
+    `${firstName}, if there's one part of ${projectDetail} holding things up, want me to walk through it so you know exactly where it stands?`,
 ];
 
 // DAY 30 — Final Closeout. Respectful, detached. Declarative. No question.
+// Job-aware via projectDetail so the final touch still names the exact job.
 const DAY30_VARIANTS: ReadonlyArray<(v: VariantVars) => string> = [
-  ({ firstName, project }) =>
-    `${firstName}, I'll close out ${project} after this. No hard feelings. If anything changes later, reach out and I'll pick it back up.`,
-  ({ firstName, project }) =>
-    `${firstName}, I'm going to close ${project} on my end for now. If you decide to revisit it later, just reach out.`,
-  ({ firstName, project }) =>
-    `${firstName}, I'll mark ${project} closed for now. No problem either way — if it comes back up later, I can reopen it.`,
-  ({ firstName, project }) =>
-    `${firstName}, I'll step back on ${project} after this. If the timing changes down the road, I'm happy to pick it back up.`,
+  ({ firstName, projectDetail }) =>
+    `${firstName}, I'll close out ${projectDetail} after this. No hard feelings. If anything changes later, reach out and I'll pick it back up.`,
+  ({ firstName, projectDetail }) =>
+    `${firstName}, I'm going to close ${projectDetail} on my end for now. If you decide to revisit it later, just reach out.`,
+  ({ firstName, projectDetail }) =>
+    `${firstName}, I'll mark ${projectDetail} closed for now. No problem either way — if it comes back up later, I can reopen it.`,
+  ({ firstName, projectDetail }) =>
+    `${firstName}, I'll step back on ${projectDetail} after this. If the timing changes down the road, I'm happy to pick it back up.`,
 ];
 
 /**
@@ -276,10 +417,13 @@ export function researchSequenceMessages(ctx: RecoveryContext): {
   day14: string;
   day30: string;
 } {
+  const project = projectLabel(ctx.trade);
+  const detail = jobDetail(ctx.trade, ctx.jobDescription);
   const vars: VariantVars = {
     firstName: cleanName(ctx.firstName, "there"),
     contractorFirstName: cleanName(ctx.contractorFirstName, "Contractor"),
-    project: projectLabel(ctx.trade),
+    project,
+    projectDetail: projectDetailPhrase(project, detail),
     tradeWord: tradeWord(ctx.trade),
   };
   const seed = variantSeed(ctx);

@@ -47,10 +47,14 @@ const DAY_TO_FOLLOWUP: Record<1 | 3 | 7 | 14 | 30, 1 | 2 | 3 | 4 | 5> = {
 };
 
 function makeVars(firstName: string, contractor: string, trade: string): VariantVars {
+  const project = projectLabel(trade);
   return {
     firstName,
     contractorFirstName: contractor,
-    project: projectLabel(trade),
+    project,
+    // No-detail path: projectDetail === project. The detail-injection path is
+    // covered separately via researchSequenceMessages with a jobDescription.
+    projectDetail: project,
     tradeWord: tradeWord(trade),
   };
 }
@@ -283,7 +287,11 @@ describe("Day 14 stays on options/phasing (NO price drop) and Day 30 closes out 
     for (let i = 0; i < day14.length; i++) {
       const msg = day14[i](sampleVars).toLowerCase();
       // Every variant must explicitly offer a walk-through / options framing.
-      expect(/walk through|options|holding (this|things) up|stuck on/.test(msg)).toBe(true);
+      expect(
+        /walk through|options|lay out|handle it|holding (this|things) up|stuck on/.test(
+          msg,
+        ),
+      ).toBe(true);
       // No discount language whatsoever.
       expect(msg).not.toMatch(/\b(discount|sale|deal|coupon|promo|cheaper)\b/);
       expect(msg).not.toMatch(/\d+\s?%\s?off/);

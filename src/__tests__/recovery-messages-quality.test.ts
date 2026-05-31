@@ -11,6 +11,7 @@ import {
   pickVariant,
   projectLabel,
   tradeWord,
+  jobDetail,
   researchSequenceMessages,
   variantSeed,
   type VariantVars,
@@ -39,10 +40,12 @@ const TRADES = [
 const NAMES = ["Jane", "Tom", "Sarah", "John", "Amanda", "Chris", "Karen"];
 
 function vars(firstName: string, contractor: string, trade: string): VariantVars {
+  const project = projectLabel(trade);
   return {
     firstName,
     contractorFirstName: contractor,
-    project: projectLabel(trade),
+    project,
+    projectDetail: project,
     tradeWord: tradeWord(trade),
   };
 }
@@ -215,7 +218,11 @@ describe("21-25. each day fulfils its strategic role", () => {
   it("24. Day 14 offers options without ANY discount language", () => {
     for (const builder of SEQUENCE_VARIANTS[14]) {
       const msg = builder(sampleVars).toLowerCase();
-      expect(/walk through|options|holding (this|things) up|stuck on/.test(msg)).toBe(true);
+      expect(
+        /walk through|options|lay out|handle it|holding (this|things) up|stuck on/.test(
+          msg,
+        ),
+      ).toBe(true);
       expect(msg).not.toMatch(/\b(discount|sale|deal|cheaper|coupon|promo)\b/);
       expect(msg).not.toMatch(/\d+\s?%\s?off/);
     }
@@ -373,5 +380,118 @@ describe("messages stay concise — every message under 220 chars across all tra
     for (const msg of everyMessage()) {
       expect(msg.length).toBeLessThanOrEqual(220);
     }
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Job-aware specificity — the headline 10/10 lever. When a job is known, the
+// message names it ("the roofing estimate for the metal roof"); when unknown,
+// it degrades cleanly to the plain trade phrasing. Fail-closed: never awkward.
+// ---------------------------------------------------------------------------
+
+describe("job-aware specificity (jobDetail)", () => {
+  const KNOWN: Array<{ trade: string; desc: string; detail: string }> = [
+    { trade: "Plumbing", desc: "Replace water heater", detail: "water heater" },
+    { trade: "Electrical", desc: "Panel upgrade to 200A", detail: "panel upgrade" },
+    { trade: "Remodeling", desc: "Kitchen remodel", detail: "kitchen" },
+    { trade: "General Contracting", desc: "Deck + sunroom addition", detail: "deck" },
+    { trade: "HVAC", desc: "Replace 3-ton AC + furnace", detail: "furnace" },
+    { trade: "Roofing", desc: "Re-roof, asphalt shingles", detail: "shingle roof" },
+    { trade: "Concrete", desc: "New driveway pour", detail: "driveway" },
+    { trade: "Painting", desc: "Exterior repaint", detail: "exterior" },
+    { trade: "Landscaping", desc: "New paver patio", detail: "patio" },
+  ];
+
+  it("extracts the curated job noun for each trade", () => {
+    for (const { trade, desc, detail } of KNOWN) {
+      expect(jobDetail(trade, desc)).toBe(detail);
+    }
+  });
+
+  it("is fail-closed: unknown / empty descriptions return null", () => {
+    expect(jobDetail("Plumbing", "asdf qwerty zzz")).toBeNull();
+    expect(jobDetail("Roofing", "")).toBeNull();
+    expect(jobDetail("HVAC", null)).toBeNull();
+    expect(jobDetail("HVAC", undefined)).toBeNull();
+    // A trade with no dictionary entry never throws and returns null.
+    expect(jobDetail("Other", "something custom")).toBeNull();
+  });
+
+  it("is deterministic for the same inputs", () => {
+    for (const { trade, desc } of KNOWN) {
+      expect(jobDetail(trade, desc)).toBe(jobDetail(trade, desc));
+    }
+  });
+
+  it("injects the job noun into Day 1, Day 14, and Day 30 (the conversion touches)", () => {
+    for (const { trade, desc, detail } of KNOWN) {
+      const seq = researchSequenceMessages({
+        firstName: "Jane",
+        contractorFirstName: "Mike",
+        trade,
+        estimateAmount: 5000,
+        jobDescription: desc,
+        quoteId: `detail-${trade}`,
+      });
+      expect(seq.day1.toLowerCase()).toContain(detail.toLowerCase());
+      expect(seq.day14.toLowerCase()).toContain(detail.toLowerCase());
+      expect(seq.day30.toLowerCase()).toContain(detail.toLowerCase());
+      // The "for the {detail}" phrasing keeps the trade keyword, so every
+      // detail-injected message still passes the validator unchanged.
+      for (const [n, msg] of [
+        [1, seq.day1],
+        [4, seq.day14],
+        [5, seq.day30],
+      ] as const) {
+        const res = validateMessage(msg, {
+          firstName: "Jane",
+          trade,
+          followupNumber: n,
+        });
+        expect(res.reasons).toEqual([]);
+        expect(msg.length).toBeLessThanOrEqual(220);
+      }
+    }
+  });
+
+  it("when the job is unknown, the sequence still validates and stays trade-anchored", () => {
+    for (const trade of TRADES) {
+      const seq = researchSequenceMessages({
+        firstName: "Jane",
+        contractorFirstName: "Mike",
+        trade,
+        estimateAmount: 5000,
+        jobDescription: "custom unrecognized scope text",
+        quoteId: `nodetail-${trade}`,
+      });
+      // No "for the" injection occurred (detail was null).
+      expect(jobDetail(trade, "custom unrecognized scope text")).toBeNull();
+      for (const [n, msg] of [
+        [1, seq.day1],
+        [2, seq.day3],
+        [3, seq.day7],
+        [4, seq.day14],
+        [5, seq.day30],
+      ] as const) {
+        const res = validateMessage(msg, {
+          firstName: "Jane",
+          trade,
+          followupNumber: n,
+        });
+        expect(res.reasons).toEqual([]);
+      }
+    }
+  });
+
+  it("detail injection is stable per quote across repeated calls", () => {
+    const ctx = {
+      firstName: "Jane",
+      contractorFirstName: "Mike",
+      trade: "Plumbing",
+      estimateAmount: 2400,
+      jobDescription: "Replace water heater",
+      quoteId: "stable-detail-1",
+    };
+    expect(researchSequenceMessages(ctx)).toEqual(researchSequenceMessages(ctx));
   });
 });
