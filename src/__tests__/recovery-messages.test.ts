@@ -136,34 +136,47 @@ function validatePlan(ctx: RecoveryContext) {
 }
 
 describe("research framework fallback sequence", () => {
-  it("Day 1 matches the uploaded report template with app variables", () => {
+  it("Day 1 is an Estimate Check — opens with Hey + name, asks about a number/timing/detail", () => {
     const ctx = SCENARIOS[0].ctx;
     const sequence = researchSequenceMessages(ctx);
-    expect(sequence.day1).toBe(
-      "Hey Jane — Mike here. Looked back at the roofing estimate. Anything on it that didn't make sense, or any number you want me to walk through?",
+    // Day 1 opens with "Hey {Name} —" or "Hey {Name}," (either is valid for variation).
+    const opensRight =
+      sequence.day1.startsWith("Hey Jane —") ||
+      sequence.day1.startsWith("Hey Jane,");
+    expect(opensRight).toBe(true);
+    // Surfaces the clarity-check intent.
+    expect(sequence.day1).toMatch(
+      /looked back over|went back through|reviewed .* again|looked over .* again/i,
     );
-    expect(sequence.day1.startsWith("Hey Jane —")).toBe(true);
+    expect(sequence.day1).toMatch(/the roofing estimate/);
     expect(sequence.day1).not.toMatch(/just checking in/i);
   });
 
-  it("Day 3 matches the uploaded report schedule/slot frame", () => {
+  it("Day 3 is a Schedule Check — active-list / move-it-off / pause framing, never fake slot scarcity", () => {
     const ctx = SCENARIOS[0].ctx;
     const sequence = researchSequenceMessages(ctx);
-    expect(sequence.day3).toBe(
-      "Jane, putting next week's schedule together. Need to know if I'm holding a slot for you or releasing it. What works?",
-    );
     expect(sequence.day3.startsWith("Jane,")).toBe(true);
     expect(sequence.day3).not.toMatch(/^(Hi|Hey)\b/);
+    // Schedule-check intent — keep active / move off / set aside / pause.
+    expect(sequence.day3).toMatch(
+      /active list|active|set it aside|pause it|move it off/i,
+    );
+    // Trade keyword appears (now required on Day 3).
+    expect(sequence.day3.toLowerCase()).toContain("roofing");
+    // No fake-scarcity phrases.
+    expect(sequence.day3).not.toMatch(
+      /releasing it|let the slot go|locking the schedule today|holding a slot/i,
+    );
   });
 
-  it("Day 7 matches the uploaded report no-oriented closeout template", () => {
+  it("Day 7 is a Close-the-Loop — no greeting, no name, easy yes/no with no pressure", () => {
     const ctx = SCENARIOS[0].ctx;
     const sequence = researchSequenceMessages(ctx);
-    expect(sequence.day7).toBe(
-      "Have you given up on the roofing estimate? If so, I'll close the file — no problem either way. Just need a yes or no so I can clear it from my list.",
-    );
     expect(sequence.day7).not.toMatch(/^Jane\b/);
     expect(sequence.day7).not.toMatch(/^(Hi|Hey)\b/);
+    expect(sequence.day7).not.toContain("Jane");
+    expect(sequence.day7).toMatch(/keep .* (open|active)|leave .* open|on the board/i);
+    expect(sequence.day7).toMatch(/close it out|mark it closed/i);
   });
 
   it("uses a safe contractor-name fallback without changing the template", () => {
@@ -188,11 +201,11 @@ describe("research framework fallback sequence", () => {
 
       it("uses the research frameworks in order (5 touches)", () => {
         expect(plan.map((m) => m.framework)).toEqual([
-          "Casual Pattern Interrupt",
-          "Authority & Status Squeeze",
-          "Professional Closeout",
-          "Value Re-frame",
-          "Final Breakup",
+          "Estimate Check",
+          "Schedule Check",
+          "Close-the-Loop",
+          "Options Check",
+          "Final Closeout",
         ]);
       });
 
@@ -207,12 +220,16 @@ describe("research framework fallback sequence", () => {
       });
 
       it("keeps the asymmetrical naming pattern across the new 5 touches", () => {
-        expect(plan[0].message.startsWith(`Hey ${ctx.firstName} —`)).toBe(
-          true,
-        );
+        // Day 1 opens with "Hey {Name} —" OR "Hey {Name}," — both are valid
+        // contractor openings and the rewrite uses both for variation.
+        const day1OpensRight =
+          plan[0].message.startsWith(`Hey ${ctx.firstName} —`) ||
+          plan[0].message.startsWith(`Hey ${ctx.firstName},`);
+        expect(day1OpensRight).toBe(true);
         expect(plan[1].message.startsWith(`${ctx.firstName},`)).toBe(true);
-        // Day 7 v0 (canonical) starts with "Have you given up on" — no name, no greeting.
+        // Day 7 (Close-the-Loop) — no greeting, no name.
         expect(plan[2].message).not.toMatch(new RegExp(`^(Hi|Hey)\\b`, "i"));
+        expect(plan[2].message).not.toContain(ctx.firstName);
         // Day 14 + Day 30 lead with the client name like Day 3.
         expect(plan[3].message.startsWith(`${ctx.firstName},`)).toBe(true);
         expect(plan[4].message.startsWith(`${ctx.firstName},`)).toBe(true);
@@ -234,7 +251,7 @@ describe("research framework fallback sequence", () => {
           expect(item.validation.reasons).toEqual([]);
           expect(item.score).toBeGreaterThanOrEqual(FALLBACK_FLOOR_SCORE);
           expect(item.message.length).toBeLessThanOrEqual(MAX_MESSAGE_CHARS);
-          // Day 30 (followup_number 5) is the Final Breakup — declarative, 0 questions.
+          // Day 30 (followup_number 5) is the Final Closeout — declarative, 0 questions.
           // Every other day must carry exactly one.
           const expectedQuestions = item.followup_number === 5 ? 0 : 1;
           expect((item.message.match(/\?/g) ?? []).length).toBe(expectedQuestions);
@@ -397,35 +414,35 @@ describe("generateRecoveryPlan", () => {
                   messages: [
                     {
                       followup_number: 1,
-                      framework: "Casual Pattern Interrupt",
+                      framework: "Estimate Check",
                       message: sequence.day1,
                       cta_type: "question",
                       confidence: 1,
                     },
                     {
                       followup_number: 2,
-                      framework: "Authority & Status Squeeze",
+                      framework: "Schedule Check",
                       message: sequence.day3,
                       cta_type: "question",
                       confidence: 1,
                     },
                     {
                       followup_number: 3,
-                      framework: "Professional Closeout",
+                      framework: "Close-the-Loop",
                       message: sequence.day7,
                       cta_type: "question",
                       confidence: 1,
                     },
                     {
                       followup_number: 4,
-                      framework: "Value Re-frame",
+                      framework: "Options Check",
                       message: sequence.day14,
                       cta_type: "question",
                       confidence: 1,
                     },
                     {
                       followup_number: 5,
-                      framework: "Final Breakup",
+                      framework: "Final Closeout",
                       message: sequence.day30,
                       cta_type: "statement",
                       confidence: 1,
@@ -452,21 +469,21 @@ describe("generateRecoveryPlan", () => {
       messages: [
         {
           followup_number: 1,
-          framework: "Casual Pattern Interrupt",
+          framework: "Estimate Check",
           message:
             "Hey Jane — Mike here. Looked back at your roofing estimate. Want me to make the next step simple?",
           cta_type: "question",
         },
         {
           followup_number: 2,
-          framework: "Authority & Status Squeeze",
+          framework: "Schedule Check",
           message:
             "Jane, touching base on the roofing schedule. Want me to hold your spot?",
           cta_type: "question",
         },
         {
           followup_number: 3,
-          framework: "Professional Closeout",
+          framework: "Close-the-Loop",
           message:
             "Jane, have you given up on the roofing? I can leave it hanging if needed.",
           cta_type: "question",

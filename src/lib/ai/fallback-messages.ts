@@ -2,10 +2,13 @@ import { titleCase } from "@/lib/utils/normalize";
 import type { RecoveryMessage, RecoveryContext } from "./generate-recovery-plan";
 
 /**
- * Deterministic fallback templates backed by:
- * Hatch 163,212-campaign study · Chris Voss (Never Split the Difference)
- * Oren Klaff Prize Frame (Pitch Anything) · Bryan Kreuzberger 76% template
- * Proven blue-collar contractor tone (ContractorTalk)
+ * Deterministic fallback templates. Voice target: a real, experienced
+ * contractor — calm, direct, specific, no sales psychology language in the
+ * message itself. The labels surfaced to the user are plain English
+ * (Estimate Check / Schedule Check / Close-the-Loop / Options Check /
+ * Final Closeout). Variation is seeded from the quote so the same quote
+ * always renders the same phrasing while different quotes spread across
+ * the four variants per day.
  */
 
 const ALIASES: Record<string, string> = {
@@ -35,9 +38,14 @@ const ALIASES: Record<string, string> = {
   landscapers: "landscaping",
   landscape: "landscaping",
   lawn: "landscaping",
+  concrete: "concrete",
+  driveway: "concrete",
+  slab: "concrete",
+  patio: "concrete",
 };
 
-// Full "the X estimate" phrase used directly in message templates.
+// Full "the X estimate" noun phrase — used where a message wants the complete
+// reference ("looked back over the roofing estimate").
 const PROJECT_LABELS: Record<string, string> = {
   roofing: "the roofing estimate",
   plumbing: "the plumbing estimate",
@@ -47,15 +55,33 @@ const PROJECT_LABELS: Record<string, string> = {
   "general contracting": "the project estimate",
   painting: "the painting estimate",
   landscaping: "the landscaping estimate",
+  concrete: "the concrete estimate",
   other: "the estimate",
 };
 
+// Bare trade modifier — used when the surrounding sentence supplies its own
+// noun ("the roofing schedule", "upcoming roofing work"). Kept aligned with
+// the validator tradeKeywords + TRADE_KEYWORD_SYNONYMS so every message
+// still passes the trade-keyword check.
+const TRADE_WORDS: Record<string, string> = {
+  roofing: "roofing",
+  plumbing: "plumbing",
+  hvac: "HVAC",
+  electrical: "electrical",
+  remodeling: "remodel",
+  "general contracting": "project",
+  painting: "painting",
+  landscaping: "landscaping",
+  concrete: "concrete",
+  other: "estimate",
+};
+
 const FRAMEWORKS: Record<1 | 2 | 3 | 4 | 5, RecoveryMessage["framework"]> = {
-  1: "Casual Pattern Interrupt",
-  2: "Authority & Status Squeeze",
-  3: "Professional Closeout",
-  4: "Value Re-frame",
-  5: "Final Breakup",
+  1: "Estimate Check",
+  2: "Schedule Check",
+  3: "Close-the-Loop",
+  4: "Options Check",
+  5: "Final Closeout",
 };
 
 function cleanName(value: string | null | undefined, fallback: string): string {
@@ -63,109 +89,122 @@ function cleanName(value: string | null | undefined, fallback: string): string {
   return titleCase(first.replace(/[.,]/g, "")) || fallback;
 }
 
+function resolveTrade(
+  trade: string,
+  table: Record<string, string>,
+  fallback: string,
+): string {
+  const lower = trade.trim().toLowerCase();
+  if (!lower) return fallback;
+  if (table[lower]) return table[lower];
+
+  const aliasMatch = ALIASES[lower];
+  if (aliasMatch && table[aliasMatch.toLowerCase()]) {
+    return table[aliasMatch.toLowerCase()];
+  }
+  for (const [alias, canonical] of Object.entries(ALIASES)) {
+    if (lower.includes(alias) && table[canonical.toLowerCase()]) {
+      return table[canonical.toLowerCase()];
+    }
+  }
+  for (const key of Object.keys(table)) {
+    if (lower.includes(key)) return table[key];
+  }
+  return fallback;
+}
+
 export function projectLabel(trade: string): string {
   const lower = trade.trim().toLowerCase();
   if (!lower) return "the estimate";
+  return resolveTrade(trade, PROJECT_LABELS, `the ${lower} estimate`);
+}
 
-  if (PROJECT_LABELS[lower]) return PROJECT_LABELS[lower];
-
-  const aliasMatch = ALIASES[lower];
-  if (aliasMatch && PROJECT_LABELS[aliasMatch.toLowerCase()]) {
-    return PROJECT_LABELS[aliasMatch.toLowerCase()];
-  }
-
-  for (const [alias, canonical] of Object.entries(ALIASES)) {
-    if (lower.includes(alias) && PROJECT_LABELS[canonical.toLowerCase()]) {
-      return PROJECT_LABELS[canonical.toLowerCase()];
-    }
-  }
-
-  for (const [key, label] of Object.entries(PROJECT_LABELS)) {
-    if (lower.includes(key)) return label;
-  }
-
-  return `the ${lower} estimate`;
+export function tradeWord(trade: string): string {
+  const lower = trade.trim().toLowerCase();
+  if (!lower) return "estimate";
+  return resolveTrade(trade, TRADE_WORDS, lower);
 }
 
 export type VariantVars = {
   firstName: string;
   contractorFirstName: string;
+  /** Full "the X estimate" noun phrase. */
   project: string;
+  /** Bare trade modifier ("roofing", "HVAC", "project", "concrete"). */
+  tradeWord: string;
 };
 
 /**
- * Four phrasings per day. Each preserves the per-day psychological frame but
- * varies verbs, structure, and opening so two different quotes do not read
- * identically (anti-repetition).
+ * Four phrasings per day. INVARIANT: index 0 is the canonical variant the
+ * deterministic seed falls back to when no quoteId is supplied. The AI
+ * exact-match gate compares against whatever researchSequenceMessages returns
+ * for the same ctx, so v0 doubles as the test fixture.
  *
- * INVARIANT: index 0 is the canonical research template and must stay
- * verbatim — the AI exact-match gate in generate-recovery-plan and the locked
- * fallback tests both pin it. Every variant must pass validateMessage:
- * under 220 chars, exactly one question mark, no exclamation, no emoji, no
- * banned phrase, and the per-day start pattern (Hey name / name comma / none).
+ * Tone: plain, contractor-native, calm, no sales psychology in the visible
+ * copy. No fake scarcity. Trade keyword in every message. Asymmetric openings
+ * across the day arc so the sequence does not read like one formula.
  */
+
+// DAY 1 — Estimate Check. Helpful, direct. "Hey {FirstName} — ..." opener.
 const DAY1_VARIANTS: ReadonlyArray<(v: VariantVars) => string> = [
-  // v0 (canonical — exact-match gate). Surfaces real objections, helper frame.
   ({ firstName, contractorFirstName, project }) =>
-    `Hey ${firstName} — ${contractorFirstName} here. Looked back at ${project}. Anything on it that didn't make sense, or any number you want me to walk through?`,
-  // v1 — "Before you decide" was rewritten as "for you" to keep the helper
-  // frame without tripping the locked banned-phrase list (recovery-messages
-  // test pins "before you decide" in BANNED_PHRASES).
-  ({ firstName, contractorFirstName, project }) =>
-    `Hey ${firstName} — ${contractorFirstName}. Re-read ${project} on my end. Was there a number or a detail you'd want me to break down for you?`,
-  ({ firstName, contractorFirstName, project }) =>
-    `Hey ${firstName} — ${contractorFirstName} here. Want to be sure ${project} fit what you pictured. Anything feel off, or a line you'd want explained?`,
-  ({ firstName, contractorFirstName, project }) =>
-    `Hey ${firstName} — ${contractorFirstName}. Before this sits too long: was ${project} clear, or is there something on it you're still weighing?`,
+    `Hey ${firstName} — ${contractorFirstName} here. I looked back over ${project}. Was there a number, timing question, or detail you wanted me to break down?`,
+  ({ firstName, project }) =>
+    `Hey ${firstName} — I went back through ${project}. Anything in the scope, timing, or total you want me to clarify?`,
+  ({ firstName, project }) =>
+    `Hey ${firstName}, I reviewed ${project} again on my end. Was anything unclear, or is there a part you want me to walk through?`,
+  ({ firstName, project }) =>
+    `Hey ${firstName}, I looked over ${project} again. Any questions on the work, timing, or total before you make a call?`,
 ];
 
+// DAY 3 — Schedule Check. "{FirstName}, ..." opener, no greeting word.
+// Operational, never claims the contractor is releasing or holding a slot.
 const DAY3_VARIANTS: ReadonlyArray<(v: VariantVars) => string> = [
-  // v0 (canonical). Real schedule scarcity, no fabricated countdown.
-  ({ firstName }) =>
-    `${firstName}, putting next week's schedule together. Need to know if I'm holding a slot for you or releasing it. What works?`,
-  ({ firstName }) =>
-    `${firstName}, booking out next week's jobs. Keep your spot on the board or open it to the next house? Either way works — just need to know.`,
-  ({ firstName }) =>
-    `${firstName}, laying out the crew's week. I can hold your slot a bit longer or release it — which way do you want me to go?`,
-  ({ firstName }) =>
-    `${firstName}, locking the schedule today. Pencil you in or let the slot go? A quick yes or no tells me how to plan.`,
+  ({ firstName, tradeWord }) =>
+    `${firstName}, I'm lining up the ${tradeWord} schedule. Should I keep this on the active list, or move it off for now?`,
+  ({ firstName, tradeWord }) =>
+    `${firstName}, I'm sorting the next round of ${tradeWord} work. Should I keep your estimate active, or set it aside for now?`,
+  ({ firstName, project }) =>
+    `${firstName}, should I keep ${project} on my list for the next opening, or pause it for now?`,
+  ({ firstName, tradeWord }) =>
+    `${firstName}, I'm organizing upcoming ${tradeWord} work. Do you still want me to keep this one active?`,
 ];
 
+// DAY 7 — Close-the-Loop. No greeting word. Name optional (v0–v3 omit it).
+// Easy yes/no, no pressure.
 const DAY7_VARIANTS: ReadonlyArray<(v: VariantVars) => string> = [
-  // v0 (canonical). No name, no greeting — pure Voss takeaway.
   ({ project }) =>
-    `Have you given up on ${project}? If so, I'll close the file — no problem either way. Just need a yes or no so I can clear it from my list.`,
-  ({ firstName, project }) =>
-    `${firstName}, should I take ${project} off my board? A no keeps it open, a yes closes it — either is fine, I just need to know where it stands.`,
+    `Should I keep ${project} open, or close it out for now? Either way is fine.`,
   ({ project }) =>
-    `Are you leaning a different direction on ${project}? No hard feelings if so — I just don't want to hold a spot if you've moved on.`,
-  ({ firstName, project }) =>
-    `${firstName}, is ${project} dead or just on pause? Tell me to close it or hold it — either way I'll respect it. Just need one word.`,
+    `Do you want me to keep ${project} active, or should I close it out on my end for now?`,
+  ({ project }) =>
+    `Should I leave ${project} open, or mark it closed for now? No pressure either way.`,
+  ({ project }) =>
+    `Do you still want me to keep ${project} on the board, or should I close it out for now?`,
 ];
 
+// DAY 14 — Options Check. Useful, never discounting. Phasing/scope frame.
 const DAY14_VARIANTS: ReadonlyArray<(v: VariantVars) => string> = [
-  // Value Re-frame. Silence is usually price shock, not rejection — reopen
-  // with phasing/scope, never a discount.
   ({ firstName, project }) =>
-    `${firstName}, sometimes ${project} stalls on budget, not interest. If that's it, I can phase the work or trim scope. Want me to put an option together?`,
+    `${firstName}, if the total, timing, or scope on ${project} is what's holding this up, I can walk through options without cutting corners. Worth a look?`,
   ({ firstName, project }) =>
-    `${firstName}, if the number on ${project} was the holdup, just say so — I'd rather find a version that fits than lose it. Want me to rework it?`,
+    `${firstName}, if ${project} is stuck on timing, scope, or total, want me to walk through the options without changing the quality of the work?`,
   ({ firstName, project }) =>
-    `${firstName}, no pressure on ${project}. But if budget or timing is the issue, there's usually a way to phase it. Want a leaner option?`,
+    `${firstName}, sometimes these estimates stall over timing or details. If that's the case here, want me to walk through ${project} with you?`,
   ({ firstName, project }) =>
-    `${firstName}, folks often go quiet on ${project} over the total, not the work. If that's you, I can show a phased path. Worth a look?`,
+    `${firstName}, if there's one part of ${project} holding things up, want me to walk through it so you know where it stands?`,
 ];
 
+// DAY 30 — Final Closeout. Respectful, detached. Declarative. No question.
 const DAY30_VARIANTS: ReadonlyArray<(v: VariantVars) => string> = [
-  // Final Breakup. Withdraw the offer. Declarative, no question by design.
   ({ firstName, project }) =>
-    `${firstName}, last one from me on ${project} — closing the file so I stop crowding your inbox. If it ever comes back around, you know where I am.`,
+    `${firstName}, I'll close out ${project} after this. No hard feelings. If anything changes later, reach out and I'll pick it back up.`,
   ({ firstName, project }) =>
-    `${firstName}, I'll let ${project} go after this. No hard feelings. If anything changes down the road, reach out and I'll pick it right back up.`,
+    `${firstName}, I'm going to close ${project} on my end for now. If you decide to revisit it later, just reach out.`,
   ({ firstName, project }) =>
-    `${firstName}, closing ${project} out today — figure you've moved on, and that's fine. Door's open if you ever want to revisit it.`,
+    `${firstName}, I'll mark ${project} closed for now. No problem either way — if it comes back up later, I can reopen it.`,
   ({ firstName, project }) =>
-    `${firstName}, this is me officially closing ${project}. I won't reach out again. If the timing's just off, save my number and get in touch.`,
+    `${firstName}, I'll step back on ${project} after this. If the timing changes down the road, I'm happy to pick it back up.`,
 ];
 
 /**
@@ -185,26 +224,49 @@ export const SEQUENCE_VARIANTS: Record<
 
 export type CadenceDay = keyof typeof SEQUENCE_VARIANTS;
 
-/**
- * Deterministic variant index (0-3) for a quote + day. The same quote always
- * maps to the same phrasing (stable across reloads and regenerations); two
- * different quotes spread across the four phrasings.
- *
- * An empty/missing quoteId returns 0 — the canonical template — which keeps
- * server-side previews and the locked exact-match tests stable.
- */
-export function pickVariant(
-  quoteId: string | null | undefined,
-  day: CadenceDay,
-): number {
-  if (!quoteId) return 0;
+function hashString(seed: string): number {
   let hash = 0;
-  const seed = `${quoteId}:${day}`;
   for (let i = 0; i < seed.length; i++) {
     // FNV-ish rolling hash; >>> 0 keeps it an unsigned 32-bit int.
     hash = (hash * 31 + seed.charCodeAt(i)) >>> 0;
   }
-  return hash % 4;
+  return hash;
+}
+
+/**
+ * Build the deterministic seed for variant selection. quoteId is preferred —
+ * it makes the message stable across reloads and regenerations. When it is
+ * missing (server-side previews, audit page, unit tests), fall back to a
+ * composite of clientName + trade + amount + daysSilent. When NONE of those
+ * are available either, return the empty string so pickVariant resolves to
+ * the canonical v0.
+ */
+export function variantSeed(ctx: RecoveryContext): string {
+  if (ctx.quoteId) return ctx.quoteId;
+  const parts = [
+    (ctx.firstName ?? "").trim(),
+    (ctx.trade ?? "").trim(),
+    ctx.estimateAmount ? String(ctx.estimateAmount) : "",
+    ctx.daysSilent != null ? String(ctx.daysSilent) : "",
+  ];
+  const joined = parts.filter((p) => p.length > 0).join("|");
+  return joined;
+}
+
+/**
+ * Deterministic variant index (0-3) for a seed + day. The same quote always
+ * maps to the same phrasing (stable across reloads and regenerations); two
+ * different quotes spread across the four phrasings.
+ *
+ * An empty seed returns 0 — the canonical template — which keeps server-side
+ * previews and the locked exact-match tests stable.
+ */
+export function pickVariant(
+  seed: string | null | undefined,
+  day: CadenceDay,
+): number {
+  if (!seed) return 0;
+  return hashString(`${seed}:${day}`) % 4;
 }
 
 export function researchSequenceMessages(ctx: RecoveryContext): {
@@ -218,15 +280,16 @@ export function researchSequenceMessages(ctx: RecoveryContext): {
     firstName: cleanName(ctx.firstName, "there"),
     contractorFirstName: cleanName(ctx.contractorFirstName, "Contractor"),
     project: projectLabel(ctx.trade),
+    tradeWord: tradeWord(ctx.trade),
   };
-  const quoteId = ctx.quoteId ?? "";
+  const seed = variantSeed(ctx);
 
   return {
-    day1: DAY1_VARIANTS[pickVariant(quoteId, 1)](vars),
-    day3: DAY3_VARIANTS[pickVariant(quoteId, 3)](vars),
-    day7: DAY7_VARIANTS[pickVariant(quoteId, 7)](vars),
-    day14: DAY14_VARIANTS[pickVariant(quoteId, 14)](vars),
-    day30: DAY30_VARIANTS[pickVariant(quoteId, 30)](vars),
+    day1: DAY1_VARIANTS[pickVariant(seed, 1)](vars),
+    day3: DAY3_VARIANTS[pickVariant(seed, 3)](vars),
+    day7: DAY7_VARIANTS[pickVariant(seed, 7)](vars),
+    day14: DAY14_VARIANTS[pickVariant(seed, 14)](vars),
+    day30: DAY30_VARIANTS[pickVariant(seed, 30)](vars),
   };
 }
 

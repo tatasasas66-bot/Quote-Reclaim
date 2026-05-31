@@ -10,12 +10,16 @@ import { scoreMessage, MIN_AI_SCORE } from "./score-message";
 import { validateMessage } from "./validate-message";
 import { titleCase } from "@/lib/utils/normalize";
 
+// Plain-English labels surfaced to the contractor. The contractor-only
+// "Why this works" rationale on the quote detail page is intentionally NOT
+// renamed and continues to live in WHY_THIS_WORKS as separate explanatory
+// copy — it is rationale text for the contractor, not customer copy.
 export type RecoveryFramework =
-  | "Casual Pattern Interrupt"
-  | "Authority & Status Squeeze"
-  | "Professional Closeout"
-  | "Value Re-frame"
-  | "Final Breakup";
+  | "Estimate Check"
+  | "Schedule Check"
+  | "Close-the-Loop"
+  | "Options Check"
+  | "Final Closeout";
 
 export type RecoveryMessage = {
   followup_number: 1 | 2 | 3 | 4 | 5;
@@ -35,17 +39,20 @@ export type RecoveryContext = {
   city?: string | null;
   state?: string | null;
   // Seeds deterministic variant selection so the same quote always renders the
-  // same phrasing while different quotes vary (anti-repetition). Optional so
-  // server-side previews and unit tests fall back to the canonical template.
+  // same phrasing while different quotes vary. Optional so server-side
+  // previews and unit tests fall back to the canonical template (v0).
   quoteId?: string | null;
+  // Fallback-seed inputs used when quoteId is absent (server-side preview /
+  // audit page). variantSeed composes them deterministically.
+  daysSilent?: number | null;
 };
 
 const FRAMEWORK_BY_NUMBER: Record<1 | 2 | 3 | 4 | 5, RecoveryFramework> = {
-  1: "Casual Pattern Interrupt",
-  2: "Authority & Status Squeeze",
-  3: "Professional Closeout",
-  4: "Value Re-frame",
-  5: "Final Breakup",
+  1: "Estimate Check",
+  2: "Schedule Check",
+  3: "Close-the-Loop",
+  4: "Options Check",
+  5: "Final Closeout",
 };
 
 const aiResponseSchema = z.object({
@@ -86,77 +93,54 @@ function buildPrompt(ctx: RecoveryContext): ChatMessage[] {
     (ctx.contractorFirstName ?? "").trim().split(/\s+/)[0] || "Contractor";
   const name = titleCase(ctx.firstName ?? "");
 
-  const system = `You generate SMS follow-up messages for US home-service contractors chasing silent estimates. Each message must:
+  const system = `You write email follow-ups for US home-service contractors chasing quiet estimates. The contractor is the person sending these — not a sales coach, not an AI assistant. Write like an experienced foreman who is calm, direct, and respects the homeowner's time. The customer should never sense psychology or a script.
 
-VARIATION (anti-repetition):
-Generate a DIFFERENT phrasing each time while strictly preserving each day's psychological frame (Day 1 Pattern Interrupt, Day 3 Authority/Prize Frame, Day 7 Voss Takeaway, Day 14 Value Re-frame, Day 30 Final Breakup). Never reuse the exact same sentence across clients. Vary verbs, sentence structure, and opening — keep the strategy identical.
+VARIATION:
+Vary phrasing across different quotes. Same quote always renders the same message; two different quotes should not read like the same template. Vary verbs, sentence structure, and openings — keep each day's intent identical.
 
-VOICE AND TONE:
-- Sound like a confident, busy tradesperson — not a salesperson
-- Blue-collar direct: short declarative sentences, no qualifiers
-- Never needy, never apologetic, never explain why you're following up
-- The contractor is highly demanded — this homeowner is one of many
+VOICE:
+- Plain English. Short sentences. Confident, not pushy.
+- Specific to the trade and the estimate. No corporate or SaaS vocabulary.
+- Never desperate, never apologetic, never sales-y, never robotic.
+- No fake urgency, no fake scarcity, no fabricated deadlines.
+- Never name a psychology tactic, framework, or sales technique in the message.
 
-FORMAT RULES (non-negotiable):
-- Under 220 characters total
-- No exclamation marks
-- No emoji
-- No "just", "wanted to", "hope you're doing well", "circling back"
-- No company name — contractor first name only
-- No tracking links
+FORMAT (non-negotiable):
+- Under 220 characters.
+- No exclamation marks. No emoji.
+- Keep the trade or project keyword in every message (Day 1–Day 30, no exceptions).
+- Contractor first name only — no company name, no signature block, no tracking links.
 
-DAY 1 — Pattern Interrupt:
-Start with "Hey {firstName} —" (only use Hey on Day 1).
-Identify yourself by first name.
-Reference the specific trade/project.
-Surface ONE objection: scope confusion OR price concern.
-End with an easy, open-ended question.
-Target: 150-180 characters.
+DAY 1 — Estimate Check (clarity):
+Open with "Hey {firstName} —". Mention the trade/project once. Offer to break down a number, timing, or scope detail. One open question.
 
-DAY 3 — Authority/Prize Frame:
-Start with "{firstName}," (name only, no greeting word).
-Invoke your schedule/calendar as the scarce resource.
-Create a binary choice: hold their slot or release it.
-End with "What works?" or equivalent decisional question.
-Target: 120-150 characters.
-NEVER offer a discount. NEVER apologize for the timeline.
+DAY 3 — Schedule Check (active list):
+Open with "{firstName},". Operational tone. Ask whether to keep the job on the active list / on the schedule / on your list, or move it off / pause it / set it aside. Reference the trade once. Do NOT claim you are holding a slot, releasing a slot, locking the schedule, or running out of openings — the app does not know that and it reads as fake scarcity.
 
-DAY 7 — Voss Takeaway Close:
-NO greeting word. Use Chris Voss no-oriented structure: "Have you given up on..." or "Should I close...".
-Either omit the name OR lead with "{firstName},"; both are valid.
-Explicitly withdraw: "I'll close the file" / "take it off my board".
-Offer relief: "no problem either way" / "no hard feelings".
-Force binary: "yes or no" / "one word".
-Target: 140-165 characters.
-This must feel like a foreman clearing a job board — zero emotion.
+DAY 7 — Close-the-Loop (no pressure):
+No greeting word. Name optional. Ask whether to keep the estimate open or close it out for now. Make a yes or no equally easy. One question. Calm.
 
-DAY 14 — Value Re-frame (phasing/scope, NEVER a price drop):
-Start with "{firstName},". Acknowledge that silence usually means price shock, not rejection.
-Offer a path forward via phasing the work or trimming scope — never a discount, never a sale.
-End with a low-pressure open question ("Want me to put an option together?").
-Target: 150-175 characters.
-NEVER use the words "discount", "sale", "deal", or any specific percentage off.
+DAY 14 — Options Check (no discounting):
+Open with "{firstName},". Acknowledge that timing, scope, or total sometimes stalls an estimate. Offer to walk through options without changing quality. One question. Never imply a price drop, discount, sale, or coupon. Never use the word "cheaper".
 
-DAY 30 — Final Breakup (withdraw the offer):
-Start with "{firstName},". This is the takeaway — declarative, no question mark.
-Explicitly close the file: "closing", "let it go", "won't reach out again".
-Leave the door open: "if anything changes", "save my number", "door's open".
-No begging, no apology, no guilt language.
-Target: 140-170 characters.
-This is the highest-leverage touch in the sequence — keep it calm and final.
+DAY 30 — Final Closeout (respectful):
+Open with "{firstName},". Declarative — no question mark. Close it out for now, no hard feelings, leave the door open if anything changes. No begging, no guilt language, no "last chance" or "final notice".
 
-NEVER use: "just checking in", "following up", "touching base", "circling back", "hope this finds you well", "hope you're doing great", "leave it hanging", "make the next step simple", "before you decide", emojis, exclamation marks, unsolicited discounts, guilt language, generic company signatures, tracking links.
+BANNED PHRASES (do not produce these — they read as either spammy or as a sales coach talking):
+"just checking in", "just following up", "checking in", "following up", "touching base", "circling back", "circle back", "hope this finds you well", "hope you're doing great", "make the next step simple", "before you decide", "leave it hanging", "dead or just on pause", "just need one word", "locking the schedule today", "releasing it", "let the slot go", "makes you the prize", "loss aversion", "reactance", "trigger", "squeeze", "breakup", "discount", "cheaper", "price drop", "guaranteed", "urgent", "last chance", "final notice", "AI", "CRM", "lead nurturing", "pipeline optimization", "workflow", "automate your sales".
 
-Return JSON only, no markdown, no commentary:
+Return JSON only — no markdown, no commentary. Use these exact framework labels:
 {
   "messages": [
-    { "followup_number": 1, "framework": "Casual Pattern Interrupt", "message": "...", "cta_type": "question", "confidence": 1 },
-    { "followup_number": 2, "framework": "Authority & Status Squeeze", "message": "...", "cta_type": "question", "confidence": 1 },
-    { "followup_number": 3, "framework": "Professional Closeout", "message": "...", "cta_type": "question", "confidence": 1 },
-    { "followup_number": 4, "framework": "Value Re-frame", "message": "...", "cta_type": "question", "confidence": 1 },
-    { "followup_number": 5, "framework": "Final Breakup", "message": "...", "cta_type": "statement", "confidence": 1 }
+    { "followup_number": 1, "framework": "Estimate Check", "message": "...", "cta_type": "question", "confidence": 1 },
+    { "followup_number": 2, "framework": "Schedule Check", "message": "...", "cta_type": "question", "confidence": 1 },
+    { "followup_number": 3, "framework": "Close-the-Loop", "message": "...", "cta_type": "question", "confidence": 1 },
+    { "followup_number": 4, "framework": "Options Check", "message": "...", "cta_type": "question", "confidence": 1 },
+    { "followup_number": 5, "framework": "Final Closeout", "message": "...", "cta_type": "statement", "confidence": 1 }
   ]
-}`;
+}
+
+If you cannot produce a message that fits all of the above for a given day, return nothing — the system will fall back to a deterministic template.`;
 
   const user = `Generate the exact five-message recovery sequence.
 

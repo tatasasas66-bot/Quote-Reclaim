@@ -218,27 +218,38 @@ describe("IntelligencePanel locked state (Phase 7.2)", () => {
 // AI system prompt hardening (Phase 4.5)
 // ---------------------------------------------------------------------------
 
-describe("AI system prompt hardening (Phase 4.5)", () => {
-  it("uses the research-backed voice and tone guidance", () => {
+describe("AI system prompt — contractor-native voice and labels", () => {
+  it("targets a real foreman voice, not a sales coach or AI assistant", () => {
     expect(aiPrompt).toMatch(
-      /You generate SMS follow-up messages for US home-service contractors/,
+      /You write email follow-ups for US home-service contractors/,
     );
-    expect(aiPrompt).toMatch(/VOICE AND TONE/);
+    expect(aiPrompt).toMatch(/VOICE/);
+    expect(aiPrompt).toMatch(/not a sales coach, not an AI assistant/);
   });
 
-  it("locks the three research frameworks", () => {
-    expect(aiPrompt).toMatch(/Casual Pattern Interrupt/);
-    expect(aiPrompt).toMatch(/Authority & Status Squeeze/);
-    expect(aiPrompt).toMatch(/Professional Closeout/);
+  it("locks the five contractor-native framework labels (plain English, no psychology jargon)", () => {
+    expect(aiPrompt).toMatch(/Estimate Check/);
+    expect(aiPrompt).toMatch(/Schedule Check/);
+    expect(aiPrompt).toMatch(/Close-the-Loop/);
+    expect(aiPrompt).toMatch(/Options Check/);
+    expect(aiPrompt).toMatch(/Final Closeout/);
+  });
+
+  it("no longer exposes the old psychology framework names to the AI", () => {
+    expect(aiPrompt).not.toMatch(/Casual Pattern Interrupt/);
+    expect(aiPrompt).not.toMatch(/Authority & Status Squeeze/);
+    expect(aiPrompt).not.toMatch(/Professional Closeout/);
+    expect(aiPrompt).not.toMatch(/Value Re-frame/);
+    expect(aiPrompt).not.toMatch(/Final Breakup/);
   });
 
   it("bans exclamation marks outright", () => {
     expect(aiPrompt).toMatch(/No exclamation marks/);
   });
 
-  it("Day 7 uses Voss takeaway close structure", () => {
-    expect(aiPrompt).toMatch(/Voss Takeaway Close/);
-    expect(aiPrompt).toMatch(/Have you given up on/);
+  it("Day 7 still anchors on close-the-loop with a calm, no-pressure ask", () => {
+    expect(aiPrompt).toMatch(/Close-the-Loop/);
+    expect(aiPrompt).toMatch(/keep the estimate open or close it out/);
   });
 });
 
@@ -251,14 +262,22 @@ describe("Fallback messages use the uploaded SMS research sequence", () => {
     expect(aiFallbacks).toMatch(/Hey \$\{firstName\} — \$\{contractorFirstName\} here/);
   });
 
-  it("Day 3 uses schedule and slot framing", () => {
-    expect(aiFallbacks).toMatch(/putting next week's schedule together/);
-    expect(aiFallbacks).toMatch(/holding a slot for you or releasing it/);
+  it("Day 3 uses the active-list / schedule framing (no fake slot scarcity)", () => {
+    expect(aiFallbacks).toMatch(/lining up the \$\{tradeWord\} schedule/);
+    expect(aiFallbacks).toMatch(/active list/);
+    // No fake-scarcity phrases the rewrite outlawed.
+    expect(aiFallbacks).not.toMatch(/let the slot go/);
+    expect(aiFallbacks).not.toMatch(/locking the schedule today/);
+    expect(aiFallbacks).not.toMatch(/releasing it/);
   });
 
-  it("Day 7 uses the no-oriented closeout", () => {
-    expect(aiFallbacks).toMatch(/Have you given up on \$\{project\}/);
-    expect(aiFallbacks).toMatch(/Just need a yes or no so I can clear it from my list/);
+  it("Day 7 is a calm Close-the-Loop ask, not a Voss-style takeaway", () => {
+    expect(aiFallbacks).toMatch(/Should I keep \$\{project\} open/);
+    expect(aiFallbacks).toMatch(/close it out for now/);
+    expect(aiFallbacks).toMatch(/Either way is fine/);
+    // The previous "Have you given up" / "Just need a yes or no" wording is gone.
+    expect(aiFallbacks).not.toMatch(/Have you given up on/);
+    expect(aiFallbacks).not.toMatch(/Just need a yes or no/);
   });
 
   it("no fallback message string literal contains an exclamation mark", () => {

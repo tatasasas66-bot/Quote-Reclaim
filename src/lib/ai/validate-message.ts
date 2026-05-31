@@ -17,6 +17,17 @@ export type ValidationResult = {
 
 export const MAX_MESSAGE_CHARS = 220;
 
+// Multi-word and discriminative banned phrases. Multi-word entries are checked
+// as case-insensitive substrings; single tokens that match /^[a-z0-9]+$/ are
+// upgraded to whole-word matches inside containsBannedPhrase (so "ai" only
+// matches the standalone word, not "available").
+//
+// This list now also encodes the contractor-native rewrite contract: it rejects
+// sales-coach vocabulary ("makes you the prize", "loss aversion", "reactance",
+// "squeeze", "breakup"), fake-scarcity claims the app cannot actually back
+// ("locking the schedule today", "releasing it", "let the slot go"), and
+// SaaS jargon ("CRM", "lead nurturing", "pipeline optimization", "workflow",
+// "automate your sales").
 export const BANNED_PHRASES: readonly string[] = [
   "hi {name}, just checking in",
   "just following up",
@@ -33,6 +44,7 @@ export const BANNED_PHRASES: readonly string[] = [
   "one final follow-up",
   "one final followup",
   "last chance",
+  "final notice",
   "act now",
   "don't miss out",
   "ai-generated",
@@ -61,6 +73,32 @@ export const BANNED_PHRASES: readonly string[] = [
   "discount",
   "send now",
   "bid",
+  // Sales-psychology vocabulary that should never appear in the customer-facing
+  // message body (the WHY_THIS_WORKS rationale on the contractor's dashboard is
+  // a separate, contractor-only surface and is intentionally left untouched).
+  "makes you the prize",
+  "loss aversion",
+  "reactance",
+  "trigger",
+  "squeeze",
+  "breakup",
+  // Fake-scarcity claims the app cannot actually back.
+  "dead or just on pause",
+  "just need one word",
+  "locking the schedule today",
+  "releasing it",
+  "let the slot go",
+  // Discount/urgency language banned outright in the body.
+  "cheaper",
+  "guaranteed",
+  "urgent",
+  // SaaS / AI jargon — the customer should never sense this is automation.
+  "ai",
+  "crm",
+  "lead nurturing",
+  "pipeline optimization",
+  "workflow",
+  "automate your sales",
 ];
 
 const FAKE_AVAILABILITY_PHRASES: readonly string[] = [
@@ -233,9 +271,13 @@ export function validateMessage(
   const firstNameLower = normalizeForScan(firstName);
 
   if (ctx.followupNumber === 1 && firstNameLower) {
-    const expectedStart = `hey ${firstNameLower} —`;
-    if (!lower.startsWith(expectedStart)) {
-      reasons.push('day 1 must start with "Hey {FirstName} —"');
+    // Day 1 must lead with "Hey {FirstName}" — followed by either em-dash
+    // ("Hey Jane — Mike here.") or comma ("Hey Jane, I looked over..."). Both
+    // are natural contractor openings and the rewrite uses both for variation.
+    const okEmdash = lower.startsWith(`hey ${firstNameLower} —`);
+    const okComma = lower.startsWith(`hey ${firstNameLower},`);
+    if (!okEmdash && !okComma) {
+      reasons.push('day 1 must start with "Hey {FirstName} —" or "Hey {FirstName},"');
     }
   }
 
@@ -259,9 +301,12 @@ export function validateMessage(
     reasons.push("missing client first name");
   }
 
-  // Trade / context anchor — Day 3 (followupNumber 2) uses a schedule/slot
-  // frame intentionally free of the trade keyword; exempt it from this check.
-  if (ctx.trade && ctx.trade.length > 0 && ctx.followupNumber !== 2) {
+  // Trade / context anchor — every day (Day 1 through Day 30) must reference
+  // the trade or its synonym. Day 3 previously slipped this check because it
+  // leaned on a generic "slot" frame; the rewrite anchors it on the actual
+  // trade (e.g., "the roofing schedule", "upcoming HVAC work") so the rule
+  // now applies uniformly.
+  if (ctx.trade && ctx.trade.length > 0) {
     const kws = tradeKeywords(ctx.trade);
     const hasAny = kws.some(
       (k) =>

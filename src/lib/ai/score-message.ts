@@ -30,6 +30,16 @@ const CALM_PHRASES = [
   "if it works",
   "want me to",
   "what works",
+  // Contractor-native phrases the rewrite leans on.
+  "looked back over",
+  "walk through",
+  "active list",
+  "close it out for now",
+  "without cutting corners",
+  "no hard feelings",
+  "pick it back up",
+  "either is fine",
+  "either way is fine",
 ];
 
 const SPECIFICITY_NOUNS: Record<string, readonly string[]> = {
