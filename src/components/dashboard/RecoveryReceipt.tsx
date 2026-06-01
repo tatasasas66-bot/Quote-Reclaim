@@ -10,7 +10,13 @@ const MONTHLY_PRICE_USD = 79;
 export type RecoveryReceiptProps = {
   recoveredThisMonth: number;
   jobsWonThisMonth: number;
-  quietQuotesWorked: number;
+  /**
+   * Quotes currently under recovery (active pending quiet quotes). This is the
+   * honest "what is being worked right now" count — using the live pending
+   * total avoids the confusing 0 a calendar-month activity counter would show
+   * on the first day of a month while real recoveries are in flight.
+   */
+  quotesBeingWorked: number;
   emailFollowups: number;
   allTimeRecovered: number;
 };
@@ -27,7 +33,7 @@ function monthsWord(n: number): string {
 export function RecoveryReceipt({
   recoveredThisMonth,
   jobsWonThisMonth,
-  quietQuotesWorked,
+  quotesBeingWorked,
   emailFollowups,
   allTimeRecovered,
 }: RecoveryReceiptProps) {
@@ -55,7 +61,7 @@ export function RecoveryReceipt({
           </span>
         </ReceiptRow>
         <ReceiptRow label="Jobs won back">{jobsWonThisMonth}</ReceiptRow>
-        <ReceiptRow label="Quiet quotes worked">{quietQuotesWorked}</ReceiptRow>
+        <ReceiptRow label="Quotes being worked">{quotesBeingWorked}</ReceiptRow>
         <ReceiptRow label="Email follow-ups">{emailFollowups}</ReceiptRow>
       </dl>
 
@@ -79,13 +85,13 @@ export function RecoveryReceipt({
 
       <div className="mt-auto flex flex-wrap items-center justify-between gap-x-4 gap-y-1 border-t border-line-subtle pt-3 text-xs text-ink-muted">
         <span>
-          All time recovered{" "}
+          All-time recovered:{" "}
           <span className="font-black tabular-nums text-ink-strong">
             {formatCurrency(allTimeRecovered)}
           </span>
         </span>
         <span>
-          All-time months paid for{" "}
+          All-time months paid for:{" "}
           <span className="font-black tabular-nums text-ink-strong">
             {allTimeMonthsPaid}
           </span>

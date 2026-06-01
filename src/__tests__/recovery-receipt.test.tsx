@@ -25,7 +25,7 @@ function props(over: Partial<RecoveryReceiptProps> = {}): RecoveryReceiptProps {
   return {
     recoveredThisMonth: 0,
     jobsWonThisMonth: 0,
-    quietQuotesWorked: 0,
+    quotesBeingWorked: 0,
     emailFollowups: 0,
     allTimeRecovered: 0,
     ...over,
@@ -51,14 +51,16 @@ describe("RecoveryReceipt — renders", () => {
         props({
           recoveredThisMonth: 8_500,
           jobsWonThisMonth: 2,
-          quietQuotesWorked: 9,
+          quotesBeingWorked: 9,
           emailFollowups: 14,
         }),
       ),
     );
     expect(screen.getByText("Recovered this month")).toBeTruthy();
     expect(screen.getByText("Jobs won back")).toBeTruthy();
-    expect(screen.getByText("Quiet quotes worked")).toBeTruthy();
+    expect(screen.getByText("Quotes being worked")).toBeTruthy();
+    // Polish: the old "Quiet quotes worked" label is gone.
+    expect(screen.queryByText("Quiet quotes worked")).toBeNull();
     expect(screen.getByText("Email follow-ups")).toBeTruthy();
     expect(screen.getByText("Months paid for")).toBeTruthy();
     // Activity counts render.
@@ -182,8 +184,11 @@ describe("RecoveryReceipt — all-time proof", () => {
         props({ recoveredThisMonth: 0, allTimeRecovered: 23_700 }),
       ),
     );
-    expect(screen.getByText(/All time recovered/i)).toBeTruthy();
-    expect(screen.getByText(/All-time months paid for/i)).toBeTruthy();
+    // Polish: footer labels use the "All-time recovered:" / "All-time months
+    // paid for:" colon form, and the old "All time recovered " variant is gone.
+    expect(screen.getByText(/All-time recovered:/)).toBeTruthy();
+    expect(screen.getByText(/All-time months paid for:/)).toBeTruthy();
+    expect(screen.queryByText(/All time recovered /)).toBeNull();
     // 23,700 / 79 = 300 exactly.
     expect(screen.getByText("300")).toBeTruthy();
     expect(screen.getByText(/\$23,700/)).toBeTruthy();
@@ -202,7 +207,7 @@ describe("RecoveryReceipt — honest copy", () => {
         props({
           recoveredThisMonth: 5_000,
           jobsWonThisMonth: 1,
-          quietQuotesWorked: 3,
+          quotesBeingWorked: 3,
           emailFollowups: 4,
           allTimeRecovered: 5_000,
         }),
@@ -227,6 +232,25 @@ describe("RecoveryReceipt — honest copy", () => {
     ]) {
       expect(receiptSrc).not.toMatch(banned);
     }
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Copy polish — exact label strings the spec requires
+// ---------------------------------------------------------------------------
+
+describe("RecoveryReceipt — polish copy", () => {
+  it("source contains the 'Quotes being worked' label exactly once and no longer the old one", () => {
+    expect(receiptSrc).toContain("Quotes being worked");
+    expect(receiptSrc).not.toContain("Quiet quotes worked");
+  });
+
+  it("source uses the colon-suffixed all-time footer labels", () => {
+    expect(receiptSrc).toContain("All-time recovered:");
+    expect(receiptSrc).toContain("All-time months paid for:");
+    // The old colon-less variants are gone.
+    expect(receiptSrc).not.toMatch(/All time recovered[^:]/);
+    expect(receiptSrc).not.toMatch(/All-time months paid for[^:]/);
   });
 });
 

@@ -6,7 +6,7 @@ type HeroMetricProps = {
   pendingCount: number;
   recoveredThisMonth: number;
   jobsWonThisMonth: number;
-  quietQuotesWorked: number;
+  quotesBeingWorked: number;
   emailFollowups: number;
   allTimeRecovered: number;
 };
@@ -16,7 +16,7 @@ export function HeroMetric({
   pendingCount,
   recoveredThisMonth,
   jobsWonThisMonth,
-  quietQuotesWorked,
+  quotesBeingWorked,
   emailFollowups,
   allTimeRecovered,
 }: HeroMetricProps) {
@@ -33,14 +33,14 @@ export function HeroMetric({
           <p className="mt-3 max-w-xl text-base leading-7 text-ink">
             {pendingCount === 0
               ? "No quiet estimates right now. The command center is clear."
-              : `${pendingCount} quiet estimate${pendingCount === 1 ? "" : "s"} still have money on the table.`}
+              : `${pendingCount} quiet estimate${pendingCount === 1 ? "" : "s"} still ${pendingCount === 1 ? "has" : "have"} money on the table.`}
           </p>
         </div>
 
         <RecoveryReceipt
           recoveredThisMonth={recoveredThisMonth}
           jobsWonThisMonth={jobsWonThisMonth}
-          quietQuotesWorked={quietQuotesWorked}
+          quotesBeingWorked={quotesBeingWorked}
           emailFollowups={emailFollowups}
           allTimeRecovered={allTimeRecovered}
         />

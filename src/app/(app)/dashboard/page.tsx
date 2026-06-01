@@ -112,7 +112,10 @@ export default async function DashboardPage() {
         pendingCount={pending.length}
         recoveredThisMonth={recoveredThisMonth}
         jobsWonThisMonth={jobsWonThisMonth}
-        quietQuotesWorked={monthlyActivity.quietQuotesWorked}
+        // "Quotes being worked" reads as a live count, so use the active
+        // pending total — never a calendar-month counter that could show 0
+        // on day 1 of a month while real recoveries are still in flight.
+        quotesBeingWorked={pending.length}
         emailFollowups={monthlyActivity.emailFollowups}
         allTimeRecovered={allTimeRecovered}
       />
