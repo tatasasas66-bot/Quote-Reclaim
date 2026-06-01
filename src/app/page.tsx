@@ -58,6 +58,8 @@ export default function HomePage() {
           </div>
         </section>
 
+        <OneTapReplyBlock />
+
         <footer className="flex flex-wrap items-center justify-between gap-3 border-t border-line-subtle/80 py-6 text-sm text-ink-muted">
           <p>© {new Date().getFullYear()} Quote Reclaim</p>
           <nav className="flex items-center gap-3">
@@ -183,5 +185,41 @@ function PreviewStat({
       </div>
       <p className="mt-2 text-xl font-black text-ink-strong">{value}</p>
     </div>
+  );
+}
+
+function OneTapReplyBlock() {
+  return (
+    <section
+      aria-label="One-Tap Reply"
+      className="mb-8 rounded-lg border border-line-subtle bg-surface-1 p-5 shadow-[0_16px_46px_rgba(0,0,0,0.18)] sm:p-6"
+    >
+      <div className="grid gap-6 lg:grid-cols-[1fr_0.9fr] lg:items-center">
+        <div className="min-w-0">
+          <p className="text-xs font-black uppercase tracking-widest text-brand">
+            One-Tap Reply
+          </p>
+          <h2 className="mt-2 text-balance text-2xl font-black leading-tight text-ink-strong sm:text-3xl">
+            Turn silence into a yes, a question, or a clean no.
+          </h2>
+          <p className="mt-3 max-w-md text-sm leading-7 text-ink">
+            Give homeowners a simple way to reply to the estimate without
+            writing a full email.
+          </p>
+        </div>
+        <div className="rounded-md border border-line-subtle bg-canvas/45 p-4">
+          <p className="text-[11px] font-bold uppercase tracking-widest text-ink-muted">
+            Example
+          </p>
+          <p className="mt-2 text-sm text-ink-strong">
+            <span className="font-bold">John</span> tapped:{" "}
+            <span className="text-brand">&ldquo;I have one question&rdquo;</span>
+          </p>
+          <p className="mt-1 text-xs text-ink-muted">
+            Reply Radar: Price concern · Next move: Send answer
+          </p>
+        </div>
+      </div>
+    </section>
   );
 }

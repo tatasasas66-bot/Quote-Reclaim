@@ -42,6 +42,18 @@ export function describeActivity(e: ActivityEvent): {
     case "message_delivered":
       return { text: `Message delivered to ${client}`, tone: "neutral" };
     case "reply_received":
+      if (e.channel === "one_tap") {
+        const intent = e.reply_intent;
+        const phrase =
+          intent === "positive"
+            ? "replied in one tap: interested"
+            : intent === "question"
+              ? "asked a question in one tap"
+              : intent === "not_interested"
+                ? "tapped: not right now"
+                : "replied in one tap";
+        return { text: `${client} ${phrase}`, tone: "success" };
+      }
       return {
         text: `${client} replied to your ${trade} quote`,
         tone: "success",

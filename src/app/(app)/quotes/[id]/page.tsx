@@ -4,6 +4,7 @@ import { notFound, redirect } from "next/navigation";
 import { Badge, Button, Logo } from "@/components/ui";
 import {
   CopyButton,
+  OneTapReplyCard,
   QuietSignalCard,
   QuoteActions,
   ReplyRadarCard,
@@ -12,6 +13,10 @@ import {
   type ReplyRadarData,
 } from "@/components/quotes";
 import { computeQuietSignal, valueBandFor } from "@/lib/quotes/quiet-signal";
+import {
+  getLatestOneTapReply,
+  listActiveReplyOptions,
+} from "@/lib/quotes/one-tap-reply-server";
 import { isReplyIntent } from "@/lib/ai/classify-reply";
 import { suggestResponse } from "@/lib/ai/suggest-response";
 import { requireUser } from "@/lib/auth/require-user";
@@ -175,6 +180,13 @@ export default async function QuoteDetailPage({
     clickCount: totalClickCount,
   });
 
+  // One-Tap Reply state for this quote.
+  const [latestOneTapReply, oneTapOptions] = await Promise.all([
+    getLatestOneTapReply(serviceClient, String(quote.id)),
+    listActiveReplyOptions(serviceClient, String(quote.id)),
+  ]);
+  const clientFirstName = titleCaseName(quote.client_name).split(/\s+/)[0] || "Customer";
+
   return (
     <main className="mx-auto flex min-h-screen w-full max-w-5xl flex-col gap-8 bg-canvas px-4 py-8 sm:px-6">
       <header className="flex items-center justify-between border-b border-line-subtle/80 pb-5">
@@ -211,6 +223,12 @@ export default async function QuoteDetailPage({
       />
 
       <QuietSignalCard signal={quietSignal} />
+      <OneTapReplyCard
+        quoteId={String(quote.id)}
+        clientFirstName={clientFirstName}
+        latestReply={latestOneTapReply}
+        options={oneTapOptions}
+      />
       <ReplyRadarCard reply={replyRadar} />
 
       <RecoveryPlanSection

@@ -191,13 +191,13 @@ describe("/api/cron/send route", () => {
 
   it("inserts a row into outbound_messages with channel=email when sending email", () => {
     expect(sendRoute).toMatch(
-      /from\("outbound_messages"\)\.insert\(\{[\s\S]*?channel:\s*"email"[\s\S]*?status:[\s\S]*?emailResult\.ok/,
+      /from\("outbound_messages"\)\s*\.insert\(\{[\s\S]*?channel:\s*"email"[\s\S]*?status:[\s\S]*?emailResult\.ok/,
     );
   });
 
   it("inserts a row into outbound_messages with channel=sms when sending SMS", () => {
     expect(sendRoute).toMatch(
-      /from\("outbound_messages"\)\.insert\(\{[\s\S]*?channel:\s*"sms"[\s\S]*?status:[\s\S]*?smsResult\.ok/,
+      /from\("outbound_messages"\)\s*\.insert\(\{[\s\S]*?channel:\s*"sms"[\s\S]*?status:[\s\S]*?smsResult\.ok/,
     );
   });
 
@@ -367,11 +367,13 @@ describe("/api/cron/send — per-user send cap", () => {
   });
 
   it("increments the per-user counter only on rows that reach the provider", () => {
-    // Email branch: incremented just before sendRecoveryEmail.
+    // Email branch: incremented before sendRecoveryEmail. The window is wide
+    // enough to allow the One-Tap link issuance (a fresh per-send token) to
+    // run after the cap reservation and before the send.
     expect(sendRoute).toMatch(
-      /perUserAttempts\.set\(r\.user_id,\s*attempts\s*\+\s*1\)[\s\S]{0,400}sendRecoveryEmail/,
+      /perUserAttempts\.set\(r\.user_id,\s*attempts\s*\+\s*1\)[\s\S]{0,800}sendRecoveryEmail/,
     );
-    // SMS branch: incremented just before smsProvider.send.
+    // SMS branch: incremented just before smsProvider.send. Unchanged.
     expect(sendRoute).toMatch(
       /perUserAttempts\.set\(r\.user_id,\s*attempts\s*\+\s*1\)[\s\S]{0,400}smsProvider\.send/,
     );

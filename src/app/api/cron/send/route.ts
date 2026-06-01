@@ -3,6 +3,7 @@ import { type NextRequest, NextResponse } from "next/server";
 import { createServiceSupabaseClient } from "@/lib/supabase/service";
 import { requireCronAuth } from "@/lib/security/require-cron";
 import { sendRecoveryEmail } from "@/lib/messaging/email-provider";
+import { issueOneTapLink } from "@/lib/quotes/one-tap-reply-server";
 import { recoveryEmailSubject } from "@/lib/messaging/select-channel";
 import { getMessagingService } from "@/lib/messaging/service";
 import { normalizePhone } from "@/lib/messaging/phone";
@@ -198,27 +199,49 @@ async function handleSend(request: NextRequest): Promise<NextResponse> {
       }
       perUserAttempts.set(r.user_id, attempts + 1);
 
+      // One-Tap Reply: mint a fresh per-send token (raw lives only in the
+      // outgoing email; the database stores the SHA-256 hash). If issuing
+      // fails for any reason, fall back to sending the original body — the
+      // follow-up still goes out, the homeowner just lacks the quick link.
+      const oneTapLink = await issueOneTapLink(supabase, r.quote_id, null);
+      const messageBodyForSend = oneTapLink
+        ? `${r.message_text}\n\nQuick reply: ${oneTapLink.url}`
+        : r.message_text;
+
       const emailResult = await sendRecoveryEmail({
         to,
         subject: recoveryEmailSubject(r.trade ?? "your"),
-        body: r.message_text,
+        body: messageBodyForSend,
       });
 
       const now = new Date().toISOString();
 
-      await supabase.from("outbound_messages").insert({
-        user_id: r.user_id,
-        quote_id: r.quote_id,
-        reminder_id: r.reminder_id,
-        channel: "email",
-        recipient: to,
-        message_text: r.message_text,
-        status: emailResult.ok ? "sent" : "failed",
-        provider_msg_id: emailResult.ok ? emailResult.providerMessageId : null,
-        failure_reason: emailResult.ok ? null : emailResult.error,
-        sent_at: emailResult.ok ? now : null,
-        idempotency_key: `cron:${r.reminder_id}:${cronRunId}`,
-      });
+      const { data: outboundInsert } = await supabase
+        .from("outbound_messages")
+        .insert({
+          user_id: r.user_id,
+          quote_id: r.quote_id,
+          reminder_id: r.reminder_id,
+          channel: "email",
+          recipient: to,
+          message_text: messageBodyForSend,
+          status: emailResult.ok ? "sent" : "failed",
+          provider_msg_id: emailResult.ok ? emailResult.providerMessageId : null,
+          failure_reason: emailResult.ok ? null : emailResult.error,
+          sent_at: emailResult.ok ? now : null,
+          idempotency_key: `cron:${r.reminder_id}:${cronRunId}`,
+        })
+        .select("id")
+        .single();
+
+      // Best-effort: link the issued token to the outbound row so the
+      // dashboard can show which email a reply came from. Never fatal.
+      if (oneTapLink && outboundInsert?.id) {
+        await supabase
+          .from("one_tap_reply_links")
+          .update({ outbound_message_id: String(outboundInsert.id) })
+          .eq("id", oneTapLink.linkId);
+      }
 
       if (!emailResult.ok) {
         await releaseClaim(supabase, r.reminder_id);
