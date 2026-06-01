@@ -75,6 +75,34 @@ returns an error. There is no local fallback in production.
 
 ---
 
+## Step 4b: Resend open/click webhook (Quiet Signal)
+
+Quiet Signal diagnoses why a quote went quiet using email open/click engagement.
+That data arrives via a Resend webhook. Until it is configured, Quiet Signal still
+works — it simply shows the calm fallback ("Normal silence / keep the default
+schedule") on every quote. Configuring the webhook is what gives it teeth.
+
+1. In the Resend dashboard → **Webhooks** → **Add Webhook**.
+2. Endpoint URL: `https://<your-domain>/api/webhooks/resend-email-events`.
+3. Subscribe to **`email.opened`** and **`email.clicked`** (others are harmless —
+   they are recorded for dedupe but do not move counters).
+4. Copy **this endpoint's** signing secret and set it in Vercel as
+   **`RESEND_EMAIL_EVENTS_WEBHOOK_SECRET`**.
+
+> ⚠️ **Do NOT overwrite any other secret with this value, and do not reuse another
+> webhook's secret here.** Resend mints a *separate* signing secret per webhook
+> endpoint. This webhook has its own dedicated var (`RESEND_EMAIL_EVENTS_WEBHOOK_SECRET`).
+> The inbound/reply webhook (Reply Radar) uses a *different* secret
+> (`EMAIL_INBOUND_SECRET`) and is unaffected by this step. Rotating or replacing
+> one must never touch the other.
+
+In production the route **fails closed**: if `RESEND_EMAIL_EVENTS_WEBHOOK_SECRET`
+is unset, the endpoint returns `503` and no engagement is recorded (it never runs
+unauthenticated). The handler is idempotent on the Svix event id, so Resend's
+retries can never double-count.
+
+---
+
 ## Step 5: Lemon Squeezy
 
 Follow `docs/LEMON_SETUP.md`.

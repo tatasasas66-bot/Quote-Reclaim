@@ -38,7 +38,10 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
 
   if (mode === "verify") {
     const ok = verifySvixSignature({
-      secret: process.env.RESEND_WEBHOOK_SECRET ?? "",
+      // Dedicated secret for THIS webhook only. Resend mints a separate
+      // signing secret per endpoint — never reuse the inbound/reply webhook's
+      // secret (that route uses EMAIL_INBOUND_SECRET) here.
+      secret: process.env.RESEND_EMAIL_EVENTS_WEBHOOK_SECRET ?? "",
       svixId,
       svixTimestamp,
       svixSignature,

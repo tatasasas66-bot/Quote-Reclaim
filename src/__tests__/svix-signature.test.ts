@@ -26,7 +26,7 @@ describe("shouldVerifyResendMode", () => {
     expect(
       shouldVerifyResendMode({
         NODE_ENV: "production",
-        RESEND_WEBHOOK_SECRET: TEST_SECRET,
+        RESEND_EMAIL_EVENTS_WEBHOOK_SECRET: TEST_SECRET,
       }),
     ).toBe("verify");
   });
@@ -39,7 +39,7 @@ describe("shouldVerifyResendMode", () => {
     expect(
       shouldVerifyResendMode({
         NODE_ENV: "development",
-        RESEND_WEBHOOK_SECRET: TEST_SECRET,
+        RESEND_EMAIL_EVENTS_WEBHOOK_SECRET: TEST_SECRET,
       }),
     ).toBe("verify");
   });

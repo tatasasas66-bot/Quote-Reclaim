@@ -15,18 +15,24 @@ import { createHmac, timingSafeEqual } from "node:crypto";
 
 export type SignatureCheckMode = "verify" | "allow-unsigned" | "reject";
 
-type EnvLike = { NODE_ENV?: string; RESEND_WEBHOOK_SECRET?: string };
+type EnvLike = { NODE_ENV?: string; RESEND_EMAIL_EVENTS_WEBHOOK_SECRET?: string };
 
 /**
  * Mirror of shouldVerifyMode() for Twilio: production always requires the
  * secret to be set (rejected with 503 if missing); non-production verifies
  * when configured and allows unsigned for local dev / source-level tests.
+ *
+ * IMPORTANT: this reads RESEND_EMAIL_EVENTS_WEBHOOK_SECRET — the dedicated
+ * signing secret for the open/click (Quiet Signal) webhook. Resend issues a
+ * DIFFERENT signing secret per webhook endpoint, so this must never share a
+ * var with any other Resend webhook (e.g. the inbound/reply webhook, which
+ * uses its own EMAIL_INBOUND_SECRET).
  */
 export function shouldVerifyResendMode(env: EnvLike): SignatureCheckMode {
   if (env.NODE_ENV === "production") {
-    return env.RESEND_WEBHOOK_SECRET ? "verify" : "reject";
+    return env.RESEND_EMAIL_EVENTS_WEBHOOK_SECRET ? "verify" : "reject";
   }
-  return env.RESEND_WEBHOOK_SECRET ? "verify" : "allow-unsigned";
+  return env.RESEND_EMAIL_EVENTS_WEBHOOK_SECRET ? "verify" : "allow-unsigned";
 }
 
 function decodeSecret(secret: string): Buffer | null {

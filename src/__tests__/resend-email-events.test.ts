@@ -48,7 +48,7 @@ beforeEach(() => {
   rpcCalls.length = 0;
   rpcReturn = { data: "processed", error: null };
   vi.stubEnv("NODE_ENV", "production");
-  vi.stubEnv("RESEND_WEBHOOK_SECRET", TEST_SECRET);
+  vi.stubEnv("RESEND_EMAIL_EVENTS_WEBHOOK_SECRET", TEST_SECRET);
 });
 
 afterEach(() => {
@@ -74,8 +74,8 @@ async function callRoute(body: string, headers: Headers) {
 // ---------------------------------------------------------------------------
 
 describe("resend-email-events webhook — signature gate", () => {
-  it("503s in production when the secret is unset (fail-closed)", async () => {
-    vi.stubEnv("RESEND_WEBHOOK_SECRET", "");
+  it("503s in production when RESEND_EMAIL_EVENTS_WEBHOOK_SECRET is unset (fail-closed)", async () => {
+    vi.stubEnv("RESEND_EMAIL_EVENTS_WEBHOOK_SECRET", "");
     const res = await callRoute("{}", new Headers());
     expect(res.status).toBe(503);
     expect(rpcCalls).toHaveLength(0);
@@ -95,7 +95,7 @@ describe("resend-email-events webhook — signature gate", () => {
   });
 
   it("does NOT leak the request body or secret in response copy", async () => {
-    vi.stubEnv("RESEND_WEBHOOK_SECRET", "");
+    vi.stubEnv("RESEND_EMAIL_EVENTS_WEBHOOK_SECRET", "");
     const res = await callRoute("{}", new Headers());
     const text = await res.text();
     expect(text).not.toContain(TEST_SECRET);
@@ -177,10 +177,56 @@ describe("resend-email-events route — source-level guarantees", () => {
     expect(routeSrc).not.toMatch(/click_count\s*[\+\-]/);
   });
 
+  it("verifies against the DEDICATED RESEND_EMAIL_EVENTS_WEBHOOK_SECRET", () => {
+    expect(routeSrc).toMatch(
+      /process\.env\.RESEND_EMAIL_EVENTS_WEBHOOK_SECRET/,
+    );
+    // Must NOT READ the generic name or the inbound webhook's secret (a
+    // comment may reference EMAIL_INBOUND_SECRET to document the boundary,
+    // but it must never be accessed here).
+    expect(routeSrc).not.toMatch(/process\.env\.RESEND_WEBHOOK_SECRET\b/);
+    expect(routeSrc).not.toMatch(/process\.env\.EMAIL_INBOUND_SECRET/);
+  });
+
   it("never logs the raw body, secret, or signature headers", () => {
     expect(routeSrc).not.toMatch(/console\.\w+\([^)]*rawBody/);
     expect(routeSrc).not.toMatch(/console\.\w+\([^)]*svixSignature/);
+    expect(routeSrc).not.toMatch(/console\.\w+\([^)]*RESEND_EMAIL_EVENTS_WEBHOOK_SECRET/);
     expect(routeSrc).not.toMatch(/console\.\w+\([^)]*RESEND_WEBHOOK_SECRET/);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Per-webhook secret isolation — the inbound/reply webhook must keep its own
+// secret; the open/click webhook must use the dedicated one. This guards
+// against a future regression where the two webhooks share a secret var and
+// rotating one breaks the other (Resend issues one signing secret per
+// endpoint).
+// ---------------------------------------------------------------------------
+
+describe("webhook secret isolation across Resend routes", () => {
+  const inboundSrc = readSource("../app/api/webhooks/email-inbound/route.ts");
+  const svixHelperSrc = readSource("../lib/messaging/svix-signature.ts");
+
+  it("inbound/reply webhook still uses its existing EMAIL_INBOUND_SECRET (unchanged)", () => {
+    expect(inboundSrc).toMatch(/process\.env\.EMAIL_INBOUND_SECRET/);
+    // The inbound webhook must NOT depend on either Resend-events secret.
+    expect(inboundSrc).not.toMatch(/RESEND_EMAIL_EVENTS_WEBHOOK_SECRET/);
+    expect(inboundSrc).not.toMatch(/RESEND_WEBHOOK_SECRET/);
+  });
+
+  it("the Svix verifier helper reads ONLY the dedicated email-events secret", () => {
+    expect(svixHelperSrc).toMatch(/RESEND_EMAIL_EVENTS_WEBHOOK_SECRET/);
+    expect(svixHelperSrc).not.toMatch(/\bRESEND_WEBHOOK_SECRET\b/);
+    // A comment may reference EMAIL_INBOUND_SECRET as the inbound webhook's
+    // separate secret; the helper must never READ it from env.
+    expect(svixHelperSrc).not.toMatch(/env\.EMAIL_INBOUND_SECRET/);
+    expect(svixHelperSrc).not.toMatch(/process\.env\.EMAIL_INBOUND_SECRET/);
+  });
+
+  it(".env.example documents the dedicated secret and warns against reuse", () => {
+    const envExample = readSource("../../.env.example");
+    expect(envExample).toMatch(/^RESEND_EMAIL_EVENTS_WEBHOOK_SECRET=/m);
   });
 });
 

@@ -102,6 +102,9 @@ Else → unavailable (returns 503).
 |----------|-------|--------|--------------|--------------------------|
 | `RESEND_API_KEY` | SERVER | OPTIONAL | resend.com → API Keys | Email channel disabled; SMS-only mode |
 | `RESEND_FROM_EMAIL` | SERVER | OPTIONAL | Verified sender in Resend | Same as above |
+| `RESEND_EMAIL_EVENTS_WEBHOOK_SECRET` | SERVER | REQUIRED (prod) | Resend dashboard → Webhooks → the **open/click** endpoint → signing secret | `/api/webhooks/resend-email-events` returns 503; Quiet Signal never gets open/click data and stays on the calm fallback |
+
+> **Dedicated secret — do not reuse.** Resend issues a *different* signing secret per webhook endpoint. `RESEND_EMAIL_EVENTS_WEBHOOK_SECRET` belongs to the open/click (Quiet Signal) webhook only. It is **not** the inbound/reply webhook's secret (that route uses `EMAIL_INBOUND_SECRET`). Never overwrite one with the other.
 
 ---
 
@@ -139,6 +142,7 @@ TWILIO_ACCOUNT_SID=
 TWILIO_AUTH_TOKEN=
 TWILIO_FROM_NUMBER=
 GROQ_API_KEY=
+RESEND_EMAIL_EVENTS_WEBHOOK_SECRET=   # Quiet Signal open/click webhook (its OWN secret)
 LEMONSQUEEZY_API_KEY=       # or NEXT_PUBLIC_LEMONSQUEEZY_CHECKOUT_URL
 LEMONSQUEEZY_STORE_ID=      # Mode A
 LEMONSQUEEZY_VARIANT_ID=    # Mode A
