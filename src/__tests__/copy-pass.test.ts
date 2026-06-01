@@ -14,6 +14,9 @@ const recoveryAlert = readSource(
   "../components/dashboard/RecoveryWindowAlert.tsx",
 );
 const heroMetric = readSource("../components/dashboard/HeroMetric.tsx");
+const recoveryReceipt = readSource(
+  "../components/dashboard/RecoveryReceipt.tsx",
+);
 const quoteForm = readSource("../components/quotes/QuoteForm.tsx");
 const quoteListItem = readSource("../components/quotes/QuoteListItem.tsx");
 // Paywall copy is asserted inside billing.test.ts; we read it through the
@@ -138,12 +141,14 @@ describe("Recovery Ledger eyebrow contrast + color discipline (v0.4)", () => {
     expect(heroMetric).toMatch(/text-warning\/80/);
   });
 
-  it("RECOVERED THIS MONTH keeps success/80 for the won state", () => {
-    expect(heroMetric).toMatch(/text-success\/80/);
+  it("Recovered-this-month keeps the success token for the won state", () => {
+    // The recovered styling now lives in the Recovery Receipt column.
+    expect(recoveryReceipt).toMatch(/text-success/);
   });
 
-  it("MONTHS PAID FOR is demoted off gold (v0.4 — gold lives only on STILL BLEEDING)", () => {
+  it("the value-proof column stays off gold (gold lives only on STILL BLEEDING)", () => {
     expect(heroMetric).not.toMatch(/text-money\/80/);
+    expect(recoveryReceipt).not.toMatch(/text-money/);
   });
 
   it("removes the decorative LIVE LEDGER badge", () => {

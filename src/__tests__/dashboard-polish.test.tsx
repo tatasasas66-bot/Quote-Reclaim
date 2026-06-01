@@ -23,22 +23,25 @@ const heroMetric = readFileSync(
 afterEach(cleanup);
 
 // ---------------------------------------------------------------------------
-// Phase 2.2 — Months Paid For empty state
+// HeroMetric now hosts the Recovery Receipt in its value-proof column, while
+// preserving the Still Bleeding hero. (Detailed receipt behavior lives in
+// recovery-receipt.test.tsx.)
 // ---------------------------------------------------------------------------
 
-describe("HeroMetric — Months Paid For empty state", () => {
-  it('shows "Not yet" instead of "0x" when nothing recovered', () => {
-    expect(heroMetric).toContain('"Not yet"');
-    expect(heroMetric).not.toMatch(/\$\{monthsPaidFor\}x[^ ]/);
+describe("HeroMetric — value column is the Recovery Receipt", () => {
+  it("preserves the Still Bleeding hero", () => {
+    expect(heroMetric).toContain("STILL BLEEDING");
   });
 
-  it("renders the start-the-meter CTA linking to the alert anchor", () => {
-    expect(heroMetric).toContain("Win one job to start the meter");
-    expect(heroMetric).toContain('href="#recovery-window-alert"');
+  it("renders the Recovery Receipt in the right value column", () => {
+    expect(heroMetric).toContain("RecoveryReceipt");
   });
 
-  it('shows "× return" once recovery exists', () => {
-    expect(heroMetric).toContain("× return");
+  it("no longer keeps a duplicate inline Months Paid ledger stat", () => {
+    // The months-paid math moved into RecoveryReceipt; HeroMetric should not
+    // also compute/render its own copy.
+    expect(heroMetric).not.toContain("MONTHS PAID FOR");
+    expect(heroMetric).not.toContain("LedgerSideStat");
   });
 });
 

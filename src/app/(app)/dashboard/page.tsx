@@ -16,6 +16,7 @@ import {
   listPendingQuotes,
   listWonQuotes,
   getProfileStats,
+  getMonthlyRecoveryActivity,
   type QuoteRow,
 } from "@/lib/quotes/repo";
 import { effectiveDaysSilent } from "@/lib/recovery/effective-days";
@@ -28,10 +29,19 @@ export default async function DashboardPage() {
   const { user, supabase } = await requireUser();
   if (!user || !supabase) redirect("/sign-in");
 
-  const [pending, wonQuotes, profile] = await Promise.all([
+  const monthStartMs = monthStartUtc();
+  const nextMonthStartMs = nextMonthStartUtc();
+
+  const [pending, wonQuotes, profile, monthlyActivity] = await Promise.all([
     listPendingQuotes(supabase, user.id),
     listWonQuotes(supabase, user.id),
     getProfileStats(supabase, user.id),
+    getMonthlyRecoveryActivity(
+      supabase,
+      user.id,
+      new Date(monthStartMs).toISOString(),
+      new Date(nextMonthStartMs).toISOString(),
+    ),
   ]);
 
   const jobsWonLifetime = profile?.jobs_won ?? 0;
@@ -47,19 +57,14 @@ export default async function DashboardPage() {
     maximumFractionDigits: 0,
   });
 
-  const monthStart = monthStartUtc();
-  const prevMonthStart = prevMonthStartUtc();
-  const monthWon = wonQuotes.filter((q) => Date.parse(q.won_at) >= monthStart);
+  const monthWon = wonQuotes.filter(
+    (q) => Date.parse(q.won_at) >= monthStartMs,
+  );
   const recoveredThisMonth = monthWon.reduce(
     (sum, q) => sum + q.estimate_amount,
     0,
   );
-  const lastMonthRecovered = wonQuotes
-    .filter((q) => {
-      const t = Date.parse(q.won_at);
-      return t >= prevMonthStart && t < monthStart;
-    })
-    .reduce((sum, q) => sum + q.estimate_amount, 0);
+  const jobsWonThisMonth = monthWon.length;
   const wonTotal = wonQuotes.reduce((sum, q) => sum + q.estimate_amount, 0);
 
   const avgDaysToWin = computeAvgDaysToWin(wonQuotes);
@@ -106,7 +111,9 @@ export default async function DashboardPage() {
         stillBleeding={stillBleeding}
         pendingCount={pending.length}
         recoveredThisMonth={recoveredThisMonth}
-        lastMonthRecovered={lastMonthRecovered}
+        jobsWonThisMonth={jobsWonThisMonth}
+        quietQuotesWorked={monthlyActivity.quietQuotesWorked}
+        emailFollowups={monthlyActivity.emailFollowups}
         allTimeRecovered={allTimeRecovered}
       />
 
@@ -206,11 +213,11 @@ function monthStartUtc(): number {
   return d.getTime();
 }
 
-function prevMonthStartUtc(): number {
+function nextMonthStartUtc(): number {
   const d = new Date();
   d.setUTCDate(1);
   d.setUTCHours(0, 0, 0, 0);
-  d.setUTCMonth(d.getUTCMonth() - 1);
+  d.setUTCMonth(d.getUTCMonth() + 1);
   return d.getTime();
 }
 

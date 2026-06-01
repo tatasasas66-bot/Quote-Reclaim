@@ -120,6 +120,45 @@ export type WonQuoteSummary = {
   created_at: string;
 };
 
+/** Read-only monthly activity proof for the Recovery Receipt. */
+export type MonthlyRecoveryActivity = {
+  /** Email follow-ups sent or scheduled this month (reminders, send_at in month). */
+  emailFollowups: number;
+  /** Distinct quotes with any follow-up sent or scheduled this month. */
+  quietQuotesWorked: number;
+};
+
+/**
+ * Count this month's follow-up activity from the reminders table. Read-only;
+ * does not touch cron, Resend, or the send path. RLS-scoped via user_id +
+ * the caller's authenticated client. send_at in [monthStart, monthEnd)
+ * captures both already-sent and still-scheduled follow-ups for the month.
+ */
+export async function getMonthlyRecoveryActivity(
+  supabase: SupabaseClient,
+  userId: string,
+  monthStartIso: string,
+  monthEndIso: string,
+): Promise<MonthlyRecoveryActivity> {
+  const { data, error } = await supabase
+    .from("reminders")
+    .select("quote_id, message_type, send_at")
+    .eq("user_id", userId)
+    .gte("send_at", monthStartIso)
+    .lt("send_at", monthEndIso);
+  if (error) {
+    throw new Error(`getMonthlyRecoveryActivity failed: ${error.message}`);
+  }
+  const rows = data ?? [];
+  const quotes = new Set<string>();
+  let emailFollowups = 0;
+  for (const r of rows) {
+    if (r.quote_id) quotes.add(String(r.quote_id));
+    if (r.message_type === "email") emailFollowups += 1;
+  }
+  return { emailFollowups, quietQuotesWorked: quotes.size };
+}
+
 /**
  * Lifetime won quotes with the fields needed to compute avg days to win and
  * to render the "Jobs Won Back" gallery. Used by the dashboard.
