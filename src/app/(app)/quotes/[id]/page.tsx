@@ -4,12 +4,14 @@ import { notFound, redirect } from "next/navigation";
 import { Badge, Button, Logo } from "@/components/ui";
 import {
   CopyButton,
+  QuietSignalCard,
   QuoteActions,
   ReplyRadarCard,
   SendEarlyButton,
   type RecoveryStatus,
   type ReplyRadarData,
 } from "@/components/quotes";
+import { computeQuietSignal, valueBandFor } from "@/lib/quotes/quiet-signal";
 import { isReplyIntent } from "@/lib/ai/classify-reply";
 import { suggestResponse } from "@/lib/ai/suggest-response";
 import { requireUser } from "@/lib/auth/require-user";
@@ -105,15 +107,24 @@ export default async function QuoteDetailPage({
 
   // Was there any inbound reply for this quote? Used to flip per-step status
   // to "Paused - customer replied" without flagging the sequence as ended.
+  // We also pull the open/click counters in the same query so Quiet Signal
+  // can compute a stall reason without a second round-trip.
   // Reads via service client to bypass RLS on outbound_messages.
   const serviceClient = createServiceSupabaseClient();
-  const { data: replyRows } = await serviceClient
+  const { data: outboundRows } = await serviceClient
     .from("outbound_messages")
-    .select("id")
-    .eq("quote_id", quote.id)
-    .eq("status", "replied")
-    .limit(1);
-  const hasReplyForQuote = (replyRows ?? []).length > 0;
+    .select("id, status, open_count, click_count")
+    .eq("quote_id", quote.id);
+  const outbound = outboundRows ?? [];
+  const hasReplyForQuote = outbound.some((r) => r.status === "replied");
+  const totalOpenCount = outbound.reduce(
+    (sum, r) => sum + (r.open_count ?? 0),
+    0,
+  );
+  const totalClickCount = outbound.reduce(
+    (sum, r) => sum + (r.click_count ?? 0),
+    0,
+  );
 
   // Reply Radar: the most recent classified inbound reply for this quote.
   // recovery_events is append-only, so reply_intent was written at capture
@@ -145,6 +156,24 @@ export default async function QuoteDetailPage({
           }),
         }
       : null;
+
+  // Quiet Signal: deterministic stall-reason diagnosis from existing signals.
+  // No LLM, no cohort, no plan swap — see src/lib/quotes/quiet-signal.ts.
+  const quietSignal = computeQuietSignal({
+    outcome: (quote.outcome ?? "pending") as "pending" | "won" | "closed",
+    optedOut: Boolean(quote.client_opted_out),
+    trade: quote.trade,
+    estimateAmount: quote.estimate_amount,
+    valueBand: valueBandFor(quote.estimate_amount),
+    daysSilent: quote.days_silent ?? 0,
+    followupsSent: reminders.filter((r) => r.sent).length,
+    hasReply: hasReplyForQuote,
+    replyIntent: isReplyIntent(replyEvent?.reply_intent)
+      ? replyEvent.reply_intent
+      : null,
+    openCount: totalOpenCount,
+    clickCount: totalClickCount,
+  });
 
   return (
     <main className="mx-auto flex min-h-screen w-full max-w-5xl flex-col gap-8 bg-canvas px-4 py-8 sm:px-6">
@@ -181,6 +210,7 @@ export default async function QuoteDetailPage({
         allTimeRecovered={allTimeRecovered}
       />
 
+      <QuietSignalCard signal={quietSignal} />
       <ReplyRadarCard reply={replyRadar} />
 
       <RecoveryPlanSection
@@ -436,7 +466,10 @@ function ReminderCard({
   const showSendEarly = hasEmail || hasPhone;
 
   return (
-    <li className="rounded-lg border border-line-subtle bg-surface-1 shadow-[0_16px_46px_rgba(0,0,0,0.2)]">
+    <li
+      id={`followup-${r.followup_number}`}
+      className="scroll-mt-20 rounded-lg border border-line-subtle bg-surface-1 shadow-[0_16px_46px_rgba(0,0,0,0.2)]"
+    >
       <div className="flex flex-wrap items-center justify-between gap-2 border-b border-line-subtle px-4 py-3">
         <div className="space-y-0.5">
           <span className="text-xs font-black uppercase tracking-widest text-brand">
