@@ -77,11 +77,18 @@ describe("RecoveryReceipt — renders", () => {
 describe("RecoveryReceipt — zero state", () => {
   it("shows the mark-a-job-as-won prompt when nothing recovered this month", () => {
     render(React.createElement(RecoveryReceipt, props()));
+    // Mobile-polished short copy.
     expect(
       screen.getByText(
-        /Mark a job as won and this receipt will show exactly how many months Quote Reclaim paid for\./i,
+        /Mark a job as won to see how many months Quote Reclaim paid for\./i,
       ),
     ).toBeTruthy();
+    // The pre-polish long-block prompt is gone.
+    expect(
+      screen.queryByText(
+        /Mark a job as won and this receipt will show exactly how many months/i,
+      ),
+    ).toBeNull();
     // Does NOT claim it paid for anything yet.
     expect(screen.queryByText(/paid for Quote Reclaim for/i)).toBeNull();
   });

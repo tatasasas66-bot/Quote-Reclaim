@@ -48,11 +48,13 @@ export function RecoveryWindowAlert({
           <p className="text-xs font-black uppercase tracking-widest text-warning">
             DO THIS TODAY
           </p>
-          <p className="mt-1 text-2xl font-black text-ink-strong">
-            Start with the highest-value quiet quote that still has a real shot.
-            Work that one before you chase anything new.
+          <p className="mt-1 text-xl font-black leading-tight text-ink-strong sm:text-2xl">
+            Work the highest-value quiet quote first.
           </p>
-          <p className="mt-1 text-sm leading-6 text-ink">
+          <p className="mt-1 text-sm leading-6 text-ink-muted">
+            Start where the money and timing still have a real shot.
+          </p>
+          <p className="mt-2 text-sm leading-6 text-ink">
             <span className="font-bold text-ink-strong">{displayName}</span> ·{" "}
             {displayTrade} ·{" "}
             <span className="font-bold text-ink-strong">

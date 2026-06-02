@@ -33,8 +33,13 @@ describe("A1: Sign out button", () => {
     expect(signOutRoute).toMatch(/redirect[\s\S]*?\/sign-in/);
   });
 
-  it("is styled as a quiet text link (ghost variant, muted text)", () => {
-    expect(dashboard).toMatch(/variant="ghost"[\s\S]*?Sign out/);
+  it("is styled as a quiet text link (small, muted text — quieter than ghost Button)", () => {
+    // Mobile polish pass: Sign out is now an even quieter plain `<button>`
+    // styled as a tiny text link, never a sized Button that competes with
+    // Upgrade for visual weight.
+    expect(dashboard).toMatch(
+      /<button\s+type="submit"[\s\S]*?text-xs[\s\S]*?text-ink-muted[\s\S]*?>\s*Sign out/,
+    );
     expect(dashboard).toContain("text-ink-muted");
   });
 });

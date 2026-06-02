@@ -69,22 +69,43 @@ export function describeActivity(e: ActivityEvent): {
   }
 }
 
+/**
+ * Render-time dedup: collapse repeated "Recovery plan built for X" events down
+ * to one per quote so a single edit that fires the plan-built event multiple
+ * times never floods the feed. Pure filter — historical events are preserved
+ * in the database, only the visible list is condensed. Newest-first ordering
+ * means the most recent plan-built per quote is the one kept.
+ */
+export function collapsePlanBuiltDuplicates(
+  events: ActivityEvent[],
+): ActivityEvent[] {
+  const seenForQuote = new Set<string>();
+  return events.filter((e) => {
+    if (e.event_type !== "followup_generated") return true;
+    const key = e.quote_id ?? e.id;
+    if (seenForQuote.has(key)) return false;
+    seenForQuote.add(key);
+    return true;
+  });
+}
+
 export function ActivityFeedView({ events }: { events: ActivityEvent[] }) {
+  const visibleEvents = collapsePlanBuiltDuplicates(events);
   return (
     <section className="rounded-lg border border-line-subtle bg-surface-1 p-5">
       <div className="mb-4 flex items-baseline justify-between">
         <h2 className="text-xs font-semibold uppercase tracking-widest text-ink-muted">
           Activity
         </h2>
-        <span className="text-xs text-ink-muted">Last {events.length}</span>
+        <span className="text-xs text-ink-muted">Last {visibleEvents.length}</span>
       </div>
-      {events.length === 0 ? (
+      {visibleEvents.length === 0 ? (
         <p className="text-sm text-ink-muted">
           Activity will appear here as Quote Reclaim works in the background.
         </p>
       ) : (
         <ol className="grid gap-3">
-          {events.map((e) => {
+          {visibleEvents.map((e) => {
             const { text, tone } = describeActivity(e);
             const dot =
               tone === "success"

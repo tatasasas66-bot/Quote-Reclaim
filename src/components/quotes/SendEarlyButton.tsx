@@ -55,7 +55,7 @@ export function SendEarlyButton({ reminderId, disabled, messageType = "sms" }: P
         loading={state === "pending"}
         onClick={handleClick}
       >
-        Send early
+        Send today
       </Button>
       {state === "error" && errorMsg ? (
         <p role="alert" className="text-xs text-danger">

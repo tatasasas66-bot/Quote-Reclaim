@@ -76,7 +76,7 @@ export function RecoveryReceipt({
         </div>
         <p className="mt-2 text-sm leading-6 text-ink-muted">
           {!recoveredPositive
-            ? "Mark a job as won and this receipt will show exactly how many months Quote Reclaim paid for."
+            ? "Mark a job as won to see how many months Quote Reclaim paid for."
             : monthsPaidThisMonth >= 1
               ? `This month paid for Quote Reclaim for ${monthsPaidThisMonth} ${monthsWord(monthsPaidThisMonth)}.`
               : "This month started covering your Quote Reclaim subscription."}
