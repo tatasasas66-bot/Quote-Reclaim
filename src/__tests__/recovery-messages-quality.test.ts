@@ -243,6 +243,57 @@ describe("21-25. each day fulfils its strategic role", () => {
 });
 
 // ---------------------------------------------------------------------------
+// Day 7 Voss variant — the no-oriented "Have you given up on …" form is the
+// most research-backed phrasing for stalled deals and must be present in the
+// variant set. It must also satisfy every existing Day 7 guardrail (no name,
+// no greeting, one question mark, trade keyword via project, length cap).
+// ---------------------------------------------------------------------------
+
+describe("Day 7 carries the Chris Voss no-oriented variant", () => {
+  const sampleVars = vars("Jane", "Mike", "Roofing");
+
+  it("at least one Day 7 variant opens with the verbatim Voss frame", () => {
+    const rendered = SEQUENCE_VARIANTS[7].map((b) => b(sampleVars));
+    const hasVoss = rendered.some((m) => /^Have you given up on /.test(m));
+    expect(hasVoss).toBe(true);
+  });
+
+  it("the Voss variant carries no name, no greeting, exactly one question, trade keyword", () => {
+    const voss = SEQUENCE_VARIANTS[7].map((b) => b(sampleVars)).find((m) =>
+      /^Have you given up on /.test(m),
+    );
+    expect(voss).toBeDefined();
+    if (!voss) return;
+    expect(voss).not.toMatch(/^(Hi|Hey)\b/);
+    expect(voss).not.toContain("Jane");
+    expect((voss.match(/\?/g) ?? []).length).toBe(1);
+    expect(voss.toLowerCase()).toContain("roofing");
+    expect(voss.length).toBeLessThanOrEqual(220);
+    // Must still satisfy the close-the-loop guarantees so it passes the
+    // existing day-7 strategic intent test.
+    expect(/keep .* (open|active)|leave .* open|on the board/.test(voss.toLowerCase())).toBe(true);
+    expect(/close it out|close it out for now|mark it closed/.test(voss.toLowerCase())).toBe(true);
+  });
+
+  it("the Voss variant validates and renders for every supported trade", () => {
+    for (const trade of TRADES) {
+      const v = vars("Jane", "Mike", trade);
+      const voss = SEQUENCE_VARIANTS[7].map((b) => b(v)).find((m) =>
+        /^Have you given up on /.test(m),
+      );
+      expect(voss).toBeDefined();
+      if (!voss) continue;
+      const res = validateMessage(voss, {
+        firstName: "Jane",
+        trade,
+        followupNumber: 3,
+      });
+      expect(res.reasons).toEqual([]);
+    }
+  });
+});
+
+// ---------------------------------------------------------------------------
 // 26. Trade/project keyword appears in EVERY message (Day 1-30)
 // ---------------------------------------------------------------------------
 

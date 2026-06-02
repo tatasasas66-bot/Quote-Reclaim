@@ -276,12 +276,16 @@ describe("Fallback messages use the uploaded SMS research sequence", () => {
     expect(aiFallbacks).not.toMatch(/releasing it/);
   });
 
-  it("Day 7 is a calm Close-the-Loop ask, not a Voss-style takeaway", () => {
+  it("Day 7 carries calm Close-the-Loop variants plus the Voss no-oriented form", () => {
+    // The primary calm close-the-loop frames remain (v0 is canonical).
     expect(aiFallbacks).toMatch(/Should I keep \$\{project\} open/);
     expect(aiFallbacks).toMatch(/close it out for now/);
     expect(aiFallbacks).toMatch(/Either way is fine/);
-    // The previous "Have you given up" / "Just need a yes or no" wording is gone.
-    expect(aiFallbacks).not.toMatch(/Have you given up on/);
+    // v4 is the research-backed Chris Voss "Have you given up on…?" no-oriented
+    // form — the single most evidence-backed phrasing for stalled-deal recovery
+    // (Never Split the Difference). Documented as a deliberate addition.
+    expect(aiFallbacks).toMatch(/Have you given up on \$\{project\}/);
+    // The blunt, pressuring "Just need a yes or no" phrasing stays banned.
     expect(aiFallbacks).not.toMatch(/Just need a yes or no/);
   });
 

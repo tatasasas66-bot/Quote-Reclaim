@@ -8,7 +8,35 @@ import type { RecoveryMessage, RecoveryContext } from "./generate-recovery-plan"
  * (Estimate Check / Schedule Check / Close-the-Loop / Options Check /
  * Final Closeout). Variation is seeded from the quote so the same quote
  * always renders the same phrasing while different quotes spread across
- * the four variants per day.
+ * the variants per day (4–5 per day).
+ *
+ * Cadence rationale (1 / 3 / 7 / 14 / 30) — research-locked:
+ *   Day 1  — 97% of homeowners expect a contractor response within a week;
+ *            54% within 1–2 days (Roofing Contractor 2024/2025 survey). A
+ *            first follow-up inside 24h captures the highest reply yield
+ *            (~25%) per cold-email benchmarks (Belkins 2025).
+ *   Day 3  — Hits the documented 2–3 day inter-touch optimum (Belkins,
+ *            Martal). Closer is intrusive; further dilutes momentum.
+ *   Day 7  — One-week mental anchor; matches the 1–3 week quote-to-job
+ *            window homeowners describe (Roofing Contractor 2025).
+ *   Day 14 — Lets price-shoppers finish the 2–3 bid comparison window the
+ *            same survey reports. Aligns with the takeaway after a multi-
+ *            week stall.
+ *   Day 30 — Wide tail spacing. Spam complaints triple after 4+ rapid
+ *            follow-ups (Belkins). The end-of-month closeout matches the
+ *            mental model contractors actually use.
+ *
+ * Strategic arc per touch (every message is a real-contractor sentence
+ * disguising the intent — never naming the psychology):
+ *   1 Estimate Check  — surface a confusion the homeowner hid (clarity).
+ *   2 Schedule Check  — operational seriousness without fake scarcity.
+ *   3 Close-the-Loop  — give a safe "no" so the awkward silence can break
+ *                       (Voss no-oriented question; v4 is the verbatim
+ *                       "Have you given up on…?" form).
+ *   4 Options Check   — normalize that price/timing/scope can stall; offer
+ *                       to walk through options without cutting corners
+ *                       (never imply discount).
+ *   5 Final Closeout  — respectful withdrawal; declarative; door open.
  */
 
 const ALIASES: Record<string, string> = {
@@ -308,8 +336,12 @@ const DAY3_VARIANTS: ReadonlyArray<(v: VariantVars) => string> = [
     `${firstName}, I'm organizing upcoming ${tradeWord} work. Do you still want me to keep this one active?`,
 ];
 
-// DAY 7 — Close-the-Loop. No greeting word. Name optional (v0–v3 omit it).
-// Easy yes/no, no pressure.
+// DAY 7 — Close-the-Loop. No greeting word. Name optional (variants omit it).
+// Easy yes/no, no pressure. v4 is the Chris Voss "Have you given up on…?"
+// no-oriented question — the single most evidence-backed phrasing for stalled
+// deals (Voss, Never Split the Difference). It keeps the "on the board" /
+// "close it out" structure that satisfies the validator while leading with the
+// pure no-oriented hook.
 const DAY7_VARIANTS: ReadonlyArray<(v: VariantVars) => string> = [
   ({ project }) =>
     `Should I keep ${project} open, or close it out for now? Either way is fine.`,
@@ -319,6 +351,8 @@ const DAY7_VARIANTS: ReadonlyArray<(v: VariantVars) => string> = [
     `Should I leave ${project} open, or mark it closed for now? No pressure either way.`,
   ({ project }) =>
     `Do you still want me to keep ${project} on the board, or should I close it out for now?`,
+  ({ project }) =>
+    `Have you given up on ${project}, or should I keep it on the board? Either's fine — I'll close it out if you want me to.`,
 ];
 
 // DAY 14 — Options Check. Useful, never discounting. Options/scope frame.
@@ -395,19 +429,22 @@ export function variantSeed(ctx: RecoveryContext): string {
 }
 
 /**
- * Deterministic variant index (0-3) for a seed + day. The same quote always
- * maps to the same phrasing (stable across reloads and regenerations); two
- * different quotes spread across the four phrasings.
+ * Deterministic variant index for a seed + day. The same quote always maps to
+ * the same phrasing (stable across reloads and regenerations); two different
+ * quotes spread across the available phrasings for that day.
  *
  * An empty seed returns 0 — the canonical template — which keeps server-side
- * previews and the locked exact-match tests stable.
+ * previews and the locked exact-match tests stable. The modulus uses the
+ * actual variant count per day (not a hard-coded 4) so adding evidence-backed
+ * variants like the Voss no-oriented form on Day 7 doesn't drift selection.
  */
 export function pickVariant(
   seed: string | null | undefined,
   day: CadenceDay,
 ): number {
   if (!seed) return 0;
-  return hashString(`${seed}:${day}`) % 4;
+  const len = SEQUENCE_VARIANTS[day].length;
+  return hashString(`${seed}:${day}`) % len;
 }
 
 export function researchSequenceMessages(ctx: RecoveryContext): {

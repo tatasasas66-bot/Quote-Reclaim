@@ -206,15 +206,18 @@ describe("researchSequenceMessages variant selection", () => {
 });
 
 // ---------------------------------------------------------------------------
-// All 20 variants (5 days × 4) pass length / ban / emoji / structure checks
+// Every variant across the arc passes length / ban / emoji / structure checks.
+// Days 1/3/14/30 expose 4 variants; Day 7 carries 5 (the 5th is the Chris
+// Voss "Have you given up on…?" no-oriented form — the most research-backed
+// stalled-deal phrasing). Total ≥20 variants across the sequence.
 // ---------------------------------------------------------------------------
 
-describe("all 20 message variants pass validation", () => {
+describe("all message variants pass validation", () => {
   for (const day of [1, 3, 7, 14, 30] as const) {
     const builders = SEQUENCE_VARIANTS[day];
 
-    it(`day ${day} exposes exactly 4 variants`, () => {
-      expect(builders).toHaveLength(4);
+    it(`day ${day} exposes at least 4 variants`, () => {
+      expect(builders.length).toBeGreaterThanOrEqual(4);
     });
 
     for (let index = 0; index < builders.length; index++) {
