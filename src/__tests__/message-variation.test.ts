@@ -333,7 +333,7 @@ describe("v0 of every day stays verbatim — AI exact-match gate intact", () => 
 
   it("Day 3 v0 is the new Schedule Check (no fake slot scarcity)", () => {
     expect(SEQUENCE_VARIANTS[3][0](vars)).toBe(
-      "Jane, I'm lining up the roofing schedule. Should I keep this on the active list, or move it off for now?",
+      "Jane, I'm lining up the roofing schedule. Should I keep this on the active list, or move it off my list?",
     );
   });
 

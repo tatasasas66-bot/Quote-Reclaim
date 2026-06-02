@@ -77,7 +77,11 @@ const ALIASES: Record<string, string> = {
 const PROJECT_LABELS: Record<string, string> = {
   roofing: "the roofing estimate",
   plumbing: "the plumbing estimate",
-  hvac: "the HVAC estimate",
+  // HVAC reads as a noun-stack when an equipment detail is appended
+  // ("the HVAC estimate for the furnace"). The ICP is replacement/install,
+  // so the richer label carries the specificity itself and HVAC is excluded
+  // from per-job detail injection below.
+  hvac: "the HVAC replacement estimate",
   electrical: "the electrical estimate",
   remodeling: "the remodel estimate",
   "general contracting": "the project estimate",
@@ -171,8 +175,10 @@ const JOB_NOUNS: Record<string, ReadonlyArray<[RegExp, string]>> = {
     [/\b(flat roof|tpo|epdm)\b/, "flat roof"],
     [/\bgutter/, "gutters"],
     [/\bshingle/, "shingle roof"],
-    [/\b(tear[- ]?off|re-?roof|reroof|new roof|full roof|replace)\b/, "roof replacement"],
-    [/\b(leak|repair)\b/, "roof repair"],
+    // "new roof" / "repair" avoid the "roofing estimate for the roof
+    // replacement" double-"roof" redundancy the previous labels produced.
+    [/\b(tear[- ]?off|re-?roof|reroof|new roof|full roof|replace)\b/, "new roof"],
+    [/\b(leak|repair)\b/, "repair"],
   ],
   plumbing: [
     [/\b(water heater|tankless)\b/, "water heater"],
@@ -182,13 +188,10 @@ const JOB_NOUNS: Record<string, ReadonlyArray<[RegExp, string]>> = {
     [/\b(faucet|fixture|sink|toilet|shower)\b/, "fixture work"],
     [/\bleak\b/, "leak repair"],
   ],
-  hvac: [
-    [/\bheat pump\b/, "heat pump"],
-    [/\bmini[- ]?split\b/, "mini-split"],
-    [/\bfurnace\b/, "furnace"],
-    [/\b(a\/c|\bac\b|air ?condition)\b/, "AC"],
-    [/\bduct/, "ductwork"],
-  ],
+  // HVAC intentionally has no per-job detail map: equipment nouns (furnace,
+  // AC, heat pump) stack awkwardly behind "the HVAC … estimate". The richer
+  // "the HVAC replacement estimate" label already carries the specificity, so
+  // jobDetail("HVAC", …) returns null and the plain label is used everywhere.
   electrical: [
     [/\bpanel\b/, "panel upgrade"],
     [/\bre-?wir|wiring\b/, "rewire"],
@@ -320,18 +323,18 @@ const DAY1_VARIANTS: ReadonlyArray<(v: VariantVars) => string> = [
   ({ firstName, projectDetail }) =>
     `Hey ${firstName}, I reviewed ${projectDetail} again on my end. Was anything unclear, or is there a part you want me to walk through?`,
   ({ firstName, projectDetail }) =>
-    `Hey ${firstName}, I had another look at ${projectDetail}. If a number or a detail is in the way, I can break it down — what is the holdup?`,
+    `Hey ${firstName}, I had another look at ${projectDetail}. If a number or a detail is in the way, I can break it down — what should I clarify?`,
 ];
 
 // DAY 3 — Schedule Check. "{FirstName}, ..." opener, no greeting word.
 // Operational, never claims the contractor is releasing or holding a slot.
 const DAY3_VARIANTS: ReadonlyArray<(v: VariantVars) => string> = [
   ({ firstName, tradeWord }) =>
-    `${firstName}, I'm lining up the ${tradeWord} schedule. Should I keep this on the active list, or move it off for now?`,
+    `${firstName}, I'm lining up the ${tradeWord} schedule. Should I keep this on the active list, or move it off my list?`,
   ({ firstName, tradeWord }) =>
-    `${firstName}, I'm sorting the next round of ${tradeWord} work. Should I keep your estimate active, or set it aside for now?`,
+    `${firstName}, I'm sorting the next round of ${tradeWord} work. Should I keep your estimate active, or set it aside?`,
   ({ firstName, project }) =>
-    `${firstName}, should I keep ${project} on my list for the next opening, or pause it for now?`,
+    `${firstName}, should I keep ${project} on my list for the next opening, or pause it?`,
   ({ firstName, tradeWord }) =>
     `${firstName}, I'm organizing upcoming ${tradeWord} work. Do you still want me to keep this one active?`,
 ];
@@ -346,11 +349,11 @@ const DAY7_VARIANTS: ReadonlyArray<(v: VariantVars) => string> = [
   ({ project }) =>
     `Should I keep ${project} open, or close it out for now? Either way is fine.`,
   ({ project }) =>
-    `Do you want me to keep ${project} active, or should I close it out on my end for now?`,
+    `Do you want me to keep ${project} active, or should I close it out on my end?`,
   ({ project }) =>
-    `Should I leave ${project} open, or mark it closed for now? No pressure either way.`,
+    `Should I leave ${project} open, or mark it closed? No rush on my end.`,
   ({ project }) =>
-    `Do you still want me to keep ${project} on the board, or should I close it out for now?`,
+    `Do you still want me to keep ${project} on the board, or should I close it out?`,
   ({ project }) =>
     `Have you given up on ${project}, or should I keep it on the board? Either's fine — I'll close it out if you want me to.`,
 ];
@@ -375,7 +378,7 @@ const DAY30_VARIANTS: ReadonlyArray<(v: VariantVars) => string> = [
   ({ firstName, projectDetail }) =>
     `${firstName}, I'll close out ${projectDetail} after this. No hard feelings. If anything changes later, reach out and I'll pick it back up.`,
   ({ firstName, projectDetail }) =>
-    `${firstName}, I'm going to close ${projectDetail} on my end for now. If you decide to revisit it later, just reach out.`,
+    `${firstName}, I'm going to close ${projectDetail} on my end. If you decide to revisit it later, just reach out.`,
   ({ firstName, projectDetail }) =>
     `${firstName}, I'll mark ${projectDetail} closed for now. No problem either way — if it comes back up later, I can reopen it.`,
   ({ firstName, projectDetail }) =>
@@ -384,7 +387,8 @@ const DAY30_VARIANTS: ReadonlyArray<(v: VariantVars) => string> = [
 
 /**
  * All variant builders keyed by day. Exported so tests can enumerate and
- * validate all 20 (5 days × 4 variants).
+ * validate all 21 (Days 1/3/14/30 carry 4 variants each; Day 7 carries 5,
+ * the extra being the Voss no-oriented form).
  */
 export const SEQUENCE_VARIANTS: Record<
   1 | 3 | 7 | 14 | 30,

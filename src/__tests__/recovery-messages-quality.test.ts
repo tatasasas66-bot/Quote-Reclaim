@@ -441,13 +441,17 @@ describe("messages stay concise — every message under 220 chars across all tra
 // ---------------------------------------------------------------------------
 
 describe("job-aware specificity (jobDetail)", () => {
+  // HVAC is intentionally excluded: equipment nouns stack awkwardly behind
+  // "the HVAC … estimate", so HVAC carries its specificity in the richer
+  // "the HVAC replacement estimate" label instead of per-job injection. See
+  // the dedicated HVAC test below.
   const KNOWN: Array<{ trade: string; desc: string; detail: string }> = [
     { trade: "Plumbing", desc: "Replace water heater", detail: "water heater" },
     { trade: "Electrical", desc: "Panel upgrade to 200A", detail: "panel upgrade" },
     { trade: "Remodeling", desc: "Kitchen remodel", detail: "kitchen" },
     { trade: "General Contracting", desc: "Deck + sunroom addition", detail: "deck" },
-    { trade: "HVAC", desc: "Replace 3-ton AC + furnace", detail: "furnace" },
     { trade: "Roofing", desc: "Re-roof, asphalt shingles", detail: "shingle roof" },
+    { trade: "Roofing", desc: "Full tear-off and replace", detail: "new roof" },
     { trade: "Concrete", desc: "New driveway pour", detail: "driveway" },
     { trade: "Painting", desc: "Exterior repaint", detail: "exterior" },
     { trade: "Landscaping", desc: "New paver patio", detail: "patio" },
@@ -544,5 +548,32 @@ describe("job-aware specificity (jobDetail)", () => {
       quoteId: "stable-detail-1",
     };
     expect(researchSequenceMessages(ctx)).toEqual(researchSequenceMessages(ctx));
+  });
+
+  it("HVAC uses the clean 'replacement estimate' label and never stacks an equipment noun", () => {
+    // jobDetail returns null for HVAC so no "for the furnace / AC / heat pump"
+    // ever appears — the noun stack that read awkwardly is gone.
+    expect(jobDetail("HVAC", "Replace 3-ton AC + furnace")).toBeNull();
+    expect(jobDetail("HVAC", "Install heat pump")).toBeNull();
+
+    const seq = researchSequenceMessages({
+      firstName: "John",
+      contractorFirstName: "Mike",
+      trade: "HVAC",
+      estimateAmount: 12000,
+      jobDescription: "Replace 3-ton AC + furnace",
+      quoteId: "hvac-clean-1",
+    });
+    // Day 3 deliberately uses the bare trade word ("HVAC") for the schedule
+    // frame, so the full label only appears on the project-anchored touches.
+    for (const day of ["day1", "day7", "day14", "day30"] as const) {
+      expect(seq[day]).toContain("HVAC replacement estimate");
+    }
+    // No awkward equipment-noun stack on ANY touch.
+    for (const day of ["day1", "day3", "day7", "day14", "day30"] as const) {
+      expect(seq[day]).not.toMatch(
+        /estimate for the (furnace|ac|heat pump|mini-split|ductwork)/i,
+      );
+    }
   });
 });
