@@ -204,7 +204,8 @@ describe("submitOneTapReply server action", () => {
   });
 
   it("option_selected verifies the option is active AND belongs to this quote", () => {
-    expect(replyActions).toMatch(/is_active.*quote_id|quote_id.*is_active/s);
+    // `[\s\S]` matches across newlines without the es2018-only `/s` dotAll flag.
+    expect(replyActions).toMatch(/is_active[\s\S]*quote_id|quote_id[\s\S]*is_active/);
   });
 
   it("returns a single generic message on every gate failure", () => {

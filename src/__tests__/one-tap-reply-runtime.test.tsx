@@ -256,11 +256,14 @@ describe("ReplyForm — contractor-approved options", () => {
 // ---------------------------------------------------------------------------
 
 describe("OneTapReplyCard — contractor states", () => {
+  // Not `as const`: the component prop `options` is a mutable `ReplyOption[]`,
+  // so the fixture's empty array must stay mutable (`never[]`) rather than
+  // becoming `readonly []`.
   const baseProps = {
     quoteId: "q-1",
     clientFirstName: "Jane",
     options: [],
-  } as const;
+  };
 
   it("empty state explains the feature and exposes the Copy/Manage actions", () => {
     render(
