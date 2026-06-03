@@ -9,6 +9,9 @@ import { AuthForm } from "@/components/onboarding/AuthForm";
 const mocks = vi.hoisted(() => ({
   signInWithOtp: vi.fn(),
   signInWithOAuth: vi.fn(),
+  // The new first-attempt OAuth recovery hook reads the local session on
+  // mount; the default is "no session" so the existing flow assertions hold.
+  getSession: vi.fn(async () => ({ data: { session: null }, error: null })),
 }));
 
 const routeState = vi.hoisted(() => ({
@@ -24,6 +27,7 @@ vi.mock("@/lib/supabase/browser", () => ({
     auth: {
       signInWithOtp: mocks.signInWithOtp,
       signInWithOAuth: mocks.signInWithOAuth,
+      getSession: mocks.getSession,
     },
   }),
 }));

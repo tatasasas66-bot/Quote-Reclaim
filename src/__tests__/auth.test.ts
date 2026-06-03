@@ -67,13 +67,16 @@ describe("AuthForm contract", () => {
 
 describe("Auth callback route", () => {
   const source = readSource("../app/api/auth/callback/route.ts");
+  // The open-redirect guard now lives in a shared helper.
+  const safeRedirect = readSource("../lib/auth/safe-redirect.ts");
 
-  it("rejects protocol-relative redirects (//evil.com)", () => {
-    expect(source).toContain('next.startsWith("//")');
+  it("delegates redirect safety to the shared safeRedirectPath helper", () => {
+    expect(source).toContain("safeRedirectPath");
+    expect(safeRedirect).toContain('next.startsWith("//")');
   });
 
   it("falls back to /dashboard for unsafe targets", () => {
-    expect(source).toContain('"/dashboard"');
+    expect(safeRedirect).toContain('"/dashboard"');
   });
 
   it("exchanges the code for a session", () => {
@@ -82,6 +85,15 @@ describe("Auth callback route", () => {
 
   it("redirects to /sign-in with error=missing_code when no code is supplied", () => {
     expect(source).toContain("error=missing_code");
+  });
+
+  it("rescues an already-signed-in caller when exchange fails (never strand a real session)", () => {
+    // If exchangeCodeForSession errors but the request cookies already carry a
+    // valid session (duplicate / racing callback), the route MUST send the user
+    // into the app instead of to /sign-in?error=...
+    expect(source).toMatch(
+      /exchangeCodeForSession[\s\S]*?if \(error\)[\s\S]*?getUser\(\)[\s\S]*?return NextResponse\.redirect\(new URL\(next/,
+    );
   });
 });
 
@@ -203,8 +215,9 @@ describe("Google OAuth contract (Phase 2)", () => {
     expect(formSource).toContain("GOOGLE_AUTH_ENABLED");
   });
 
-  it("auth callback blocks protocol-relative open-redirect targets", () => {
+  it("auth callback blocks protocol-relative open-redirect targets via the shared helper", () => {
+    const safeRedirectSource = readSource("../lib/auth/safe-redirect.ts");
     expect(callbackSource).toContain("safeRedirectPath");
-    expect(callbackSource).toContain('next.startsWith("//")');
+    expect(safeRedirectSource).toContain('next.startsWith("//")');
   });
 });

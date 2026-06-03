@@ -4,6 +4,7 @@ import * as React from "react";
 import { useSearchParams } from "next/navigation";
 import { Button, Input } from "@/components/ui";
 import { createBrowserSupabaseClient } from "@/lib/supabase/browser";
+import { safeRedirectPath } from "@/lib/auth/safe-redirect";
 
 type AuthFormProps = {
   mode: "sign-in" | "sign-up";
@@ -116,8 +117,14 @@ const GOOGLE_AUTH_ENABLED =
 
 export function AuthForm({ mode }: AuthFormProps) {
   const searchParams = useSearchParams();
-  const callbackError = describeCallbackError(searchParams.get("error"));
   const auditToken = searchParams.get("audit_token") ?? undefined;
+  const rawCallbackError = describeCallbackError(searchParams.get("error"));
+
+  // Suppressed once a client-side session is detected, so a stale
+  // `?error=auth_callback_failed` left over from a first-attempt OAuth race is
+  // never shown to a user who is in fact already signed in.
+  const [hasSession, setHasSession] = React.useState(false);
+  const callbackError = hasSession ? null : rawCallbackError;
 
   const [email, setEmail] = React.useState("");
   const [sentEmail, setSentEmail] = React.useState("");
@@ -153,6 +160,43 @@ export function AuthForm({ mode }: AuthFormProps) {
     const id = window.setInterval(() => setNow(Date.now()), 1000);
     return () => window.clearInterval(id);
   }, [resendAvailableAt]);
+
+  // First-attempt OAuth recovery: if a Supabase session cookie already exists
+  // when the auth page mounts (e.g., the callback succeeded server-side but
+  // the browser is showing a stale `/sign-in?error=...` URL), hard-navigate to
+  // the dashboard. Hard navigation (vs router.replace) ensures the dashboard
+  // server render reads the freshly-written cookies. No token is logged.
+  React.useEffect(() => {
+    let cancelled = false;
+    let supabase: ReturnType<typeof createBrowserSupabaseClient>;
+    try {
+      supabase = createBrowserSupabaseClient();
+    } catch {
+      return;
+    }
+    supabase.auth
+      .getSession()
+      .then(({ data, error }) => {
+        if (cancelled || error) return;
+        if (data.session?.user) {
+          setHasSession(true);
+          const next = searchParams.get("next");
+          const target = safeRedirectPath(
+            auditToken && !next
+              ? `/dashboard?audit_token=${encodeURIComponent(auditToken)}`
+              : next,
+          );
+          window.location.replace(target);
+        }
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+    // Intentionally one-shot on mount: the auth surface re-renders are state-
+    // driven, and getSession() is a fast local-cookie read.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   function startResendCooldown() {
     const next = Date.now() + RESEND_COOLDOWN_SECONDS * 1000;

@@ -1,22 +1,8 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
+import { safeRedirectPath } from "@/lib/auth/safe-redirect";
 
 export const dynamic = "force-dynamic";
-
-/**
- * Rejects open-redirect attempts. Anything that doesn't start with a single
- * forward slash falls back to /dashboard.
- *
- *   ?next=/dashboard         -> /dashboard
- *   ?next=//evil.com         -> /dashboard  (protocol-relative)
- *   ?next=https://evil.com   -> /dashboard
- *   ?next=javascript:alert() -> /dashboard
- */
-function safeRedirectPath(next: string | null): string {
-  if (!next) return "/dashboard";
-  if (!next.startsWith("/") || next.startsWith("//")) return "/dashboard";
-  return next;
-}
 
 function safeSupabaseError(err: unknown): { name?: string; code?: string; message?: string; status?: number } {
   if (!err || typeof err !== "object") return {};
@@ -64,6 +50,18 @@ export async function GET(request: NextRequest) {
         status: safe.status,
         path: requestPath,
       });
+      // Rescue: a valid session may already exist on these cookies (e.g., a
+      // duplicate callback request, a back/refresh that replayed a one-time
+      // code, or a parallel attempt that already completed). If so, never
+      // strand the signed-in user on an error page — send them into the app.
+      try {
+        const { data: userData } = await supabase.auth.getUser();
+        if (userData.user) {
+          return NextResponse.redirect(new URL(next, request.url));
+        }
+      } catch {
+        // getUser failing is fine here — we just fall through to the error.
+      }
       return NextResponse.redirect(
         new URL(`/sign-in?error=${callbackErrorCode(error)}`, request.url),
       );
