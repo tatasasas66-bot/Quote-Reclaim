@@ -259,31 +259,31 @@ export function computeQuietSignal(s: SilenceSignals): QuietSignal | null {
     }
   }
 
-  // R6a — Long-quiet AND no engagement data: this is *real* silence, not
-  // just initial quiet. Don't pretend it's calm — name it honestly and give
-  // the contractor an action-oriented next move.
+  // R6a — At Risk / Critical AND no engagement data: this is *real* silence,
+  // not just initial quiet. Don't pretend it's calm — name it honestly and
+  // give the contractor an action-oriented next move.
   //
-  // Both branches REQUIRE noEngagement (open=0 AND click=0). A 28-day quote
-  // with two clicks is not "no signal yet" — there IS signal, it just sits
-  // outside R5's 3-21 day window, and the calm fallback below is the right
-  // answer for it.
+  // Threshold is daysSilent >= 7, which is exactly the At Risk band boundary
+  // in getRecoveryScore (fresh 0-2, cooling 3-6, at_risk 7-13, critical 14+).
+  // So an 11-day at-risk quote with no opens/clicks/replies can never read
+  // "Normal silence / Early" again. REQUIRES noEngagement: a quote with clicks
+  // has signal and routes to R5 or the calm fallback, not here.
   const noEngagement = s.openCount === 0 && s.clickCount === 0;
-  const longQuiet = s.daysSilent >= 14 && noEngagement;
-  const workedWithoutSignal =
-    s.followupsSent >= 2 && s.daysSilent >= 7 && noEngagement;
-  if (longQuiet || workedWithoutSignal) {
+  const atRiskOrWorse = s.daysSilent >= 7;
+  if (atRiskOrWorse && noEngagement) {
     return {
       reason: "no_signal_yet",
       reasonLabel: REASON_LABELS.no_signal_yet,
-      // Strength stays low — we explicitly don't have data. The card renders
-      // "Not enough data" instead of "Early" for this reason.
-      strength: "early",
+      // "medium" only drives the card's warning-toned border/accent so the
+      // card does not look calm next to an At Risk badge. The visible strength
+      // text is overridden to "Not enough data" by the card for this reason —
+      // we never claim a real confidence read.
+      strength: "medium",
       evidence: [
         daysSilentSentence(s.daysSilent),
         "No open, click, or reply signal is available yet.",
       ],
-      recommendedMove:
-        "Send the close-the-loop message today. Let the homeowner choose instead of stay silent.",
+      recommendedMove: "Send the next follow-up today.",
       recommendedFollowupNumber: 3,
       confidence: 0,
     };

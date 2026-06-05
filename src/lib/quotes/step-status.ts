@@ -1,4 +1,8 @@
 import type { ReminderRow } from "@/lib/quotes/repo";
+import {
+  formatScheduleDateTime,
+  formatScheduleTime,
+} from "@/lib/quotes/business-hours";
 
 export type StepStatus =
   | "scheduled"
@@ -40,7 +44,7 @@ export function computeStepDisplay(
   if (reminder.sent) {
     return {
       status: "sent",
-      label: `Sent ${formatTime(reminder.sent_at)}`,
+      label: `Sent ${formatScheduleTime(reminder.sent_at)}`,
       tone: "success",
     };
   }
@@ -49,7 +53,7 @@ export function computeStepDisplay(
   if (!due) {
     return {
       status: "scheduled",
-      label: `Scheduled ${formatDate(reminder.send_at)}`,
+      label: `Scheduled ${formatScheduleDateTime(reminder.send_at)}`,
       tone: "neutral",
     };
   }
@@ -62,23 +66,7 @@ export function computeStepDisplay(
   }
   return {
     status: "scheduled",
-    label: `Scheduled ${formatDate(reminder.send_at)}`,
+    label: `Scheduled ${formatScheduleDateTime(reminder.send_at)}`,
     tone: "neutral",
   };
-}
-
-function formatTime(iso: string | null): string {
-  if (!iso) return "";
-  return new Intl.DateTimeFormat("en-US", {
-    hour: "numeric",
-    minute: "2-digit",
-  }).format(new Date(iso));
-}
-
-function formatDate(iso: string): string {
-  return new Intl.DateTimeFormat("en-US", {
-    month: "short",
-    day: "numeric",
-    hour: "numeric",
-  }).format(new Date(iso));
 }

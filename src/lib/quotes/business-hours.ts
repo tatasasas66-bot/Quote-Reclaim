@@ -12,6 +12,36 @@ export const DEFAULT_TIMEZONE = "America/Chicago";
 export const DEFAULT_SEND_HOUR = 9; // 09:00 local
 
 /**
+ * THE single quote-detail schedule formatter. Header ("Next follow-up
+ * sends"), per-message badge ("Scheduled …"), and footer ("Scheduled …")
+ * MUST all call this so they never disagree (the badge used to render UTC
+ * "2 PM" next to a CT "9:00 AM" footer). Always America/Chicago for now.
+ *
+ *   → "May 28, 9:00 AM"
+ */
+export function formatScheduleDateTime(value: string | Date): string {
+  const date = typeof value === "string" ? new Date(value) : value;
+  return date.toLocaleString("en-US", {
+    timeZone: DEFAULT_TIMEZONE,
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  });
+}
+
+/** Time-only variant for "Sent …" labels. Same timezone discipline. */
+export function formatScheduleTime(value: string | Date | null): string {
+  if (!value) return "";
+  const date = typeof value === "string" ? new Date(value) : value;
+  return date.toLocaleString("en-US", {
+    timeZone: DEFAULT_TIMEZONE,
+    hour: "numeric",
+    minute: "2-digit",
+  });
+}
+
+/**
  * Round `date` to {DEFAULT_SEND_HOUR}:00 local in {DEFAULT_TIMEZONE}. Pure
  * Date + Intl math — no library. Anchors every generated send_at to a
  * sensible business-hour window so the detail page never displays an

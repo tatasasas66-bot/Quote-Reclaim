@@ -21,6 +21,7 @@ import { fileURLToPath } from "node:url";
 
 import {
   normalizeToBusinessHour,
+  formatScheduleDateTime,
   DEFAULT_TIMEZONE,
   DEFAULT_SEND_HOUR,
 } from "@/lib/quotes/business-hours";
@@ -39,6 +40,7 @@ function readSource(rel: string): string {
 const detailPage = readSource("../app/(app)/quotes/[id]/page.tsx");
 const quoteActions = readSource("../components/quotes/QuoteActions.tsx");
 const quietCard = readSource("../components/quotes/QuietSignalCard.tsx");
+const stepStatusSrc = readSource("../lib/quotes/step-status.ts");
 
 // ---------------------------------------------------------------------------
 // 1 + 2. Send time: business-hour anchor, no 3 AM in the UI
@@ -100,10 +102,13 @@ describe("send_at is anchored to 09:00 America/Chicago", () => {
   });
 });
 
-describe("detail page formats send dates in Central, not UTC", () => {
-  it("formatSendDate passes timeZone: America/Chicago to toLocaleString", () => {
-    expect(detailPage).toMatch(/timeZone:\s*DISPLAY_TIMEZONE/);
-    expect(detailPage).toMatch(/DISPLAY_TIMEZONE\s*=\s*"America\/Chicago"/);
+describe("detail page formats send dates via the shared Central formatter", () => {
+  it("formatSendDate delegates to formatScheduleDateTime (no local UTC formatter)", () => {
+    expect(detailPage).toMatch(
+      /function formatSendDate[\s\S]*?return formatScheduleDateTime/,
+    );
+    // The old page-local DISPLAY_TIMEZONE/toLocaleString block is gone.
+    expect(detailPage).not.toMatch(/DISPLAY_TIMEZONE/);
   });
 });
 
@@ -128,20 +133,41 @@ function baseSignals(over: Partial<SilenceSignals> = {}): SilenceSignals {
   };
 }
 
-describe("Quiet Signal: long-quiet + no-engagement uses 'no_signal_yet' (not 'Normal silence / Early')", () => {
-  it("20 days quiet, no engagement, no replies → 'No engagement signal yet'", () => {
-    const s = computeQuietSignal(baseSignals({ daysSilent: 20 }));
+describe("Quiet Signal: At Risk / Critical + no engagement uses 'no_signal_yet' (never 'Normal silence / Early')", () => {
+  it("the reported bug: 11-day At Risk quote, no engagement → 'No engagement signal yet'", () => {
+    const s = computeQuietSignal(baseSignals({ daysSilent: 11 }));
     expect(s).not.toBeNull();
     if (!s) return;
     expect(s.reason).toBe("no_signal_yet");
     expect(s.reasonLabel).toBe("No engagement signal yet");
+    // Never the calm verdict for an at-risk quote.
+    expect(s.reason).not.toBe("normal_silence");
   });
 
-  it("the move is action-oriented (not 'Keep the default follow-up schedule')", () => {
-    const s = computeQuietSignal(baseSignals({ daysSilent: 20 }));
-    expect(s?.recommendedMove).toMatch(/close-the-loop/i);
+  it("7 days (At Risk boundary) + no engagement → no_signal_yet", () => {
+    expect(computeQuietSignal(baseSignals({ daysSilent: 7 }))?.reason).toBe(
+      "no_signal_yet",
+    );
+  });
+
+  it("20 days (Critical) + no engagement → no_signal_yet", () => {
+    expect(computeQuietSignal(baseSignals({ daysSilent: 20 }))?.reason).toBe(
+      "no_signal_yet",
+    );
+  });
+
+  it("the move is action-oriented: 'Send the next follow-up today.'", () => {
+    const s = computeQuietSignal(baseSignals({ daysSilent: 11 }));
+    expect(s?.recommendedMove).toMatch(/Send the next follow-up today/i);
     expect(s?.recommendedMove).not.toMatch(/keep the default follow-up schedule/i);
     expect(s?.recommendedFollowupNumber).toBe(3);
+  });
+
+  it("strength is not the calm 'early' tone for an at-risk no-signal quote", () => {
+    // "medium" drives a warning-toned card; the visible label is overridden
+    // to "Not enough data". Either way it must not read as the calm 'early'.
+    const s = computeQuietSignal(baseSignals({ daysSilent: 11 }));
+    expect(s?.strength).not.toBe("early");
   });
 
   it("evidence names the missing data honestly (no faked diagnosis)", () => {
@@ -151,21 +177,83 @@ describe("Quiet Signal: long-quiet + no-engagement uses 'no_signal_yet' (not 'No
     expect(blob).toMatch(/No open, click, or reply signal/);
   });
 
-  it("a 5-day-quiet quote with no signal stays on the calm fallback (Normal silence)", () => {
+  it("Early/Cooling quiet quote can STILL show Normal silence (5 days, no signal)", () => {
     const s = computeQuietSignal(baseSignals({ daysSilent: 5 }));
     expect(s?.reason).toBe("normal_silence");
+    expect(s?.strength).toBe("early");
   });
 
-  it("2+ follow-ups sent with zero opens/clicks also triggers no_signal_yet (worked-without-signal)", () => {
-    const s = computeQuietSignal(
-      baseSignals({ daysSilent: 9, followupsSent: 3 }),
+  it("a 6-day cooling quote stays calm (boundary: < 7 days)", () => {
+    expect(computeQuietSignal(baseSignals({ daysSilent: 6 }))?.reason).toBe(
+      "normal_silence",
     );
-    expect(s?.reason).toBe("no_signal_yet");
+  });
+
+  it("an at-risk quote WITH clicks is not 'no signal' — it has signal", () => {
+    // clicks present → routes to R5 behavioral or the calm fallback, never
+    // the no_signal_yet branch (which requires zero opens AND zero clicks).
+    const s = computeQuietSignal(
+      baseSignals({ daysSilent: 11, clickCount: 2, openCount: 4 }),
+    );
+    expect(s?.reason).not.toBe("no_signal_yet");
   });
 
   it("QuietSignalCard renders 'Not enough data' as the strength label for no_signal_yet", () => {
     expect(quietCard).toContain("Not enough data");
     expect(quietCard).toMatch(/signal\.reason === "no_signal_yet"/);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// 1. One shared schedule formatter — header / badge / footer never disagree
+// ---------------------------------------------------------------------------
+
+describe("schedule times use ONE shared formatter (America/Chicago, with minutes)", () => {
+  // 14:00 UTC = 09:00 CDT on a June day — the canonical generated send hour.
+  const NINE_AM_CT = "2026-06-10T14:00:00Z";
+
+  it("formatScheduleDateTime renders 9:00 AM in Central, with minutes", () => {
+    const out = formatScheduleDateTime(NINE_AM_CT);
+    expect(out).toMatch(/9:00\s?AM/);
+    expect(out).toMatch(/Jun 10/);
+    // Never the UTC 2 PM the old badge formatter produced.
+    expect(out).not.toMatch(/2:00\s?PM/);
+    expect(out).not.toMatch(/\bPM\b/);
+  });
+
+  it("a GENERATED send time (normalized) always formats to 9:00 AM, never 3 AM", () => {
+    // The real guarantee: normalizeToBusinessHour (generation) + the shared
+    // formatter (display) compose to a 9 AM business-hour label regardless of
+    // the click-moment. Feed a 3-AM-ish UTC baseline through the chain.
+    const generated = normalizeToBusinessHour(new Date("2026-06-10T03:00:00Z"));
+    const label = formatScheduleDateTime(generated);
+    expect(label).toMatch(/9:00\s?AM/);
+    expect(label).not.toMatch(/3:00\s?AM/);
+  });
+
+  it("step-status badge calls the shared formatter (not its own UTC one)", () => {
+    expect(stepStatusSrc).toContain("formatScheduleDateTime");
+    // The old hour-only, timezone-less Intl.DateTimeFormat helpers are gone.
+    expect(stepStatusSrc).not.toMatch(/function formatDate\(/);
+    expect(stepStatusSrc).not.toMatch(/function formatTime\(/);
+  });
+
+  it("detail page header + footer route through the shared formatter", () => {
+    expect(detailPage).toContain("formatScheduleDateTime");
+    expect(detailPage).toMatch(/function formatSendDate[\s\S]*?formatScheduleDateTime/);
+  });
+
+  it("badge and footer produce the IDENTICAL string for the same send_at", () => {
+    // The badge label is `Scheduled ${formatScheduleDateTime(send_at)}` and the
+    // footer is `Scheduled ${formatScheduleDateTime(send_at)} · EMAIL`; both
+    // share the formatter, so the date/time portion is byte-identical.
+    const badge = `Scheduled ${formatScheduleDateTime(NINE_AM_CT)}`;
+    const footer = `Scheduled ${formatScheduleDateTime(NINE_AM_CT)} · EMAIL`;
+    expect(footer.startsWith(badge)).toBe(true);
+  });
+
+  it("detail page passes effectiveDaysSilent into computeQuietSignal (matches the band)", () => {
+    expect(detailPage).toMatch(/daysSilent:\s*effectiveDaysSilent\(quote\)/);
   });
 });
 
@@ -241,14 +329,31 @@ describe("Recovery Priority IntelligenceField shows the band label only", () => 
   });
 });
 
-describe("IntelligenceField uses break-words, not truncate", () => {
-  it("the value <dd> wraps long strings instead of clipping mid-word", () => {
-    expect(detailPage).toMatch(
-      /<dd\s+className="mt-1 break-words text-sm font-bold text-ink-strong">/,
-    );
+describe("IntelligenceField never clips: text wraps, currency never breaks", () => {
+  it("text values use break-words (not truncate) so labels never clip mid-word", () => {
+    expect(detailPage).toMatch(/mt-1 break-words text-sm font-bold text-ink-strong/);
     expect(detailPage).not.toMatch(
       /<dd\s+className="mt-1 truncate text-sm font-bold/,
     );
+  });
+
+  it("numeric/currency values use whitespace-nowrap + tabular-nums (no '$4,00' break)", () => {
+    // The amount must stay on one line so '$4,000' can never split into
+    // '$4,00' / '0'. The numeric branch is the fix.
+    expect(detailPage).toMatch(
+      /mt-1 whitespace-nowrap tabular-nums text-sm font-bold text-ink-strong/,
+    );
+  });
+
+  it("the Amount quiet field is rendered with the numeric flag", () => {
+    expect(detailPage).toMatch(
+      /<IntelligenceField\s+label="Amount quiet"[\s\S]*?numeric/,
+    );
+  });
+
+  it("IntelligenceField accepts a numeric prop that selects the no-break class", () => {
+    expect(detailPage).toMatch(/numeric\?\:\s*boolean/);
+    expect(detailPage).toMatch(/numeric\s*\?\s*\n?\s*"mt-1 whitespace-nowrap tabular-nums/);
   });
 });
 
@@ -296,6 +401,20 @@ describe("polished message wordings", () => {
     const msg = SEQUENCE_VARIANTS[3][0](sample);
     expect(msg).toContain("Should I keep your estimate active");
     expect(msg).not.toContain("Should I keep this on the active list");
+  });
+
+  it("NO Day 3 variant contains the weak 'this one active' phrasing (audit all variants)", () => {
+    for (let i = 0; i < SEQUENCE_VARIANTS[3].length; i++) {
+      const msg = SEQUENCE_VARIANTS[3][i](sample);
+      expect(msg).not.toContain("this one active");
+      expect(msg).not.toContain("keep this one");
+    }
+  });
+
+  it("Day 3 v3 is now a concrete estimate-active / take-it-off-my-list ask", () => {
+    const msg = SEQUENCE_VARIANTS[3][3](sample);
+    expect(msg).toContain("keep your estimate active");
+    expect(msg).toContain("take it off my list");
   });
 
   it("Day 14 v3 — 'what you're looking at' (was 'where it stands')", () => {

@@ -30,6 +30,7 @@ import {
 } from "@/lib/quotes/repo";
 import { getRecoveryScore } from "@/lib/quotes/recovery-score";
 import { computeStepDisplay } from "@/lib/quotes/step-status";
+import { formatScheduleDateTime } from "@/lib/quotes/business-hours";
 import { effectiveDaysSilent } from "@/lib/recovery/effective-days";
 import { createServiceSupabaseClient } from "@/lib/supabase/service";
 import { formatCurrency } from "@/lib/utils/currency";
@@ -81,21 +82,13 @@ function nextSendAt(reminders: ReminderRow[]): Date | null {
   return candidates[0] ?? null;
 }
 
-// Display TZ for scheduled-send dates. Anchored to the same zone the
-// scheduler uses for the canonical 09:00 send hour, so server renders
-// (Vercel = UTC) never expose 3 AM clock-times to a US contractor. Until
-// per-contractor TZ ships, every contractor sees Central business-hour
-// labels.
-const DISPLAY_TIMEZONE = "America/Chicago";
-
+// Header / badge / footer all render scheduled times through the SAME shared
+// formatter (America/Chicago). formatScheduleDateTime lives in business-hours
+// alongside the 09:00 send-hour anchor so display and generation can never
+// drift onto different timezones — the badge no longer shows UTC "2 PM" next
+// to a CT "9:00 AM" footer.
 function formatSendDate(date: Date): string {
-  return date.toLocaleString("en-US", {
-    timeZone: DISPLAY_TIMEZONE,
-    month: "short",
-    day: "numeric",
-    hour: "numeric",
-    minute: "2-digit",
-  });
+  return formatScheduleDateTime(date);
 }
 
 export default async function QuoteDetailPage({
@@ -179,7 +172,10 @@ export default async function QuoteDetailPage({
     trade: quote.trade,
     estimateAmount: quote.estimate_amount,
     valueBand: valueBandFor(quote.estimate_amount),
-    daysSilent: quote.days_silent ?? 0,
+    // Use the live elapsed days (same value that drives the At Risk / Critical
+    // band) so Quiet Signal can never read "calm" while the header shows a
+    // long-quiet, at-risk quote.
+    daysSilent: effectiveDaysSilent(quote),
     followupsSent: reminders.filter((r) => r.sent).length,
     hasReply: hasReplyForQuote,
     replyIntent: isReplyIntent(replyEvent?.reply_intent)
@@ -321,8 +317,9 @@ function QuoteSummary({
         <IntelligenceField
           label="Amount quiet"
           value={formatCurrency(quote.estimate_amount)}
+          numeric
         />
-        <IntelligenceField label="Days quiet" value={String(daysQuiet)} />
+        <IntelligenceField label="Days quiet" value={String(daysQuiet)} numeric />
         <IntelligenceField label="Recovery Priority" value={score.label} />
         <IntelligenceField
           label="Next Best Action"
@@ -361,18 +358,28 @@ function QuoteSummary({
   );
 }
 
-function IntelligenceField({ label, value }: { label: string; value: string }) {
-  // `break-words` (not `truncate`) so a slightly long label — a Next Best
-  // Action variant, a long client email — wraps cleanly instead of silently
-  // clipping mid-word like the previous "Send the close-the…" bug.
+function IntelligenceField({
+  label,
+  value,
+  numeric = false,
+}: {
+  label: string;
+  value: string;
+  numeric?: boolean;
+}) {
+  // Text values (email, description, action labels) wrap with `break-words`
+  // so nothing clips mid-word. Numeric/currency values use `whitespace-nowrap`
+  // + `tabular-nums` so "$4,000" can never break across lines into "$4,00" /
+  // "0" — every digit stays on one line.
+  const valueClass = numeric
+    ? "mt-1 whitespace-nowrap tabular-nums text-sm font-bold text-ink-strong"
+    : "mt-1 break-words text-sm font-bold text-ink-strong";
   return (
     <div className="min-w-0 rounded-lg border border-line-subtle bg-canvas/35 p-3">
       <dt className="text-[10px] font-black uppercase tracking-widest text-ink-muted">
         {label}
       </dt>
-      <dd className="mt-1 break-words text-sm font-bold text-ink-strong">
-        {value}
-      </dd>
+      <dd className={valueClass}>{value}</dd>
     </div>
   );
 }

@@ -336,7 +336,7 @@ const DAY3_VARIANTS: ReadonlyArray<(v: VariantVars) => string> = [
   ({ firstName, project }) =>
     `${firstName}, should I keep ${project} on my list for the next opening, or pause it?`,
   ({ firstName, tradeWord }) =>
-    `${firstName}, I'm organizing upcoming ${tradeWord} work. Do you still want me to keep this one active?`,
+    `${firstName}, I'm organizing upcoming ${tradeWord} work. Should I keep your estimate active, or take it off my list?`,
 ];
 
 // DAY 7 — Close-the-Loop. No greeting word. Name optional (variants omit it).
