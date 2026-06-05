@@ -26,9 +26,13 @@ function monthsWord(n: number): string {
 }
 
 /**
- * The dashboard value-proof column, read as a receipt: what Quote Reclaim did
- * this month and how many months of the subscription that recovery covered.
- * Every number is real and passed in — nothing is fabricated or projected.
+ * The dashboard value-proof column, read as a receipt.
+ *
+ * Hierarchy: the ALL-TIME proof leads — it is the strongest, never-empty
+ * number and the clearest answer to "has this paid for itself." The current
+ * month sits below as live activity, so a fresh-month $0 day never makes the
+ * card read as empty. Every value is passed in honestly; nothing is projected
+ * or fabricated, and the months-paid math is unchanged (floor(recovered/79)).
  */
 export function RecoveryReceipt({
   recoveredThisMonth,
@@ -40,6 +44,7 @@ export function RecoveryReceipt({
   const monthsPaidThisMonth = Math.floor(recoveredThisMonth / MONTHLY_PRICE_USD);
   const allTimeMonthsPaid = Math.floor(allTimeRecovered / MONTHLY_PRICE_USD);
   const recoveredPositive = recoveredThisMonth > 0;
+  const allTimePositive = allTimeRecovered > 0;
 
   return (
     <div className="flex h-full flex-col p-5 sm:p-6">
@@ -50,7 +55,38 @@ export function RecoveryReceipt({
         </p>
       </div>
 
+      {/* ALL-TIME — the strongest, never-empty proof, hoisted to the top as
+          two headline numbers. Single source: these numbers appear once. */}
       <p className="mt-4 text-[11px] font-black uppercase tracking-widest text-ink-muted">
+        All-time recovered
+      </p>
+      <div className="mt-2 grid grid-cols-2 gap-3">
+        <div className="min-w-0">
+          <p
+            className={`whitespace-nowrap text-4xl font-black tabular-nums ${
+              allTimePositive ? "text-success" : "text-ink-strong"
+            }`}
+          >
+            {formatCurrency(allTimeRecovered)}
+          </p>
+          <p className="mt-1 text-xs text-ink-muted">recovered for you</p>
+        </div>
+        <div className="min-w-0">
+          <p
+            className={`text-4xl font-black tabular-nums ${
+              allTimeMonthsPaid > 0 ? "text-success" : "text-ink-strong"
+            }`}
+          >
+            {allTimeMonthsPaid}
+          </p>
+          <p className="mt-1 text-xs text-ink-muted">
+            {allTimeMonthsPaid === 1 ? "month paid for" : "months paid for"}
+          </p>
+        </div>
+      </div>
+
+      {/* THIS MONTH — live activity below the all-time proof. */}
+      <p className="mt-5 text-[11px] font-black uppercase tracking-widest text-ink-muted">
         This month
       </p>
 
@@ -65,12 +101,12 @@ export function RecoveryReceipt({
         <ReceiptRow label="Email follow-ups">{emailFollowups}</ReceiptRow>
       </dl>
 
-      <div className="mt-3 border-t border-dashed border-line-subtle pt-3">
+      <div className="mt-auto border-t border-dashed border-line-subtle pt-3">
         <div className="flex items-baseline justify-between gap-3">
           <dt className="text-sm font-bold text-ink-strong">
-            Months paid for
+            Months paid this month
           </dt>
-          <dd className="text-3xl font-black tabular-nums text-ink-strong">
+          <dd className="text-2xl font-black tabular-nums text-ink-strong">
             {monthsPaidThisMonth}
           </dd>
         </div>
@@ -81,21 +117,6 @@ export function RecoveryReceipt({
               ? `This month paid for Quote Reclaim for ${monthsPaidThisMonth} ${monthsWord(monthsPaidThisMonth)}.`
               : "This month started covering your Quote Reclaim subscription."}
         </p>
-      </div>
-
-      <div className="mt-auto flex flex-wrap items-center justify-between gap-x-4 gap-y-1 border-t border-line-subtle pt-3 text-xs text-ink-muted">
-        <span>
-          All-time recovered:{" "}
-          <span className="font-black tabular-nums text-ink-strong">
-            {formatCurrency(allTimeRecovered)}
-          </span>
-        </span>
-        <span>
-          All-time months paid for:{" "}
-          <span className="font-black tabular-nums text-ink-strong">
-            {allTimeMonthsPaid}
-          </span>
-        </span>
       </div>
     </div>
   );

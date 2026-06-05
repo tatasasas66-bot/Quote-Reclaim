@@ -39,11 +39,10 @@ describe("RecoveryWindowAlert (Do This Today)", () => {
     expect(screen.getByText("DO THIS TODAY")).toBeTruthy();
   });
 
-  it("coaches the highest-value-first frame and shows the real quote context", () => {
+  it("names the client to work first and shows the real quote context", () => {
     const { container } = renderAlert(60);
     const text = container.textContent ?? "";
-    expect(text).toContain("highest-value quiet quote");
-    expect(text).toContain("Jane Doe");
+    expect(text).toContain("Work Jane Doe first.");
     expect(text).toContain("days quiet");
   });
 

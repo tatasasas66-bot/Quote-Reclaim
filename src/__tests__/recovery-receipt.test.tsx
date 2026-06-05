@@ -62,11 +62,54 @@ describe("RecoveryReceipt — renders", () => {
     // Polish: the old "Quiet quotes worked" label is gone.
     expect(screen.queryByText("Quiet quotes worked")).toBeNull();
     expect(screen.getByText("Email follow-ups")).toBeTruthy();
-    expect(screen.getByText("Months paid for")).toBeTruthy();
+    // Hierarchy polish: the monthly total is now labeled "Months paid this
+    // month" (the all-time "months paid for" hero leads above it).
+    expect(screen.getByText("Months paid this month")).toBeTruthy();
     // Activity counts render.
     expect(screen.getByText("2")).toBeTruthy();
     expect(screen.getByText("9")).toBeTruthy();
     expect(screen.getByText("14")).toBeTruthy();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Hierarchy: all-time proof leads
+// ---------------------------------------------------------------------------
+
+describe("RecoveryReceipt — all-time proof leads the hierarchy", () => {
+  it("the all-time block appears ABOVE the this-month block in source order", () => {
+    const allTimeIdx = receiptSrc.indexOf("All-time recovered");
+    const thisMonthIdx = receiptSrc.indexOf("This month");
+    expect(allTimeIdx).toBeGreaterThan(-1);
+    expect(thisMonthIdx).toBeGreaterThan(-1);
+    expect(allTimeIdx).toBeLessThan(thisMonthIdx);
+  });
+
+  it("all-time recovered + months paid are the large headline numbers", () => {
+    render(
+      React.createElement(
+        RecoveryReceipt,
+        props({ recoveredThisMonth: 0, allTimeRecovered: 23_700 }),
+      ),
+    );
+    // $23,700 / 79 = 300, shown once (single source — no duplicate footer).
+    expect(screen.getByText("300")).toBeTruthy();
+    expect(screen.getByText(/\$23,700/)).toBeTruthy();
+    expect(screen.getByText("All-time recovered")).toBeTruthy();
+    expect(screen.getByText("months paid for")).toBeTruthy();
+  });
+
+  it("stays non-empty on a fresh-month $0 day (all-time carries the proof)", () => {
+    const { container } = render(
+      React.createElement(
+        RecoveryReceipt,
+        props({ recoveredThisMonth: 0, allTimeRecovered: 15_800 }),
+      ),
+    );
+    const text = container.textContent ?? "";
+    // $15,800 / 79 = 200 — the value proof is visible even with $0 this month.
+    expect(text).toContain("$15,800");
+    expect(text).toContain("200");
   });
 });
 
@@ -93,10 +136,9 @@ describe("RecoveryReceipt — zero state", () => {
     expect(screen.queryByText(/paid for Quote Reclaim for/i)).toBeNull();
   });
 
-  it("months paid for is 0 in the zero state", () => {
+  it("months paid is 0 in the zero state (this-month total)", () => {
     const { container } = render(React.createElement(RecoveryReceipt, props()));
-    // The Months-paid value sits in the totals row as a standalone 0.
-    expect(container.textContent).toContain("Months paid for");
+    expect(container.textContent).toContain("Months paid this month");
     expect(container.textContent).toContain("0");
   });
 });
@@ -191,12 +233,10 @@ describe("RecoveryReceipt — all-time proof", () => {
         props({ recoveredThisMonth: 0, allTimeRecovered: 23_700 }),
       ),
     );
-    // Polish: footer labels use the "All-time recovered:" / "All-time months
-    // paid for:" colon form, and the old "All time recovered " variant is gone.
-    expect(screen.getByText(/All-time recovered:/)).toBeTruthy();
-    expect(screen.getByText(/All-time months paid for:/)).toBeTruthy();
-    expect(screen.queryByText(/All time recovered /)).toBeNull();
-    // 23,700 / 79 = 300 exactly.
+    // Hierarchy polish: all-time is now the leading headline block.
+    expect(screen.getByText("All-time recovered")).toBeTruthy();
+    expect(screen.getByText("months paid for")).toBeTruthy();
+    // 23,700 / 79 = 300 exactly, shown once (no duplicate footer).
     expect(screen.getByText("300")).toBeTruthy();
     expect(screen.getByText(/\$23,700/)).toBeTruthy();
   });
@@ -252,12 +292,16 @@ describe("RecoveryReceipt — polish copy", () => {
     expect(receiptSrc).not.toContain("Quiet quotes worked");
   });
 
-  it("source uses the colon-suffixed all-time footer labels", () => {
-    expect(receiptSrc).toContain("All-time recovered:");
-    expect(receiptSrc).toContain("All-time months paid for:");
-    // The old colon-less variants are gone.
-    expect(receiptSrc).not.toMatch(/All time recovered[^:]/);
-    expect(receiptSrc).not.toMatch(/All-time months paid for[^:]/);
+  it("leads with an all-time headline block, not a small footer", () => {
+    expect(receiptSrc).toContain("All-time recovered");
+    expect(receiptSrc).toContain("recovered for you");
+    expect(receiptSrc).toContain("months paid for");
+    // The redundant duplicate "All-time …:" colon footer is gone (the numbers
+    // now appear exactly once, as the leading headline).
+    expect(receiptSrc).not.toContain("All-time recovered:");
+    expect(receiptSrc).not.toContain("All-time months paid for:");
+    // The monthly total is clearly scoped.
+    expect(receiptSrc).toContain("Months paid this month");
   });
 });
 

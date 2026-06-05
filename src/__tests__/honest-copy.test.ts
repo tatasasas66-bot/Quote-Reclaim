@@ -42,7 +42,7 @@ describe("honest conversion copy renders on each surface", () => {
 
   it("Do This Today alert coaches highest-value-first", () => {
     expect(SURFACES.recoveryAlert).toMatch(/DO THIS TODAY/);
-    expect(SURFACES.recoveryAlert).toMatch(/Work the highest-value quiet quote first\./);
+    expect(SURFACES.recoveryAlert).toMatch(/Work \{displayName\} first\./);
     expect(SURFACES.recoveryAlert).toMatch(/Work this quote/);
   });
 

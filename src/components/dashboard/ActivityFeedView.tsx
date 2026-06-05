@@ -25,14 +25,17 @@ export function describeActivity(e: ActivityEvent): {
 } {
   const client = titleCase(e.client_name ?? "a customer") || "a customer";
   const trade = e.trade ?? "the project";
-  const amt = e.estimate_amount ? ` (${formatCurrency(e.estimate_amount)})` : "";
   switch (e.event_type) {
     case "estimate_created":
+      // Folds the now-hidden "Recovery plan built" line into one useful line:
+      // every added quote gets the fixed 5-touch cadence scheduled.
       return {
-        text: `You added ${client}'s ${trade} quote${amt}`,
+        text: `${client} added · 5 follow-ups scheduled`,
         tone: "neutral",
       };
     case "followup_generated":
+      // Internal plan-build mechanic. Kept for unit coverage but hidden from
+      // the rendered feed (see cleanActivityEvents) so it never reads as spam.
       return { text: `Recovery plan built for ${client}`, tone: "neutral" };
     case "message_sent":
       return {
@@ -59,7 +62,13 @@ export function describeActivity(e: ActivityEvent): {
         tone: "success",
       };
     case "win_recorded":
-      return { text: `Won ${client}'s ${trade} quote${amt}`, tone: "success" };
+      // "Matteo won · $4,000 recovered" — the headline win, not a log row.
+      return {
+        text: e.estimate_amount
+          ? `${client} won · ${formatCurrency(e.estimate_amount)} recovered`
+          : `${client} won`,
+        tone: "success",
+      };
     case "sequence_closed":
       return { text: `Sequence closed for ${client}`, tone: "neutral" };
     case "opt_out":
@@ -70,27 +79,21 @@ export function describeActivity(e: ActivityEvent): {
 }
 
 /**
- * Render-time dedup: collapse repeated "Recovery plan built for X" events down
- * to one per quote so a single edit that fires the plan-built event multiple
- * times never floods the feed. Pure filter — historical events are preserved
- * in the database, only the visible list is condensed. Newest-first ordering
- * means the most recent plan-built per quote is the one kept.
+ * Render-time cleanup so the feed reads like field updates, not system logs.
+ * Hides internal mechanics — the "Recovery plan built for X" plan-build events
+ * (their value is folded into the "X added · 5 follow-ups scheduled" line) and
+ * raw "Message delivered" rows (covered by the "follow-up sent" line). Pure
+ * filter: NO data is deleted, NO event storage changes — only the visible list
+ * is condensed. Replaces the earlier collapse-to-one approach.
  */
-export function collapsePlanBuiltDuplicates(
-  events: ActivityEvent[],
-): ActivityEvent[] {
-  const seenForQuote = new Set<string>();
-  return events.filter((e) => {
-    if (e.event_type !== "followup_generated") return true;
-    const key = e.quote_id ?? e.id;
-    if (seenForQuote.has(key)) return false;
-    seenForQuote.add(key);
-    return true;
-  });
+const HIDDEN_EVENT_TYPES = new Set(["followup_generated", "message_delivered"]);
+
+export function cleanActivityEvents(events: ActivityEvent[]): ActivityEvent[] {
+  return events.filter((e) => !HIDDEN_EVENT_TYPES.has(e.event_type));
 }
 
 export function ActivityFeedView({ events }: { events: ActivityEvent[] }) {
-  const visibleEvents = collapsePlanBuiltDuplicates(events);
+  const visibleEvents = cleanActivityEvents(events);
   return (
     <section className="rounded-lg border border-line-subtle bg-surface-1 p-5">
       <div className="mb-4 flex items-baseline justify-between">

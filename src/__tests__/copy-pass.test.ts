@@ -104,13 +104,12 @@ describe("Recovery Window Alert copy (Value Proof v0.5)", () => {
     expect(recoveryAlert).not.toMatch(/RECOVERY WINDOW ALERT/);
   });
 
-  it("headline coaches the contractor to work the highest-value quote first", () => {
-    // The mobile-polished headline is the short command; the longer second
-    // line (subtext) keeps the "real shot" sentiment.
-    expect(recoveryAlert).toMatch(/Work the highest-value quiet quote first\./);
-    expect(recoveryAlert).toMatch(/the money and timing still have a real shot/);
+  it("headline is the daily command naming the client to work first", () => {
+    // "DO THIS TODAY" + "Work {displayName} first." reads as an order.
+    expect(recoveryAlert).toMatch(/Work \{displayName\} first\./);
+    expect(recoveryAlert).toMatch(/DO THIS TODAY/);
     expect(recoveryAlert).not.toMatch(/Open \{displayName\}/);
-    // The pre-polish long-block headline is gone.
+    // The pre-polish long-block headlines are gone.
     expect(recoveryAlert).not.toMatch(
       /Start with the highest-value quiet quote that still has a real shot/,
     );
@@ -216,26 +215,28 @@ describe("IntelligencePanel — Recovery Pattern (mobile polish)", () => {
     expect(intelligencePanel).not.toMatch(/PERSONAL RECOVERY DNA/);
   });
 
-  it("uses 'Unlocks after N sequences'", () => {
-    expect(intelligencePanel).toMatch(/Unlocks after \{unlockAt\} sequences/);
+  it("uses the premium 'Learning from your first N sequences' headline", () => {
+    expect(intelligencePanel).toMatch(/Learning from your first \{unlockAt\} sequences/);
+    // The game-like "Unlocks after N" framing is gone.
+    expect(intelligencePanel).not.toMatch(/Unlocks after/);
   });
 
-  it("locked progress copy renders 'You have X — Y to go.'", () => {
-    expect(intelligencePanel).toMatch(/You have \{totalSequences\} — \{remaining\} to go/);
+  it("locked progress copy renders the premium 'X of N analyzed.' form", () => {
+    expect(intelligencePanel).toMatch(/\{analyzed\} of \{unlockAt\} analyzed/);
+    // The "Y to go" countdown is gone.
+    expect(intelligencePanel).not.toMatch(/to go/);
   });
 
-  it("unlocked copy is 'You have X — unlocked.'", () => {
-    expect(intelligencePanel).toMatch(/You have \{totalSequences\} — unlocked/);
+  it("unlocked copy reads 'X of X analyzed.'", () => {
+    expect(intelligencePanel).toMatch(/\{totalSequences\} of \{totalSequences\} analyzed/);
   });
 
   it("preview copy is the contractor-native rewrite (no 'framework'/'reply windows' jargon)", () => {
-    // JSX wraps the prose across two source lines, so the regex tolerates
-    // whitespace between words (matches the same way React's text rendering will).
     expect(intelligencePanel).toMatch(
-      /which follow-ups work best for your\s+trade/,
+      /which follow-ups work best for your trade/,
     );
     expect(intelligencePanel).toMatch(
-      /when your quiet quotes are most likely to come back/,
+      /when quiet quotes are most likely to come back/,
     );
     expect(intelligencePanel).not.toMatch(/strongest framework/);
     expect(intelligencePanel).not.toMatch(/best\s+reply windows/);

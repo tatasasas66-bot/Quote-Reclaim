@@ -90,7 +90,7 @@ export function QuoteListItem({
               <p className="text-xs font-black uppercase tracking-widest text-ink-muted">
                 Amount quiet
               </p>
-              <p className="mt-1 text-3xl font-black text-ink-strong tabular-nums">
+              <p className="mt-1 whitespace-nowrap text-3xl font-black text-ink-strong tabular-nums">
                 {formatCurrency(quote.estimate_amount)}
               </p>
             </div>

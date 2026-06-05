@@ -107,10 +107,27 @@ describe("MetricCards — day labels are full words", () => {
     expect(screen.queryByText(/^1d$/)).toBeNull();
   });
 
-  it("null: falls back to '--' (unchanged)", () => {
+  it("Coldest null falls back to '--'; Avg null shows the em dash + 'Need more wins'", () => {
     renderCards({ coldestDays: null, avgDaysToWin: null });
-    const placeholders = screen.getAllByText("--");
-    expect(placeholders.length).toBeGreaterThanOrEqual(2);
+    // Coldest keeps the neutral '--' placeholder.
+    expect(screen.getByText("--")).toBeTruthy();
+    // Avg Days to Win never shows a misleading "0 days" / "--" — it reads as
+    // insufficient data.
+    expect(screen.getByText("—")).toBeTruthy();
+    expect(screen.getByText("Need more wins")).toBeTruthy();
+  });
+
+  it("Avg Days to Win = 0 is treated as insufficient (shows '—', not '0 days')", () => {
+    renderCards({ avgDaysToWin: 0 });
+    expect(screen.queryByText("0 days")).toBeNull();
+    expect(screen.getByText("—")).toBeTruthy();
+    expect(screen.getByText("Need more wins")).toBeTruthy();
+  });
+
+  it("Avg Days to Win with real data still shows 'N days'", () => {
+    renderCards({ avgDaysToWin: 6 });
+    expect(screen.getByText("6 days")).toBeTruthy();
+    expect(screen.getByText("Quote sent to won")).toBeTruthy();
   });
 
   it("no rendered MetricCard value renders the glued 'Xd' form", () => {

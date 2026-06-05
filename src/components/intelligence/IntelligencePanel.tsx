@@ -29,14 +29,14 @@ function LockedBody({
   totalSequences: number;
   unlockAt: number;
 }) {
-  const remaining = Math.max(0, unlockAt - totalSequences);
+  const analyzed = Math.min(totalSequences, unlockAt);
   return (
     <>
       <p className="mt-2 text-lg font-bold text-ink-strong">
-        Unlocks after {unlockAt} sequences.
+        Learning from your first {unlockAt} sequences.
       </p>
       <p className="mt-1 text-sm text-ink-muted">
-        You have {totalSequences} — {remaining} to go.
+        {analyzed} of {unlockAt} analyzed.
       </p>
       <div className="mt-3 h-1.5 w-full overflow-hidden rounded-full bg-surface-2">
         <div
@@ -44,12 +44,12 @@ function LockedBody({
           style={{
             width: `${Math.min(100, (totalSequences / unlockAt) * 100)}%`,
           }}
-          aria-label={`${totalSequences} of ${unlockAt} sequences captured`}
+          aria-label={`${analyzed} of ${unlockAt} sequences analyzed`}
         />
       </div>
       <p className="mt-3 text-xs leading-5 text-ink-muted">
-        Once unlocked, Quote Reclaim shows which follow-ups work best for your
-        trade and when your quiet quotes are most likely to come back.
+        Then Quote Reclaim shows which follow-ups work best for your trade and
+        when quiet quotes are most likely to come back.
       </p>
     </>
   );
@@ -59,10 +59,11 @@ function UnlockedBody({ totalSequences }: { totalSequences: number }) {
   return (
     <>
       <p className="mt-2 text-lg font-bold text-ink-strong">
-        You have {totalSequences} — unlocked.
+        {totalSequences} of {totalSequences} analyzed.
       </p>
       <p className="mt-1 text-sm text-ink-muted">
-        Quote Reclaim is rolling up your pattern now. Check back in a few hours.
+        Quote Reclaim is building your recovery pattern from these now. Check
+        back soon.
       </p>
     </>
   );

@@ -49,14 +49,10 @@ export function RecoveryWindowAlert({
             DO THIS TODAY
           </p>
           <p className="mt-1 text-xl font-black leading-tight text-ink-strong sm:text-2xl">
-            Work the highest-value quiet quote first.
-          </p>
-          <p className="mt-1 text-sm leading-6 text-ink-muted">
-            Start where the money and timing still have a real shot.
+            Work {displayName} first.
           </p>
           <p className="mt-2 text-sm leading-6 text-ink">
-            <span className="font-bold text-ink-strong">{displayName}</span> ·{" "}
-            {displayTrade} ·{" "}
+            <span className="font-bold text-ink-strong">{displayTrade}</span> ·{" "}
             <span className="font-bold text-ink-strong">
               {formatCurrency(amount)}
             </span>{" "}

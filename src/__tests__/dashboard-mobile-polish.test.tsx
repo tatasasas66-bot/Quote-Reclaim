@@ -19,7 +19,7 @@ import { fileURLToPath } from "node:url";
 import { IntelligencePanel } from "@/components/intelligence/IntelligencePanel";
 import {
   ActivityFeedView,
-  collapsePlanBuiltDuplicates,
+  cleanActivityEvents,
 } from "@/components/dashboard/ActivityFeedView";
 import { RecoveryWindowAlert } from "@/components/dashboard/RecoveryWindowAlert";
 import type { ActivityEvent } from "@/lib/intelligence/list-recent-events";
@@ -58,6 +58,31 @@ describe("Sticky '+ Add Silent Quote' CTA", () => {
       /pb-\[calc\(6rem\+env\(safe-area-inset-bottom\)\)\]/,
     );
     expect(dashboard).toMatch(/sm:pb-8/);
+  });
+
+  it("desktop renders a SECOND '+ Add Silent Quote' in the queue header (hidden on mobile)", () => {
+    // The queue-header CTA is desktop-only (hidden sm:inline-flex) so it never
+    // competes with the sticky mobile bar. Both use the exact same label.
+    expect(dashboard).toMatch(
+      /<Link href="\/quotes\/new" className="hidden sm:inline-flex">[\s\S]*?\+ Add Silent Quote/,
+    );
+    // The label appears at least twice (desktop header + sticky mobile bar).
+    const occurrences = dashboard.split("+ Add Silent Quote").length - 1;
+    expect(occurrences).toBeGreaterThanOrEqual(2);
+  });
+
+  it("the queue-header Add button sits to the right of 'IN THE QUEUE'", () => {
+    const queueIdx = dashboard.indexOf("IN THE QUEUE");
+    const headerAddIdx = dashboard.indexOf('href="/quotes/new" className="hidden sm:inline-flex"');
+    const stickyIdx = dashboard.indexOf("fixed inset-x-3 bottom-3");
+    expect(queueIdx).toBeGreaterThan(0);
+    // Desktop header Add comes after the queue label and before the sticky bar.
+    expect(headerAddIdx).toBeGreaterThan(queueIdx);
+    expect(headerAddIdx).toBeLessThan(stickyIdx);
+  });
+
+  it("the old bare 'Add Silent Quote' (no '+') queue button is gone", () => {
+    expect(dashboard).not.toMatch(/<Button size="sm">Add Silent Quote<\/Button>/);
   });
 });
 
@@ -137,32 +162,39 @@ function ev(overrides: Partial<ActivityEvent>): ActivityEvent {
   };
 }
 
-describe("Activity feed — duplicates are collapsed at render time", () => {
-  it("collapsePlanBuiltDuplicates keeps only the most recent plan-built per quote", () => {
+describe("Activity feed — system-log events are hidden, not shown as spam", () => {
+  it("cleanActivityEvents hides ALL plan-built events (no 'Recovery plan built' rows)", () => {
     const events = [
       planEvent("e1", "q-jasmine", "jasmine"),
       planEvent("e2", "q-jasmine", "jasmine"),
       planEvent("e3", "q-jasmine", "jasmine"),
-      planEvent("e4", "q-tom", "tom"),
-      planEvent("e5", "q-jasmine", "jasmine"),
+      ev({ id: "keep", event_type: "win_recorded", client_name: "tom" }),
     ];
-    const out = collapsePlanBuiltDuplicates(events);
-    expect(out.map((e) => e.id)).toEqual(["e1", "e4"]);
+    const out = cleanActivityEvents(events);
+    expect(out.map((e) => e.id)).toEqual(["keep"]);
   });
 
-  it("non-plan events (added/sent/replied/won) are never collapsed", () => {
+  it("hides message_delivered (covered by the 'follow-up sent' line)", () => {
+    const out = cleanActivityEvents([
+      ev({ id: "a", event_type: "message_delivered" }),
+      ev({ id: "b", event_type: "message_sent" }),
+    ]);
+    expect(out.map((e) => e.id)).toEqual(["b"]);
+  });
+
+  it("contractor-useful events (added/sent/replied/won/closed) are never hidden", () => {
     const events: ActivityEvent[] = [
-      ev({ id: "a", event_type: "estimate_created", quote_id: "q1" }),
-      ev({ id: "b", event_type: "message_sent", quote_id: "q1" }),
-      ev({ id: "c", event_type: "reply_received", quote_id: "q1" }),
-      ev({ id: "d", event_type: "win_recorded", quote_id: "q1" }),
-      ev({ id: "e", event_type: "estimate_created", quote_id: "q1" }),
+      ev({ id: "a", event_type: "estimate_created" }),
+      ev({ id: "b", event_type: "message_sent" }),
+      ev({ id: "c", event_type: "reply_received" }),
+      ev({ id: "d", event_type: "win_recorded" }),
+      ev({ id: "e", event_type: "sequence_closed" }),
     ];
-    const out = collapsePlanBuiltDuplicates(events);
+    const out = cleanActivityEvents(events);
     expect(out.map((e) => e.id)).toEqual(["a", "b", "c", "d", "e"]);
   });
 
-  it("renders 'Recovery plan built for Jasmine' once even when given 5 in a row", () => {
+  it("renders ZERO 'Recovery plan built' rows even when given 5 in a row", () => {
     const events = [
       planEvent("e1", "q-jasmine", "jasmine"),
       planEvent("e2", "q-jasmine", "jasmine"),
@@ -171,13 +203,12 @@ describe("Activity feed — duplicates are collapsed at render time", () => {
       planEvent("e5", "q-jasmine", "jasmine"),
     ];
     render(React.createElement(ActivityFeedView, { events }));
-    const matches = screen.getAllByText(/Recovery plan built for Jasmine/);
-    expect(matches).toHaveLength(1);
-    // The footer count reflects the collapsed list, not the raw input.
-    expect(screen.getByText("Last 1")).toBeTruthy();
+    expect(screen.queryByText(/Recovery plan built/)).toBeNull();
+    // Empty visible list → the empty-state copy, not 5 log rows.
+    expect(screen.getByText("Last 0")).toBeTruthy();
   });
 
-  it("still renders meaningful events (quote added, message sent, reply, won) alongside the single plan-built", () => {
+  it("renders the premium contractor lines and no plan-built spam", () => {
     const events: ActivityEvent[] = [
       ev({
         id: "a",
@@ -208,14 +239,14 @@ describe("Activity feed — duplicates are collapsed at render time", () => {
       }),
     ];
     render(React.createElement(ActivityFeedView, { events }));
-    expect(screen.getByText(/You added Jasmine's roofing quote/)).toBeTruthy();
+    expect(screen.getByText(/Jasmine added · 5 follow-ups scheduled/)).toBeTruthy();
     expect(screen.getByText(/Day 1 follow-up sent to Jasmine/)).toBeTruthy();
     expect(
       screen.getByText(/Jasmine replied in one tap: interested/),
     ).toBeTruthy();
-    expect(screen.getByText(/Won Jasmine's roofing quote/)).toBeTruthy();
-    // One plan-built, not two.
-    expect(screen.getAllByText(/Recovery plan built/)).toHaveLength(1);
+    expect(screen.getByText(/Jasmine won · \$8,500 recovered/)).toBeTruthy();
+    // Zero plan-built rows.
+    expect(screen.queryByText(/Recovery plan built/)).toBeNull();
   });
 });
 
@@ -235,34 +266,39 @@ describe("Recovery Pattern card", () => {
     expect(screen.queryByText(/PERSONAL RECOVERY DNA/)).toBeNull();
   });
 
-  it("locked progress copy reads 'You have 4 — 1 to go.'", () => {
+  it("locked progress copy reads the premium '3 of 5 analyzed.' form", () => {
     render(
       React.createElement(IntelligencePanel, {
-        totalSequences: 4,
+        totalSequences: 3,
         unlockAt: 5,
       }),
     );
-    expect(screen.getByText(/You have 4 — 1 to go\./)).toBeTruthy();
+    expect(screen.getByText(/3 of 5 analyzed\./)).toBeTruthy();
+    expect(
+      screen.getByText(/Learning from your first 5 sequences\./),
+    ).toBeTruthy();
+    // No game-like countdown.
+    expect(screen.queryByText(/to go/)).toBeNull();
   });
 
-  it("'You have 4 — 1 to go.' updates dynamically (1 -> 4 to go)", () => {
+  it("'X of N analyzed.' updates dynamically (1 of 5)", () => {
     render(
       React.createElement(IntelligencePanel, {
         totalSequences: 1,
         unlockAt: 5,
       }),
     );
-    expect(screen.getByText(/You have 1 — 4 to go\./)).toBeTruthy();
+    expect(screen.getByText(/1 of 5 analyzed\./)).toBeTruthy();
   });
 
-  it("unlocked state reads 'You have 5 — unlocked.'", () => {
+  it("unlocked state reads 'X of X analyzed.'", () => {
     render(
       React.createElement(IntelligencePanel, {
         totalSequences: 5,
         unlockAt: 5,
       }),
     );
-    expect(screen.getByText(/You have 5 — unlocked\./)).toBeTruthy();
+    expect(screen.getByText(/5 of 5 analyzed\./)).toBeTruthy();
   });
 
   it("preview copy uses contractor-native wording (no 'framework' / 'reply windows' jargon)", () => {
@@ -274,7 +310,7 @@ describe("Recovery Pattern card", () => {
     );
     expect(
       screen.getByText(
-        /which follow-ups work best for your trade and when your quiet quotes are most likely to come back\./,
+        /which follow-ups work best for your trade and when quiet quotes are most likely to come back\./,
       ),
     ).toBeTruthy();
   });
@@ -284,9 +320,9 @@ describe("Recovery Pattern card", () => {
 // Do This Today — short mobile headline
 // ---------------------------------------------------------------------------
 
-describe("Do This Today — mobile headline polish", () => {
-  it("renders the short directive 'Work the highest-value quiet quote first.'", () => {
-    render(
+describe("Do This Today — daily-command headline polish", () => {
+  it("renders the directive naming the client: 'Work {ClientName} first.'", () => {
+    const { container } = render(
       React.createElement(RecoveryWindowAlert, {
         quoteId: "q1",
         amount: 8500,
@@ -296,12 +332,12 @@ describe("Do This Today — mobile headline polish", () => {
         score: 60,
       }),
     );
-    expect(
-      screen.getByText("Work the highest-value quiet quote first."),
-    ).toBeTruthy();
-    expect(
-      screen.getByText("Start where the money and timing still have a real shot."),
-    ).toBeTruthy();
+    expect(screen.getByText("Work Jasmine first.")).toBeTruthy();
+    // Trade · amount · days · risk context line stays.
+    const text = container.textContent ?? "";
+    expect(text).toContain("Roofing");
+    expect(text).toContain("$8,500");
+    expect(text).toContain("9 days quiet");
   });
 
   it("the old long-block headline is gone", () => {

@@ -152,8 +152,11 @@ export default async function DashboardPage() {
                   : `${stillBleedingValue} across ${pending.length} quote${pending.length === 1 ? "" : "s"}`}
               </p>
             </div>
-            <Link href="/quotes/new">
-              <Button size="sm">Add Silent Quote</Button>
+            {/* Desktop-only Add CTA — anchors the queue section header. On
+                mobile the sticky bottom CTA below is the single source for
+                this action so we never render two competing buttons. */}
+            <Link href="/quotes/new" className="hidden sm:inline-flex">
+              <Button size="sm">+ Add Silent Quote</Button>
             </Link>
           </div>
 

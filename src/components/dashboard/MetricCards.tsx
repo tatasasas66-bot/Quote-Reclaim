@@ -55,6 +55,11 @@ export function MetricCards({
   jobsWonLifetime,
   avgDaysToWin,
 }: MetricCardsProps) {
+  // A rounded average of 0 days reads as a bug (it implies "won instantly").
+  // Treat 0 — and the no-wins null — as insufficient data and show an em dash
+  // with a "Need more wins" hint instead of "0 days". The underlying
+  // calculation is unchanged; this is display-only.
+  const avgInsufficient = avgDaysToWin == null || avgDaysToWin === 0;
   return (
     <section className="grid w-full min-w-0 grid-cols-2 gap-3 sm:grid-cols-4">
       <MetricCard
@@ -77,8 +82,8 @@ export function MetricCards({
       />
       <MetricCard
         label="AVG DAYS TO WIN"
-        value={formatDays(avgDaysToWin)}
-        hint={avgDaysToWin == null ? "No wins recorded yet" : "Quote sent to won"}
+        value={avgInsufficient ? "—" : formatDays(avgDaysToWin)}
+        hint={avgInsufficient ? "Need more wins" : "Quote sent to won"}
         tone="money"
       />
     </section>

@@ -169,7 +169,8 @@ describe("describeActivity copy + tone per event type", () => {
     const { text, tone } = describeActivity(
       ev({ event_type: "estimate_created", estimate_amount: 8500 }),
     );
-    expect(text).toBe("You added Tom's roofing quote ($8,500)");
+    // Folds the hidden plan-built line into one useful line.
+    expect(text).toBe("Tom added · 5 follow-ups scheduled");
     expect(tone).toBe("neutral");
   });
 
@@ -200,11 +201,11 @@ describe("describeActivity copy + tone per event type", () => {
     );
   });
 
-  it("win_recorded is success and includes amount", () => {
+  it("win_recorded is success and includes the recovered amount", () => {
     const { text, tone } = describeActivity(
       ev({ event_type: "win_recorded", estimate_amount: 12000 }),
     );
-    expect(text).toBe("Won Tom's roofing quote ($12,000)");
+    expect(text).toBe("Tom won · $12,000 recovered");
     expect(tone).toBe("success");
   });
 
