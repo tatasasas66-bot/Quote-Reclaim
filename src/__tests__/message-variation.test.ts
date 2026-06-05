@@ -207,9 +207,10 @@ describe("researchSequenceMessages variant selection", () => {
 
 // ---------------------------------------------------------------------------
 // Every variant across the arc passes length / ban / emoji / structure checks.
-// Days 1/3/14/30 expose 4 variants; Day 7 carries 5 (the 5th is the Chris
-// Voss "Have you given up on…?" no-oriented form — the most research-backed
-// stalled-deal phrasing). Total ≥20 variants across the sequence.
+// Days 1/3/14/30 expose 4 variants; Day 7 carries 5 (calm contractor-native
+// close-the-loop asks — the earlier verbatim Voss "Have you given up on…?"
+// variant was removed in the message-tone safety pass). Total ≥20 variants
+// across the sequence.
 // ---------------------------------------------------------------------------
 
 describe("all message variants pass validation", () => {

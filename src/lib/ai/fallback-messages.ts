@@ -30,9 +30,10 @@ import type { RecoveryMessage, RecoveryContext } from "./generate-recovery-plan"
  * disguising the intent — never naming the psychology):
  *   1 Estimate Check  — surface a confusion the homeowner hid (clarity).
  *   2 Schedule Check  — operational seriousness without fake scarcity.
- *   3 Close-the-Loop  — give a safe "no" so the awkward silence can break
- *                       (Voss no-oriented question; v4 is the verbatim
- *                       "Have you given up on…?" form).
+ *   3 Close-the-Loop  — give a safe "no" so the awkward silence can break.
+ *                       All five variants are calm contractor-native asks —
+ *                       no sharp no-oriented frame (removed in the
+ *                       message-tone safety pass).
  *   4 Options Check   — normalize that price/timing/scope can stall; offer
  *                       to walk through options without cutting corners
  *                       (never imply discount).
@@ -323,7 +324,7 @@ const DAY1_VARIANTS: ReadonlyArray<(v: VariantVars) => string> = [
   ({ firstName, projectDetail }) =>
     `Hey ${firstName}, I reviewed ${projectDetail} again on my end. Was anything unclear, or is there a part you want me to walk through?`,
   ({ firstName, projectDetail }) =>
-    `Hey ${firstName}, I had another look at ${projectDetail}. If a number or a detail is in the way, I can break it down — what should I clarify?`,
+    `Hey ${firstName}, I had another look at ${projectDetail}. Anything you want me to clarify or break down?`,
 ];
 
 // DAY 3 — Schedule Check. "{FirstName}, ..." opener, no greeting word.
@@ -340,11 +341,10 @@ const DAY3_VARIANTS: ReadonlyArray<(v: VariantVars) => string> = [
 ];
 
 // DAY 7 — Close-the-Loop. No greeting word. Name optional (variants omit it).
-// Easy yes/no, no pressure. v4 is the Chris Voss "Have you given up on…?"
-// no-oriented question — the single most evidence-backed phrasing for stalled
-// deals (Voss, Never Split the Difference). It keeps the "on the board" /
-// "close it out" structure that satisfies the validator while leading with the
-// pure no-oriented hook.
+// Easy yes/no, no pressure. All five variants are contractor-native calm
+// close-the-loop forms. An earlier verbatim no-oriented variant tested
+// high but read too sharp for a homeowner under a contractor name, so it
+// was removed in the message-tone safety pass.
 const DAY7_VARIANTS: ReadonlyArray<(v: VariantVars) => string> = [
   ({ project }) =>
     `Should I keep ${project} open, or close it out for now? Either way is fine.`,
@@ -355,7 +355,7 @@ const DAY7_VARIANTS: ReadonlyArray<(v: VariantVars) => string> = [
   ({ project }) =>
     `Do you still want me to keep ${project} on the board, or should I close it out?`,
   ({ project }) =>
-    `Have you given up on ${project}, or should I keep it on the board? Either's fine — I'll close it out if you want me to.`,
+    `Want me to keep ${project} on the board, or close it out on my end? Either works.`,
 ];
 
 // DAY 14 — Options Check. Useful, never discounting. Options/scope frame.
