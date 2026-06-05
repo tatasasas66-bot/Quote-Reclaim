@@ -79,15 +79,17 @@ export default async function DashboardPage() {
     <main className="mx-auto flex min-h-screen w-full max-w-7xl flex-col gap-8 bg-canvas px-4 pt-8 pb-[calc(6rem+env(safe-area-inset-bottom))] sm:px-6 sm:pb-8 lg:px-8">
       <header className="border-b border-line-subtle/80 pb-5">
         <div className="flex items-center justify-between gap-3">
-          <p className="text-xs font-semibold uppercase tracking-widest text-brand">
+          <p className="whitespace-nowrap text-xs font-semibold uppercase tracking-widest text-brand">
             QUOTE RECLAIM
           </p>
-          <div className="flex items-center gap-3">
+          {/* shrink-0 keeps the action group at its natural width so the
+              Upgrade label and Sign out never compress + wrap at 375px. */}
+          <div className="flex shrink-0 items-center gap-3">
             <UpgradeButton />
             <form action="/api/auth/sign-out" method="post">
               <button
                 type="submit"
-                className="rounded text-xs font-medium text-ink-muted hover:text-ink-strong focus:outline-none focus-visible:ring-2 focus-visible:ring-focus"
+                className="whitespace-nowrap rounded text-xs font-medium text-ink-muted hover:text-ink-strong focus:outline-none focus-visible:ring-2 focus-visible:ring-focus"
               >
                 Sign out
               </button>

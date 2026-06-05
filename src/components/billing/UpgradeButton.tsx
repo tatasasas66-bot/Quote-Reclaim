@@ -53,7 +53,7 @@ export function UpgradeButton({ variant = "primary", size = "sm", className }: P
   }
 
   return (
-    <div className="flex flex-col items-end gap-1">
+    <div className="flex shrink-0 flex-col items-end gap-1">
       <Button
         type="button"
         variant={variant}
@@ -62,9 +62,13 @@ export function UpgradeButton({ variant = "primary", size = "sm", className }: P
         loading={pending}
         disabled={pending}
         title={unavailable ? "Checkout coming soon" : `Upgrade — ${PRICE_LABEL}`}
-        className={className}
+        className={["whitespace-nowrap", className].filter(Boolean).join(" ")}
       >
-        Upgrade — {PRICE_LABEL}
+        {/* Compact one-line label on phones (prevents the 375px "Upgrade —" /
+            "$79/month" wrap); full label from sm: up. Display only — the price
+            value is unchanged. */}
+        <span className="sm:hidden">Upgrade $79</span>
+        <span className="hidden sm:inline">Upgrade — {PRICE_LABEL}</span>
       </Button>
       {unavailable ? (
         <span role="status" className="text-xs text-ink-muted">
