@@ -110,6 +110,7 @@ export default async function DashboardPage() {
       <HeroMetric
         stillBleeding={stillBleeding}
         pendingCount={pending.length}
+        atRiskCount={atRiskCount}
         recoveredThisMonth={recoveredThisMonth}
         jobsWonThisMonth={jobsWonThisMonth}
         // "Quotes being worked" reads as a live count, so use the active

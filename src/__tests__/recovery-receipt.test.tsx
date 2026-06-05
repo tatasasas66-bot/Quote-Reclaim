@@ -61,7 +61,9 @@ describe("RecoveryReceipt — renders", () => {
     expect(screen.getByText("Quotes being worked")).toBeTruthy();
     // Polish: the old "Quiet quotes worked" label is gone.
     expect(screen.queryByText("Quiet quotes worked")).toBeNull();
-    expect(screen.getByText("Email follow-ups")).toBeTruthy();
+    // Polish: clarified the monthly follow-up label.
+    expect(screen.getByText("Follow-ups this month")).toBeTruthy();
+    expect(screen.queryByText("Email follow-ups")).toBeNull();
     // Hierarchy polish: the monthly total is now labeled "Months paid this
     // month" (the all-time "months paid for" hero leads above it).
     expect(screen.getByText("Months paid this month")).toBeTruthy();

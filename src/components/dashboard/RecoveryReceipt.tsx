@@ -98,7 +98,7 @@ export function RecoveryReceipt({
         </ReceiptRow>
         <ReceiptRow label="Jobs won back">{jobsWonThisMonth}</ReceiptRow>
         <ReceiptRow label="Quotes being worked">{quotesBeingWorked}</ReceiptRow>
-        <ReceiptRow label="Email follow-ups">{emailFollowups}</ReceiptRow>
+        <ReceiptRow label="Follow-ups this month">{emailFollowups}</ReceiptRow>
       </dl>
 
       <div className="mt-auto border-t border-dashed border-line-subtle pt-3">

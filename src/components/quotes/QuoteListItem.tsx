@@ -25,6 +25,10 @@ export function QuoteListItem({
   const level = riskLevel(quote);
   const score = getRecoveryScore(quote);
   const priority = recoveryPriority(score.score);
+  // Fresh quotes map to the "LOW" priority band, which reads like "low value"
+  // on a card. Show "Fresh" instead — display-only; scoring is unchanged and
+  // the band color (priority.labelClass) is preserved.
+  const priorityLabel = score.band === "fresh" ? "Fresh" : priority.label;
   const nba = nextBestAction(quote, hasReply);
   const displayName = titleCaseName(quote.client_name);
   const displayTrade = titleCaseName(quote.trade);
@@ -62,7 +66,7 @@ export function QuoteListItem({
                     Recovery Priority
                   </span>
                   <span className={`text-xs font-bold ${priority.labelClass}`}>
-                    {priority.label}
+                    {priorityLabel}
                   </span>
                 </div>
                 <div className="h-1.5 w-full overflow-hidden rounded-full bg-surface-2">
