@@ -20,7 +20,13 @@
  * contracts remain intact.
  */
 import * as React from "react";
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import {
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from "@testing-library/react";
 import {
   afterEach,
   beforeEach,
@@ -236,9 +242,10 @@ describe("Callback route — last-line-of-defence rescue", () => {
   });
 
   it("still shows the safe sign-in error when both exchange AND getUser fail", () => {
-    // The error branch must end at the existing sign-in redirect.
+    // The error branch must end at the existing sign-in redirect, using the
+    // local errorCategory variable that classifies the failure.
     expect(callbackRoute).toMatch(
-      /return NextResponse\.redirect\(\s*new URL\(`\/sign-in\?error=\$\{callbackErrorCode\(error\)\}`/,
+      /return NextResponse\.redirect\(\s*new URL\(`\/sign-in\?error=\$\{errorCategory\}`/,
     );
   });
 
@@ -278,7 +285,197 @@ describe("Google button is still gated by NEXT_PUBLIC_ENABLE_GOOGLE_AUTH", () =>
 });
 
 // ---------------------------------------------------------------------------
-// 5. safeRedirectPath helper sanity
+// 5. Same-origin guarantee for the OAuth redirectTo (PKCE cross-origin fix)
+// ---------------------------------------------------------------------------
+
+describe("redirectTo always anchors on the current browsing origin", () => {
+  it("uses window.location.origin when env is unset", async () => {
+    vi.stubEnv("NEXT_PUBLIC_AUTH_CALLBACK_URL", "");
+    render(<AuthForm mode="sign-in" />);
+    // Wait for the session-check gate to flip false so the magic-link form
+    // is interactive.
+    const send = await screen.findByRole("button", {
+      name: /send secure link/i,
+    });
+    fireEvent.change(screen.getByLabelText(/work email/i), {
+      target: { value: "j@x.com" },
+    });
+    fireEvent.click(send);
+    await waitFor(() => {
+      expect(mocks.signInWithOtp).toHaveBeenCalled();
+    });
+    const opts = mocks.signInWithOtp.mock.calls[0][0].options;
+    expect(opts.emailRedirectTo).toContain("https://app.test/api/auth/callback");
+    vi.unstubAllEnvs();
+  });
+
+  it("honors env when its origin matches the current browsing origin", async () => {
+    vi.stubEnv(
+      "NEXT_PUBLIC_AUTH_CALLBACK_URL",
+      "https://app.test/api/auth/callback",
+    );
+    render(<AuthForm mode="sign-in" />);
+    const send = await screen.findByRole("button", {
+      name: /send secure link/i,
+    });
+    fireEvent.change(screen.getByLabelText(/work email/i), {
+      target: { value: "j@x.com" },
+    });
+    fireEvent.click(send);
+    await waitFor(() => {
+      expect(mocks.signInWithOtp).toHaveBeenCalled();
+    });
+    const opts = mocks.signInWithOtp.mock.calls[0][0].options;
+    expect(opts.emailRedirectTo).toContain("https://app.test/api/auth/callback");
+    vi.unstubAllEnvs();
+  });
+
+  it("IGNORES env and uses current origin when origins MISMATCH (the PKCE break)", async () => {
+    // This is the bug fix: env points at production but user is browsing a
+    // preview. Previously this stranded the verifier cookie on the wrong
+    // origin and broke the first attempt. Now the current origin always wins.
+    vi.stubEnv(
+      "NEXT_PUBLIC_AUTH_CALLBACK_URL",
+      "https://other-domain.example/api/auth/callback",
+    );
+    render(<AuthForm mode="sign-in" />);
+    const send = await screen.findByRole("button", {
+      name: /send secure link/i,
+    });
+    fireEvent.change(screen.getByLabelText(/work email/i), {
+      target: { value: "j@x.com" },
+    });
+    fireEvent.click(send);
+    await waitFor(() => {
+      expect(mocks.signInWithOtp).toHaveBeenCalled();
+    });
+    const opts = mocks.signInWithOtp.mock.calls[0][0].options;
+    expect(opts.emailRedirectTo).toContain("https://app.test/api/auth/callback");
+    expect(opts.emailRedirectTo).not.toContain("other-domain.example");
+    vi.unstubAllEnvs();
+  });
+
+  it("rejects an unsafe `next` value via safeRedirectPath in the callback URL", async () => {
+    // The redirectTo always encodes a next=/dashboard (never a user-provided
+    // unsafe next). This pins that contract for both Google and Magic Link.
+    render(<AuthForm mode="sign-in" />);
+    const send = await screen.findByRole("button", {
+      name: /send secure link/i,
+    });
+    fireEvent.change(screen.getByLabelText(/work email/i), {
+      target: { value: "j@x.com" },
+    });
+    fireEvent.click(send);
+    await waitFor(() => {
+      expect(mocks.signInWithOtp).toHaveBeenCalled();
+    });
+    const opts = mocks.signInWithOtp.mock.calls[0][0].options;
+    expect(opts.emailRedirectTo).toMatch(/next=%2Fdashboard/);
+    expect(opts.emailRedirectTo).not.toMatch(/next=https/);
+    expect(opts.emailRedirectTo).not.toMatch(/next=%2F%2F/);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// 6. Session-check gate suppresses the stale error flash + strips ?error=
+// ---------------------------------------------------------------------------
+
+describe("Session-check gate", () => {
+  it("does not render the stale `?error=` on the initial pre-resolution render", () => {
+    routeState.searchParams = new URLSearchParams("error=auth_callback_failed");
+    // Hold the getSession promise open by never resolving it on first call.
+    let resolveFn: (v: { data: { session: null }; error: null }) => void = () => {};
+    mocks.getSession.mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          resolveFn = resolve;
+        }),
+    );
+    render(<AuthForm mode="sign-in" />);
+    // Initial render: error is NOT in the DOM because sessionChecking is true.
+    expect(
+      screen.queryByText(/We couldn't finish signing you in/),
+    ).toBeNull();
+    // Let the promise resolve to clean up.
+    resolveFn({ data: { session: null }, error: null });
+  });
+
+  it("strips `?error=` from the URL once session check resolves with no session", async () => {
+    routeState.searchParams = new URLSearchParams("error=auth_callback_failed");
+    const replaceState = vi.fn();
+    Object.defineProperty(window, "location", {
+      configurable: true,
+      value: {
+        ...originalLocation,
+        origin: "https://app.test",
+        href: "https://app.test/sign-in?error=auth_callback_failed",
+        pathname: "/sign-in",
+        hash: "",
+        replace: replaceSpy,
+      },
+    });
+    Object.defineProperty(window, "history", {
+      configurable: true,
+      value: { ...window.history, replaceState },
+    });
+    render(<AuthForm mode="sign-in" />);
+    // Wait for the gate to resolve (error becomes visible inline).
+    expect(
+      await screen.findByText(/We couldn't finish signing you in/),
+    ).toBeTruthy();
+    // URL was stripped via history.replaceState (no navigation).
+    expect(replaceState).toHaveBeenCalled();
+    const newUrl = String(replaceState.mock.calls[0][2]);
+    expect(newUrl).not.toContain("error=");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// 7. AUTH_DEBUG observability — opt-in, never leaks secrets
+// ---------------------------------------------------------------------------
+
+const authFormSrc = readSource("../components/onboarding/AuthForm.tsx");
+
+describe("AUTH_DEBUG observability", () => {
+  it("AuthForm debug is gated by NEXT_PUBLIC_AUTH_DEBUG only", () => {
+    expect(authFormSrc).toMatch(/NEXT_PUBLIC_AUTH_DEBUG !== "true"/);
+  });
+
+  it("callback debug is gated by AUTH_DEBUG only", () => {
+    expect(callbackRoute).toMatch(/AUTH_DEBUG !== "true"/);
+  });
+
+  it("callback debug payloads NEVER include code, token, full URL, or query string", () => {
+    // Scan only debug payloads (authDebugLog({...})).
+    const debugCalls = callbackRoute.match(/authDebugLog\(\s*\{[\s\S]*?\}\s*\)/g) ?? [];
+    expect(debugCalls.length).toBeGreaterThan(0);
+    for (const call of debugCalls) {
+      expect(call).not.toMatch(/access_token/);
+      expect(call).not.toMatch(/refresh_token/);
+      // The local `code` variable holds the OAuth authorization code; assert
+      // it's never passed (vs `errorCategory` / `hasCode` which are safe).
+      expect(call).not.toMatch(/[^a-zA-Z]code:\s*code\b/);
+      expect(call).not.toMatch(/request\.url\b/);
+      expect(call).not.toMatch(/searchParams\b/);
+      expect(call).not.toMatch(/cookies?\b/i);
+    }
+  });
+
+  it("AuthForm debug payloads NEVER include token, code, or full URLs", () => {
+    const debugCalls = authFormSrc.match(/authDebugLog\(\s*\{[\s\S]*?\}\s*\)/g) ?? [];
+    expect(debugCalls.length).toBeGreaterThan(0);
+    for (const call of debugCalls) {
+      expect(call).not.toMatch(/access_token/);
+      expect(call).not.toMatch(/refresh_token/);
+      expect(call).not.toMatch(/\bcode\b/);
+      expect(call).not.toMatch(/callbackUrl\b/);
+      expect(call).not.toMatch(/window\.location\.href/);
+    }
+  });
+});
+
+// ---------------------------------------------------------------------------
+// 8. safeRedirectPath helper sanity
 // ---------------------------------------------------------------------------
 
 describe("safeRedirectPath helper", () => {

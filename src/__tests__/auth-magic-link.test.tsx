@@ -109,13 +109,16 @@ describe("AuthForm Magic Link flow", () => {
     ).toBe(true);
   });
 
-  it("shows expired-link callback copy", () => {
+  it("shows expired-link callback copy after the session-check gate resolves", async () => {
     routeState.searchParams = new URLSearchParams("error=link_expired");
 
     render(<AuthForm mode="sign-in" />);
 
+    // The error is gated behind the mount-time getSession() resolution so a
+    // stale `?error=` never flashes during the brief microtask between mount
+    // and the first resolution. findByText awaits the post-resolution render.
     expect(
-      screen.getByText(
+      await screen.findByText(
         "That link expired or was already used. Send a fresh sign-in link.",
       ),
     ).toBeTruthy();

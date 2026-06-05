@@ -28,6 +28,30 @@ function normalizeCallbackBase(raw: string): string {
   }
 }
 
+function safeHostname(input: string | null | undefined): string | null {
+  if (!input) return null;
+  try {
+    return new URL(input).hostname || null;
+  } catch {
+    return null;
+  }
+}
+
+function safeOrigin(input: string | null | undefined): string | null {
+  if (!input) return null;
+  try {
+    return new URL(input).origin || null;
+  } catch {
+    return null;
+  }
+}
+
+function authDebugLog(payload: Record<string, unknown>): void {
+  if (process.env.NEXT_PUBLIC_AUTH_DEBUG !== "true") return;
+  // Hostname / boolean / pathname facts only — never token, code, or full URL.
+  console.log("[auth:debug]", payload);
+}
+
 function GoogleIcon() {
   return (
     <svg
@@ -120,11 +144,17 @@ export function AuthForm({ mode }: AuthFormProps) {
   const auditToken = searchParams.get("audit_token") ?? undefined;
   const rawCallbackError = describeCallbackError(searchParams.get("error"));
 
-  // Suppressed once a client-side session is detected, so a stale
-  // `?error=auth_callback_failed` left over from a first-attempt OAuth race is
-  // never shown to a user who is in fact already signed in.
+  // Session-check gate. Initial render is "checking" so a stale
+  // `?error=auth_callback_failed` never flashes during the brief microtask
+  // between mount and the first getSession() resolution. After resolution,
+  // either we hard-navigate to /dashboard (session present) or we surface
+  // the error AND strip `?error=` from the visible URL so a refresh doesn't
+  // keep re-showing it. Both branches preserve a real failure signal in the
+  // page body — only the URL is cleaned.
+  const [sessionChecking, setSessionChecking] = React.useState(true);
   const [hasSession, setHasSession] = React.useState(false);
-  const callbackError = hasSession ? null : rawCallbackError;
+  const callbackError =
+    hasSession || sessionChecking ? null : rawCallbackError;
 
   const [email, setEmail] = React.useState("");
   const [sentEmail, setSentEmail] = React.useState("");
@@ -142,12 +172,43 @@ export function AuthForm({ mode }: AuthFormProps) {
     : 0;
 
   const callbackUrl = React.useMemo(() => {
+    // ALWAYS anchor on the current browsing origin so the PKCE code_verifier
+    // cookie (written client-side just before the redirect to Google) and the
+    // cookies the /api/auth/callback handler reads share the SAME origin.
+    // A NEXT_PUBLIC_AUTH_CALLBACK_URL pointing at a different origin (e.g.,
+    // the production custom domain while the user is on a Vercel preview, or
+    // the apex while the user is on www., etc.) silently strands the verifier
+    // cookie on the wrong origin and breaks the first attempt every time.
+    const currentOrigin =
+      typeof window !== "undefined" ? window.location.origin : "";
     const configured = process.env.NEXT_PUBLIC_AUTH_CALLBACK_URL;
-    const base = configured
-      ? normalizeCallbackBase(configured)
-      : typeof window !== "undefined"
-        ? `${window.location.origin}${CALLBACK_PATH}`
-        : CALLBACK_PATH;
+    const configuredOrigin = safeOrigin(configured);
+
+    let base: string;
+    if (currentOrigin) {
+      // Browser path — current origin wins. If env is set AND its origin
+      // matches the current one, honor the env (it may include a custom
+      // pathname); otherwise fall back to current origin + default path and
+      // optionally surface a hostname-only warning.
+      if (configured && configuredOrigin === currentOrigin) {
+        base = normalizeCallbackBase(configured);
+      } else {
+        if (configured && configuredOrigin && configuredOrigin !== currentOrigin) {
+          authDebugLog({
+            event: "redirectTo_origin_mismatch_ignored_env",
+            envHost: safeHostname(configured),
+            currentHost: safeHostname(currentOrigin),
+          });
+        }
+        base = `${currentOrigin}${CALLBACK_PATH}`;
+      }
+    } else if (configured) {
+      // SSR / non-browser path — no live origin to anchor on, so use env.
+      base = normalizeCallbackBase(configured);
+    } else {
+      base = CALLBACK_PATH;
+    }
+
     const nextPath = auditToken
       ? `/dashboard?audit_token=${auditToken}`
       : "/dashboard";
@@ -172,13 +233,14 @@ export function AuthForm({ mode }: AuthFormProps) {
     try {
       supabase = createBrowserSupabaseClient();
     } catch {
+      setSessionChecking(false);
       return;
     }
     supabase.auth
       .getSession()
       .then(({ data, error }) => {
-        if (cancelled || error) return;
-        if (data.session?.user) {
+        if (cancelled) return;
+        if (!error && data.session?.user) {
           setHasSession(true);
           const next = searchParams.get("next");
           const target = safeRedirectPath(
@@ -186,10 +248,42 @@ export function AuthForm({ mode }: AuthFormProps) {
               ? `/dashboard?audit_token=${encodeURIComponent(auditToken)}`
               : next,
           );
+          authDebugLog({
+            event: "auth_page_session_detected_redirecting",
+            targetPath: target,
+          });
           window.location.replace(target);
+          return;
         }
+        // No session: drop the stale `?error=` from the URL so a refresh
+        // doesn't keep re-showing it. The error stays visible inline (the
+        // page body still renders it after sessionChecking flips false) so
+        // the user knows what happened.
+        if (typeof window !== "undefined" && rawCallbackError) {
+          try {
+            const url = new URL(window.location.href);
+            if (url.searchParams.get("error")) {
+              url.searchParams.delete("error");
+              const qs = url.searchParams.toString();
+              window.history.replaceState(
+                null,
+                "",
+                url.pathname + (qs ? `?${qs}` : "") + url.hash,
+              );
+            }
+          } catch {
+            // ignore URL parsing failures
+          }
+        }
+        authDebugLog({
+          event: "auth_page_no_session_resolved",
+          hadStaleError: Boolean(rawCallbackError),
+        });
+        setSessionChecking(false);
       })
-      .catch(() => {});
+      .catch(() => {
+        if (!cancelled) setSessionChecking(false);
+      });
     return () => {
       cancelled = true;
     };
