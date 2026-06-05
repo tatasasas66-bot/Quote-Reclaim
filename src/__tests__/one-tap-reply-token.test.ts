@@ -1,7 +1,7 @@
 /**
  * One-Tap Reply — token helpers + gating (pure, no DB).
  */
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
 import {
   ANSWER_TYPES,
   appBaseUrl,
@@ -87,6 +87,12 @@ describe("mapAnswerTypeToReplyIntent", () => {
 });
 
 describe("buildReplyUrl / appBaseUrl", () => {
+  const ORIGINAL_APP_BASE_URL = process.env.APP_BASE_URL;
+  afterEach(() => {
+    if (ORIGINAL_APP_BASE_URL === undefined) delete process.env.APP_BASE_URL;
+    else process.env.APP_BASE_URL = ORIGINAL_APP_BASE_URL;
+  });
+
   it("appends /reply/{token} to the configured base", () => {
     expect(buildReplyUrl("abc123", "https://example.com")).toBe(
       "https://example.com/reply/abc123",
@@ -97,9 +103,19 @@ describe("buildReplyUrl / appBaseUrl", () => {
       "https://example.com/reply/abc",
     );
   });
-  it("appBaseUrl falls back to production host when env unset", () => {
+  it("appBaseUrl falls back to the canonical www host when env unset", () => {
     delete process.env.APP_BASE_URL;
-    expect(appBaseUrl()).toBe("https://quotereclaim.com");
+    expect(appBaseUrl()).toBe("https://www.quotereclaim.com");
+  });
+  it("appBaseUrl uses APP_BASE_URL when set (canonical www in production)", () => {
+    process.env.APP_BASE_URL = "https://www.quotereclaim.com";
+    expect(appBaseUrl()).toBe("https://www.quotereclaim.com");
+  });
+  it("buildReplyUrl produces a canonical https://www.quotereclaim.com/reply/{token}", () => {
+    process.env.APP_BASE_URL = "https://www.quotereclaim.com";
+    expect(buildReplyUrl("TOKEN123")).toBe(
+      "https://www.quotereclaim.com/reply/TOKEN123",
+    );
   });
 });
 

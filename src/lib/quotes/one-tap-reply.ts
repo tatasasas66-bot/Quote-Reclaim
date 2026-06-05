@@ -103,13 +103,15 @@ export function mapAnswerTypeToReplyIntent(
 // ---------------------------------------------------------------------------
 
 /**
- * Production-safe base URL: explicit env, otherwise the marketing host.
- * Mirrors the helper in the email-inbound webhook to avoid leaking localhost.
+ * Production-safe base URL: explicit env, otherwise the canonical marketing
+ * host. Mirrors the helper in the email-inbound webhook to avoid leaking
+ * localhost. Canonical origin is www (apex 301s to www), so the fallback uses
+ * www to keep homeowner-facing /reply/{token} links hop-free.
  */
 export function appBaseUrl(): string {
   const explicit = process.env.APP_BASE_URL?.trim();
   if (explicit) return explicit.replace(/\/+$/, "");
-  return "https://quotereclaim.com";
+  return "https://www.quotereclaim.com";
 }
 
 export function buildReplyUrl(token: string, base?: string): string {

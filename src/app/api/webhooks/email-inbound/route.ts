@@ -36,11 +36,12 @@ function pickString(...candidates: unknown[]): string {
 
 function appBaseUrl(): string {
   // Used only to build the "open the quote" link in the contractor email.
-  // Defaults to the production host so a missing env doesn't leak a localhost
-  // URL into a real notification.
+  // Defaults to the canonical production host (www) so a missing env doesn't
+  // leak a localhost URL — or an apex URL that would 301 — into a real
+  // notification.
   const explicit = process.env.APP_BASE_URL?.trim();
   if (explicit) return explicit.replace(/\/+$/, "");
-  return "https://quotereclaim.com";
+  return "https://www.quotereclaim.com";
 }
 
 function notificationBody(args: {
