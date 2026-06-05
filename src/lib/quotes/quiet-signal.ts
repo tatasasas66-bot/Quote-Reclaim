@@ -31,7 +31,11 @@ export type StallReason =
   | "decision_pending"
   | "open_question"
   | "lost_interest"
-  | "normal_silence";
+  | "normal_silence"
+  // Long-quiet AND no engagement data — we don't have a confident diagnosis
+  // but we also can't pretend everything is calm. Honest "no data" verdict
+  // with an action-oriented next move.
+  | "no_signal_yet";
 
 export type SignalStrength = "early" | "medium" | "strong";
 
@@ -103,6 +107,7 @@ const REASON_LABELS: Record<StallReason, string> = {
   open_question: "Open question",
   lost_interest: "Lost interest",
   normal_silence: "Normal silence",
+  no_signal_yet: "No engagement signal yet",
 };
 
 const STRONG_CONFIDENCE = 0.9;
@@ -254,8 +259,38 @@ export function computeQuietSignal(s: SilenceSignals): QuietSignal | null {
     }
   }
 
-  // R6 — Safe fallback. Everything else (sparse data, opens-only,
-  // wrong-band, too fresh, too stale, mixed signals) lands here.
+  // R6a — Long-quiet AND no engagement data: this is *real* silence, not
+  // just initial quiet. Don't pretend it's calm — name it honestly and give
+  // the contractor an action-oriented next move.
+  //
+  // Both branches REQUIRE noEngagement (open=0 AND click=0). A 28-day quote
+  // with two clicks is not "no signal yet" — there IS signal, it just sits
+  // outside R5's 3-21 day window, and the calm fallback below is the right
+  // answer for it.
+  const noEngagement = s.openCount === 0 && s.clickCount === 0;
+  const longQuiet = s.daysSilent >= 14 && noEngagement;
+  const workedWithoutSignal =
+    s.followupsSent >= 2 && s.daysSilent >= 7 && noEngagement;
+  if (longQuiet || workedWithoutSignal) {
+    return {
+      reason: "no_signal_yet",
+      reasonLabel: REASON_LABELS.no_signal_yet,
+      // Strength stays low — we explicitly don't have data. The card renders
+      // "Not enough data" instead of "Early" for this reason.
+      strength: "early",
+      evidence: [
+        daysSilentSentence(s.daysSilent),
+        "No open, click, or reply signal is available yet.",
+      ],
+      recommendedMove:
+        "Send the close-the-loop message today. Let the homeowner choose instead of stay silent.",
+      recommendedFollowupNumber: 3,
+      confidence: 0,
+    };
+  }
+
+  // R6b — Safe fallback for early quiet + no signal. The cadence is still
+  // doing its job; no action required yet.
   return {
     reason: "normal_silence",
     reasonLabel: REASON_LABELS.normal_silence,

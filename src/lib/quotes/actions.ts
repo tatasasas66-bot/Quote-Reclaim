@@ -13,6 +13,7 @@ import type { SmsResult } from "@/lib/messaging/types";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { createServiceSupabaseClient } from "@/lib/supabase/service";
 import { titleCaseName } from "@/lib/utils/title-case";
+import { normalizeToBusinessHour } from "./business-hours";
 import { quoteInputSchema, quoteUpdateSchema } from "./schema";
 
 export type ActionResult =
@@ -86,7 +87,7 @@ function contractorFirstNameOf(user: {
 function sendAtFromBase(quoteSentAt: string, daysAfter: number): string {
   const d = new Date(quoteSentAt);
   d.setUTCDate(d.getUTCDate() + daysAfter);
-  return d.toISOString();
+  return normalizeToBusinessHour(d).toISOString();
 }
 
 type ReminderShape = {

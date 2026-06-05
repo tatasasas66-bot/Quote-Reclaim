@@ -10,12 +10,15 @@ export interface NextBestAction {
  * One recommended next action per quote row. Reads the band from
  * getRecoveryScore() so labels stay in sync with the badge.
  *
+ * Labels are kept short on purpose — they render inside the IntelligenceField
+ * grid cell on the quote detail page, where a long string used to clip
+ * mid-word ("Send the close-the..." was the visible bug).
+ *
  * - Won / Closed → null (nothing to do)
  * - Reply received → "Mark as won" (success cue)
- * - Fresh / Cooling → "Let recovery run" (muted info — the sequence is doing
- *   its job; no action needed)
- * - At Risk → "Send early" (rust — the contractor should poke today)
- * - Critical → "Send the close-the-loop message today" (warning)
+ * - Fresh / Cooling → "Let recovery run" (muted info — sequence is doing its job)
+ * - At Risk → "Send next follow-up" (rust — contractor should poke today)
+ * - Critical → "Send close-the-loop today" (warning)
  */
 export function nextBestAction(
   quote: QuoteRow,
@@ -27,9 +30,8 @@ export function nextBestAction(
   if (band === "fresh" || band === "cooling") {
     return { label: "Let recovery run", severity: "info" };
   }
-  if (band === "at_risk") return { label: "Send early", severity: "rust" };
-  return {
-    label: "Send the close-the-loop message today",
-    severity: "warning",
-  };
+  if (band === "at_risk") {
+    return { label: "Send next follow-up", severity: "rust" };
+  }
+  return { label: "Send close-the-loop today", severity: "warning" };
 }

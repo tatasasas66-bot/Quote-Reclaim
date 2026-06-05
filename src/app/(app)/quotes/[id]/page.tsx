@@ -50,14 +50,15 @@ const CADENCE_DAYS: Record<FollowupStep, number> = {
   5: 30,
 };
 
-// Research rationale shown under each step so the contractor trusts the
-// message instead of seeing "AI text". Keyed by follow-up number.
+// Research rationale shown under each step. Contractor-native — names the
+// move and the outcome, no academic psychology terms. Replaces an earlier
+// version that used "scarcity", "loss aversion", and "reactance".
 const WHY_THIS_WORKS: Record<FollowupStep, string> = {
   1: "Asking what didn't land flips you from chaser to helper — and surfaces the real objection instead of begging for a reply.",
-  2: "Schedule scarcity makes you the prize. The homeowner now weighs losing access to you, not whether to spend.",
-  3: "Giving permission to say no feels safer than being pushed — so they rarely take it. 'Should I close it' triggers loss aversion.",
+  2: "Showing that your schedule has to be managed makes the homeowner choose instead of leaving you hanging.",
+  3: "Giving permission to say no feels safer than being pushed — so they rarely take it. Asking 'should I close it' lets the homeowner act instead of staying silent.",
   4: "Most quiet quotes stall on price, not interest. Offering a phased path removes the real barrier without ever dropping your number.",
-  5: "The takeaway. Withdrawing the offer triggers reactance — this final close often pulls the reply the first four couldn't.",
+  5: "Pulling back often gets the reply that pushing could not. Saying you'll close the estimate lets the homeowner re-engage on their own terms.",
 };
 
 function computeStatus(
@@ -80,8 +81,16 @@ function nextSendAt(reminders: ReminderRow[]): Date | null {
   return candidates[0] ?? null;
 }
 
+// Display TZ for scheduled-send dates. Anchored to the same zone the
+// scheduler uses for the canonical 09:00 send hour, so server renders
+// (Vercel = UTC) never expose 3 AM clock-times to a US contractor. Until
+// per-contractor TZ ships, every contractor sees Central business-hour
+// labels.
+const DISPLAY_TIMEZONE = "America/Chicago";
+
 function formatSendDate(date: Date): string {
   return date.toLocaleString("en-US", {
+    timeZone: DISPLAY_TIMEZONE,
     month: "short",
     day: "numeric",
     hour: "numeric",
@@ -314,10 +323,7 @@ function QuoteSummary({
           value={formatCurrency(quote.estimate_amount)}
         />
         <IntelligenceField label="Days quiet" value={String(daysQuiet)} />
-        <IntelligenceField
-          label="Recovery Priority"
-          value={`${score.score} · ${score.label}`}
-        />
+        <IntelligenceField label="Recovery Priority" value={score.label} />
         <IntelligenceField
           label="Next Best Action"
           value={nba?.label ?? "Review plan"}
@@ -356,12 +362,17 @@ function QuoteSummary({
 }
 
 function IntelligenceField({ label, value }: { label: string; value: string }) {
+  // `break-words` (not `truncate`) so a slightly long label — a Next Best
+  // Action variant, a long client email — wraps cleanly instead of silently
+  // clipping mid-word like the previous "Send the close-the…" bug.
   return (
     <div className="min-w-0 rounded-lg border border-line-subtle bg-canvas/35 p-3">
       <dt className="text-[10px] font-black uppercase tracking-widest text-ink-muted">
         {label}
       </dt>
-      <dd className="mt-1 truncate text-sm font-bold text-ink-strong">{value}</dd>
+      <dd className="mt-1 break-words text-sm font-bold text-ink-strong">
+        {value}
+      </dd>
     </div>
   );
 }

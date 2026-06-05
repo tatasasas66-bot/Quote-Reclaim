@@ -384,18 +384,19 @@ describe("30. visible framework labels", () => {
 //        and visible labels, not the contractor-only rationale text.
 // ---------------------------------------------------------------------------
 
-describe("31-32. WHY_THIS_WORKS rationale is byte-identical to the pre-rewrite version", () => {
-  // Locked snapshot. If this ever needs to change, it requires an explicit
-  // task scope expansion — the upgrade-to-10/10 task forbids edits here.
+describe("31-32. WHY_THIS_WORKS rationale is contractor-native (no psychology jargon)", () => {
+  // Locked snapshot after the contractor-native rewrite. The previous version
+  // used "Schedule scarcity makes you the prize", "loss aversion", and
+  // "reactance" — phrases that read as a sales coach instead of a contractor.
   const EXPECTED_WHY_THIS_WORKS = `const WHY_THIS_WORKS: Record<FollowupStep, string> = {
   1: "Asking what didn't land flips you from chaser to helper — and surfaces the real objection instead of begging for a reply.",
-  2: "Schedule scarcity makes you the prize. The homeowner now weighs losing access to you, not whether to spend.",
-  3: "Giving permission to say no feels safer than being pushed — so they rarely take it. 'Should I close it' triggers loss aversion.",
+  2: "Showing that your schedule has to be managed makes the homeowner choose instead of leaving you hanging.",
+  3: "Giving permission to say no feels safer than being pushed — so they rarely take it. Asking 'should I close it' lets the homeowner act instead of staying silent.",
   4: "Most quiet quotes stall on price, not interest. Offering a phased path removes the real barrier without ever dropping your number.",
-  5: "The takeaway. Withdrawing the offer triggers reactance — this final close often pulls the reply the first four couldn't.",
+  5: "Pulling back often gets the reply that pushing could not. Saying you'll close the estimate lets the homeowner re-engage on their own terms.",
 };`;
 
-  it("31. WHY_THIS_WORKS source block is unchanged", () => {
+  it("31. WHY_THIS_WORKS source block matches the contractor-native rewrite", () => {
     expect(detailPage).toContain(EXPECTED_WHY_THIS_WORKS);
   });
 
@@ -404,21 +405,35 @@ describe("31-32. WHY_THIS_WORKS rationale is byte-identical to the pre-rewrite v
       "Asking what didn't land flips you from chaser to helper — and surfaces the real objection instead of begging for a reply.",
     );
     expect(detailPage).toContain(
-      "Schedule scarcity makes you the prize. The homeowner now weighs losing access to you, not whether to spend.",
+      "Showing that your schedule has to be managed makes the homeowner choose instead of leaving you hanging.",
     );
     expect(detailPage).toContain(
-      "Giving permission to say no feels safer than being pushed — so they rarely take it. 'Should I close it' triggers loss aversion.",
+      "Giving permission to say no feels safer than being pushed — so they rarely take it. Asking 'should I close it' lets the homeowner act instead of staying silent.",
     );
     expect(detailPage).toContain(
       "Most quiet quotes stall on price, not interest. Offering a phased path removes the real barrier without ever dropping your number.",
     );
     expect(detailPage).toContain(
-      "The takeaway. Withdrawing the offer triggers reactance — this final close often pulls the reply the first four couldn't.",
+      "Pulling back often gets the reply that pushing could not. Saying you'll close the estimate lets the homeowner re-engage on their own terms.",
     );
   });
 
   it("the WHY_THIS_WORKS UI rendering point is unchanged (keyed by followup_number)", () => {
     expect(detailPage).toMatch(/WHY_THIS_WORKS\[r\.followup_number/);
+  });
+
+  it("contains NO academic psychology jargon (the contract this rewrite delivers)", () => {
+    // Scan the locked block only — `loss aversion` / `reactance` may appear
+    // legitimately in test fixtures elsewhere in the file.
+    const startIdx = detailPage.indexOf("const WHY_THIS_WORKS");
+    const endIdx = detailPage.indexOf("};", startIdx);
+    expect(startIdx).toBeGreaterThan(-1);
+    expect(endIdx).toBeGreaterThan(startIdx);
+    const block = detailPage.slice(startIdx, endIdx);
+    expect(block).not.toMatch(/loss aversion/i);
+    expect(block).not.toMatch(/reactance/i);
+    expect(block).not.toMatch(/scarcity makes you the prize/i);
+    expect(block).not.toMatch(/psychological trigger/i);
   });
 });
 

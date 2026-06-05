@@ -394,14 +394,14 @@ describe("detail page integration — Quiet Signal mounted, anchors in place", (
     expect(detailPage).not.toMatch(/swapFollowup|replacePlan|regeneratePlan/);
   });
 
-  it("WHY_THIS_WORKS source block remains byte-identical", () => {
+  it("WHY_THIS_WORKS source block matches the contractor-native rewrite", () => {
     expect(detailPage).toContain(
       `const WHY_THIS_WORKS: Record<FollowupStep, string> = {
   1: "Asking what didn't land flips you from chaser to helper — and surfaces the real objection instead of begging for a reply.",
-  2: "Schedule scarcity makes you the prize. The homeowner now weighs losing access to you, not whether to spend.",
-  3: "Giving permission to say no feels safer than being pushed — so they rarely take it. 'Should I close it' triggers loss aversion.",
+  2: "Showing that your schedule has to be managed makes the homeowner choose instead of leaving you hanging.",
+  3: "Giving permission to say no feels safer than being pushed — so they rarely take it. Asking 'should I close it' lets the homeowner act instead of staying silent.",
   4: "Most quiet quotes stall on price, not interest. Offering a phased path removes the real barrier without ever dropping your number.",
-  5: "The takeaway. Withdrawing the offer triggers reactance — this final close often pulls the reply the first four couldn't.",
+  5: "Pulling back often gets the reply that pushing could not. Saying you'll close the estimate lets the homeowner re-engage on their own terms.",
 };`,
     );
   });

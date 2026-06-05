@@ -330,7 +330,7 @@ const DAY1_VARIANTS: ReadonlyArray<(v: VariantVars) => string> = [
 // Operational, never claims the contractor is releasing or holding a slot.
 const DAY3_VARIANTS: ReadonlyArray<(v: VariantVars) => string> = [
   ({ firstName, tradeWord }) =>
-    `${firstName}, I'm lining up the ${tradeWord} schedule. Should I keep this on the active list, or move it off my list?`,
+    `${firstName}, I'm lining up the ${tradeWord} schedule. Should I keep your estimate active, or move it off my list?`,
   ({ firstName, tradeWord }) =>
     `${firstName}, I'm sorting the next round of ${tradeWord} work. Should I keep your estimate active, or set it aside?`,
   ({ firstName, project }) =>
@@ -369,7 +369,7 @@ const DAY14_VARIANTS: ReadonlyArray<(v: VariantVars) => string> = [
   ({ firstName, projectDetail }) =>
     `${firstName}, sometimes these stall over timing or one detail. If that's the case with ${projectDetail}, want me to walk through the options with you?`,
   ({ firstName, projectDetail }) =>
-    `${firstName}, if there's one part of ${projectDetail} holding things up, want me to walk through it so you know exactly where it stands?`,
+    `${firstName}, if there's one part of ${projectDetail} holding things up, want me to walk through it so you know exactly what you're looking at?`,
 ];
 
 // DAY 30 — Final Closeout. Respectful, detached. Declarative. No question.
@@ -378,7 +378,7 @@ const DAY30_VARIANTS: ReadonlyArray<(v: VariantVars) => string> = [
   ({ firstName, projectDetail }) =>
     `${firstName}, I'll close out ${projectDetail} after this. No hard feelings. If anything changes later, reach out and I'll pick it back up.`,
   ({ firstName, projectDetail }) =>
-    `${firstName}, I'm going to close ${projectDetail} on my end. If you decide to revisit it later, just reach out.`,
+    `${firstName}, I'm going to close ${projectDetail} on my end. If you want me to keep it open, just let me know.`,
   ({ firstName, projectDetail }) =>
     `${firstName}, I'll mark ${projectDetail} closed for now. No problem either way — if it comes back up later, I can reopen it.`,
   ({ firstName, projectDetail }) =>

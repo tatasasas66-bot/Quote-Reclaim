@@ -67,7 +67,29 @@ export function QuoteActions({
           onDismiss={() => router.push("/dashboard")}
         />
       ) : null}
+      {/*
+        Order: dominant green CTA → secondary toggle → terminal destructive.
+        Got-the-Job leads so the contractor's eye lands on the win action
+        first; Close (terminal) sits last with the quietest variant.
+      */}
       <div className="flex flex-wrap gap-2">
+        <Button
+          type="button"
+          variant="success"
+          loading={pending === "won"}
+          disabled={busy}
+          className="shadow-[0_0_30px_rgba(31,169,113,0.2)]"
+          onClick={() =>
+            run(
+              "won",
+              () => markQuoteWonAction(quoteId),
+              "Mark this quote as won? Reminders pause and your totals update.",
+            )
+          }
+        >
+          Got the Job
+        </Button>
+
         {status === "running" ? (
           <Button
             type="button"
@@ -101,23 +123,6 @@ export function QuoteActions({
             Resume sequence
           </Button>
         )}
-
-        <Button
-          type="button"
-          variant="success"
-          loading={pending === "won"}
-          disabled={busy}
-          className="shadow-[0_0_30px_rgba(31,169,113,0.2)]"
-          onClick={() =>
-            run(
-              "won",
-              () => markQuoteWonAction(quoteId),
-              "Mark this quote as won? Reminders pause and your totals update.",
-            )
-          }
-        >
-          Got the Job
-        </Button>
 
         <Button
           type="button"

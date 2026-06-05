@@ -20,6 +20,11 @@ const STRENGTH_LABEL: Record<SignalStrength, string> = {
   strong: "Strong",
 };
 
+// The `no_signal_yet` reason is, by definition, missing the data needed for
+// a real strength read. Show that honestly instead of mapping to "Early"
+// (which read as "calm" next to a CRITICAL Recovery Priority).
+const NO_SIGNAL_STRENGTH_LABEL = "Not enough data";
+
 const STRENGTH_TONE: Record<SignalStrength, string> = {
   early: "text-ink-muted",
   medium: "text-warning",
@@ -35,7 +40,10 @@ const STRENGTH_BORDER: Record<SignalStrength, string> = {
 export function QuietSignalCard({ signal }: { signal: QuietSignal | null }) {
   if (!signal) return null;
 
-  const strengthLabel = STRENGTH_LABEL[signal.strength];
+  const strengthLabel =
+    signal.reason === "no_signal_yet"
+      ? NO_SIGNAL_STRENGTH_LABEL
+      : STRENGTH_LABEL[signal.strength];
   const strengthTone = STRENGTH_TONE[signal.strength];
   const borderTone = STRENGTH_BORDER[signal.strength];
 

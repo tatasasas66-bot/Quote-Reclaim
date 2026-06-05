@@ -144,15 +144,19 @@ describe("Sequence detail 'Why this works' rationale", () => {
   it("provides distinct rationale for all five follow-up steps", () => {
     // Day 1 — Pattern Interrupt
     expect(detailPage).toMatch(/flips you from chaser to helper/);
-    // Day 3 — Authority / Prize Frame
-    expect(detailPage).toMatch(/Schedule scarcity makes you the prize/);
-    // Day 7 — Voss Takeaway
+    // Day 3 — Schedule frame (contractor-native rewrite)
+    expect(detailPage).toMatch(
+      /Showing that your schedule has to be managed/,
+    );
+    // Day 7 — Permission-to-say-no
     expect(detailPage).toMatch(/Giving permission to say no/);
-    // Day 14 — Value Re-frame (phasing, never a price drop)
+    // Day 14 — Phased path (no price drop)
     expect(detailPage).toMatch(/stall on price, not interest/);
     expect(detailPage).toMatch(/phased path/);
-    // Day 30 — Final Breakup
-    expect(detailPage).toMatch(/Withdrawing the offer triggers reactance/);
+    // Day 30 — Pull-back (no academic "reactance" wording)
+    expect(detailPage).toMatch(
+      /Pulling back often gets the reply that pushing could not/,
+    );
   });
 
   it("keys the rationale by follow-up number", () => {

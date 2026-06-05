@@ -292,7 +292,10 @@ describe("Fallback messages use the uploaded SMS research sequence", () => {
 
   it("Day 3 uses the active-list / schedule framing (no fake slot scarcity)", () => {
     expect(aiFallbacks).toMatch(/lining up the \$\{tradeWord\} schedule/);
-    expect(aiFallbacks).toMatch(/active list/);
+    // Polish pass: Day 3 v0 was sharpened from "this on the active list" to
+    // "your estimate active"; v2 still carries the "list" framing. Either
+    // shape is valid as long as the schedule-check intent is preserved.
+    expect(aiFallbacks).toMatch(/active list|estimate active|keep .* on my list/);
     // No fake-scarcity phrases the rewrite outlawed.
     expect(aiFallbacks).not.toMatch(/let the slot go/);
     expect(aiFallbacks).not.toMatch(/locking the schedule today/);
