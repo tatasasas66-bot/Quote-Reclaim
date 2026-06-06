@@ -72,11 +72,41 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
   const attrs = payload.data?.attributes ?? {};
   const status = (attrs.status ?? "").toLowerCase();
   const paid = isPaidStatus(status);
+  const incomingUpdatedAtIso = attrs.updated_at ?? null;
 
   const supabase = createServiceSupabaseClient();
 
   const subscriptionId = payload.data?.id ?? null;
   const orderId = attrs.order_id != null ? String(attrs.order_id) : null;
+
+  // Out-of-order protection: Lemon retries can deliver an older event AFTER a
+  // newer one (e.g. a delayed subscription_created arriving after a
+  // subscription_cancelled). Compare the incoming attrs.updated_at against
+  // the stored row's updated_at; skip the apply if the incoming event is
+  // older. New users with no existing row always proceed. Equal timestamps
+  // are treated as same-event replays and skipped (idempotent no-op).
+  if (incomingUpdatedAtIso) {
+    const { data: existingRow } = await supabase
+      .from("subscriptions")
+      .select("updated_at")
+      .eq("user_id", userId)
+      .maybeSingle();
+
+    const existingUpdatedAtIso = existingRow?.updated_at ?? null;
+    if (existingUpdatedAtIso) {
+      const incomingMs = Date.parse(incomingUpdatedAtIso);
+      const existingMs = Date.parse(existingUpdatedAtIso);
+      if (
+        Number.isFinite(incomingMs) &&
+        Number.isFinite(existingMs) &&
+        incomingMs <= existingMs
+      ) {
+        // Stale (older or duplicate) event — drop on the floor, no DB mutation.
+        // 200 so Lemon stops retrying.
+        return new NextResponse("ok", { status: 200 });
+      }
+    }
+  }
 
   // Upsert subscriptions row. Idempotent on retry: same primary key (user_id)
   // overwrites with the same values when the webhook is replayed.

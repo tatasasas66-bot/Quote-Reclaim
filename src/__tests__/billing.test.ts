@@ -438,6 +438,138 @@ describe("createQuoteAction free-plan gate", () => {
 });
 
 // ---------------------------------------------------------------------------
+// LAUNCH-BLOCKER FIX #1 — billing column lockdown (Migration 011)
+// ---------------------------------------------------------------------------
+
+describe("Migration 011 — billing column lockdown trigger", () => {
+  const migrationSrc = readSource(
+    "../../supabase/migrations/011_billing_column_lockdown.sql",
+  );
+
+  it("creates a BEFORE UPDATE trigger on public.profiles", () => {
+    expect(migrationSrc).toMatch(
+      /create trigger trg_guard_billing_columns[\s\S]*?before update on public\.profiles/,
+    );
+  });
+
+  it("guards EVERY billing/usage column an attacker could try to flip", () => {
+    expect(migrationSrc).toMatch(/is_paid is distinct from old\.is_paid/);
+    expect(migrationSrc).toMatch(/usage_count is distinct from old\.usage_count/);
+    expect(migrationSrc).toMatch(/jobs_won is distinct from old\.jobs_won/);
+    expect(migrationSrc).toMatch(
+      /recovered_amount is distinct from old\.recovered_amount/,
+    );
+  });
+
+  it("raises permission_denied (42501) for authenticated/anon callers", () => {
+    expect(migrationSrc).toMatch(/permission denied: billing and usage columns/);
+    expect(migrationSrc).toMatch(/errcode\s*=\s*'42501'/);
+  });
+
+  it("allows service_role and the RPC owner to mutate billing columns", () => {
+    // The bypass is "current_user NOT IN (authenticated, anon)" — anything
+    // else (service_role, postgres, supabase_admin, the RPC owner) is trusted.
+    expect(migrationSrc).toMatch(
+      /current_user not in \('authenticated', 'anon'\)/,
+    );
+  });
+
+  it("revokes EXECUTE on the guard function from public", () => {
+    expect(migrationSrc).toMatch(
+      /revoke execute on function public\.guard_billing_columns_on_profiles\(\) from public/,
+    );
+  });
+
+  it("is idempotent (safe to re-run)", () => {
+    expect(migrationSrc).toMatch(/create or replace function/);
+    expect(migrationSrc).toMatch(
+      /drop trigger if exists trg_guard_billing_columns/,
+    );
+  });
+
+  it("touches NO existing tables or policies (additive only)", () => {
+    // No ALTER, no DROP TABLE, no CREATE/DROP POLICY.
+    expect(migrationSrc).not.toMatch(/^alter table/im);
+    expect(migrationSrc).not.toMatch(/^drop table/im);
+    expect(migrationSrc).not.toMatch(/create policy/i);
+    expect(migrationSrc).not.toMatch(/drop policy/i);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// LAUNCH-BLOCKER FIX #2 — webhook out-of-order protection
+// ---------------------------------------------------------------------------
+
+describe("/api/webhooks/lemonsqueezy — out-of-order event protection", () => {
+  it("reads the existing subscription row's updated_at before upserting", () => {
+    expect(webhookRoute).toMatch(
+      /from\("subscriptions"\)[\s\S]*?\.select\("updated_at"\)[\s\S]*?\.eq\("user_id", userId\)/,
+    );
+  });
+
+  it("compares incoming attrs.updated_at against the stored updated_at", () => {
+    expect(webhookRoute).toContain("incomingUpdatedAtIso");
+    expect(webhookRoute).toMatch(/attrs\.updated_at\s*\?\?\s*null/);
+    expect(webhookRoute).toMatch(/Date\.parse\(incomingUpdatedAtIso\)/);
+    expect(webhookRoute).toMatch(/Date\.parse\(existingUpdatedAtIso\)/);
+  });
+
+  it("drops stale events with 200 (no DB mutation) so Lemon stops retrying", () => {
+    // A stale or duplicate-timestamp event must short-circuit BEFORE the
+    // upsert + profile update.
+    expect(webhookRoute).toMatch(
+      /incomingMs\s*<=\s*existingMs[\s\S]*?return new NextResponse\("ok", \{ status: 200 \}\)/,
+    );
+  });
+
+  it("new users (no existing row) still go through — first event creates the row", () => {
+    // If there's no existing row, the comparison branch is skipped and the
+    // upsert path runs normally.
+    expect(webhookRoute).toMatch(
+      /if \(existingUpdatedAtIso\)\s*\{[\s\S]*?const incomingMs/,
+    );
+  });
+
+  it("never logs the OAuth code, raw secret, or full request URL on the stale path", () => {
+    // The stale-event branch is silent — no console.log/error with payload data.
+    // (The existing 'no secret logging' contract from the previous suite still
+    // holds; just pin it for the new branch.)
+    expect(webhookRoute).not.toMatch(/console\.\w+\([^)]*incomingUpdatedAtIso/);
+    expect(webhookRoute).not.toMatch(/console\.\w+\([^)]*existingUpdatedAtIso/);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Webhook event-name handling — explicit allow + safe-ignore
+// ---------------------------------------------------------------------------
+
+describe("webhook event handling — explicit subscription_* + safe-ignore others", () => {
+  it("explicitly handles only subscription_* events", () => {
+    // order_*, license_*, etc. are ack'd with 200 but do not touch the DB.
+    expect(webhookRoute).toContain('eventName.startsWith("subscription_")');
+  });
+
+  it("ack-200s unknown / order_* / license_* events without DB writes", () => {
+    expect(webhookRoute).toMatch(
+      /if \(!eventName\.startsWith\("subscription_"\)\)\s*\{[\s\S]*?return new NextResponse\("ok", \{ status: 200 \}\)/,
+    );
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Canonical domain — checkout / webhook URLs in docs use www, never vercel.app
+// ---------------------------------------------------------------------------
+
+describe("billing URLs use the canonical www origin", () => {
+  it("no production code references vercel.app", () => {
+    expect(checkoutRoute).not.toMatch(/vercel\.app/i);
+    expect(webhookRoute).not.toMatch(/vercel\.app/i);
+    expect(lsLib).not.toMatch(/vercel\.app/i);
+    expect(actions).not.toMatch(/vercel\.app/i);
+  });
+});
+
+// ---------------------------------------------------------------------------
 // Centralized price constants
 // ---------------------------------------------------------------------------
 
