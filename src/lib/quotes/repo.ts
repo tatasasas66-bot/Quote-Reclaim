@@ -28,6 +28,7 @@ export type ProfileStats = {
   recovered_amount: number;
   usage_count: number;
   is_paid: boolean;
+  onboarding_done: boolean;
 };
 
 export async function listPendingQuotes(
@@ -98,7 +99,7 @@ export async function getProfileStats(
 ): Promise<ProfileStats | null> {
   const { data, error } = await supabase
     .from("profiles")
-    .select("jobs_won, recovered_amount, usage_count, is_paid")
+    .select("jobs_won, recovered_amount, usage_count, is_paid, onboarding_done")
     .eq("id", userId)
     .maybeSingle();
   if (error) throw new Error(`getProfileStats failed: ${error.message}`);
@@ -108,6 +109,7 @@ export async function getProfileStats(
     recovered_amount: Number(data.recovered_amount ?? 0),
     usage_count: data.usage_count ?? 0,
     is_paid: Boolean(data.is_paid),
+    onboarding_done: Boolean(data.onboarding_done),
   };
 }
 

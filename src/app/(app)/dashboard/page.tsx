@@ -44,6 +44,14 @@ export default async function DashboardPage() {
     ),
   ]);
 
+  // Silent Money Reveal — first-run flow. New users (no quotes yet AND
+  // onboarding_done flag still false) get the bulk-import reveal so their
+  // first dashboard view is alive with real numbers, not zeros. Existing
+  // users (any pending quotes OR onboarding_done already true) skip past.
+  if (!profile?.onboarding_done && pending.length === 0) {
+    redirect("/onboarding/reveal");
+  }
+
   const jobsWonLifetime = profile?.jobs_won ?? 0;
   const allTimeRecovered = profile?.recovered_amount ?? 0;
 
