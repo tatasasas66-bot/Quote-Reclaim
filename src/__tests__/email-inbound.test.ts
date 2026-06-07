@@ -11,6 +11,7 @@ import {
   parseFromEmail,
   stripQuotedReply,
 } from "@/lib/messaging/strip-quoted-reply";
+import { shouldVerifyEmailInboundMode } from "@/lib/messaging/email-inbound-verify";
 import { suggestResponse } from "@/lib/ai/suggest-response";
 import {
   ReplyRadarCard,
@@ -365,5 +366,73 @@ describe("new email-inbound files pass the honest-copy audit", () => {
     for (const lit of literals) {
       expect(lit, lit).not.toMatch(/!/);
     }
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Production fail-closed: no anonymous fake-reply injection
+// ---------------------------------------------------------------------------
+
+describe("shouldVerifyEmailInboundMode — production must require the secret", () => {
+  it("rejects (503) in production when the secret is missing", () => {
+    expect(shouldVerifyEmailInboundMode({ NODE_ENV: "production" })).toBe(
+      "reject",
+    );
+  });
+
+  it("verifies in production when the secret is set", () => {
+    expect(
+      shouldVerifyEmailInboundMode({
+        NODE_ENV: "production",
+        EMAIL_INBOUND_SECRET: "x",
+      }),
+    ).toBe("verify");
+  });
+
+  it("allows unsigned in non-production with no secret (dev/test parity)", () => {
+    expect(shouldVerifyEmailInboundMode({ NODE_ENV: "development" })).toBe(
+      "allow-unsigned",
+    );
+    expect(shouldVerifyEmailInboundMode({ NODE_ENV: "test" })).toBe(
+      "allow-unsigned",
+    );
+  });
+
+  it("verifies in non-production when a secret IS configured", () => {
+    expect(
+      shouldVerifyEmailInboundMode({
+        NODE_ENV: "development",
+        EMAIL_INBOUND_SECRET: "x",
+      }),
+    ).toBe("verify");
+  });
+});
+
+describe("/api/webhooks/email-inbound — route fail-closed contract", () => {
+  it("uses the shared shouldVerifyEmailInboundMode helper", () => {
+    expect(inboundRoute).toContain("shouldVerifyEmailInboundMode");
+    expect(inboundRoute).toContain(
+      'from "@/lib/messaging/email-inbound-verify"',
+    );
+  });
+
+  it("returns 503 'Webhook misconfigured' in production without the secret", () => {
+    expect(inboundRoute).toMatch(
+      /mode === "reject"[\s\S]*?Webhook misconfigured[\s\S]*?status:\s*503/,
+    );
+  });
+
+  it("returns 401 on a wrong x-webhook-secret when the mode is verify", () => {
+    expect(inboundRoute).toMatch(
+      /mode === "verify"[\s\S]*?provided !== secret[\s\S]*?status:\s*401/,
+    );
+  });
+
+  it("no longer silently accepts unsigned when EMAIL_INBOUND_SECRET is unset", () => {
+    // The pre-fix `if (secret) { check }` block — which fell through to
+    // accept when the env was missing — is gone.
+    expect(inboundRoute).not.toMatch(
+      /const secret = process\.env\.EMAIL_INBOUND_SECRET\?\.trim\(\);\s*if \(secret\) \{/,
+    );
   });
 });

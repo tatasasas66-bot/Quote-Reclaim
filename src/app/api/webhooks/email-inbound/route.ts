@@ -4,6 +4,7 @@ import { createServiceSupabaseClient } from "@/lib/supabase/service";
 import { classifyReply, isReplyIntent } from "@/lib/ai/classify-reply";
 import { suggestResponse } from "@/lib/ai/suggest-response";
 import { sendRecoveryEmail } from "@/lib/messaging/email-provider";
+import { shouldVerifyEmailInboundMode } from "@/lib/messaging/email-inbound-verify";
 import {
   parseFromEmail,
   stripQuotedReply,
@@ -71,12 +72,14 @@ function notificationBody(args: {
 }
 
 export async function POST(request: NextRequest): Promise<NextResponse> {
-  // Shared-secret check, opt-in. When EMAIL_INBOUND_SECRET is set we require
-  // the header; when it's unset we accept (dev / preview parity with the
-  // shouldVerifyMode pattern used for Twilio).
-  const secret = process.env.EMAIL_INBOUND_SECRET?.trim();
-  if (secret) {
+  const mode = shouldVerifyEmailInboundMode(process.env);
+  if (mode === "reject") {
+    // Production without EMAIL_INBOUND_SECRET => fail closed.
+    return new NextResponse("Webhook misconfigured", { status: 503 });
+  }
+  if (mode === "verify") {
     const provided = request.headers.get("x-webhook-secret") ?? "";
+    const secret = process.env.EMAIL_INBOUND_SECRET?.trim() ?? "";
     if (provided !== secret) {
       return new NextResponse("Invalid signature", { status: 401 });
     }
