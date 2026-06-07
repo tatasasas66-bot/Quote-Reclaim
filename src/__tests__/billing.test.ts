@@ -324,8 +324,11 @@ describe("/api/webhooks/lemonsqueezy route", () => {
     expect(webhookRoute).toMatch(/updated\.length === 0[\s\S]*?status:\s*500/);
   });
 
-  it("handles subscription_* events and ignores others", () => {
-    expect(webhookRoute).toMatch(/eventName\.startsWith\("subscription_"\)/);
+  it("handles subscription lifecycle events and ignores others", () => {
+    expect(webhookRoute).toContain("SUBSCRIPTION_LIFECYCLE_EVENTS");
+    expect(webhookRoute).toMatch(
+      /SUBSCRIPTION_LIFECYCLE_EVENTS\.has\(eventName\)/,
+    );
   });
 
   it("never echoes raw error details into the response body", () => {
@@ -543,16 +546,65 @@ describe("/api/webhooks/lemonsqueezy — out-of-order event protection", () => {
 // Webhook event-name handling — explicit allow + safe-ignore
 // ---------------------------------------------------------------------------
 
-describe("webhook event handling — explicit subscription_* + safe-ignore others", () => {
-  it("explicitly handles only subscription_* events", () => {
-    // order_*, license_*, etc. are ack'd with 200 but do not touch the DB.
-    expect(webhookRoute).toContain('eventName.startsWith("subscription_")');
+describe("webhook event handling — lifecycle-only entitlement, invoice events ignored", () => {
+  it("defines the exact 7 subscription lifecycle events that drive entitlement", () => {
+    for (const ev of [
+      "subscription_created",
+      "subscription_updated",
+      "subscription_cancelled",
+      "subscription_expired",
+      "subscription_resumed",
+      "subscription_paused",
+      "subscription_unpaused",
+    ]) {
+      expect(webhookRoute).toContain(`"${ev}"`);
+    }
   });
 
-  it("ack-200s unknown / order_* / license_* events without DB writes", () => {
-    expect(webhookRoute).toMatch(
-      /if \(!eventName\.startsWith\("subscription_"\)\)\s*\{[\s\S]*?return new NextResponse\("ok", \{ status: 200 \}\)/,
+  it("does NOT treat payment/invoice events as lifecycle (the activation bug)", () => {
+    // subscription_payment_success / _failed / _refunded must not be in the
+    // lifecycle set — their invoice status ("paid") would wrongly downgrade.
+    const lifecycleBlock = webhookRoute.slice(
+      webhookRoute.indexOf("SUBSCRIPTION_LIFECYCLE_EVENTS: ReadonlySet"),
+      webhookRoute.indexOf("]);"),
     );
+    expect(lifecycleBlock).not.toContain("subscription_payment_success");
+    expect(lifecycleBlock).not.toContain("subscription_payment_failed");
+    expect(lifecycleBlock).not.toContain("subscription_payment_refunded");
+  });
+
+  it("ack-200s every non-lifecycle event (incl. payment_*) without DB writes", () => {
+    expect(webhookRoute).toMatch(
+      /if \(!SUBSCRIPTION_LIFECYCLE_EVENTS\.has\(eventName\)\)\s*\{[\s\S]*?return new NextResponse\("ok", \{ status: 200 \}\)/,
+    );
+  });
+
+  it("only computes entitlement from a `subscriptions` data resource (defence in depth)", () => {
+    expect(webhookRoute).toMatch(
+      /dataType && dataType !== "subscriptions"[\s\S]*?return new NextResponse\("ok", \{ status: 200 \}\)/,
+    );
+  });
+
+  it("invoice status 'paid' is never a paid entitlement (isPaidStatus allow-list)", () => {
+    // Belt + suspenders at the lib layer: even if "paid" reached isPaidStatus,
+    // it is NOT in the allow-list, so it cannot grant entitlement.
+    expect(isPaidStatus("paid")).toBe(false);
+    expect(isPaidStatus("active")).toBe(true);
+    expect(isPaidStatus("on_trial")).toBe(true);
+  });
+
+  it("debug diagnostics are opt-in and never log payload/secret/PII", () => {
+    expect(webhookRoute).toMatch(
+      /LEMONSQUEEZY_WEBHOOK_DEBUG !== "true"/,
+    );
+    const debugCalls = webhookRoute.match(/webhookDebugLog\(\{[\s\S]*?\}\)/g) ?? [];
+    expect(debugCalls.length).toBeGreaterThan(0);
+    for (const call of debugCalls) {
+      expect(call).not.toMatch(/rawBody|signature|secret|payload\b/);
+      expect(call).not.toMatch(/\bemail\b/);
+      // Only a user_id PREFIX is allowed, never the full id field on its own.
+      expect(call).not.toMatch(/userId\s*[,}]/);
+    }
   });
 });
 

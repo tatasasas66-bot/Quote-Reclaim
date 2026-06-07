@@ -9,6 +9,45 @@ import { isPaidStatus } from "@/lib/payments/lemonsqueezy";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
+/**
+ * Subscription LIFECYCLE events. Only these carry a `subscriptions` data
+ * resource whose `attributes.status` is the real lifecycle status — active /
+ * on_trial / cancelled / expired / past_due / paused / unpaid — and only
+ * these may drive entitlement (profiles.is_paid) and write
+ * subscriptions.status.
+ *
+ * Payment/invoice events (subscription_payment_success,
+ * subscription_payment_failed, subscription_payment_recovered,
+ * subscription_payment_refunded) carry a `subscription-invoices` resource
+ * whose `attributes.status` is an INVOICE status ("paid", "pending",
+ * "refunded"). An invoice status of "paid" is NOT a subscription lifecycle
+ * status: feeding it through isPaidStatus() returns false and wrongly
+ * downgrades a paying user. These events are acknowledged (200) but never
+ * change entitlement — the matching lifecycle event (e.g. subscription_updated
+ * -> past_due on a failed charge) is what moves is_paid.
+ */
+const SUBSCRIPTION_LIFECYCLE_EVENTS: ReadonlySet<string> = new Set([
+  "subscription_created",
+  "subscription_updated",
+  "subscription_cancelled",
+  "subscription_expired",
+  "subscription_resumed",
+  "subscription_paused",
+  "subscription_unpaused",
+]);
+
+/**
+ * Opt-in webhook diagnostics. Behind LEMONSQUEEZY_WEBHOOK_DEBUG=true so
+ * production stays quiet. Logs ONLY non-sensitive facts: event name, data
+ * type, lifecycle status, whether a parent subscription id is present, a
+ * short user_id prefix, the entitlement decision, and affected-row counts.
+ * NEVER the raw payload, signature, secret, email, or any customer PII.
+ */
+function webhookDebugLog(fields: Record<string, unknown>): void {
+  if (process.env.LEMONSQUEEZY_WEBHOOK_DEBUG !== "true") return;
+  console.log("[lemon:webhook:debug]", fields);
+}
+
 type LemonWebhookBody = {
   meta?: {
     event_name?: string;
@@ -57,8 +96,33 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
   }
 
   const eventName = payload?.meta?.event_name ?? "";
-  if (!eventName.startsWith("subscription_")) {
-    // Phase 9 only handles subscription_* events. Ack anything else.
+  const dataType = payload.data?.type ?? "";
+  const hasParentSubscriptionId =
+    payload.data?.attributes?.subscription_id != null;
+
+  // Entitlement is driven ONLY by subscription lifecycle events. Payment/
+  // invoice events (subscription_payment_*) and anything else are ack'd 200
+  // with NO DB mutation, so an invoice status of "paid" can never downgrade a
+  // paying user's entitlement.
+  if (!SUBSCRIPTION_LIFECYCLE_EVENTS.has(eventName)) {
+    webhookDebugLog({
+      event: eventName,
+      dataType,
+      hasParentSubscriptionId,
+      decision: "ignored:non_lifecycle_event",
+    });
+    return new NextResponse("ok", { status: 200 });
+  }
+
+  // Defence in depth: a lifecycle event must carry a `subscriptions` data
+  // resource. If Lemon ever sends a different resource under a lifecycle
+  // event name, do NOT mutate entitlement from it.
+  if (dataType && dataType !== "subscriptions") {
+    webhookDebugLog({
+      event: eventName,
+      dataType,
+      decision: "ignored:wrong_data_type",
+    });
     return new NextResponse("ok", { status: 200 });
   }
 
@@ -70,9 +134,21 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
   }
 
   const attrs = payload.data?.attributes ?? {};
+  // `status` here is guaranteed to be a subscription lifecycle status because
+  // we only reach this point for lifecycle events carrying a `subscriptions`
+  // resource (gated above).
   const status = (attrs.status ?? "").toLowerCase();
   const paid = isPaidStatus(status);
   const incomingUpdatedAtIso = attrs.updated_at ?? null;
+
+  webhookDebugLog({
+    event: eventName,
+    dataType,
+    status,
+    hasParentSubscriptionId,
+    userIdPrefix: userId.slice(0, 8),
+    entitlement: paid ? "paid" : "unpaid",
+  });
 
   const supabase = createServiceSupabaseClient();
 
@@ -141,6 +217,13 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     // mismatch (e.g., user deleted their account between checkout and webhook).
     return new NextResponse("User not found", { status: 500 });
   }
+
+  webhookDebugLog({
+    event: eventName,
+    decision: "applied",
+    entitlement: paid ? "paid" : "unpaid",
+    affectedRows: updated.length,
+  });
 
   return new NextResponse("ok", { status: 200 });
 }
