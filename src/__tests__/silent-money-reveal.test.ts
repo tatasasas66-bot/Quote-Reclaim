@@ -309,13 +309,56 @@ describe("RevealClient — copy, CTAs, and brand guardrails", () => {
     expect(revealClientSrc).not.toMatch(/text-blue-\d/);
   });
 
-  it("the reveal step exposes the free-trial nuance honestly (top N free, $X parked)", () => {
-    expect(revealClientSrc).toContain("Your trial covers");
-    expect(revealClientSrc).toContain("stays parked until you upgrade");
+  it("free-trial copy is HONEST — dropped rows are 'waiting outside your free plan', never 'parked'", () => {
+    // Rows beyond the free cap are NOT persisted, so we must not imply stored
+    // data. "parked" implied storage; it's gone.
+    expect(revealClientSrc).not.toMatch(/stays parked/i);
+    expect(revealClientSrc).not.toMatch(/\bparked\b/i);
+    expect(revealClientSrc).toContain("waiting outside your free plan");
+    expect(revealClientSrc).toContain("Upgrade to import the rest");
+  });
+
+  it("the reveal mirrors the server ranking (highest value first) for the parked math", () => {
+    // The client must rank by amount desc too, or the 'remaining outside free
+    // plan' number won't match what the server actually drops.
+    expect(revealClientSrc).toMatch(
+      /\[\.\.\.parsed\.rows\]\.sort\(\(a, b\) => b\.amount - a\.amount\)/,
+    );
+  });
+
+  it("no-email rows are labeled copy/manual honestly (no fake automation claim)", () => {
+    expect(revealClientSrc).toContain("noEmailImporting");
+    expect(revealClientSrc).toMatch(/send the follow-ups yourself|send .* yourself/);
+    expect(revealClientSrc).toMatch(/The rest send automatically by email|switch it to automatic/);
   });
 
   it("CTA copy never invents fake urgency or fake recovered revenue", () => {
     expect(revealClientSrc).not.toMatch(/limited time|last chance|only \d+ left/i);
     expect(revealClientSrc).not.toMatch(/guaranteed/i);
+  });
+});
+
+// ───────────────────────────────────────────────────────────────────────
+// No-email rows — message_type matches the proven single-quote convention
+// ───────────────────────────────────────────────────────────────────────
+
+describe("no-email import rows behave like the single-quote flow (copy mode)", () => {
+  it("sets message_type from the email presence: has email -> email, none -> sms", () => {
+    // Mirrors createQuoteAction's `channel = client_email ? "email" : "sms"`.
+    // Guarantees a no-email row is NEVER stored as an email reminder with a
+    // null recipient (which the cron would churn on).
+    expect(actionSrc).toMatch(
+      /messageType:\s*"email"\s*\|\s*"sms"\s*=\s*normalizedEmail\s*\?\s*"email"\s*:\s*"sms"/,
+    );
+  });
+
+  it("no longer routes no-email rows through selectChannel (which returned 'copy')", () => {
+    expect(actionSrc).not.toContain("selectChannel");
+  });
+
+  it("never stores a reminder as message_type 'email' with a null recipient", () => {
+    // The only message_type values written are "email" (email present) or
+    // "sms" (no email -> copy/manual). There is no "copy"->"email" coercion.
+    expect(actionSrc).not.toMatch(/channel === "sms" \? "sms" : "email"/);
   });
 });

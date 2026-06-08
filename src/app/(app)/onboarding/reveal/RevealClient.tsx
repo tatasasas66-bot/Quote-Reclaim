@@ -383,11 +383,20 @@ function RevealStep({
   onBack: () => void;
 }) {
   const count = parsed.rows.length;
+  // Mirror the server: it imports the highest-value rows first under the free
+  // cap. Rank here too so "remaining outside free plan" matches exactly what
+  // the server will actually keep vs. drop.
+  const ranked = [...parsed.rows].sort((a, b) => b.amount - a.amount);
   const willImport = isPaid ? count : Math.min(count, freeRemaining);
   const willSkip = Math.max(0, count - willImport);
-  const remainingDollars = parsed.rows
+  const importing = ranked.slice(0, willImport);
+  const remainingDollars = ranked
     .slice(willImport)
     .reduce((s, r) => s + r.amount, 0);
+  // How many of the rows we will actually import have no email. Those become
+  // copy/manual quotes — the contractor sends them himself; they do NOT
+  // auto-send. Surfaced honestly so no one thinks automation is on for them.
+  const noEmailImporting = importing.filter((r) => !r.email).length;
 
   // Breakdown — quick segmentation by days silent.
   const warm = parsed.rows.filter((r) => r.daysSilent <= 6).length;
@@ -444,12 +453,21 @@ function RevealStep({
 
       {!isPaid && willSkip > 0 ? (
         <p className="mx-auto max-w-xl text-center text-sm leading-6 text-ink-muted">
-          Your trial covers {willImport} quote
-          {willImport === 1 ? "" : "s"} — we&apos;ll start with the highest
-          value first.{" "}
+          Your free plan covers {willImport} quote
+          {willImport === 1 ? "" : "s"} — we&apos;ll import the highest value
+          first.{" "}
           <span className="text-ink">
-            {formatCurrency(remainingDollars)} stays parked until you upgrade.
+            {formatCurrency(remainingDollars)} is waiting outside your free plan.
+            Upgrade to import the rest.
           </span>
+        </p>
+      ) : null}
+
+      {noEmailImporting > 0 ? (
+        <p className="mx-auto max-w-xl text-center text-xs leading-6 text-ink-muted">
+          {noEmailImporting === willImport
+            ? `None of these have an email yet, so you'll send the follow-ups yourself — open any quote to copy each message. Add an email to a quote to switch it to automatic.`
+            : `${noEmailImporting} of these ${noEmailImporting === 1 ? "has" : "have"} no email — you'll send ${noEmailImporting === 1 ? "that one" : "those"} yourself. The rest send automatically by email.`}
         </p>
       ) : null}
 

@@ -3,7 +3,6 @@
 import { revalidatePath } from "next/cache";
 import { generateRecoveryPlan } from "@/lib/ai/generate-recovery-plan";
 import { emitRecoveryEvent } from "@/lib/intelligence/event-emitter";
-import { selectChannel } from "@/lib/messaging/select-channel";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { createServiceSupabaseClient } from "@/lib/supabase/service";
 import { titleCaseName } from "@/lib/utils/title-case";
@@ -119,14 +118,14 @@ export async function importSilentQuotesAction(input: {
 
     const normalizedName = titleCaseName(row.name);
     const normalizedEmail = row.email ?? null;
-    const channel = selectChannel({
-      client_email: normalizedEmail,
-      client_phone: null,
-    });
-    // Reminders.message_type is the canonical SMS/email column; if there is
-    // no recipient channel (copy mode), default to email so the row still
-    // validates — the cron skips it because client_email is null.
-    const messageType: "email" | "sms" = channel === "sms" ? "sms" : "email";
+    // Match the single-quote flow's convention exactly (createQuoteAction):
+    //   has email  -> "email"  (cron auto-sends via Resend)
+    //   no email   -> "sms"    (with SMS off by default = copy/manual mode;
+    //                           the cron leaves it alone, the contractor copies
+    //                           each message from the quote page)
+    // This guarantees bulk-imported rows behave identically to manually-added
+    // ones — no row is ever stored as "email" with a null recipient.
+    const messageType: "email" | "sms" = normalizedEmail ? "email" : "sms";
 
     const insertResult = await userClient
       .from("quotes")
