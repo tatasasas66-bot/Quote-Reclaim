@@ -22,7 +22,14 @@ type Props = {
   pendingCount: number;
 };
 
-type Step = "input" | "preview" | "reveal" | "submitting";
+import {
+  AuditTransition,
+  noEmailRevealCopy,
+  REVEAL_AUDIT_LINES,
+  REVEAL_TRANSITION_MIN_MS,
+} from "./transition-and-copy";
+
+type Step = "input" | "preview" | "transitioning" | "reveal" | "submitting";
 
 const TRADES = [
   "Roofing",
@@ -83,9 +90,35 @@ export function RevealClient({ isPaid, usageCount, pendingCount }: Props) {
     setParsed({ ...parsed, rows: next, totalAmount });
   }
 
+  // Audit-transition message rotation. Idx advances on a setInterval so the
+  // contractor reads through the honest "what's happening" lines while the
+  // timer counts down. Reset when we leave the transitioning step.
+  const [transitionMsgIdx, setTransitionMsgIdx] = React.useState(0);
+  React.useEffect(() => {
+    if (step !== "transitioning") {
+      setTransitionMsgIdx(0);
+      return;
+    }
+    const tick = window.setInterval(() => {
+      setTransitionMsgIdx((i) => Math.min(i + 1, REVEAL_AUDIT_LINES.length - 1));
+    }, Math.floor(REVEAL_TRANSITION_MIN_MS / REVEAL_AUDIT_LINES.length));
+    return () => window.clearInterval(tick);
+  }, [step]);
+  React.useEffect(() => {
+    if (step !== "transitioning") return;
+    const t = window.setTimeout(() => setStep("reveal"), REVEAL_TRANSITION_MIN_MS);
+    return () => window.clearTimeout(t);
+  }, [step]);
+
   function handleConfirm() {
     if (!parsed || parsed.rows.length === 0) return;
-    setStep("reveal");
+    // Respect prefers-reduced-motion: skip the audit-transition window
+    // entirely and go straight to the reveal.
+    const reduceMotion =
+      typeof window !== "undefined" &&
+      typeof window.matchMedia === "function" &&
+      window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    setStep(reduceMotion ? "reveal" : "transitioning");
   }
 
   async function handleStartRecovering() {
@@ -144,6 +177,10 @@ export function RevealClient({ isPaid, usageCount, pendingCount }: Props) {
             onConfirm={handleConfirm}
             onBack={() => setStep("input")}
           />
+        )}
+
+        {step === "transitioning" && (
+          <AuditTransition messageIdx={transitionMsgIdx} />
         )}
 
         {(step === "reveal" || step === "submitting") && parsed && (
@@ -242,7 +279,8 @@ function InputStep({
           className="mt-2 w-full rounded-md border border-line-strong bg-surface-2 p-3 font-mono text-sm leading-6 text-ink-strong placeholder:text-ink-muted/50 focus:outline-none focus-visible:ring-2 focus-visible:ring-focus"
         />
         <p className="mt-2 text-xs text-ink-muted">
-          Name and amount are required. Date and email are optional. Max{" "}
+          Name and amount are required. Date and email are optional. No email?
+          We&apos;ll set that quote up for manual copy — you send when ready. Max{" "}
           {MAX_IMPORT_ROWS} rows per import.
         </p>
 
@@ -287,7 +325,7 @@ function PreviewStep({
     <section className="mx-auto mt-8 grid w-full max-w-3xl gap-6">
       <div>
         <p className="text-xs font-black uppercase tracking-widest text-brand">
-          {trade} · Preview
+          {trade} · Audit preview
         </p>
         <h2 className="mt-3 text-3xl font-black leading-tight text-ink-strong sm:text-4xl">
           We found {count} estimate{count === 1 ? "" : "s"}.
@@ -451,7 +489,58 @@ function RevealStep({
         </div>
       </div>
 
-      {!isPaid && willSkip > 0 ? (
+      {/* YOUR FIRST N MOVES — same ranking the server actually imports.
+          Always shows up to 3 even for paid users, because the "first moves"
+          framing is what makes this feel like a ranked audit, not a list. */}
+      {(() => {
+        const movesCount = Math.min(3, isPaid ? count : willImport);
+        if (movesCount === 0) return null;
+        const moves = ranked.slice(0, movesCount);
+        const heading =
+          movesCount === 1
+            ? "Your first move"
+            : `Your first ${movesCount} moves`;
+        return (
+          <div className="mx-auto w-full max-w-md">
+            <p className="text-center text-xs font-black uppercase tracking-widest text-ink-muted">
+              {heading}
+            </p>
+            <ol className="mt-3 grid gap-2">
+              {moves.map((row, i) => (
+                <li
+                  key={`${row.name}-${row.amount}-${i}`}
+                  className="flex items-center justify-between gap-3 rounded-md border border-line-subtle bg-surface-1 px-3 py-2.5"
+                >
+                  <div className="flex min-w-0 items-center gap-3">
+                    <span className="shrink-0 text-xs font-black text-brand tabular-nums">
+                      {i + 1}
+                    </span>
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-bold text-ink-strong">
+                        {row.name}
+                      </p>
+                      <p className="truncate text-xs text-ink-muted">
+                        {row.daysSilent === 0
+                          ? "today"
+                          : `${row.daysSilent} day${row.daysSilent === 1 ? "" : "s"} quiet`}
+                        {row.email ? " · email ready" : " · manual copy"}
+                      </p>
+                    </div>
+                  </div>
+                  <span className="shrink-0 whitespace-nowrap text-sm font-black text-ink-strong tabular-nums">
+                    {formatCurrency(row.amount)}
+                  </span>
+                </li>
+              ))}
+            </ol>
+            <p className="mt-3 text-center text-xs text-ink-muted">
+              Quote Reclaim will start with {movesCount === 1 ? "this one" : "these"} first.
+            </p>
+          </div>
+        );
+      })()}
+
+      {!isPaid && willSkip > 0 && remainingDollars > 0 ? (
         <p className="mx-auto max-w-xl text-center text-sm leading-6 text-ink-muted">
           Your free plan covers {willImport} quote
           {willImport === 1 ? "" : "s"} — we&apos;ll import the highest value
@@ -463,13 +552,19 @@ function RevealStep({
         </p>
       ) : null}
 
-      {noEmailImporting > 0 ? (
-        <p className="mx-auto max-w-xl text-center text-xs leading-6 text-ink-muted">
-          {noEmailImporting === willImport
-            ? `None of these have an email yet, so you'll send the follow-ups yourself — open any quote to copy each message. Add an email to a quote to switch it to automatic.`
-            : `${noEmailImporting} of these ${noEmailImporting === 1 ? "has" : "have"} no email — you'll send ${noEmailImporting === 1 ? "that one" : "those"} yourself. The rest send automatically by email.`}
-        </p>
-      ) : null}
+      {(() => {
+        const line = noEmailRevealCopy({
+          willImport,
+          noEmailInImporting: noEmailImporting,
+          isPaid,
+        });
+        if (!line) return null;
+        return (
+          <p className="mx-auto max-w-xl text-center text-xs leading-6 text-ink-muted">
+            {line}
+          </p>
+        );
+      })()}
 
       {error ? (
         <p role="alert" className="text-center text-sm text-danger">
@@ -501,3 +596,4 @@ function RevealStep({
     </section>
   );
 }
+

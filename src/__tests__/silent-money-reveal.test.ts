@@ -1,7 +1,10 @@
 /**
- * Silent Money Reveal — parser, action contract, and routing wiring.
+ * @vitest-environment happy-dom
  *
- * The parser is unit-tested directly. The server action is verified by
+ * Silent Money Reveal — parser, action contract, routing wiring, and the
+ * value-polish surfaces (audit transition, top moves, no-email copy matrix).
+ *
+ * Parser and helpers unit-tested directly. The server action is verified by
  * source-level contract (it imports the parser cap, uses the existing
  * free-trial gate, never bypasses it, and sets onboarding_done) so we
  * don't have to mock the whole Supabase chain.
@@ -25,6 +28,9 @@ const dashboardSrc = readSource("../app/(app)/dashboard/page.tsx");
 const revealPageSrc = readSource("../app/(app)/onboarding/reveal/page.tsx");
 const revealClientSrc = readSource(
   "../app/(app)/onboarding/reveal/RevealClient.tsx",
+);
+const transitionSrc = readSource(
+  "../app/(app)/onboarding/reveal/transition-and-copy.tsx",
 );
 
 // Fixed "now" so day-math is deterministic across CI clocks.
@@ -294,9 +300,10 @@ describe("/onboarding/reveal page — auth-gated", () => {
 });
 
 describe("RevealClient — copy, CTAs, and brand guardrails", () => {
-  it("renders the 3-step flow: paste/preview/reveal", () => {
+  it("renders the 4-step flow: paste/preview/transitioning/reveal", () => {
     expect(revealClientSrc).toContain('"input"');
     expect(revealClientSrc).toContain('"preview"');
+    expect(revealClientSrc).toContain('"transitioning"');
     expect(revealClientSrc).toContain('"reveal"');
   });
 
@@ -331,9 +338,11 @@ describe("RevealClient — copy, CTAs, and brand guardrails", () => {
   });
 
   it("no-email rows are labeled copy/manual honestly (no fake automation claim)", () => {
+    // Helper lives in transition-and-copy; reveal client just calls it.
+    expect(revealClientSrc).toContain("noEmailRevealCopy");
     expect(revealClientSrc).toContain("noEmailImporting");
-    expect(revealClientSrc).toMatch(/send the follow-ups yourself|send .* yourself/);
-    expect(revealClientSrc).toMatch(/The rest send automatically by email|switch it to automatic/);
+    expect(transitionSrc).toMatch(/send the follow-ups yourself|send .* yourself/);
+    expect(transitionSrc).toMatch(/The rest can send automatically|switch it to automatic/);
   });
 
   it("CTA copy never invents fake urgency or fake recovered revenue", () => {
@@ -364,5 +373,223 @@ describe("no-email import rows behave like the single-quote flow (copy mode)", (
     // The only message_type values written are "email" (email present) or
     // "sms" (no email -> copy/manual). There is no "copy"->"email" coercion.
     expect(actionSrc).not.toMatch(/channel === "sms" \? "sms" : "email"/);
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────
+// Value-perception polish — audit framing, transition, top moves, copy
+// ─────────────────────────────────────────────────────────────────────────
+
+describe("input helper makes no-email behavior clear BEFORE the reveal", () => {
+  it("tells the contractor a no-email quote becomes manual copy", () => {
+    expect(revealClientSrc).toMatch(
+      /No email\?\s*We&apos;ll set that quote up for manual copy/,
+    );
+  });
+
+  it("still mentions the 100-row cap", () => {
+    expect(revealClientSrc).toContain("MAX_IMPORT_ROWS");
+    expect(revealClientSrc).toMatch(/rows per import\./);
+  });
+});
+
+describe("preview eyebrow reads as an audit, not a calculator", () => {
+  it("uses '{trade} · Audit preview' instead of plain 'Preview'", () => {
+    expect(revealClientSrc).toContain("Audit preview");
+    expect(revealClientSrc).not.toMatch(/\{trade\} · Preview\b/);
+  });
+});
+
+describe("Audit transition step — honest, fast, testable", () => {
+  it("declares a sub-2s minimum window (spec cap: 1200–1800ms)", () => {
+    expect(transitionSrc).toMatch(
+      /REVEAL_TRANSITION_MIN_MS\s*=\s*(1[2-7]\d\d|1800)\b/,
+    );
+  });
+
+  it("rotates through honest contractor-facing lines (no AI/billing/internal-validation copy)", () => {
+    // Scope the scan to just the literal-string contents of REVEAL_AUDIT_LINES
+    // so file-header words like "AI" in code comments don't trip the audit.
+    const decl = transitionSrc.match(
+      /REVEAL_AUDIT_LINES[^=]*=\s*\[([\s\S]*?)\];/,
+    );
+    expect(decl, "REVEAL_AUDIT_LINES declaration not found").not.toBeNull();
+    const lines = (decl?.[1].match(/"([^"]+)"/g) ?? []).map((s) => s.slice(1, -1));
+    expect(lines).toEqual([
+      "Reading your pasted estimates…",
+      "Ranking your highest-value quiet quotes…",
+      "Separating email-ready from manual follow-ups…",
+      "Preparing your first recovery targets…",
+    ]);
+    // Never the banned categories inside the actual lines.
+    for (const line of lines) {
+      expect(line).not.toMatch(/\bAI\b/i);
+      expect(line).not.toMatch(/securing billing|verifying webhook|validating session/i);
+      expect(line).not.toMatch(/encrypting|hashing|signing/i);
+    }
+  });
+
+  it("flips to reveal via setTimeout (no infinite hang) and is testable with fake timers", () => {
+    expect(revealClientSrc).toMatch(
+      /setTimeout\(\(\) => setStep\("reveal"\), REVEAL_TRANSITION_MIN_MS\)/,
+    );
+  });
+
+  it("respects prefers-reduced-motion by skipping the transition", () => {
+    expect(revealClientSrc).toMatch(/prefers-reduced-motion: reduce/);
+    expect(revealClientSrc).toMatch(
+      /reduceMotion\s*\?\s*"reveal"\s*:\s*"transitioning"/,
+    );
+  });
+
+  it("AuditTransition is rendered ONLY for the transitioning step (no overlap with reveal)", () => {
+    expect(revealClientSrc).toMatch(
+      /step === "transitioning"[\s\S]*?<AuditTransition/,
+    );
+  });
+});
+
+describe("Top recovery targets — ranked list mirrors the server import", () => {
+  it("renders 'Your first move' / 'Your first N moves' depending on count", () => {
+    expect(revealClientSrc).toContain('"Your first move"');
+    expect(revealClientSrc).toMatch(/`Your first \$\{movesCount\} moves`/);
+  });
+
+  it("ranks by amount DESC — same order the server uses for the free gate", () => {
+    expect(revealClientSrc).toMatch(
+      /const ranked = \[\.\.\.parsed\.rows\]\.sort\(\(a, b\) => b\.amount - a\.amount\)/,
+    );
+    expect(revealClientSrc).toMatch(/const moves = ranked\.slice\(0, movesCount\)/);
+  });
+
+  it("caps the visible moves at 3, even for paid users importing everything", () => {
+    expect(revealClientSrc).toMatch(
+      /const movesCount = Math\.min\(3, isPaid \? count : willImport\)/,
+    );
+  });
+
+  it("labels each row as 'email ready' or 'manual copy' — never invents auto-sending", () => {
+    expect(revealClientSrc).toContain("email ready");
+    expect(revealClientSrc).toContain("manual copy");
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────
+// No-email copy matrix — pure helper, tested directly
+// ─────────────────────────────────────────────────────────────────────────
+
+import {
+  noEmailRevealCopy,
+  AuditTransition,
+} from "@/app/(app)/onboarding/reveal/transition-and-copy";
+import { render, cleanup, screen } from "@testing-library/react";
+import * as React from "react";
+import { afterEach as afterEachRev, vi } from "vitest";
+
+describe("noEmailRevealCopy — free user matrix references 'your top N' explicitly", () => {
+  it("0 valid rows → no line", () => {
+    expect(
+      noEmailRevealCopy({ willImport: 0, noEmailInImporting: 0, isPaid: false }),
+    ).toBeNull();
+  });
+
+  it("free + 0 no-email + top 3 → affirms top 3 can auto-send", () => {
+    expect(
+      noEmailRevealCopy({ willImport: 3, noEmailInImporting: 0, isPaid: false }),
+    ).toBe("Your top 3 can send automatically by email.");
+  });
+
+  it("free + 1 of top 3 has no email → exact spec wording", () => {
+    expect(
+      noEmailRevealCopy({ willImport: 3, noEmailInImporting: 1, isPaid: false }),
+    ).toBe(
+      "1 of your top 3 has no email — you'll send that one yourself. The other 2 can send automatically by email.",
+    );
+  });
+
+  it("free + 2 of top 3 have no email", () => {
+    expect(
+      noEmailRevealCopy({ willImport: 3, noEmailInImporting: 2, isPaid: false }),
+    ).toBe(
+      "2 of your top 3 have no email — you'll send those yourself. The other one can send automatically by email.",
+    );
+  });
+
+  it("free + all top 3 have no email → no auto-send promise", () => {
+    const line = noEmailRevealCopy({
+      willImport: 3,
+      noEmailInImporting: 3,
+      isPaid: false,
+    });
+    expect(line).toBe(
+      "Your top 3 have no email — you'll send those yourself. Add emails later to switch them to automatic follow-up.",
+    );
+  });
+
+  it("free + only 1 import (e.g. usage already consumed 2/3) uses 'top quote' singular", () => {
+    expect(
+      noEmailRevealCopy({ willImport: 1, noEmailInImporting: 0, isPaid: false }),
+    ).toBe("Your top quote can send automatically by email.");
+    expect(
+      noEmailRevealCopy({ willImport: 1, noEmailInImporting: 1, isPaid: false }),
+    ).toContain("Your top quote has no email");
+  });
+
+  it("paid + mixed → keeps 'these' wording (importing everything)", () => {
+    expect(
+      noEmailRevealCopy({ willImport: 7, noEmailInImporting: 2, isPaid: true }),
+    ).toBe(
+      "2 of these have no email — you'll send those yourself. The rest can send automatically by email.",
+    );
+  });
+
+  it("paid + 0 no-email → suppress line (no clutter on the paid reveal)", () => {
+    expect(
+      noEmailRevealCopy({ willImport: 10, noEmailInImporting: 0, isPaid: true }),
+    ).toBeNull();
+  });
+
+  it("paid + all no email", () => {
+    expect(
+      noEmailRevealCopy({ willImport: 5, noEmailInImporting: 5, isPaid: true }),
+    ).toContain("None of these have an email yet");
+  });
+
+  it("never says 'parked', 'stored', or 'saved' anywhere", () => {
+    for (const args of [
+      { willImport: 3, noEmailInImporting: 0, isPaid: false },
+      { willImport: 3, noEmailInImporting: 1, isPaid: false },
+      { willImport: 3, noEmailInImporting: 3, isPaid: false },
+      { willImport: 7, noEmailInImporting: 2, isPaid: true },
+    ] as const) {
+      const line = noEmailRevealCopy(args) ?? "";
+      expect(line).not.toMatch(/\b(parked|stored|saved)\b/i);
+    }
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────
+// AuditTransition — render contract
+// ─────────────────────────────────────────────────────────────────────────
+
+describe("AuditTransition — visible contract", () => {
+  afterEachRev(() => {
+    cleanup();
+    vi.useRealTimers();
+  });
+
+  it("shows the Silent Quote Audit eyebrow", () => {
+    render(React.createElement(AuditTransition, { messageIdx: 0 }));
+    expect(screen.getByText(/Silent Quote Audit/i)).toBeTruthy();
+  });
+
+  it("renders the first message at idx 0", () => {
+    render(React.createElement(AuditTransition, { messageIdx: 0 }));
+    expect(screen.getByText(/Reading your pasted estimates/)).toBeTruthy();
+  });
+
+  it("clamps an out-of-range idx (defence in depth)", () => {
+    render(React.createElement(AuditTransition, { messageIdx: 99 }));
+    expect(screen.getByText(/Preparing your first recovery targets/)).toBeTruthy();
   });
 });
