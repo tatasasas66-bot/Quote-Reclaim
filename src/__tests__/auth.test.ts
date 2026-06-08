@@ -35,7 +35,7 @@ describe("AuthForm contract", () => {
 
   it("shows safe Magic Link success, expired-link, and rate-limit copy", () => {
     expect(source).toContain(
-      "Secure link sent. Open it from your inbox to sign in.",
+      "If that email can receive mail, your secure link is on the way.",
     );
     expect(source).toContain(
       "This link expires shortly and can only be used once.",
@@ -100,8 +100,9 @@ describe("Auth callback route", () => {
 describe("AuthShell renders both pathways", () => {
   const source = readSource("../components/onboarding/AuthShell.tsx");
 
-  it("links to the free Silent Quote Audit", () => {
-    expect(source).toContain("/audit");
+  it("links the free Silent Quote Audit CTA to the live reveal flow (not the dead /audit route)", () => {
+    expect(source).toContain("/onboarding/reveal");
+    expect(source).not.toContain('href="/audit"');
   });
 
   it("renders the AuthForm inside a Suspense boundary", () => {

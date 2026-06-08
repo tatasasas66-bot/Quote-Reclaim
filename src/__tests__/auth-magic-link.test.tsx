@@ -38,7 +38,7 @@ async function submitEmail(email = "jane@example.com") {
   });
   fireEvent.click(screen.getByRole("button", { name: /send secure link/i }));
   await screen.findByText(
-    "Secure link sent. Open it from your inbox to sign in.",
+    "If that email can receive mail, your secure link is on the way.",
   );
 }
 
@@ -61,7 +61,7 @@ describe("AuthForm Magic Link flow", () => {
     await submitEmail();
 
     expect(
-      screen.getByText("Secure link sent. Open it from your inbox to sign in."),
+      screen.getByText("If that email can receive mail, your secure link is on the way."),
     ).toBeTruthy();
     expect(
       screen.getByText("This link expires shortly and can only be used once."),

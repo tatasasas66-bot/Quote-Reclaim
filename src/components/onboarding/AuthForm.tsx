@@ -128,7 +128,7 @@ function userFacingMagicLinkError(err: unknown): string {
     return "Too many attempts. Wait a few minutes, then try again.";
   }
   if (code === "email_not_confirmed") {
-    return "Secure link sent. Open it from your inbox to sign in.";
+    return "If that email can receive mail, your secure link is on the way.";
   }
   if (lower.includes("invalid api key") || lower.includes("invalid project")) {
     return "Service configuration error. Contact support if this persists.";
@@ -209,12 +209,22 @@ export function AuthForm({ mode }: AuthFormProps) {
       base = CALLBACK_PATH;
     }
 
+    // Honor an explicit `?next=` query param so links like
+    // `/sign-up?next=/onboarding/reveal` actually land on the reveal page
+    // after auth instead of dropping into the default dashboard. Always
+    // routed through safeRedirectPath so external / protocol-relative /
+    // javascript: / data: targets can never sneak through as a redirect.
+    const explicitNext = searchParams.get("next");
+    const safeExplicitNext =
+      explicitNext && explicitNext !== "/dashboard"
+        ? safeRedirectPath(explicitNext)
+        : null;
     const nextPath = auditToken
       ? `/dashboard?audit_token=${auditToken}`
-      : "/dashboard";
+      : safeExplicitNext ?? "/dashboard";
     const sep = base.includes("?") ? "&" : "?";
     return `${base}${sep}next=${encodeURIComponent(nextPath)}`;
-  }, [auditToken]);
+  }, [auditToken, searchParams]);
 
   React.useEffect(() => {
     if (!resendAvailableAt) return undefined;
@@ -400,7 +410,7 @@ export function AuthForm({ mode }: AuthFormProps) {
           className="rounded-lg border border-success/40 bg-success/10 p-4 text-sm"
         >
           <p className="font-semibold text-success">
-            Secure link sent. Open it from your inbox to sign in.
+            If that email can receive mail, your secure link is on the way.
           </p>
           <p className="mt-1 text-ink">
             This link expires shortly and can only be used once.

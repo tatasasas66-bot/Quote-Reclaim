@@ -176,9 +176,15 @@ describe("Auth copy", () => {
     expect(authShell).not.toMatch(/Revenue Recovery OS/);
   });
 
-  it("magic-link success keeps secure link as the primary path", () => {
-    expect(authForm).toMatch(/Secure link sent\. Open it from your inbox to sign in\./);
+  it("magic-link success is honest (no claim the inbox exists) — anti-enumeration", () => {
+    // Cannot promise the inbox received it; we have no email-existence
+    // check and adding one would create account enumeration risk.
+    expect(authForm).toMatch(
+      /If that email can receive mail, your secure link is on the way\./,
+    );
     expect(authForm).toMatch(/This link expires shortly and can only be used once\./);
+    // Old absolute-claim copy is gone everywhere.
+    expect(authForm).not.toMatch(/Secure link sent\. Open it from your inbox to sign in\./);
     expect(authForm).not.toMatch(/Link not working\?/);
     expect(authForm).not.toMatch(/6-digit code/);
   });

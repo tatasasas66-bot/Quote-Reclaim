@@ -273,9 +273,13 @@ describe("dashboard — first-run redirect to /onboarding/reveal", () => {
 });
 
 describe("/onboarding/reveal page — auth-gated", () => {
-  it("uses requireUser and redirects unauthenticated callers to /sign-in", () => {
+  it("uses requireUser and redirects unauthenticated callers to /sign-up with next preserved", () => {
     expect(revealPageSrc).toContain("requireUser");
-    expect(revealPageSrc).toMatch(/redirect\("\/sign-in"\)/);
+    // Preserves the destination through auth so a prospect lands on the
+    // audit immediately after sign-up instead of dropping on /dashboard.
+    expect(revealPageSrc).toContain(
+      'redirect("/sign-up?next=/onboarding/reveal")',
+    );
   });
 
   it("force-dynamic so server-side flag checks always re-run", () => {

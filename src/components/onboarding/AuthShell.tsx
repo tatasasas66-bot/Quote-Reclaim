@@ -182,8 +182,15 @@ export function AuthShell({ mode }: AuthShellProps) {
             </Suspense>
 
             <div className="mt-6 space-y-2 text-center">
+              {/*
+                Routes to the live Silent Money Reveal onboarding (the audit
+                IS the reveal). Unauthenticated visitors get bounced through
+                /sign-up?next=/onboarding/reveal by the reveal page guard so
+                they land on the audit immediately after auth. Already-signed-
+                in users go straight there.
+              */}
               <Link
-                href="/audit"
+                href="/onboarding/reveal"
                 className="inline-block rounded text-sm text-ink hover:text-ink-strong focus:outline-none focus-visible:ring-2 focus-visible:ring-focus"
               >
                 Try the free Silent Quote Audit first {"->"}

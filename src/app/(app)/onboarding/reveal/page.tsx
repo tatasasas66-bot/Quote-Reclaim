@@ -12,7 +12,12 @@ export const dynamic = "force-dynamic";
 
 export default async function OnboardingRevealPage() {
   const { user, supabase } = await requireUser();
-  if (!user || !supabase) redirect("/sign-in");
+  // Preserve the destination through auth so a prospect clicking the
+  // "Try the free Silent Quote Audit first ->" CTA lands back here right
+  // after sign-up instead of getting dropped on the default /dashboard.
+  if (!user || !supabase) {
+    redirect("/sign-up?next=/onboarding/reveal");
+  }
 
   const [profile, pending] = await Promise.all([
     getProfileStats(supabase, user.id),
