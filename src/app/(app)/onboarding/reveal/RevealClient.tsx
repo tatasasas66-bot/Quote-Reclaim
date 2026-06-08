@@ -456,21 +456,21 @@ function RevealStep({
         : `Start recovering your top ${willImport} free →`;
 
   return (
-    <section className="mx-auto mt-6 grid w-full max-w-3xl gap-8 sm:mt-12">
+    <section className="mx-auto mt-4 grid w-full max-w-3xl gap-5 pb-[calc(5.5rem+env(safe-area-inset-bottom))] sm:mt-8 sm:gap-6 sm:[@media(min-height:760px)]:pb-0">
       <div className="text-center">
         <p className="text-xs font-black uppercase tracking-widest text-warning/80">
           Sitting quiet
         </p>
-        <p className="mt-4 text-6xl font-black leading-none tabular-nums text-warning sm:text-7xl lg:text-8xl">
+        <p className="mt-3 text-[length:clamp(2.5rem,7vw,4.5rem)] font-black leading-none tabular-nums text-warning">
           {formatCurrency(parsed.totalAmount)}
         </p>
-        <p className="mx-auto mt-4 max-w-xl text-base leading-7 text-ink sm:text-lg">
+        <p className="mx-auto mt-3 max-w-xl text-base leading-7 text-ink sm:text-lg">
           in <span className="font-bold text-ink-strong">{count}</span>{" "}
           {trade.toLowerCase()} estimate{count === 1 ? "" : "s"} you already
           paid to earn.
         </p>
 
-        <div className="mx-auto mt-6 flex max-w-2xl flex-wrap items-center justify-center gap-x-3 gap-y-2 text-sm text-ink-muted">
+        <div className="mx-auto mt-4 flex max-w-2xl flex-wrap items-center justify-center gap-x-3 gap-y-2 text-sm text-ink-muted">
           {warm > 0 ? (
             <Badge variant="success">{warm} still warm</Badge>
           ) : null}
@@ -505,11 +505,11 @@ function RevealStep({
             <p className="text-center text-xs font-black uppercase tracking-widest text-ink-muted">
               {heading}
             </p>
-            <ol className="mt-3 grid gap-2">
+            <ol className="mt-2 grid gap-1.5">
               {moves.map((row, i) => (
                 <li
                   key={`${row.name}-${row.amount}-${i}`}
-                  className="flex items-center justify-between gap-3 rounded-md border border-line-subtle bg-surface-1 px-3 py-2.5"
+                  className="flex items-center justify-between gap-3 rounded-md border border-line-subtle bg-surface-1 px-3 py-2"
                 >
                   <div className="flex min-w-0 items-center gap-3">
                     <span className="shrink-0 text-xs font-black text-brand tabular-nums">
@@ -533,7 +533,7 @@ function RevealStep({
                 </li>
               ))}
             </ol>
-            <p className="mt-3 text-center text-xs text-ink-muted">
+            <p className="mt-2 text-center text-xs text-ink-muted">
               Quote Reclaim will start with {movesCount === 1 ? "this one" : "these"} first.
             </p>
           </div>
@@ -572,6 +572,10 @@ function RevealStep({
         </p>
       ) : null}
 
+      {/* In-flow CTA. On a tall desktop the primary button renders here,
+          above the fold after the compacted reveal. On mobile and short
+          laptop viewports (≤ ~760px tall) the primary action moves to the
+          sticky command bar below, so only the secondary "Back" stays here. */}
       <div className="flex flex-col items-center gap-3">
         <Button
           type="button"
@@ -579,7 +583,7 @@ function RevealStep({
           onClick={onStart}
           loading={submitting}
           disabled={submitting || willImport === 0}
-          className="shadow-[0_0_42px_rgba(217,111,50,0.28)]"
+          className="hidden shadow-[0_0_42px_rgba(217,111,50,0.28)] sm:[@media(min-height:760px)]:inline-flex"
         >
           {ctaLabel}
         </Button>
@@ -592,6 +596,28 @@ function RevealStep({
         >
           Back to preview
         </Button>
+      </div>
+
+      {/* Sticky command bar — keeps the primary CTA in reach without a scroll
+          on mobile and short laptop viewports (e.g. 1366×768), where the
+          in-flow CTA would otherwise fall below the fold. Hidden on tall
+          desktop, where the in-flow CTA above is already visible. Safe-area
+          padding clears the iOS home indicator; the section reserves matching
+          bottom padding so the bar never permanently covers "Back". */}
+      <div className="fixed inset-x-0 bottom-0 z-30 border-t border-line-subtle/70 bg-canvas px-4 pb-[calc(0.75rem+env(safe-area-inset-bottom))] pt-3 sm:[@media(min-height:760px)]:hidden">
+        <div className="mx-auto w-full max-w-3xl">
+          <Button
+            type="button"
+            size="lg"
+            fullWidth
+            onClick={onStart}
+            loading={submitting}
+            disabled={submitting || willImport === 0}
+            className="shadow-[0_0_36px_rgba(217,111,50,0.32)]"
+          >
+            {ctaLabel}
+          </Button>
+        </div>
       </div>
     </section>
   );

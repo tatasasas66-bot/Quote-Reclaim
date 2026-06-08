@@ -351,6 +351,85 @@ describe("RevealClient — copy, CTAs, and brand guardrails", () => {
   });
 });
 
+// ─────────────────────────────────────────────────────────────────────────
+// Viewport CTA polish — primary CTA visible without a scroll on common
+// laptop (1366×768) and mobile viewports. Sticky command bar on mobile +
+// short heights; in-flow CTA on tall desktop. No copy/logic regressions.
+// ─────────────────────────────────────────────────────────────────────────
+
+describe("Reveal CTA stays above the fold (sticky on mobile/short, in-flow on tall desktop)", () => {
+  it("renders a fixed, bottom-anchored, high-z sticky container", () => {
+    expect(revealClientSrc).toMatch(/fixed inset-x-0 bottom-0 z-30/);
+  });
+
+  it("the sticky bar is hidden ONLY on tall desktop (sm width AND min-height:760px)", () => {
+    // Mobile (width < sm) and short laptops (height < 760px) keep the bar;
+    // it disappears only when the in-flow CTA is already above the fold.
+    expect(revealClientSrc).toMatch(
+      /fixed inset-x-0 bottom-0 z-30[\s\S]*?sm:\[@media\(min-height:760px\)\]:hidden/,
+    );
+  });
+
+  it("the sticky bar carries the primary CTA, full width, with the same ctaLabel", () => {
+    expect(revealClientSrc).toMatch(
+      /sm:\[@media\(min-height:760px\)\]:hidden[\s\S]*?fullWidth[\s\S]*?\{ctaLabel\}/,
+    );
+  });
+
+  it("the in-flow primary CTA is hidden by default and shown only on tall desktop", () => {
+    // `hidden … sm:[@media(min-height:760px)]:inline-flex` — same idiom as
+    // Tailwind's `hidden sm:flex`, so exactly one primary CTA is ever visible.
+    expect(revealClientSrc).toMatch(
+      /hidden shadow-\[0_0_42px[\s\S]*?sm:\[@media\(min-height:760px\)\]:inline-flex/,
+    );
+  });
+
+  it("accounts for the iOS safe-area at the bottom (no home-indicator overlap)", () => {
+    expect(revealClientSrc).toContain("env(safe-area-inset-bottom)");
+  });
+
+  it("reserves scroll clearance so the bar never permanently covers in-flow content", () => {
+    // The reveal section pads its bottom while the bar is visible, and drops
+    // that padding on tall desktop where the bar is hidden.
+    expect(revealClientSrc).toMatch(
+      /pb-\[calc\(5\.5rem\+env\(safe-area-inset-bottom\)\)\][\s\S]*?sm:\[@media\(min-height:760px\)\]:pb-0/,
+    );
+  });
+
+  it("caps the hero number with a clamped size (impressive but bounded; no lg:text-8xl)", () => {
+    expect(revealClientSrc).not.toContain("lg:text-8xl");
+    expect(revealClientSrc).toMatch(/text-\[length:clamp\(/);
+  });
+
+  it("compacts the reveal vertical rhythm (no oversized gap-8 / sm:mt-12)", () => {
+    expect(revealClientSrc).not.toMatch(/grid w-full max-w-3xl gap-8 sm:mt-12/);
+    expect(revealClientSrc).toMatch(/sm:gap-6/);
+  });
+
+  it("preserves the free vs paid CTA labels exactly (top N free vs all N)", () => {
+    expect(revealClientSrc).toContain(
+      "Start recovering your top ${willImport} free →",
+    );
+    expect(revealClientSrc).toContain("Start recovering all ${willImport} →");
+  });
+
+  it("keeps Top 3 Moves and trust copy; adds no countdown/parked regression", () => {
+    expect(revealClientSrc).toContain('"Your first move"');
+    expect(revealClientSrc).toMatch(/`Your first \$\{movesCount\} moves`/);
+    expect(revealClientSrc).toContain("waiting outside your free plan");
+    expect(revealClientSrc).not.toMatch(/\bparked\b/i);
+    expect(revealClientSrc).not.toMatch(/countdown|expires in|seconds? left/i);
+  });
+
+  it("touches only the reveal UI — no billing/auth/parser wiring changed here", () => {
+    // The reveal client still imports the same gated action + parser and
+    // introduces no billing/schema vocabulary as part of this polish.
+    expect(revealClientSrc).toContain("importSilentQuotesAction");
+    expect(revealClientSrc).toContain("parseSilentQuotesInput");
+    expect(revealClientSrc).not.toMatch(/is_paid|usage_count|check_and_increment|lemonsqueezy\./i);
+  });
+});
+
 // ───────────────────────────────────────────────────────────────────────
 // No-email rows — message_type matches the proven single-quote convention
 // ───────────────────────────────────────────────────────────────────────

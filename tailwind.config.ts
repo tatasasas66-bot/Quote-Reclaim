@@ -1,7 +1,10 @@
 import type { Config } from "tailwindcss";
 
 const config: Config = {
-  content: ["./src/**/*.{ts,tsx}"],
+  // Test files are not UI — excluding them keeps regex/class-name strings in
+  // the suite from leaking (sometimes malformed) candidates into the CSS
+  // bundle. Real components under src/ are still fully scanned.
+  content: ["./src/**/*.{ts,tsx}", "!./src/**/__tests__/**"],
   theme: {
     extend: {
       colors: {
