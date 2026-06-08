@@ -272,8 +272,12 @@ describe("schedule is the 5-touch cadence", () => {
     );
   });
 
-  it("createQuoteAction now inserts 5 reminders (not 3)", () => {
-    expect(actionsSrc).toMatch(/reminderRows\.length\s*===\s*5/);
+  it("createQuoteAction now inserts 5 reminders (not 3) via the shared writer", () => {
+    // The 5-step gate moved into the shared recovery-plan writer;
+    // createQuoteAction delegates to it and the writer enforces a complete plan.
+    expect(actionsSrc).toContain("persistRecoveryPlan");
+    const writer = readSource("../lib/quotes/recovery-plan-write.ts");
+    expect(writer).toMatch(/chosen\.length\s*!==\s*5/);
   });
 });
 

@@ -1,8 +1,8 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { generateRecoveryPlan } from "@/lib/ai/generate-recovery-plan";
 import { emitRecoveryEvent } from "@/lib/intelligence/event-emitter";
+import { persistRecoveryPlan } from "@/lib/quotes/recovery-plan-write";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { createServiceSupabaseClient } from "@/lib/supabase/service";
 import { titleCaseName } from "@/lib/utils/title-case";
@@ -32,6 +32,12 @@ const ALLOWED_TRADES = new Set([
 
 const MAX_AMOUNT_USD = 10_000_000;
 const MAX_NAME_LEN = 200;
+
+// Opt-in, PII-free diagnostics for the bulk-import plan write. Off by default
+// so production logs stay clean; set RECOVERY_IMPORT_DEBUG=1 to trace plan
+// insertion per quote (quote id prefix + inserted count + fallback + error
+// code only — never names, emails, amounts, or message text).
+const RECOVERY_IMPORT_DEBUG = process.env.RECOVERY_IMPORT_DEBUG === "1";
 
 function sanitizeServerRow(row: ParsedQuote): ParsedQuote | null {
   const name = String(row.name ?? "").trim().slice(0, MAX_NAME_LEN);
@@ -155,11 +161,20 @@ export async function importSilentQuotesAction(input: {
     const quoteId = String(insertResult.data.id);
     const sequenceId = String(insertResult.data.sequence_id ?? "");
 
-    // Best-effort plan generation + activity event. Failures here are
-    // non-fatal — the quote is on the dashboard either way. The contractor
-    // can manually trigger / fix sends per quote later.
-    try {
-      const plan = await generateRecoveryPlan({
+    // Generate + persist the 5-step recovery plan through the SAME shared
+    // writer the single-quote create flow uses. This guarantees every imported
+    // quote — email-ready OR manual-copy — gets a full plan, with deterministic
+    // fallback messages when AI is unavailable, keyed by (quote_id,
+    // followup_number). The previous bulk path inserted a non-existent
+    // reminders.sequence_id column, so PostgREST rejected every insert and the
+    // error was swallowed — leaving every imported quote with no plan.
+    const planResult = await persistRecoveryPlan({
+      serviceClient,
+      userId,
+      quoteId,
+      channel: messageType,
+      quoteSentAt: quoteSentAtFromDaysSilent(row.daysSilent),
+      context: {
         firstName: normalizedName.split(/\s+/)[0] || "there",
         contractorFirstName: null,
         trade,
@@ -169,39 +184,16 @@ export async function importSilentQuotesAction(input: {
         state: null,
         quoteId,
         daysSilent: row.daysSilent,
-      });
+      },
+    });
 
-      if (plan.length === 5 && sequenceId) {
-        const baseSentAt = quoteSentAtFromDaysSilent(row.daysSilent);
-        const sendAtFor = (daysAfter: number): string => {
-          const d = new Date(baseSentAt);
-          d.setUTCDate(d.getUTCDate() + daysAfter);
-          return d.toISOString();
-        };
-        const cadence: Record<1 | 2 | 3 | 4 | 5, number> = {
-          1: 1,
-          2: 3,
-          3: 7,
-          4: 14,
-          5: 30,
-        };
-        const reminderRows = plan.map((m) => ({
-          user_id: userId,
-          quote_id: quoteId,
-          sequence_id: sequenceId,
-          followup_number: m.followup_number,
-          message_type: messageType,
-          message_text: m.message,
-          framework_used: m.framework,
-          cta_type: m.cta_type,
-          send_at: sendAtFor(cadence[m.followup_number]),
-        }));
-        await serviceClient.from("reminders").insert(reminderRows);
-      }
-    } catch {
-      /* non-fatal */
+    if (RECOVERY_IMPORT_DEBUG) {
+      console.info(
+        `[reveal-import] quote=${quoteId.slice(0, 8)} plan=${planResult.inserted}/5 fallback=${planResult.fallbackUsed} err=${planResult.insertError ?? "none"}`,
+      );
     }
 
+    // Activity event — non-fatal telemetry; never blocks the import.
     try {
       await emitRecoveryEvent({
         userId,

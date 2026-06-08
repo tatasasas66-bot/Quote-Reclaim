@@ -456,6 +456,94 @@ describe("no-email import rows behave like the single-quote flow (copy mode)", (
 });
 
 // ─────────────────────────────────────────────────────────────────────────
+// Bulk import recovery-plan generation (launch-blocker regression)
+//
+// Root cause: the bulk path built reminder rows with a sequence_id field, but
+// public.reminders has NO sequence_id column (it lives on quotes). PostgREST
+// rejected every insert and the swallowed error left each imported quote with
+// "No recovery plan generated". The fix routes BOTH paths through one shared
+// writer that can never include sequence_id.
+// ─────────────────────────────────────────────────────────────────────────
+
+describe("Silent Money Reveal bulk import — recovery plan is generated for every quote", () => {
+  const writerSrc = readSource("../lib/quotes/recovery-plan-write.ts");
+  const quotesActionsSrc = readSource("../lib/quotes/actions.ts");
+
+  it("imports the plan through the SAME shared writer as single-quote create (no divergence)", () => {
+    expect(actionSrc).toContain("persistRecoveryPlan");
+    expect(quotesActionsSrc).toContain("persistRecoveryPlan");
+  });
+
+  it("the shared writer NEVER includes sequence_id as an insert key", () => {
+    // reminders has no sequence_id column — including it rejects the whole
+    // insert. This is the exact bug; lock the dangerous `sequence_id:` key out
+    // permanently (the explanatory comment may still name the column).
+    expect(writerSrc).not.toMatch(/sequence_id\s*:/);
+  });
+
+  it("the bulk action no longer builds reminder rows itself (and never with sequence_id)", () => {
+    expect(actionSrc).not.toMatch(/sequence_id:\s*sequenceId/);
+    expect(actionSrc).not.toMatch(/from\("reminders"\)\s*\.insert/);
+  });
+
+  it("the writer keys reminders by (quote_id, followup_number) with the real column set", () => {
+    expect(writerSrc).toContain("quote_id: quoteId");
+    expect(writerSrc).toContain("followup_number: m.followup_number");
+    expect(writerSrc).toContain("message_type: channel");
+  });
+
+  it("guarantees a deterministic fallback plan — generation never leaves 0 messages", () => {
+    expect(writerSrc).toContain("generateRecoveryPlan");
+    // If validation drops AI rows, fall back to the deterministic 5 from the plan.
+    expect(writerSrc).toMatch(/valid\.length === 5 \? valid : plan/);
+    // generateRecoveryPlan itself is contracted to always return 5 (fallback).
+    const gen = readSource("../lib/ai/generate-recovery-plan.ts");
+    expect(gen).toMatch(/return fallbackPlan\(ctx\)/);
+  });
+
+  it("passes the per-row channel so email-ready AND no-email rows both get 5 messages", () => {
+    // No-email rows still get the full plan as message_type "sms" (manual copy);
+    // they are not silently skipped.
+    expect(actionSrc).toMatch(/channel:\s*messageType/);
+    expect(actionSrc).toMatch(
+      /messageType:\s*"email"\s*\|\s*"sms"\s*=\s*normalizedEmail\s*\?\s*"email"\s*:\s*"sms"/,
+    );
+  });
+
+  it("a fake/example email cannot block generation — the plan is built from trade/amount/name", () => {
+    // The writer feeds generateRecoveryPlan trade/estimateAmount/firstName, never
+    // the email address; an unreachable email never short-circuits the plan.
+    expect(writerSrc).toContain("generateRecoveryPlan(context)");
+    expect(writerSrc).not.toMatch(/if\s*\(\s*!?\s*context\.\w*[Ee]mail/);
+  });
+
+  it("does not pretend email automation is active for no-email rows", () => {
+    expect(actionSrc).not.toMatch(/message_type:\s*"email"/);
+  });
+
+  it("still gates every imported row through check_and_increment_usage (free limit intact)", () => {
+    expect(actionSrc).toContain("check_and_increment_usage");
+    expect(actionSrc).toMatch(
+      /for \(const row of cleaned\)[\s\S]*?check_and_increment_usage/,
+    );
+  });
+
+  it("emits opt-in, PII-free import diagnostics only (no names/emails/amounts/message text)", () => {
+    const consoleCalls = actionSrc.match(/console\.\w+\([\s\S]*?\);/g) ?? [];
+    for (const call of consoleCalls) {
+      expect(call).not.toMatch(/\b(name|email|amount|row|rawRows|cleaned|message_text)\b/);
+    }
+    expect(actionSrc).toContain("RECOVERY_IMPORT_DEBUG");
+  });
+
+  it("no billing / auth / schema / pricing change in the import action", () => {
+    expect(actionSrc).not.toMatch(/is_paid|FREE_PLAN_LIMIT|lemonsqueezy|price|\$79/i);
+    // Quote insert still goes through the RLS-gated user client.
+    expect(actionSrc).toMatch(/userClient[\s\S]{0,40}\.from\("quotes"\)[\s\S]{0,40}\.insert/);
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────
 // Value-perception polish — audit framing, transition, top moves, copy
 // ─────────────────────────────────────────────────────────────────────────
 

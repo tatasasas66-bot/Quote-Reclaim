@@ -224,8 +224,14 @@ describe("reconcileReminders behavior", () => {
 // ---------------------------------------------------------------------------
 
 describe("5-reminder maximum invariant", () => {
-  it("createQuoteAction only inserts when exactly 5 valid messages are produced", () => {
-    expect(actions).toMatch(/reminderRows\.length\s*===\s*5/);
+  it("the shared recovery-plan writer only inserts a complete 5-step plan", () => {
+    // The 5-message gate moved into the single shared writer that BOTH the
+    // single-quote create flow and the bulk import use. createQuoteAction
+    // delegates to it; the writer never persists a partial plan.
+    const writer = readSource("../lib/quotes/recovery-plan-write.ts");
+    expect(writer).toMatch(/chosen\.length\s*!==\s*5/);
+    expect(writer).toContain('from("reminders")');
+    expect(actions).toContain("persistRecoveryPlan");
   });
 
   it("CADENCE_DAYS table has exactly 5 entries: 1, 2, 3, 4, 5", () => {

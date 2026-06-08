@@ -14,6 +14,7 @@ import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { createServiceSupabaseClient } from "@/lib/supabase/service";
 import { titleCaseName } from "@/lib/utils/title-case";
 import { normalizeToBusinessHour } from "./business-hours";
+import { persistRecoveryPlan } from "./recovery-plan-write";
 import { quoteInputSchema, quoteUpdateSchema } from "./schema";
 
 export type ActionResult =
@@ -283,39 +284,26 @@ export async function createQuoteAction(
   const firstName = firstNameOf(normalizedClientName);
   const contractorFirstName = contractorFirstNameOf(userData.user);
 
-  const plan = await generateRecoveryPlan({
-    firstName,
-    contractorFirstName,
-    trade: input.trade,
-    estimateAmount: input.estimate_amount,
-    jobDescription: input.job_description || null,
-    city: input.city || null,
-    state: input.state || null,
+  // Generate + persist the 5-step plan through the ONE shared writer that the
+  // bulk-import flow also uses, so reminder shape can never diverge between the
+  // two paths again. Returns the written rows for activity-event emission.
+  const { rows: reminderRows } = await persistRecoveryPlan({
+    serviceClient,
+    userId: userData.user.id,
     quoteId,
+    channel,
+    quoteSentAt,
+    context: {
+      firstName,
+      contractorFirstName,
+      trade: input.trade,
+      estimateAmount: input.estimate_amount,
+      jobDescription: input.job_description || null,
+      city: input.city || null,
+      state: input.state || null,
+      quoteId,
+    },
   });
-
-  const reminderRows = plan
-    .filter((m) =>
-      validateMessage(m.message, {
-        firstName,
-        trade: input.trade,
-        followupNumber: m.followup_number,
-      }).ok,
-    )
-    .map((m) => ({
-      user_id: userData.user.id,
-      quote_id: quoteId,
-      followup_number: m.followup_number,
-      message_type: channel,
-      message_text: m.message,
-      framework_used: m.framework,
-      cta_type: m.cta_type,
-      send_at: sendAtFromBase(quoteSentAt, CADENCE_DAYS[m.followup_number]),
-    }));
-
-  if (reminderRows.length === 5) {
-    await serviceClient.from("reminders").insert(reminderRows);
-  }
 
   // Recovery Graph telemetry — emit estimate_created + one followup_generated
   // per reminder. Fire-and-forget; failures must not break quote creation.
