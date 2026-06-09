@@ -60,9 +60,12 @@ export default function HomePage() {
 
         <OneTapReplyBlock />
 
-        <footer className="flex flex-wrap items-center justify-between gap-3 border-t border-line-subtle/80 py-6 text-sm text-ink-muted">
+        <footer className="flex flex-wrap items-center justify-between gap-y-3 gap-x-4 border-t border-line-subtle/80 py-6 text-sm text-ink-muted">
           <p>© {new Date().getFullYear()} Quote Reclaim</p>
-          <nav className="flex items-center gap-3">
+          <nav
+            aria-label="Legal"
+            className="flex flex-wrap items-center gap-x-3 gap-y-1"
+          >
             <Link
               href="/terms"
               className="rounded hover:text-ink-strong focus:outline-none focus-visible:ring-2 focus-visible:ring-focus"
@@ -75,6 +78,27 @@ export default function HomePage() {
               className="rounded hover:text-ink-strong focus:outline-none focus-visible:ring-2 focus-visible:ring-focus"
             >
               Privacy
+            </Link>
+            <span aria-hidden="true">·</span>
+            <Link
+              href="/refund-policy"
+              className="rounded hover:text-ink-strong focus:outline-none focus-visible:ring-2 focus-visible:ring-focus"
+            >
+              Refund Policy
+            </Link>
+            <span aria-hidden="true">·</span>
+            <Link
+              href="/cancellation-policy"
+              className="rounded hover:text-ink-strong focus:outline-none focus-visible:ring-2 focus-visible:ring-focus"
+            >
+              Cancellation
+            </Link>
+            <span aria-hidden="true">·</span>
+            <Link
+              href="/contact"
+              className="rounded hover:text-ink-strong focus:outline-none focus-visible:ring-2 focus-visible:ring-focus"
+            >
+              Contact
             </Link>
           </nav>
         </footer>

@@ -66,33 +66,24 @@ No silent simulation ever happens in production.
 
 ---
 
-## Lemon Squeezy (Payments)
+## Billing (provider TBD)
 
-Pick exactly one checkout mode (Mode A preferred):
+Quote Reclaim is currently between merchants of record — there is no
+active billing provider, no checkout env vars are needed, and the upgrade
+UI surfaces an honest "billing being updated — email
+support@quotereclaim.com" state instead of routing to a dead checkout.
 
-### Mode A — API-created checkouts (preferred)
+When a future provider (Paddle, Stripe-via-MoR, etc.) is wired up:
 
-| Variable | Scope | Status | Where to get | Failure mode when absent |
-|----------|-------|--------|--------------|--------------------------|
-| `LEMONSQUEEZY_API_KEY` | SERVER | REQUIRED (Mode A) | app.lemonsqueezy.com → Settings → API | Checkout endpoint returns 503 |
-| `LEMONSQUEEZY_STORE_ID` | SERVER | REQUIRED (Mode A) | Dashboard URL: `/stores/<id>` | Same as above |
-| `LEMONSQUEEZY_VARIANT_ID` | SERVER | REQUIRED (Mode A) | Product page → Variants → numeric ID | Same as above |
-
-### Mode B — Direct store URL fallback
-
-| Variable | Scope | Status | Where to get | Failure mode when absent |
-|----------|-------|--------|--------------|--------------------------|
-| `NEXT_PUBLIC_LEMONSQUEEZY_CHECKOUT_URL` | PUBLIC | REQUIRED (Mode B) | Product → Share → copy URL | Checkout endpoint returns 503 |
-
-### Always required
-
-| Variable | Scope | Status | Where to get | Failure mode when absent |
-|----------|-------|--------|--------------|--------------------------|
-| `LEMONSQUEEZY_WEBHOOK_SECRET` | SERVER | REQUIRED (prod) | Lemon dashboard → Webhooks → signing secret | Webhook route returns 503; subscriptions never activate |
-
-**Mode resolution logic:** If `LEMONSQUEEZY_API_KEY` + `LEMONSQUEEZY_STORE_ID` + `LEMONSQUEEZY_VARIANT_ID`
-are all set → Mode A. Else if `NEXT_PUBLIC_LEMONSQUEEZY_CHECKOUT_URL` is set → Mode B.
-Else → unavailable (returns 503).
+- Add its server-side credentials (API key, store/account id, price/variant id)
+  and any public checkout URL to this table.
+- Add a webhook signing secret with a fail-closed `shouldVerify…Mode`
+  helper that follows the same pattern as `EMAIL_INBOUND_SECRET` and
+  `RESEND_EMAIL_EVENTS_WEBHOOK_SECRET`.
+- Implement the `BillingProvider` interface (`src/lib/payments/types.ts`)
+  and swap `disabledProvider` in `src/lib/payments/provider.ts`. The UI
+  flips to the active checkout path the moment `availability()` returns
+  `{ status: "available" }`.
 
 ---
 
@@ -143,9 +134,6 @@ TWILIO_AUTH_TOKEN=
 TWILIO_FROM_NUMBER=
 GROQ_API_KEY=
 RESEND_EMAIL_EVENTS_WEBHOOK_SECRET=   # Quiet Signal open/click webhook (its OWN secret)
-LEMONSQUEEZY_API_KEY=       # or NEXT_PUBLIC_LEMONSQUEEZY_CHECKOUT_URL
-LEMONSQUEEZY_STORE_ID=      # Mode A
-LEMONSQUEEZY_VARIANT_ID=    # Mode A
-LEMONSQUEEZY_WEBHOOK_SECRET=
+# Billing provider env vars: TBD — see "Billing (provider TBD)" above.
 CRON_SECRET=
 ```

@@ -6,10 +6,11 @@
 --
 -- Postgres has no column-level RLS, so this trigger fills the gap: any UPDATE
 -- on public.profiles that would change a billing/usage column is rejected
--- unless the caller is the service_role (used by /api/webhooks/lemonsqueezy)
--- or the function owner (used by the security-definer
--- public.check_and_increment_usage RPC). All other roles — authenticated and
--- anon — cannot mutate billing state via the REST layer.
+-- unless the caller is the service_role (used by any future billing-provider
+-- webhook route under /api/webhooks/<provider>) or the function owner (used
+-- by the security-definer public.check_and_increment_usage RPC). All other
+-- roles — authenticated and anon — cannot mutate billing state via the REST
+-- layer.
 --
 -- Additive only: NO schema changes, NO column changes, NO policy edits.
 -- Just one function + one trigger.

@@ -92,8 +92,12 @@ export default function PrivacyPage() {
             generation of draft follow-up messages and reply classification.
           </li>
           <li>
-            <span className="font-semibold text-ink-strong">Lemon Squeezy</span>{" "}
-            — subscription payments, as merchant of record.
+            <span className="font-semibold text-ink-strong">
+              Payment provider
+            </span>{" "}
+            — when billing is active, a third-party payment provider acts as
+            merchant of record and processes subscription charges. Quote
+            Reclaim does not store your card details.
           </li>
           <li>
             <span className="font-semibold text-ink-strong">Vercel</span> —
@@ -104,7 +108,7 @@ export default function PrivacyPage() {
           These providers process data on our behalf under their own terms and
           privacy policies. We share customer reply text with our AI provider
           only to classify intent and draft responses. We do not use your data
-          to train AI models.
+          to train AI models. We do not sell your data.
         </p>
       </LegalSection>
 
@@ -142,10 +146,10 @@ export default function PrivacyPage() {
         <p>
           To make a deletion or data request, email us at{" "}
           <a
-            href="mailto:hello@quotereclaim.com"
+            href="mailto:support@quotereclaim.com"
             className="font-semibold text-brand hover:text-ink-strong"
           >
-            hello@quotereclaim.com
+            support@quotereclaim.com
           </a>{" "}
           and we will respond within a reasonable time.
         </p>
@@ -190,10 +194,10 @@ export default function PrivacyPage() {
         <p>
           Questions or privacy requests? Email us at{" "}
           <a
-            href="mailto:hello@quotereclaim.com"
+            href="mailto:support@quotereclaim.com"
             className="font-semibold text-brand hover:text-ink-strong"
           >
-            hello@quotereclaim.com
+            support@quotereclaim.com
           </a>
           .
         </p>

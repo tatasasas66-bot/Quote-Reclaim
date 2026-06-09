@@ -82,24 +82,31 @@ describe("canonical www host in URL-builder fallbacks", () => {
 });
 
 // ---------------------------------------------------------------------------
-// 9. Billing builds NO app-domain return URL in code (no vercel.app / apex)
+// 9. Billing carries no app-origin URL — provider-agnostic, no Lemon refs
 // ---------------------------------------------------------------------------
 
-describe("billing checkout URLs are provider-built, not app-origin", () => {
-  const checkout = read("lib/payments/create-checkout.ts");
+describe("billing modules carry no app-origin URLs and no MoR name", () => {
+  const entitlement = read("lib/payments/entitlement.ts");
+  const disabled = read("lib/payments/disabled-provider.ts");
+  const providerSrc = read("lib/payments/provider.ts");
+  const types = read("lib/payments/types.ts");
 
-  it("does not construct a return/success/cancel URL from an app origin", () => {
-    expect(checkout).not.toMatch(/vercel\.app/i);
-    expect(checkout).not.toMatch(/quotereclaim\.com/);
-    // The checkout URL comes from Lemon's store URL or API response.
-    expect(checkout).toMatch(/api\.lemonsqueezy\.com\/v1\/checkouts/);
+  it("provider-agnostic billing modules carry no app-origin URL", () => {
+    for (const src of [entitlement, disabled, providerSrc, types]) {
+      expect(src).not.toMatch(/vercel\.app/i);
+      expect(src).not.toMatch(/quotereclaim\.com\/(?!terms|privacy)/);
+    }
+  });
+
+  it("no billing module names any specific MoR (provider-agnostic)", () => {
+    for (const src of [entitlement, disabled, providerSrc, types]) {
+      expect(src.toLowerCase()).not.toMatch(/lemon|stripe|paddle/);
+    }
   });
 
   it("pricing stays $79 (FREE_PLAN_LIMIT + price constants untouched)", () => {
-    const lemon = read("lib/payments/lemonsqueezy.ts");
-    // The $79 price label lives in the UI/paywall; this just asserts billing
-    // code carries no contradicting hardcoded price origin or vercel return.
-    expect(lemon).not.toMatch(/vercel\.app/i);
+    expect(entitlement).toContain("MONTHLY_PRICE_USD = 79");
+    expect(entitlement).toContain("FREE_PLAN_LIMIT = 3");
   });
 });
 

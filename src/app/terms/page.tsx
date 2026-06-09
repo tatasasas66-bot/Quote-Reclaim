@@ -48,16 +48,29 @@ export default function TermsPage() {
           $79/month.
         </p>
         <p>
-          Billing is handled by Lemon Squeezy, which acts as the merchant of
-          record for all purchases. Your payment is processed by Lemon Squeezy
-          under their terms, and your subscription renews monthly until
-          canceled.
+          Subscription billing is handled by a third-party payment provider
+          that acts as the merchant of record for the purchase. Your payment
+          is processed by that provider under their terms, and your
+          subscription renews monthly until canceled.
         </p>
         <p>
-          You can cancel anytime. When you cancel, your subscription stays
-          active until the end of the current billing period and does not renew
-          after that. Except where required by law, payments already made are
-          non-refundable.
+          You can cancel anytime — see our{" "}
+          <a
+            href="/cancellation-policy"
+            className="font-semibold text-brand hover:text-ink-strong"
+          >
+            Cancellation Policy
+          </a>
+          . When you cancel, your subscription stays active until the end of
+          the current billing period and does not renew after that. Refund
+          requests are handled case by case under our{" "}
+          <a
+            href="/refund-policy"
+            className="font-semibold text-brand hover:text-ink-strong"
+          >
+            Refund Policy
+          </a>
+          .
         </p>
       </LegalSection>
 

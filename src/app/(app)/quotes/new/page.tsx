@@ -7,7 +7,7 @@ import { Paywall } from "@/components/billing";
 import { requireUser } from "@/lib/auth/require-user";
 import { createQuoteAction } from "@/lib/quotes/actions";
 import { getProfileStats, listPendingQuotes } from "@/lib/quotes/repo";
-import { FREE_PLAN_LIMIT } from "@/lib/payments/lemonsqueezy";
+import { FREE_PLAN_LIMIT } from "@/lib/payments/entitlement";
 import { formatCurrency } from "@/lib/utils/currency";
 
 export const metadata: Metadata = { title: "New quote - Quote Reclaim" };

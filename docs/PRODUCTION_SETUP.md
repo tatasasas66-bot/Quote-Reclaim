@@ -14,7 +14,7 @@ Quote Reclaim is a Next.js 14 app deployed on Vercel. It requires:
 | Supabase | Database, auth, RLS, RPCs | Yes |
 | Twilio | Outbound + inbound SMS | Yes |
 | Groq | AI message generation | Yes |
-| Lemon Squeezy | Subscriptions + paywall | Yes |
+| Billing provider | Subscriptions + paywall | TBD (currently disabled) |
 | Resend | Email (future channel) | Optional |
 | Sentry | Error tracking | Optional |
 | PostHog | Analytics | Optional |
@@ -103,17 +103,20 @@ retries can never double-count.
 
 ---
 
-## Step 5: Lemon Squeezy
+## Step 5: Billing provider (currently disabled)
 
-Follow `docs/LEMON_SETUP.md`.
+Quote Reclaim is between merchants of record. There is no active billing
+provider in the codebase, no provider-specific env vars are required,
+and the upgrade UI shows an honest "billing being updated
+— email support@quotereclaim.com" state instead of a dead checkout. Paid
+activation during this window is manual (see `docs/LAUNCH_GATE.md`).
 
-Minimum:
-- $79/month product and variant created
-- Checkout mode chosen (Mode A preferred)
-- Env vars set
-- Webhook endpoint added with all subscription events
-- Webhook secret set
-- Test checkout flow passed (test mode)
+When a future provider is wired up:
+
+- Add its env vars to `.env.example` and the table in `docs/ENV_VARS.md`.
+- Implement `BillingProvider` (`src/lib/payments/types.ts`) and swap the
+  selector in `src/lib/payments/provider.ts`. The Paywall + UpgradeButton
+  UI flips to the active checkout path automatically.
 
 ---
 
@@ -227,7 +230,8 @@ After all providers are configured and the first production deploy is live:
 1. Sign up with a real email. Confirm magic link works.
 2. Create 3 quotes. Confirm no paywall.
 3. Attempt 4th quote. Confirm paywall with correct copy.
-4. Complete a test checkout (Lemon test mode or lowest real charge).
+4. Confirm the Paywall surfaces the "billing being updated" support
+   email instead of routing anywhere; no dead checkout link.
 5. Confirm `profiles.is_paid = true`; paywall gone.
 6. On a quote with a valid phone, click Send Now. Confirm SMS arrives.
 7. Reply STOP. Confirm opt-out recorded.
@@ -248,7 +252,7 @@ For the full test matrix, see `docs/REAL_E2E_TEST_PLAN.md`.
 | Other plans | **None** |
 
 The codebase enforces these at:
-- `src/lib/payments/lemonsqueezy.ts`: `MONTHLY_PRICE_USD = 79`, `FREE_PLAN_LIMIT = 3`
+- `src/lib/payments/entitlement.ts`: `MONTHLY_PRICE_USD = 79`, `FREE_PLAN_LIMIT = 3`
 - `src/components/billing/Paywall.tsx`: hardcoded copy
 - `src/lib/quotes/actions.ts`: `check_and_increment_usage` RPC gating
 

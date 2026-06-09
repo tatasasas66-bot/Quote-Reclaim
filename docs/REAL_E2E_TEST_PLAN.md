@@ -12,7 +12,8 @@ Before running any test, confirm:
 - [ ] All required env vars are set (see `docs/ENV_VARS.md`)
 - [ ] Supabase project is running with migrations applied
 - [ ] Twilio number is provisioned with webhooks configured
-- [ ] Lemon Squeezy is in test mode with webhook endpoint configured
+- [ ] Billing provider is disabled (Quote Reclaim is between MoRs);
+      Paywall surfaces support@quotereclaim.com instead of a checkout link
 - [ ] Vercel deployment is live (or `npm run dev` for local)
 - [ ] You have a real US mobile number for SMS testing
 
@@ -149,27 +150,32 @@ After sending an SMS:
 
 ---
 
-## Test Group 6: Lemon Squeezy billing
+## Test Group 6: Billing — currently disabled
 
-### T6.1 — Checkout flow (test mode)
+Quote Reclaim is between merchants of record. The Paywall + UpgradeButton
+must not call any checkout route. Re-introduce real checkout tests when a
+future provider is wired up.
+
+### T6.1 — Paywall surfaces the support email instead of a dead route
 
 1. Hit the paywall on the 4th quote.
 2. Click the CTA.
-3. **Expected:** browser navigates to a real Lemon Squeezy checkout page (not `#`, not 503).
-4. Complete checkout with Lemon test card.
-5. **Expected:** webhook fires; `subscriptions` row with `status = 'active'`; `profiles.is_paid = true`.
-6. Reload `/quotes/new` — form renders, not paywall.
+3. **Expected:** an inline status appears with a `mailto:` link to
+   `support@quotereclaim.com`; the page does NOT navigate, no network
+   call is made, no toast is shown, and there is no `#` jump.
 
-### T6.2 — Subscription cancellation
+### T6.2 — Manual paid activation (admin out-of-band)
 
-1. In Lemon test dashboard, cancel the subscription.
-2. **Expected:** webhook fires; `profiles.is_paid = false`.
-3. Reload `/quotes/new` — paywall returns.
+1. With service-role access, set `profiles.is_paid = true` for the user.
+2. Reload `/quotes/new` — the form renders, not the Paywall.
+3. Set `profiles.is_paid = false`. Reload — the Paywall returns.
 
-### T6.3 — Webhook signature rejection
+### T6.3 — No legacy checkout/webhook routes remain
 
-1. Send a POST to `/api/webhooks/lemonsqueezy` with a wrong `X-Signature` header.
-2. **Expected:** 401 response.
+1. Any prior provider-specific checkout / webhook routes under
+   `/api/*` must return 404.
+2. Grep the deployed bundle for any prior provider name. Should be zero
+   hits.
 
 ---
 

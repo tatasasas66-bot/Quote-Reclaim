@@ -5,7 +5,7 @@
  *
  * Non-production: opt-in. If a secret is configured we verify it; otherwise
  * we accept unsigned for local dev + preview parity. Same shape as the
- * `shouldVerifyLemonMode` / `shouldVerifyResendMode` helpers.
+ * `shouldVerifyResendMode` helper.
  */
 export type EmailInboundSignatureMode = "verify" | "allow-unsigned" | "reject";
 

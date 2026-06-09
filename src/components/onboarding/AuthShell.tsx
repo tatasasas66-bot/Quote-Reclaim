@@ -203,7 +203,10 @@ export function AuthShell({ mode }: AuthShellProps) {
         </section>
       </div>
 
-      <footer className="mx-auto mt-10 flex w-full max-w-6xl flex-wrap items-center justify-center gap-3 border-t border-line-subtle/80 pt-6 text-sm text-ink-muted">
+      <footer
+        aria-label="Legal"
+        className="mx-auto mt-10 flex w-full max-w-6xl flex-wrap items-center justify-center gap-x-3 gap-y-1 border-t border-line-subtle/80 pt-6 text-sm text-ink-muted"
+      >
         <Link
           href="/terms"
           className="rounded hover:text-ink-strong focus:outline-none focus-visible:ring-2 focus-visible:ring-focus"
@@ -216,6 +219,27 @@ export function AuthShell({ mode }: AuthShellProps) {
           className="rounded hover:text-ink-strong focus:outline-none focus-visible:ring-2 focus-visible:ring-focus"
         >
           Privacy
+        </Link>
+        <span aria-hidden="true">·</span>
+        <Link
+          href="/refund-policy"
+          className="rounded hover:text-ink-strong focus:outline-none focus-visible:ring-2 focus-visible:ring-focus"
+        >
+          Refund Policy
+        </Link>
+        <span aria-hidden="true">·</span>
+        <Link
+          href="/cancellation-policy"
+          className="rounded hover:text-ink-strong focus:outline-none focus-visible:ring-2 focus-visible:ring-focus"
+        >
+          Cancellation
+        </Link>
+        <span aria-hidden="true">·</span>
+        <Link
+          href="/contact"
+          className="rounded hover:text-ink-strong focus:outline-none focus-visible:ring-2 focus-visible:ring-focus"
+        >
+          Contact
         </Link>
       </footer>
     </main>

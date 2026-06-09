@@ -14,7 +14,7 @@ import {
   skipOnboardingAction,
 } from "@/lib/onboarding/actions";
 import { formatCurrency } from "@/lib/utils/currency";
-import { FREE_PLAN_LIMIT } from "@/lib/payments/lemonsqueezy";
+import { FREE_PLAN_LIMIT } from "@/lib/payments/entitlement";
 
 type Props = {
   isPaid: boolean;

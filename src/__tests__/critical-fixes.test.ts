@@ -101,20 +101,24 @@ describe("A3: Upgrade — $79/month button", () => {
     expect(upgradeButton).toMatch(/Upgrade — \$\{PRICE_LABEL\}|Upgrade — \$79\/month/);
   });
 
-  it("wires to the existing Lemon Squeezy checkout route", () => {
-    expect(upgradeButton).toContain("/api/lemonsqueezy/checkout");
+  it("does not route to a billing-provider-specific checkout URL (safe-disabled)", () => {
+    // Quote Reclaim is currently between merchants of record. The button
+    // never fetches any provider-specific checkout route — it surfaces the
+    // support email instead. When a future provider lands, replace this with
+    // a positive assertion against the new path.
+    expect(upgradeButton).not.toMatch(/\/api\/(lemonsqueezy|stripe|paddle)/i);
+    expect(upgradeButton).not.toMatch(/fetch\(/);
   });
 
-  it("degrades gracefully when checkout is unconfigured (warn + tooltip, no crash)", () => {
-    expect(upgradeButton).toContain("console.warn");
-    expect(upgradeButton).toContain("Checkout coming soon");
-    expect(upgradeButton).toMatch(/try\s*\{[\s\S]*?\}\s*catch/);
-    // Must not hard-redirect to '#'
+  it("surfaces a safe billing-disabled state on click (mailto, not a dead fetch)", () => {
+    expect(upgradeButton).toContain("SUPPORT_EMAIL");
+    expect(upgradeButton).toContain("Billing is being updated");
+    expect(upgradeButton).toMatch(/mailto:\$\{SUPPORT_EMAIL\}/);
+    // Must not hard-redirect to '#'.
     expect(upgradeButton).not.toMatch(/href\s*=\s*['"]#['"]/);
   });
 
-  it("never trusts a client-provided user_id (checkout route derives it server-side)", () => {
-    // The button posts with no body; the route reads the session user.
+  it("never trusts a client-provided user_id (the future checkout call will derive it server-side)", () => {
     expect(upgradeButton).not.toMatch(/user_id/);
   });
 });
