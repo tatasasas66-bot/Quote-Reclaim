@@ -3,8 +3,8 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { Button } from "@/components/ui";
 import { UpgradeButton } from "@/components/billing";
-import { LogoMark } from "@/components/brand/Logo";
 import { QuoteListItem } from "@/components/quotes";
+import { FirstRecoveryCommand } from "@/components/dashboard/FirstRecoveryCommand";
 import { HeroMetric } from "@/components/dashboard/HeroMetric";
 import { MetricCards } from "@/components/dashboard/MetricCards";
 import { RecoveryWindowAlert } from "@/components/dashboard/RecoveryWindowAlert";
@@ -21,6 +21,7 @@ import {
 } from "@/lib/quotes/repo";
 import { effectiveDaysSilent } from "@/lib/recovery/effective-days";
 import { getRecoveryScore } from "@/lib/quotes/recovery-score";
+import { FREE_PLAN_LIMIT } from "@/lib/payments/entitlement";
 
 export const metadata: Metadata = { title: "Dashboard – Quote Reclaim" };
 export const dynamic = "force-dynamic";
@@ -83,6 +84,20 @@ export default async function DashboardPage() {
   }, null);
   const priorityQuote = pickPriorityQuote(pending);
 
+  // First-run / empty-queue command panel. An empty queue is the dead zone we
+  // are killing: instead of a passive "nothing here" box, the contractor gets
+  // one dominant first mission (Silent Money Reveal) with manual add secondary.
+  // Brand-new users with no quotes are already redirected to /onboarding/reveal
+  // above, so this panel is for people who skipped the reveal, imported nothing,
+  // or cleared their queue — exactly the users who otherwise stall.
+  const isPaid = profile?.is_paid ?? false;
+  const usageCount = profile?.usage_count ?? 0;
+  const freeRemaining = isPaid
+    ? Number.POSITIVE_INFINITY
+    : Math.max(0, FREE_PLAN_LIMIT - usageCount);
+  const hasRecoveredBefore = jobsWonLifetime > 0 || allTimeRecovered > 0;
+  const showFirstRecoveryCommand = pending.length === 0;
+
   return (
     <main className="mx-auto flex min-h-screen w-full max-w-7xl flex-col gap-8 bg-canvas px-4 pt-8 pb-[calc(6rem+env(safe-area-inset-bottom))] sm:px-6 sm:pb-8 lg:px-8">
       <header className="border-b border-line-subtle/80 pb-5">
@@ -114,6 +129,14 @@ export default async function DashboardPage() {
           </p>
         </div>
       </header>
+
+      {showFirstRecoveryCommand ? (
+        <FirstRecoveryCommand
+          isPaid={isPaid}
+          freeRemaining={freeRemaining}
+          hasRecoveredBefore={hasRecoveredBefore}
+        />
+      ) : null}
 
       <HeroMetric
         stillBleeding={stillBleeding}
@@ -170,22 +193,14 @@ export default async function DashboardPage() {
           </div>
 
           {pending.length === 0 ? (
-            <div className="rounded-lg border border-dashed border-line-subtle bg-surface-1 px-6 py-10 text-center">
-              <LogoMark className="mx-auto mb-3 h-10 w-10" />
-              <p className="text-lg font-bold text-ink-strong">
-                No quiet quotes right now.
-              </p>
-              <p className="mx-auto mt-1 max-w-md text-sm text-ink-muted">
-                Good. When an estimate goes quiet, it shows up here ranked by
-                dollars, risk, age, and next move — so you know what deserves
-                action and what to leave alone.
-              </p>
-              <Link href="#recent-quotes" className="mt-4 inline-block">
-                <Button size="sm" variant="secondary">
-                  View recent quotes
-                </Button>
-              </Link>
-            </div>
+            // Slim, secondary hint — the First Recovery Command panel above is
+            // the single focal point on an empty dashboard, so this stays quiet
+            // and just explains what will land here.
+            <p className="rounded-lg border border-dashed border-line-subtle bg-surface-1 px-5 py-6 text-sm leading-6 text-ink-muted">
+              Quiet estimates land here ranked by dollars, risk, age, and next
+              move — so you always know what deserves action and what to leave
+              alone.
+            </p>
           ) : (
             <ul className="grid gap-3">
               {pending.map((q) => (

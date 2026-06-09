@@ -34,10 +34,19 @@ describe("honest conversion copy renders on each surface", () => {
     expect(SURFACES.authShell).toMatch(/Silent Quote Command for serious contractors\./);
   });
 
-  it("dashboard empty state uses the calm 'nothing to do' frame", () => {
-    expect(SURFACES.dashboard).toMatch(/No quiet quotes right now\./);
-    expect(SURFACES.dashboard).toMatch(/ranked by\s+dollars, risk, age, and next move/);
-    expect(SURFACES.dashboard).toMatch(/View recent quotes/);
+  it("dashboard empty queue leads with the First Recovery Command, not a passive 'nothing here'", () => {
+    // The empty state is now an action panel (run the reveal / add a quote)
+    // rendered only when the queue is empty, with a slim secondary hint that
+    // explains what lands in the queue. The old passive box is gone.
+    expect(SURFACES.dashboard).toContain("FirstRecoveryCommand");
+    expect(SURFACES.dashboard).toMatch(
+      /showFirstRecoveryCommand = pending\.length === 0/,
+    );
+    expect(SURFACES.dashboard).toMatch(
+      /ranked by dollars, risk, age, and next\s+move/,
+    );
+    expect(SURFACES.dashboard).not.toMatch(/No quiet quotes right now/);
+    expect(SURFACES.dashboard).not.toMatch(/View recent quotes/);
   });
 
   it("Do This Today alert coaches highest-value-first", () => {
