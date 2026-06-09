@@ -568,10 +568,30 @@ describe("preview eyebrow reads as an audit, not a calculator", () => {
 });
 
 describe("Audit transition step — honest, fast, testable", () => {
-  it("declares a sub-2s minimum window (spec cap: 1200–1800ms)", () => {
+  it("declares a perceptible-but-honest window (spec cap: 2800–3400ms)", () => {
+    // Below ~2s the four honest audit lines render almost simultaneously and
+    // the labor-illusion signal is wasted; above ~3.5s the contractor starts
+    // to suspect the wait is fake. The 2.8–3.4s band lets each line breathe
+    // (~700ms / line) while staying snappy.
     expect(transitionSrc).toMatch(
-      /REVEAL_TRANSITION_MIN_MS\s*=\s*(1[2-7]\d\d|1800)\b/,
+      /REVEAL_TRANSITION_MIN_MS\s*=\s*(2[89]\d\d|3[0-3]\d\d|3400)\b/,
     );
+  });
+
+  it("the perceived-effort window is long enough to register (≥2800ms)", () => {
+    // Numeric value parse — defends against a future regression that pushes
+    // the constant back below the labor-illusion threshold (which is what
+    // wasted the audit signal in the first place).
+    const m = transitionSrc.match(/REVEAL_TRANSITION_MIN_MS\s*=\s*(\d+)/);
+    expect(m, "REVEAL_TRANSITION_MIN_MS literal not found").not.toBeNull();
+    const ms = Number(m![1]);
+    expect(ms).toBeGreaterThanOrEqual(2800);
+    expect(ms).toBeLessThanOrEqual(3400);
+  });
+
+  it("the perceived-effort doc-comment matches the new spec band", () => {
+    // Self-checking docstring so the spec stays in source-truth alignment.
+    expect(transitionSrc).toMatch(/capped by spec to 2800–3400ms/);
   });
 
   it("rotates through honest contractor-facing lines (no AI/billing/internal-validation copy)", () => {

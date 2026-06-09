@@ -8,7 +8,12 @@
  *
  * Contracts:
  *   - REVEAL_TRANSITION_MIN_MS is the visible audit-transition window,
- *     capped by spec to 1200–1800ms.
+ *     capped by spec to 2800–3400ms — short enough never to feel slow,
+ *     long enough that the four honest audit lines actually register as
+ *     "Quote Reclaim just did work" before the number lands. Below ~2s
+ *     the labor-illusion signal is wasted because all four lines render
+ *     almost simultaneously; above ~3.5s the contractor starts to suspect
+ *     the wait is fake.
  *   - REVEAL_AUDIT_LINES is honest contractor-facing copy ONLY. No AI,
  *     billing, internal-validation, or security wording.
  *   - AuditTransition renders the transition view. No timers — the host
@@ -19,7 +24,7 @@
  */
 import * as React from "react";
 
-export const REVEAL_TRANSITION_MIN_MS = 1200;
+export const REVEAL_TRANSITION_MIN_MS = 3000;
 
 export const REVEAL_AUDIT_LINES: ReadonlyArray<string> = [
   "Reading your pasted estimates…",

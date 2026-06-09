@@ -383,6 +383,38 @@ describe("Paywall component", () => {
     expect(paywall).not.toMatch(/window\.location\.href\s*=\s*['"]#['"]/);
   });
 
+  it("anchors the upgrade ask to the contractor's own silent dollars when known", () => {
+    // Ethical value anchoring: when we know hasSilent, the number is the
+    // visual hero (text-money, large font) AND the CTA reframes as "Import
+    // the rest — $79/month" so $79 reads as the answer to *their* number.
+    expect(paywall).toContain("hasSilent");
+    expect(paywall).toContain('data-testid="paywall-money-anchor"');
+    expect(paywall).toMatch(/Sitting quiet in your queue/);
+    expect(paywall).toMatch(/text-money/);
+    expect(paywall).toContain("Import the rest — $79/month");
+    // Original CTA label survives as the fallback branch for the no-silent
+    // case (locked by existing tests above). Both labels co-exist in source.
+    expect(paywall).toContain("Unlock Silent Quote Command — $79/month");
+  });
+
+  it("the value anchor is gated on hasSilent only — no fake/zero numbers ever rendered", () => {
+    // Zero or unknown silentQuoteValue must NOT render the money anchor.
+    expect(paywall).toMatch(
+      /hasSilent\s*=\s*Boolean\(silentQuoteValue && silentQuoteValue > 0\)/,
+    );
+    expect(paywall).toMatch(/hasSilent\s*\?\s*\([\s\S]*?paywall-money-anchor/);
+  });
+
+  it("the new anchor introduces no scarcity, countdown, or fake-math claim", () => {
+    expect(paywall).not.toMatch(
+      /expires|countdown|hurry|only \d+ left|last chance|today only/i,
+    );
+    expect(paywall).not.toMatch(/\bguarantee\b/i);
+    // $79 is the only price — unchanged.
+    expect(paywall).not.toMatch(/\$39\b|\$49\b|\$59\b|\$69\b|\$89\b|\$99\b/);
+    expect(paywall).toContain("$79/month");
+  });
+
   it("never shows feature-list paywall, fake urgency, or testimonials", () => {
     expect(paywall).not.toMatch(/feature.list|features:|✓ feature/i);
     expect(paywall).not.toMatch(/only \d+ left|hurry|expires soon/i);

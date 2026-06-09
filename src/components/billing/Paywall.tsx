@@ -37,7 +37,14 @@ export function Paywall({ silentQuoteValue }: Props) {
     }
   }
 
-  const hasSilent = silentQuoteValue && silentQuoteValue > 0;
+  const hasSilent = Boolean(silentQuoteValue && silentQuoteValue > 0);
+  // Ethical value anchoring: when we know the contractor's actual quiet
+  // dollars, the number is the headline — not a generic SaaS pitch. CTA
+  // flips to "Import the rest" so $79 reads as the answer to *their*
+  // number, not a feature unlock. Honest framing only.
+  const ctaLabel = hasSilent
+    ? "Import the rest — $79/month"
+    : "Unlock Silent Quote Command — $79/month";
 
   return (
     <section className="space-y-5 rounded-xl border border-brand/30 bg-surface-2 p-6">
@@ -45,6 +52,16 @@ export function Paywall({ silentQuoteValue }: Props) {
         <p className="text-xs font-semibold uppercase tracking-widest text-brand">
           FOUNDING CONTRACTOR
         </p>
+        {hasSilent ? (
+          <div data-testid="paywall-money-anchor" className="space-y-1">
+            <p className="text-xs font-black uppercase tracking-widest text-warning/80">
+              Sitting quiet in your queue
+            </p>
+            <p className="text-4xl font-black leading-none tabular-nums text-money sm:text-5xl">
+              {formatCurrency(silentQuoteValue)}
+            </p>
+          </div>
+        ) : null}
         <h2 className="text-2xl font-bold text-ink-strong">
           Don&apos;t let good quotes die quiet.
         </h2>
@@ -54,12 +71,6 @@ export function Paywall({ silentQuoteValue }: Props) {
           $79/month — about 1.5% of a single $5,000 job — it doesn&apos;t take
           many recovered jobs to look like a smart line item.
         </p>
-        {hasSilent ? (
-          <p className="text-sm font-medium text-money">
-            You have {formatCurrency(silentQuoteValue)} of quiet estimates
-            sitting in your queue right now.
-          </p>
-        ) : null}
       </div>
 
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
@@ -69,7 +80,7 @@ export function Paywall({ silentQuoteValue }: Props) {
           loading={pending}
           disabled={pending}
         >
-          Unlock Silent Quote Command — $79/month
+          {ctaLabel}
         </Button>
         <Link
           href="/dashboard"
