@@ -342,7 +342,8 @@ describe("RevealClient — copy, CTAs, and brand guardrails", () => {
     expect(revealClientSrc).toContain("noEmailRevealCopy");
     expect(revealClientSrc).toContain("noEmailImporting");
     expect(transitionSrc).toMatch(/send the follow-ups yourself|send .* yourself/);
-    expect(transitionSrc).toMatch(/The rest can send automatically|switch it to automatic/);
+    // "can run by email" is the updated phrasing for the email-capable subset.
+    expect(transitionSrc).toMatch(/can run by email|switch it to automatic/);
   });
 
   it("CTA copy never invents fake urgency or fake recovered revenue", () => {
@@ -406,11 +407,14 @@ describe("Reveal CTA stays above the fold (sticky on mobile/short, in-flow on ta
     expect(revealClientSrc).toMatch(/sm:gap-6/);
   });
 
-  it("preserves the free vs paid CTA labels exactly (top N free vs all N)", () => {
+  it("CTA labels: 'Start the top N follow-up plan' for free-capped, 'Start the follow-up plan' otherwise", () => {
     expect(revealClientSrc).toContain(
-      "Start recovering your top ${willImport} free →",
+      "Start the top ${willImport} follow-up plan →",
     );
-    expect(revealClientSrc).toContain("Start recovering all ${willImport} →");
+    expect(revealClientSrc).toContain("Start the follow-up plan →");
+    // Old recovery-claim labels are gone.
+    expect(revealClientSrc).not.toContain("Start recovering your top");
+    expect(revealClientSrc).not.toContain("Start recovering all");
   });
 
   it("keeps Top 3 Moves and trust copy; adds no countdown/parked regression", () => {
@@ -548,10 +552,12 @@ describe("Silent Money Reveal bulk import — recovery plan is generated for eve
 // ─────────────────────────────────────────────────────────────────────────
 
 describe("input helper makes no-email behavior clear BEFORE the reveal", () => {
-  it("tells the contractor a no-email quote becomes manual copy", () => {
+  it("tells the contractor no-email quotes get copy-ready follow-ups", () => {
     expect(revealClientSrc).toMatch(
-      /No email\?\s*We&apos;ll set that quote up for manual copy/,
+      /No email\?\s*We&apos;ll build copy-ready follow-ups instead\./,
     );
+    // Old "set that quote up for manual copy" copy is replaced.
+    expect(revealClientSrc).not.toMatch(/We&apos;ll set that quote up for manual copy/);
   });
 
   it("still mentions the 100-row cap", () => {
@@ -680,25 +686,25 @@ describe("noEmailRevealCopy — free user matrix references 'your top N' explici
     ).toBeNull();
   });
 
-  it("free + 0 no-email + top 3 → affirms top 3 can auto-send", () => {
+  it("free + 0 no-email + top 3 → describes email-ready follow-up (no broad auto-send claim)", () => {
     expect(
       noEmailRevealCopy({ willImport: 3, noEmailInImporting: 0, isPaid: false }),
-    ).toBe("Your top 3 can send automatically by email.");
+    ).toBe("Your top 3 have email addresses, so the 5-message follow-up can run by email.");
   });
 
-  it("free + 1 of top 3 has no email → exact spec wording", () => {
+  it("free + 1 of top 3 has no email → generic mixed-mode message", () => {
     expect(
       noEmailRevealCopy({ willImport: 3, noEmailInImporting: 1, isPaid: false }),
     ).toBe(
-      "1 of your top 3 has no email — you'll send that one yourself. The other 2 can send automatically by email.",
+      "Quotes with email can run by email. Quotes without email get the same 5-message plan ready to copy.",
     );
   });
 
-  it("free + 2 of top 3 have no email", () => {
+  it("free + 2 of top 3 have no email → same generic mixed-mode message", () => {
     expect(
       noEmailRevealCopy({ willImport: 3, noEmailInImporting: 2, isPaid: false }),
     ).toBe(
-      "2 of your top 3 have no email — you'll send those yourself. The other one can send automatically by email.",
+      "Quotes with email can run by email. Quotes without email get the same 5-message plan ready to copy.",
     );
   });
 
@@ -713,20 +719,20 @@ describe("noEmailRevealCopy — free user matrix references 'your top N' explici
     );
   });
 
-  it("free + only 1 import (e.g. usage already consumed 2/3) uses 'top quote' singular", () => {
+  it("free + only 1 import uses 'top quote' singular — no auto-send overclaim", () => {
     expect(
       noEmailRevealCopy({ willImport: 1, noEmailInImporting: 0, isPaid: false }),
-    ).toBe("Your top quote can send automatically by email.");
+    ).toBe("Your top quote has an email address, so the 5-message follow-up can run by email.");
     expect(
       noEmailRevealCopy({ willImport: 1, noEmailInImporting: 1, isPaid: false }),
     ).toContain("Your top quote has no email");
   });
 
-  it("paid + mixed → keeps 'these' wording (importing everything)", () => {
+  it("paid + mixed → 'can run by email' (not the old broad auto-send claim)", () => {
     expect(
       noEmailRevealCopy({ willImport: 7, noEmailInImporting: 2, isPaid: true }),
     ).toBe(
-      "2 of these have no email — you'll send those yourself. The rest can send automatically by email.",
+      "2 of these have no email — you'll send those yourself. The rest can run by email.",
     );
   });
 
@@ -778,5 +784,198 @@ describe("AuditTransition — visible contract", () => {
   it("clamps an out-of-range idx (defence in depth)", () => {
     render(React.createElement(AuditTransition, { messageIdx: 99 }));
     expect(screen.getByText(/Preparing your first recovery targets/)).toBeTruthy();
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────
+// Parser format coverage — whitespace-separated and new format variants
+// ─────────────────────────────────────────────────────────────────────────
+
+describe("parseSilentQuotesInput — whitespace-separated format (money-first)", () => {
+  it("parses a row with a two-word name, amount, date, and email (multiple spaces)", () => {
+    const input = "Martin Alvarez    8500    2026-05-21    martin.alvarez@example.com";
+    const out = parseSilentQuotesInput(input, NOW);
+    expect(out.rows).toHaveLength(1);
+    expect(out.rows[0].name).toBe("Martin Alvarez");
+    expect(out.rows[0].amount).toBe(8500);
+    expect(out.rows[0].email).toBe("martin.alvarez@example.com");
+    expect(out.rows[0].daysSilent).toBe(17);
+  });
+
+  it("parses a whitespace-separated row with no email (produces null email, not a failure)", () => {
+    const input = "Robert Wilson    4200    2026-05-29";
+    const out = parseSilentQuotesInput(input, NOW);
+    expect(out.rows).toHaveLength(1);
+    expect(out.rows[0].name).toBe("Robert Wilson");
+    expect(out.rows[0].amount).toBe(4200);
+    expect(out.rows[0].email).toBeNull();
+    expect(out.rows[0].daysSilent).toBe(9);
+  });
+
+  it("parses dollar amounts with commas in whitespace-separated rows", () => {
+    const input = "Jane Smith    $8,500    2026-05-15";
+    const out = parseSilentQuotesInput(input, NOW);
+    expect(out.rows).toHaveLength(1);
+    expect(out.rows[0].amount).toBe(8500);
+  });
+
+  it("skips invalid rows but keeps valid ones in a mixed whitespace-separated paste", () => {
+    const input = [
+      "David Harris    31000    2026-04-30    david.harris@example.com",
+      "no amount row",
+      "Chris Walker    21900    2026-05-07    chris.walker@example.com",
+    ].join("\n");
+    const out = parseSilentQuotesInput(input, NOW);
+    expect(out.rows).toHaveLength(2);
+    expect(out.rows.map((r) => r.name)).toEqual(["David Harris", "Chris Walker"]);
+    expect(out.skipped).toBe(1);
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────
+// Exact 10-row sample — the blocking bug regression
+// ─────────────────────────────────────────────────────────────────────────
+
+// NOW = 2026-06-07 (UTC), defined at the top of this file.
+const SAMPLE_10 = [
+  "Martin Alvarez    8500    2026-05-21    martin.alvarez@example.com",
+  "Jessica Brown    17600    2026-05-12    jessica.brown@example.com",
+  "Robert Wilson    4200    2026-05-29",
+  "Amanda Clark    12450    2026-05-18    amanda.clark@example.com",
+  "David Harris    31000    2026-04-30    david.harris@example.com",
+  "Emily Turner    6800    2026-05-26",
+  "Chris Walker    21900    2026-05-07    chris.walker@example.com",
+  "Patricia Young    5600    2026-05-31    patricia.young@example.com",
+  "Kevin Moore    9800    2026-05-23",
+  "Angela Scott    14750    2026-05-16    angela.scott@example.com",
+].join("\n");
+
+describe("exact 10-row blocking-bug sample", () => {
+  const sampleOut = parseSilentQuotesInput(SAMPLE_10, NOW);
+
+  it("parses all 10 rows without error", () => {
+    expect(sampleOut.rows).toHaveLength(10);
+    expect(sampleOut.skipped).toBe(0);
+  });
+
+  it("total for the 10-row sample equals $132,600", () => {
+    expect(sampleOut.totalAmount).toBe(132_600);
+  });
+
+  it("rows with email have non-null email; rows without email are null (not skipped)", () => {
+    const withEmail = sampleOut.rows.filter((r) => r.email !== null);
+    const noEmail = sampleOut.rows.filter((r) => r.email === null);
+    // 7 rows have emails, 3 do not.
+    expect(withEmail).toHaveLength(7);
+    expect(noEmail).toHaveLength(3);
+    expect(noEmail.map((r) => r.name)).toEqual(
+      expect.arrayContaining(["Robert Wilson", "Emily Turner", "Kevin Moore"]),
+    );
+  });
+
+  it("top 3 by amount are David Harris ($31,000), Chris Walker ($21,900), Jessica Brown ($17,600)", () => {
+    const ranked = [...sampleOut.rows].sort((a, b) => b.amount - a.amount);
+    const top3 = ranked.slice(0, 3);
+    expect(top3[0].name).toBe("David Harris");
+    expect(top3[0].amount).toBe(31_000);
+    expect(top3[1].name).toBe("Chris Walker");
+    expect(top3[1].amount).toBe(21_900);
+    expect(top3[2].name).toBe("Jessica Brown");
+    expect(top3[2].amount).toBe(17_600);
+  });
+
+  it("outside-free-plan amount (rows 4–10 by rank) equals $62,100", () => {
+    const ranked = [...sampleOut.rows].sort((a, b) => b.amount - a.amount);
+    const outsideTotal = ranked.slice(3).reduce((s, r) => s + r.amount, 0);
+    expect(outsideTotal).toBe(62_100);
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────
+// Parser error message + copy compliance
+// ─────────────────────────────────────────────────────────────────────────
+
+describe("parser error message and input-step copy compliance", () => {
+  it("all-failed error uses the improved message (no 'Each line should have a name and an amount')", () => {
+    expect(revealClientSrc).toContain(
+      "Couldn't read those rows. Try: name, amount, optional date, optional email — one quote per line.",
+    );
+    expect(revealClientSrc).not.toContain(
+      "Each line should have a name and an amount.",
+    );
+  });
+
+  it("input helper leads with 'One quote per line' and mentions date+email purpose", () => {
+    expect(revealClientSrc).toMatch(
+      /One quote per line\. Name \+ amount is enough; date and email help/,
+    );
+    expect(revealClientSrc).not.toMatch(/A name and an amount per line is enough\./);
+  });
+
+  it("no-email helper says 'copy-ready follow-ups' (not 'manual copy — you send when ready')", () => {
+    expect(revealClientSrc).toMatch(
+      /No email\?\s*We&apos;ll build copy-ready follow-ups instead\./,
+    );
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────
+// Reveal result copy compliance
+// ─────────────────────────────────────────────────────────────────────────
+
+describe("reveal result copy — no overclaim, no revenue guarantee", () => {
+  it("result copy says 'you already sent' (not 'paid to earn')", () => {
+    expect(revealClientSrc).toMatch(/you already\s+sent\./);
+    expect(revealClientSrc).not.toContain("paid to earn");
+  });
+
+  it("CTA says 'Start the top N follow-up plan' — no recovery claim", () => {
+    expect(revealClientSrc).toContain("Start the top ${willImport} follow-up plan →");
+    expect(revealClientSrc).not.toMatch(/Start recovering/i);
+  });
+
+  it("result screen never says 'automatically' when all importing quotes lack email", () => {
+    // noEmailRevealCopy(all no-email) must not contain 'automatically'.
+    const allNoEmail = noEmailRevealCopy({
+      willImport: 3,
+      noEmailInImporting: 3,
+      isPaid: false,
+    }) ?? "";
+    expect(allNoEmail).not.toMatch(/automatically/i);
+  });
+
+  it("result screen says '5-message follow-up' (not 'automatic') when all have email", () => {
+    const allEmail = noEmailRevealCopy({
+      willImport: 3,
+      noEmailInImporting: 0,
+      isPaid: false,
+    }) ?? "";
+    expect(allEmail).toContain("5-message follow-up");
+    expect(allEmail).not.toMatch(/automatically/i);
+  });
+
+  it("mixed-mode message does not imply automatic email for the no-email quotes", () => {
+    const mixed = noEmailRevealCopy({
+      willImport: 3,
+      noEmailInImporting: 1,
+      isPaid: false,
+    }) ?? "";
+    expect(mixed).toContain("ready to copy");
+    expect(mixed).not.toMatch(/automatically/i);
+  });
+
+  it("no banned overclaim or compliance-risk phrases introduced", () => {
+    const sources = [revealClientSrc, transitionSrc];
+    for (const src of sources) {
+      expect(src).not.toMatch(/guaranteed recovery|guaranteed revenue/i);
+      expect(src).not.toMatch(/debt collection|financial recovery/i);
+      expect(src).not.toMatch(/AI-powered/i);
+    }
+  });
+
+  it("no Lemon references anywhere in the reveal surfaces", () => {
+    for (const src of [revealClientSrc, transitionSrc]) {
+      expect(src.toLowerCase()).not.toContain("lemon");
+    }
   });
 });

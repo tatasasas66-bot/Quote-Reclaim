@@ -80,14 +80,14 @@ describe("reveal input copy", () => {
   });
 
   it("body answers what-to-paste, what-happens, is-it-saved, and no-email", () => {
-    expect(revealClient).toMatch(/A name and an amount per line is enough/);
+    expect(revealClient).toMatch(/One quote per line\. Name \+ amount is enough/);
     expect(revealClient).toMatch(/builds the recovery plan for your top 3 — free/);
     expect(revealClient).toMatch(/Nothing is saved until you confirm\./);
     expect(revealClient).toMatch(/No email on file\? You still\s+get all 5 messages, ready to copy\./);
   });
 
-  it("keeps the no-email manual-copy promise and the row cap", () => {
-    expect(revealClient).toMatch(/No email\?\s*We&apos;ll set that quote up for manual copy/);
+  it("keeps the no-email copy-ready promise and the row cap", () => {
+    expect(revealClient).toMatch(/No email\?\s*We&apos;ll build copy-ready follow-ups instead\./);
     expect(revealClient).toMatch(/rows per import\./);
   });
 });

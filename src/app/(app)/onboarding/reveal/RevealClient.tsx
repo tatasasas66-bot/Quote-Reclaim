@@ -75,7 +75,7 @@ export function RevealClient({ isPaid, usageCount, pendingCount }: Props) {
     const summary = parseSilentQuotesInput(pasted);
     if (summary.rows.length === 0) {
       setError(
-        "Couldn't read any estimates. Each line should have a name and an amount.",
+        "Couldn't read those rows. Try: name, amount, optional date, optional email — one quote per line.",
       );
       return;
     }
@@ -231,7 +231,8 @@ function InputStep({
           Paste your last 30 estimates.
         </h1>
         <p className="mt-3 max-w-2xl text-base leading-7 text-ink">
-          A name and an amount per line is enough. Quote Reclaim totals
+          One quote per line. Name + amount is enough; date and email help
+          us time the follow-up. Quote Reclaim totals
           what&apos;s sitting silent, ranks the homeowners still worth a
           follow-up, and builds the recovery plan for your top 3 — free.
           Nothing is saved until you confirm. No email on file? You still
@@ -282,7 +283,7 @@ function InputStep({
         />
         <p className="mt-2 text-xs text-ink-muted">
           Name and amount are required. Date and email are optional. No email?
-          We&apos;ll set that quote up for manual copy — you send when ready. Max{" "}
+          We&apos;ll build copy-ready follow-ups instead. Max{" "}
           {MAX_IMPORT_ROWS} rows per import.
         </p>
 
@@ -450,12 +451,10 @@ function RevealStep({
   );
 
   const ctaLabel = submitting
-    ? "Starting recovery…"
-    : isPaid
-      ? `Start recovering all ${willImport} →`
-      : willImport === count
-        ? `Start recovering all ${willImport} →`
-        : `Start recovering your top ${willImport} free →`;
+    ? "Starting…"
+    : isPaid || willImport === count
+      ? `Start the follow-up plan →`
+      : `Start the top ${willImport} follow-up plan →`;
 
   return (
     <section className="mx-auto mt-4 grid w-full max-w-3xl gap-5 pb-[calc(5.5rem+env(safe-area-inset-bottom))] sm:mt-8 sm:gap-6 sm:[@media(min-height:760px)]:pb-0">
@@ -469,7 +468,7 @@ function RevealStep({
         <p className="mx-auto mt-3 max-w-xl text-base leading-7 text-ink sm:text-lg">
           in <span className="font-bold text-ink-strong">{count}</span>{" "}
           {trade.toLowerCase()} estimate{count === 1 ? "" : "s"} you already
-          paid to earn.
+          sent.
         </p>
 
         <div className="mx-auto mt-4 flex max-w-2xl flex-wrap items-center justify-center gap-x-3 gap-y-2 text-sm text-ink-muted">

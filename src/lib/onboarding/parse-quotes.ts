@@ -2,6 +2,8 @@
  * Silent Money Reveal — quote import parser.
  *
  * Tolerates everything a real contractor might paste:
+ *   - Whitespace-separated (multiple spaces / copy from a text file)
+ *     e.g. "Martin Alvarez   8500   2026-05-21   email@example.com"
  *   - CSV with headers in any order (name/amount/date/email + synonyms)
  *   - CSV without headers (assumed: name, amount[, date[, email]])
  *   - Tab-separated (Excel/Sheets copy)
@@ -67,10 +69,19 @@ const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 // ASCII-safe (no accidental literal control bytes).
 const CONTROL_CHAR_RE = new RegExp("[\\u0000-\\u001F\\u007F]", "g");
 
-function detectDelimiter(line: string): "\t" | "," {
+// Three delimiter types: tab, comma, or whitespace-separated.
+type Delimiter = "\t" | "," | "ws";
+
+function detectDelimiter(line: string): Delimiter {
   const tabs = (line.match(/\t/g) ?? []).length;
-  const commas = (line.match(/,/g) ?? []).length;
-  return tabs >= commas && tabs > 0 ? "\t" : ",";
+  if (tabs > 0) return "\t";
+  // Count only "structural" commas — ones NOT preceded by a digit.
+  // A comma between digits (e.g. "$8,500" → "8,5") is a thousands separator,
+  // not a field delimiter; counting it would misclassify a space-separated
+  // row that happens to contain a formatted amount.
+  const structuralCommas = (line.match(/(?<!\d),/g) ?? []).length;
+  if (structuralCommas > 0) return ",";
+  return "ws";
 }
 
 function splitRow(line: string, delim: "\t" | ","): string[] {
@@ -195,6 +206,86 @@ function defaultColumnMap(width: number): ColumnMap {
 }
 
 /**
+ * Parse one whitespace-separated line using a money-first scan.
+ *
+ * Algorithm:
+ *   1. Split on any whitespace into tokens.
+ *   2. Find the FIRST token (at index ≥ 1) that is a valid money amount.
+ *      Requiring index ≥ 1 ensures the name has at least one token.
+ *   3. Everything before the amount token is joined as the customer name.
+ *   4. Tokens after the amount are scanned for an optional date and email
+ *      in any order — email detected by @-regex, date by ISO parse or bare
+ *      integer (1–3 digits treated as days-silent).
+ */
+function parseSpaceSeparatedRow(line: string, now: number): ParsedQuote | null {
+  const tokens = line.split(/\s+/).filter(Boolean);
+  if (tokens.length < 2) return null;
+
+  let amountIdx = -1;
+  let amount: number | null = null;
+  for (let i = 1; i < tokens.length; i++) {
+    const a = parseAmount(tokens[i]);
+    if (a !== null) {
+      amountIdx = i;
+      amount = a;
+      break;
+    }
+  }
+  if (amountIdx < 0 || amount === null) return null;
+
+  const name = sanitizeName(tokens.slice(0, amountIdx).join(" "));
+  if (!name) return null;
+
+  const rest = tokens.slice(amountIdx + 1);
+  let dateRaw = "";
+  let emailRaw = "";
+  for (const token of rest) {
+    if (!emailRaw && EMAIL_RE.test(token.toLowerCase())) {
+      emailRaw = token;
+    } else if (
+      !dateRaw &&
+      (/^\d{1,3}$/.test(token) || !Number.isNaN(Date.parse(token)))
+    ) {
+      dateRaw = token;
+    }
+  }
+
+  const daysSilent = parseDaysSilent(dateRaw, now);
+  const email = sanitizeEmail(emailRaw);
+
+  return { name, amount, daysSilent, email };
+}
+
+/** Process all lines as whitespace-separated rows (money-first algorithm). */
+function parseWhitespaceSeparated(lines: string[], now: number): ParseSummary {
+  const truncatedAt = lines.length > MAX_IMPORT_ROWS ? MAX_IMPORT_ROWS : null;
+  const limited = lines.slice(0, MAX_IMPORT_ROWS);
+
+  const seen = new Set<string>();
+  const out: ParsedQuote[] = [];
+  let skipped = 0;
+  let totalAmount = 0;
+
+  for (const line of limited) {
+    const parsed = parseSpaceSeparatedRow(line, now);
+    if (!parsed) {
+      skipped++;
+      continue;
+    }
+    const key = `${parsed.name.toLowerCase()}|${parsed.amount}`;
+    if (seen.has(key)) {
+      skipped++;
+      continue;
+    }
+    seen.add(key);
+    out.push(parsed);
+    totalAmount += parsed.amount;
+  }
+
+  return { rows: out, skipped, totalAmount, truncatedAt };
+}
+
+/**
  * Parse a pasted blob into a clean, capped, deduped list of quotes.
  * Skipped rows are counted but never crash the parser.
  */
@@ -212,6 +303,14 @@ export function parseSilentQuotesInput(
   }
 
   const delim = detectDelimiter(lines[0]);
+
+  // Whitespace-separated path (no structural delimiter found): money-first
+  // scan handles multi-word names like "Martin Alvarez  8500  2026-05-21".
+  if (delim === "ws") {
+    return parseWhitespaceSeparated(lines, now);
+  }
+
+  // Structured delimiter path (CSV or TSV) — TypeScript narrows delim here.
   const firstCells = splitRow(lines[0], delim);
   const header = detectHeader(firstCells);
   const dataStart = header ? 1 : 0;

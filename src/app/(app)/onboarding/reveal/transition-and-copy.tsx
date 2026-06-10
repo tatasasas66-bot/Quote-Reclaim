@@ -74,28 +74,27 @@ export function noEmailRevealCopy(args: {
     }
     const verb = noEmailInImporting === 1 ? "has" : "have";
     const pronoun = noEmailInImporting === 1 ? "that one" : "those";
-    return `${noEmailInImporting} of these ${verb} no email — you'll send ${pronoun} yourself. The rest can send automatically by email.`;
+    return `${noEmailInImporting} of these ${verb} no email — you'll send ${pronoun} yourself. The rest can run by email.`;
   }
 
   // Free: explicit "your top N" so the contractor cannot read "these" as
   // the full pasted list.
   const subjectCap = willImport === 1 ? "Your top quote" : `Your top ${willImport}`;
-  const subjectLower =
-    willImport === 1 ? "your top quote" : `your top ${willImport}`;
 
   if (noEmailInImporting === 0) {
-    return `${subjectCap} can send automatically by email.`;
+    // All importing rows have email addresses — describe what that enables.
+    if (willImport === 1) {
+      return `${subjectCap} has an email address, so the 5-message follow-up can run by email.`;
+    }
+    return `${subjectCap} have email addresses, so the 5-message follow-up can run by email.`;
   }
   if (noEmailInImporting === willImport) {
+    // None have email — no automation claim possible.
     if (willImport === 1) {
       return `${subjectCap} has no email — you'll send that one yourself. Add an email later to switch to automatic follow-up.`;
     }
     return `${subjectCap} have no email — you'll send those yourself. Add emails later to switch them to automatic follow-up.`;
   }
-  // Mixed — only possible when willImport >= 2.
-  const others = willImport - noEmailInImporting;
-  const noEmailVerb = noEmailInImporting === 1 ? "has" : "have";
-  const noEmailPronoun = noEmailInImporting === 1 ? "that one" : "those";
-  const otherLabel = others === 1 ? "other one" : `other ${others}`;
-  return `${noEmailInImporting} of ${subjectLower} ${noEmailVerb} no email — you'll send ${noEmailPronoun} yourself. The ${otherLabel} can send automatically by email.`;
+  // Mixed — some have email, some don't. One clear sentence for both cases.
+  return "Quotes with email can run by email. Quotes without email get the same 5-message plan ready to copy.";
 }
