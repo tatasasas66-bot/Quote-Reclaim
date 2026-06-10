@@ -22,10 +22,12 @@ const SURFACES: Record<string, string> = {
 // ---------------------------------------------------------------------------
 
 describe("honest conversion copy renders on each surface", () => {
-  it("homepage hero uses the loss-framed labor headline + honest email claim", () => {
-    expect(SURFACES.homepage).toMatch(/You did the drive, the takeoff, the math\./);
-    expect(SURFACES.homepage).toMatch(/let the money die quiet\./);
-    expect(SURFACES.homepage).toMatch(/follows\s+up by email automatically/);
+  it("homepage hero uses the quiet-quotes-aren't-dead headline + honest email+copy claim", () => {
+    expect(SURFACES.homepage).toMatch(/Your quiet quotes aren&apos;t dead yet\./);
+    expect(SURFACES.homepage).toMatch(/Run the audit before they are\./);
+    // Tightened: email + copy, both disclosed in the same sentence.
+    expect(SURFACES.homepage).toMatch(/sent by email when there&apos;s an address/);
+    expect(SURFACES.homepage).toMatch(/ready to copy\s+when there isn&apos;t/);
   });
 
   it("sign-in left panel reframes lead-chasing toward sent quotes", () => {
@@ -61,10 +63,11 @@ describe("honest conversion copy renders on each surface", () => {
     expect(SURFACES.quoteDetail).toMatch(/the next move that makes the most sense/);
   });
 
-  it("paywall uses founding framing + real price math + honest email claim", () => {
+  it("paywall uses founding framing + real price math + honest email+copy disclosure", () => {
     expect(SURFACES.paywall).toMatch(/FOUNDING CONTRACTOR/);
     expect(SURFACES.paywall).toMatch(/Don&apos;t let good quotes die quiet\./);
-    expect(SURFACES.paywall).toMatch(/follows\s+up by email automatically/);
+    expect(SURFACES.paywall).toMatch(/sent by\s+email when there&apos;s an address/);
+    expect(SURFACES.paywall).toMatch(/ready to copy when there\s+isn&apos;t/);
     expect(SURFACES.paywall).toMatch(/1\.5% of a single \$5,000 job/);
   });
 });
@@ -93,10 +96,13 @@ describe("$79 price stays intact", () => {
 // "follows up by email" — the only true automation claim — is present
 // ---------------------------------------------------------------------------
 
-describe("true automation claim is present (email auto-send via Resend)", () => {
-  it("homepage and paywall both claim email follow-up", () => {
-    expect(SURFACES.homepage).toMatch(/follows\s+up by email/);
-    expect(SURFACES.paywall).toMatch(/follows\s+up by email/);
+describe("true automation claim is present (email auto-send via Resend, qualified with copy fallback)", () => {
+  it("homepage and paywall both claim email follow-up — explicitly qualified", () => {
+    // Tightened: the only true automation claim is email auto-send when an
+    // address exists. The qualifier (ready-to-copy when it doesn't) lives in
+    // the same sentence so the broad reading is impossible.
+    expect(SURFACES.homepage).toMatch(/sent by email when there&apos;s an address/);
+    expect(SURFACES.paywall).toMatch(/sent by\s+email when there&apos;s an address/);
   });
 
   it("no surface claims SMS auto-send (SMS is not active)", () => {

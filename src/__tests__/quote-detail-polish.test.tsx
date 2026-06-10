@@ -417,9 +417,10 @@ describe("polished message wordings", () => {
     expect(msg).toContain("take it off my list");
   });
 
-  it("Day 14 v3 — 'what you're looking at' (was 'where it stands')", () => {
+  it("Day 14 v3 — tightened single-piece offer (was the wordy 'what you're looking at')", () => {
     const msg = SEQUENCE_VARIANTS[14][3](sample);
-    expect(msg).toContain("what you're looking at");
+    expect(msg).toContain("I can walk through just that piece. Want me to?");
+    expect(msg).not.toContain("what you're looking at");
     expect(msg).not.toContain("where it stands");
   });
 

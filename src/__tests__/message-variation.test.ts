@@ -356,7 +356,7 @@ describe("v0 of every day stays verbatim — AI exact-match gate intact", () => 
 
   it("Day 30 v0 is the new Final Closeout", () => {
     expect(SEQUENCE_VARIANTS[30][0](vars)).toBe(
-      "Jane, I'll close out the roofing estimate after this. No hard feelings. If anything changes later, reach out and I'll pick it back up.",
+      "Jane, I'll close out the roofing estimate after this. All good either way. If anything changes later, reach out and I'll pick it back up.",
     );
   });
 });

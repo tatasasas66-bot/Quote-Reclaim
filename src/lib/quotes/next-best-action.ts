@@ -16,7 +16,9 @@ export interface NextBestAction {
  *
  * - Won / Closed → null (nothing to do)
  * - Reply received → "Mark as won" (success cue)
- * - Fresh / Cooling → "Let recovery run" (muted info — sequence is doing its job)
+ * - Fresh / Cooling → "On schedule — follow-up queued" (muted info — the
+ *   sequence is doing its job; the old let-it-run wording read as passive
+ *   permission instead of a working system)
  * - At Risk → "Send next follow-up" (rust — contractor should poke today)
  * - Critical → "Send close-the-loop today" (warning)
  */
@@ -28,7 +30,7 @@ export function nextBestAction(
   if (band === "won" || band === "closed") return null;
   if (hasReply) return { label: "Mark as won", severity: "success" };
   if (band === "fresh" || band === "cooling") {
-    return { label: "Let recovery run", severity: "info" };
+    return { label: "On schedule — follow-up queued", severity: "info" };
   }
   if (band === "at_risk") {
     return { label: "Send next follow-up", severity: "rust" };

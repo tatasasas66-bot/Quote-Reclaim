@@ -101,22 +101,33 @@ export function RecoveryReceipt({
         <ReceiptRow label="Follow-ups this month">{emailFollowups}</ReceiptRow>
       </dl>
 
+      {/* Receipt footer = ACTUAL results only. Months-paid renders only once
+          a real win exists this month — a big "0 months paid" was an anti-
+          proof headline, and the potential-payback math lives in the Price-
+          check meter, not here. No wins yet: one quiet line. */}
       <div className="mt-auto border-t border-dashed border-line-subtle pt-3">
-        <div className="flex items-baseline justify-between gap-3">
-          <dt className="text-sm font-bold text-ink-strong">
-            Months paid this month
-          </dt>
-          <dd className="text-2xl font-black tabular-nums text-ink-strong">
-            {monthsPaidThisMonth}
-          </dd>
-        </div>
-        <p className="mt-2 text-sm leading-6 text-ink-muted">
-          {!recoveredPositive
-            ? "Mark a job as won to see how many months Quote Reclaim paid for."
-            : monthsPaidThisMonth >= 1
-              ? `This month paid for Quote Reclaim for ${monthsPaidThisMonth} ${monthsWord(monthsPaidThisMonth)}.`
-              : "This month started covering your Quote Reclaim subscription."}
-        </p>
+        {recoveredPositive ? (
+          <>
+            <div className="flex items-baseline justify-between gap-3">
+              <dt className="text-sm font-bold text-ink-strong">
+                Months paid this month
+              </dt>
+              <dd className="text-2xl font-black tabular-nums text-success">
+                {monthsPaidThisMonth}
+              </dd>
+            </div>
+            <p className="mt-2 text-sm leading-6 text-ink-muted">
+              {monthsPaidThisMonth >= 1
+                ? `This month's wins covered ${monthsPaidThisMonth} ${monthsWord(monthsPaidThisMonth)} of Quote Reclaim.`
+                : "This month's wins started covering your Quote Reclaim subscription."}
+            </p>
+          </>
+        ) : (
+          <p className="text-sm leading-6 text-ink-muted">
+            No wins marked this month yet. When a job comes back, it shows
+            here.
+          </p>
+        )}
       </div>
     </div>
   );

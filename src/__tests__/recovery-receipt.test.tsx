@@ -119,29 +119,28 @@ describe("RecoveryReceipt — all-time proof leads the hierarchy", () => {
 // Zero state
 // ---------------------------------------------------------------------------
 
-describe("RecoveryReceipt — zero state", () => {
-  it("shows the mark-a-job-as-won prompt when nothing recovered this month", () => {
+describe("RecoveryReceipt — zero state stays quiet (actual proof only)", () => {
+  it("shows the quiet no-wins line instead of a months-paid prompt", () => {
     render(React.createElement(RecoveryReceipt, props()));
-    // Mobile-polished short copy.
     expect(
-      screen.getByText(
-        /Mark a job as won to see how many months Quote Reclaim paid for\./i,
-      ),
+      screen.getByText(/No wins marked this month yet\./i),
     ).toBeTruthy();
-    // The pre-polish long-block prompt is gone.
     expect(
-      screen.queryByText(
-        /Mark a job as won and this receipt will show exactly how many months/i,
-      ),
+      screen.getByText(/When a job comes back, it shows\s+here\./i),
+    ).toBeTruthy();
+    // The old big-zero framing and its prompt are gone.
+    expect(
+      screen.queryByText(/Mark a job as won to see how many months/i),
     ).toBeNull();
-    // Does NOT claim it paid for anything yet.
-    expect(screen.queryByText(/paid for Quote Reclaim for/i)).toBeNull();
+    expect(screen.queryByText(/wins covered/i)).toBeNull();
   });
 
-  it("months paid is 0 in the zero state (this-month total)", () => {
-    const { container } = render(React.createElement(RecoveryReceipt, props()));
-    expect(container.textContent).toContain("Months paid this month");
-    expect(container.textContent).toContain("0");
+  it("never renders 'Months paid this month' without a real win", () => {
+    // A prominent "0 months paid" was an anti-proof headline. With zero
+    // recovered this month the row simply does not exist; the potential
+    // math lives in the Price-check meter instead.
+    render(React.createElement(RecoveryReceipt, props()));
+    expect(screen.queryByText("Months paid this month")).toBeNull();
   });
 });
 
@@ -171,7 +170,7 @@ describe("RecoveryReceipt — recovered value and months-paid math", () => {
       ),
     );
     expect(
-      screen.getByText(/This month paid for Quote Reclaim for 107 months\./i),
+      screen.getByText(/wins covered 107 months of Quote Reclaim\./i),
     ).toBeTruthy();
   });
 
@@ -189,7 +188,7 @@ describe("RecoveryReceipt — recovered value and months-paid math", () => {
       );
       expect(
         screen.getByText(
-          new RegExp(`paid for Quote Reclaim for ${months} months\\.`, "i"),
+          new RegExp(`wins covered ${months} months of Quote Reclaim\\.`, "i"),
         ),
       ).toBeTruthy();
       unmount();
@@ -205,7 +204,7 @@ describe("RecoveryReceipt — recovered value and months-paid math", () => {
       ),
     );
     expect(
-      screen.getByText(/paid for Quote Reclaim for 1 month\./i),
+      screen.getByText(/wins covered 1 month of Quote Reclaim\./i),
     ).toBeTruthy();
     unmount();
 
@@ -216,9 +215,9 @@ describe("RecoveryReceipt — recovered value and months-paid math", () => {
         props({ recoveredThisMonth: 50, jobsWonThisMonth: 1 }),
       ),
     );
-    expect(screen.queryByText(/for 0 months/i)).toBeNull();
+    expect(screen.queryByText(/covered 0 months/i)).toBeNull();
     expect(
-      screen.getByText(/started covering your Quote Reclaim subscription\./i),
+      screen.getByText(/wins started covering your Quote Reclaim subscription\./i),
     ).toBeTruthy();
   });
 });

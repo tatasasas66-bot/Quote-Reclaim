@@ -369,14 +369,14 @@ const DAY14_VARIANTS: ReadonlyArray<(v: VariantVars) => string> = [
   ({ firstName, projectDetail }) =>
     `${firstName}, sometimes these stall over timing or one detail. If that's the case with ${projectDetail}, want me to walk through the options with you?`,
   ({ firstName, projectDetail }) =>
-    `${firstName}, if there's one part of ${projectDetail} holding things up, want me to walk through it so you know exactly what you're looking at?`,
+    `${firstName}, if one part of ${projectDetail} is holding things up, I can walk through just that piece. Want me to?`,
 ];
 
 // DAY 30 — Final Closeout. Respectful, detached. Declarative. No question.
 // Job-aware via projectDetail so the final touch still names the exact job.
 const DAY30_VARIANTS: ReadonlyArray<(v: VariantVars) => string> = [
   ({ firstName, projectDetail }) =>
-    `${firstName}, I'll close out ${projectDetail} after this. No hard feelings. If anything changes later, reach out and I'll pick it back up.`,
+    `${firstName}, I'll close out ${projectDetail} after this. All good either way. If anything changes later, reach out and I'll pick it back up.`,
   ({ firstName, projectDetail }) =>
     `${firstName}, I'm going to close ${projectDetail} on my end. If you want me to keep it open, just let me know.`,
   ({ firstName, projectDetail }) =>

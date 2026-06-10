@@ -399,11 +399,20 @@ function RecoveryPlanSection({
   hasEmail: boolean;
   hasReplyForQuote: boolean;
 }) {
-  // Email channel = automated via Resend on the cron schedule.
-  // No email = copy mode (contractor sends manually from their phone).
+  // Email channel = automated via Resend on the cron schedule, only when
+  // there's an address on file. No email = copy mode (contractor sends
+  // manually from their phone). The intro picks the truthful sentence.
   const runningIntro = hasEmail
     ? "Quote Reclaim sends these follow-ups by email on schedule. Step in when they reply or the job comes back."
     : "Your recovery plan is ready. Copy each message and send it from your phone — Quote Reclaim tracks the timing for you.";
+
+  // NEXT MOVE — the one unmistakable answer to "what happens next with this
+  // quote, and do I have to do it?" Derived from the soonest unsent, unpaused
+  // reminder; copy mode tells the contractor it's their send, email mode says
+  // the system has it. Renders only while recovery is running.
+  const nextReminder = reminders
+    .filter((r) => !r.sent && !r.paused_at)
+    .sort((a, b) => Date.parse(a.send_at) - Date.parse(b.send_at))[0];
 
   return (
     <section className="space-y-4">
@@ -422,6 +431,43 @@ function RecoveryPlanSection({
           </p>
         ) : null}
       </div>
+
+      {status === "running" && nextReminder ? (
+        <div
+          data-testid="next-move-banner"
+          className="flex flex-wrap items-center gap-x-4 gap-y-2 rounded-lg border border-brand/40 bg-surface-1 px-4 py-3.5"
+        >
+          <span className="text-[11px] font-black uppercase tracking-widest text-brand">
+            Next move
+          </span>
+          {nextReminder.message_type === "email" && hasEmail ? (
+            <p className="min-w-0 flex-1 text-sm leading-6 text-ink">
+              Follow-up {nextReminder.followup_number} sends by email{" "}
+              <span className="font-bold text-ink-strong">
+                {formatSendDate(new Date(nextReminder.send_at))}
+              </span>
+              . Nothing to send by hand — step in when they reply.
+            </p>
+          ) : (
+            <>
+              <p className="min-w-0 flex-1 text-sm leading-6 text-ink">
+                Follow-up {nextReminder.followup_number} is yours to send —
+                scheduled{" "}
+                <span className="font-bold text-ink-strong">
+                  {formatSendDate(new Date(nextReminder.send_at))}
+                </span>
+                . Copy it and send from your phone.
+              </p>
+              <a
+                href={`#followup-${nextReminder.followup_number}`}
+                className="whitespace-nowrap rounded text-sm font-bold text-brand hover:text-ink-strong focus:outline-none focus-visible:ring-2 focus-visible:ring-focus"
+              >
+                Jump to the message →
+              </a>
+            </>
+          )}
+        </div>
+      ) : null}
 
       {(status === "running" || status === "paused") && reminders.length > 0 ? (
         <p className="max-w-3xl text-sm leading-6 text-ink-muted">

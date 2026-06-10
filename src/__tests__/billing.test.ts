@@ -198,10 +198,15 @@ describe("Paywall component", () => {
     expect(paywall).toMatch(/Billing is being updated/);
   });
 
-  it("displays the founding-contractor copy with honest real price math (unchanged)", () => {
+  it("displays the founding-contractor copy with honest real price math (email + copy disclosed)", () => {
     expect(paywall).toContain("FOUNDING CONTRACTOR");
     expect(paywall).toMatch(/Don&apos;t let good quotes die quiet\./);
-    expect(paywall).toMatch(/follows\s+up by email automatically/);
+    // Tightened: discloses both the email auto-send and the manual-copy path
+    // for quotes without an address, so no contractor reads the paywall as
+    // "everything sends automatically."
+    expect(paywall).toMatch(/sent by\s+email when there&apos;s an address/);
+    expect(paywall).toMatch(/ready to copy when there\s+isn&apos;t/);
+    expect(paywall).not.toMatch(/follows\s+up by email automatically\./);
     expect(paywall).toMatch(/1\.5% of a single \$5,000 job/);
     expect(paywall).toContain("Unlock Silent Quote Command — $79/month");
     expect(paywall).toContain("Not now");

@@ -39,26 +39,31 @@ describe("Homepage hero copy (honest conversion rewrite)", () => {
     expect(homepage).not.toMatch(/QUOTE RECLAIM · SILENT QUOTE COMMAND/);
   });
 
-  it("uses the loss-framed contractor-labor headline", () => {
-    expect(homepage).toMatch(/You did the drive, the takeoff, the math\./);
-    expect(homepage).toMatch(/let the money die quiet\./);
+  it("uses the quiet-quotes-aren't-dead headline (hard-mode rewrite)", () => {
+    expect(homepage).toMatch(/Your quiet quotes aren&apos;t dead yet\./);
+    expect(homepage).toMatch(/Run the audit before they are\./);
   });
 
-  it("subhead is honest about email auto-send (no SMS overclaim)", () => {
-    expect(homepage).toMatch(/which silent estimates still have money in/);
-    expect(homepage).toMatch(/follows\s+up by email automatically/);
-    expect(homepage).toMatch(/drift\s+cold\./);
+  it("subhead is honest about email auto-send AND manual-copy fallback", () => {
+    expect(homepage).toMatch(/Paste the estimates that went silent/);
+    expect(homepage).toMatch(/sent by email when there&apos;s an address/);
+    expect(homepage).toMatch(/ready to copy\s+when there isn&apos;t/);
+    expect(homepage).toMatch(/You step in when someone replies\./);
+    // The broad "follows up by email automatically" claim — without the
+    // no-email qualifier — is gone.
+    expect(homepage).not.toMatch(/follows\s+up by email automatically/);
   });
 
-  it("primary CTA is See What's Sitting Quiet", () => {
-    expect(homepage).toMatch(/Sitting Quiet/);
+  it("primary CTA runs the free audit and routes into the reveal flow", () => {
+    expect(homepage).toMatch(/Run the Free Silent Quote Audit/);
+    expect(homepage).toMatch(/href="\/onboarding\/reveal"/);
     expect(homepage).not.toMatch(/Find Silent Money/);
   });
 
-  it("secondary CTA is See How It Works (links to the product preview)", () => {
-    expect(homepage).toMatch(/<Button[^>]*variant=["']secondary["']/);
-    expect(homepage).toMatch(/See How It Works/);
-    expect(homepage).toMatch(/href="#how-it-works"/);
+  it("no decorative secondary CTA — the See How It Works scroll button is gone", () => {
+    expect(homepage).not.toMatch(/See How It Works/);
+    expect(homepage).not.toMatch(/<Button[^>]*variant=["']secondary["']/);
+    // The preview card keeps its anchor id harmlessly.
     expect(homepage).toMatch(/id="how-it-works"/);
   });
 

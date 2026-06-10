@@ -24,27 +24,29 @@ export default function HomePage() {
                 Silent Quote Command
               </p>
               <h1 className="max-w-2xl text-balance text-5xl font-black leading-[0.98] text-ink-strong sm:text-6xl lg:text-7xl">
-                You did the drive, the takeoff, the math.
+                Your quiet quotes aren&apos;t dead yet.
                 <br />
                 <span className="text-brand">
-                  Don&apos;t let the money die quiet.
+                  Run the audit before they are.
                 </span>
               </h1>
               <p className="max-w-xl break-words text-lg leading-8 text-ink sm:text-xl">
-                Quote Reclaim shows which silent estimates still have money in
-                them, what they&apos;re worth, and the next move — then follows
-                up by email automatically so quoted work doesn&apos;t drift
-                cold.
+                Paste the estimates that went silent. Quote Reclaim totals
+                what&apos;s still sitting there, ranks which homeowners are
+                worth another shot, and writes the 5-message follow-up —
+                sent by email when there&apos;s an address, ready to copy
+                when there isn&apos;t. You step in when someone replies.
               </p>
               <div className="flex flex-wrap items-center gap-3 pt-1">
-                <Link href="/sign-up">
+                {/* One CTA. The old scroll-only secondary ("See How It
+                    Works") only jumped to the preview card sitting beside
+                    this text — decorative, split attention from the single
+                    action that matters. The audit link routes signed-out
+                    visitors through /sign-up?next=/onboarding/reveal so
+                    the first action after auth is the audit itself. */}
+                <Link href="/onboarding/reveal">
                   <Button size="lg" className="shadow-[0_0_42px_rgba(217,111,50,0.28)]">
-                    See What&apos;s Sitting Quiet
-                  </Button>
-                </Link>
-                <Link href="#how-it-works">
-                  <Button size="lg" variant="secondary">
-                    See How It Works
+                    Run the Free Silent Quote Audit →
                   </Button>
                 </Link>
               </div>

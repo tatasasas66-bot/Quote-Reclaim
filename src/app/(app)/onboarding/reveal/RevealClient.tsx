@@ -225,15 +225,17 @@ function InputStep({
     <section className="mx-auto mt-8 grid w-full max-w-3xl gap-6">
       <div>
         <p className="text-xs font-black uppercase tracking-widest text-brand">
-          Find the money sitting quiet
+          Silent Quote Audit
         </p>
         <h1 className="mt-3 text-balance text-4xl font-black leading-tight text-ink-strong sm:text-5xl">
           Paste your last 30 estimates.
         </h1>
         <p className="mt-3 max-w-2xl text-base leading-7 text-ink">
-          Quote Reclaim will add up every silent estimate you&apos;ve sent —
-          and show you the total amount sitting quiet right now. One number
-          you&apos;ve never seen in your life.
+          A name and an amount per line is enough. Quote Reclaim totals
+          what&apos;s sitting silent, ranks the homeowners still worth a
+          follow-up, and builds the recovery plan for your top 3 — free.
+          Nothing is saved until you confirm. No email on file? You still
+          get all 5 messages, ready to copy.
         </p>
         {pendingCount > 0 ? (
           <p className="mt-3 text-xs text-ink-muted">

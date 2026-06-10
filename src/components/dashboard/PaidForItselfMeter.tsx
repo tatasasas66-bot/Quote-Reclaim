@@ -51,32 +51,33 @@ export function PaidForItselfMeter({
         id="paid-for-itself-heading"
         className="text-xs font-black uppercase tracking-widest text-money"
       >
-        Pays for itself
+        Price check
       </p>
       <p className="mt-3 text-2xl font-black leading-tight text-ink-strong">
-        One job back covers{" "}
+        If this one comes back, that covers{" "}
         <span className="whitespace-nowrap text-money tabular-nums">
           {monthsCovered} months
         </span>
         .
       </p>
       <p className="mt-2 text-sm leading-6 text-ink">
-        Your biggest quiet quote —{" "}
+        Your biggest quiet quote is{" "}
         <span className="font-bold text-ink-strong">{displayName}</span>,{" "}
         <span className="whitespace-nowrap font-bold text-ink-strong tabular-nums">
           {formatCurrency(biggestQuoteAmount)}
-        </span>{" "}
-        — covers {monthsCovered} months of Quote Reclaim on its own.{" "}
+        </span>
+        . If it comes back, that alone covers {monthsCovered} months of
+        Quote Reclaim.{" "}
         <span className="whitespace-nowrap tabular-nums">
           {formatCurrency(queueTotal)}
         </span>{" "}
         is sitting across {pendingCount} quiet quote
-        {pendingCount === 1 ? "" : "s"}.
+        {pendingCount === 1 ? "" : "s"} total.
       </p>
       <p className="mt-3 text-xs leading-5 text-ink-muted">
         Straight math from your own queue:{" "}
         {formatCurrency(biggestQuoteAmount)} ÷ {PAYWALL_PRICE_LABEL}. No
-        promises — just the size of what&apos;s sitting there.
+        promises — just the size of the opportunity.
       </p>
     </section>
   );

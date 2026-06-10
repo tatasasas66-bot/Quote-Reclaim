@@ -63,10 +63,12 @@ export function Paywall({ silentQuoteValue }: Props) {
           Don&apos;t let good quotes die quiet.
         </h2>
         <p className="text-sm text-ink">
-          Quote Reclaim shows which silent estimates still matter, what
-          they&apos;re worth, and follows up by email automatically. At
-          $79/month — about 1.5% of a single $5,000 job — it doesn&apos;t take
-          many recovered jobs to look like a smart line item.
+          Quote Reclaim shows which silent estimates still matter and what
+          they&apos;re worth — and writes the 5-message follow-up, sent by
+          email when there&apos;s an address and ready to copy when there
+          isn&apos;t. At $79/month — about 1.5% of a single $5,000 job — it
+          doesn&apos;t take many recovered jobs to look like a smart line
+          item.
         </p>
       </div>
 

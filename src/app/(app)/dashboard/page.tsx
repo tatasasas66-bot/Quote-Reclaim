@@ -159,6 +159,8 @@ export default async function DashboardPage() {
         quotesBeingWorked={pending.length}
         emailFollowups={monthlyActivity.emailFollowups}
         allTimeRecovered={allTimeRecovered}
+        priorityClientName={priorityQuote?.client_name ?? null}
+        priorityQuoteId={priorityQuote?.id ?? null}
       />
 
       {priorityQuote ? (
@@ -220,6 +222,32 @@ export default async function DashboardPage() {
         </section>
 
         <aside className="flex min-w-0 flex-col gap-6 lg:sticky lg:top-8 lg:self-start">
+          {/* Actual-win proof chip — green is reserved for real recovered
+              money. Compact so it never competes with the next action, but
+              no longer buried below the fold under a long queue. */}
+          {wonTotal > 0 ? (
+            <Link
+              href="#recent-quotes"
+              data-testid="won-proof-chip"
+              className="group flex items-center justify-between gap-3 rounded-lg border border-success/35 bg-surface-1 px-4 py-3 focus:outline-none focus-visible:ring-2 focus-visible:ring-focus"
+            >
+              <div className="min-w-0">
+                <p className="text-[11px] font-black uppercase tracking-widest text-success">
+                  Jobs won back
+                </p>
+                <p className="mt-1 whitespace-nowrap text-xl font-black tabular-nums text-success">
+                  {wonTotal.toLocaleString("en-US", {
+                    style: "currency",
+                    currency: "USD",
+                    maximumFractionDigits: 0,
+                  })}
+                </p>
+              </div>
+              <span className="whitespace-nowrap text-sm font-bold text-ink-muted group-hover:text-ink-strong">
+                {wonQuotes.length} job{wonQuotes.length === 1 ? "" : "s"} →
+              </span>
+            </Link>
+          ) : null}
           {biggestPending ? (
             <PaidForItselfMeter
               biggestQuoteName={biggestPending.client_name}
