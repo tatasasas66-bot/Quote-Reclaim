@@ -67,14 +67,14 @@ describe("Homepage hero copy (honest conversion rewrite)", () => {
     expect(homepage).toMatch(/id="how-it-works"/);
   });
 
-  it("trust line names the audience, the price, and 'Not another CRM'", () => {
+  it("trust line names the audience, the price, and the no-learning-curve differentiator", () => {
     expect(homepage).toMatch(/Built for US home-service contractors\./);
     expect(homepage).toContain("$79/month");
-    expect(homepage).toMatch(/Not another\s+CRM\./);
+    expect(homepage).toMatch(/No learning curve\./);
   });
 
-  it("hero section uses py-12 md:py-16 (above-the-fold compression)", () => {
-    expect(homepage).toMatch(/py-12 md:py-16/);
+  it("hero section uses py-6 md:py-8 (above-the-fold compression)", () => {
+    expect(homepage).toMatch(/py-6 md:py-8/);
   });
 });
 

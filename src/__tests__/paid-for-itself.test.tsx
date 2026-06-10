@@ -184,6 +184,6 @@ describe("homepage trust line states the free start next to the price", () => {
   it("price anchor now carries 'first 3 quotes free, no card needed'", () => {
     expect(homepageSrc).toContain("$79/month");
     expect(homepageSrc).toMatch(/first 3\s+quotes free, no card needed/);
-    expect(homepageSrc).toMatch(/Not another\s+CRM\./);
+    expect(homepageSrc).toMatch(/No learning curve\./);
   });
 });

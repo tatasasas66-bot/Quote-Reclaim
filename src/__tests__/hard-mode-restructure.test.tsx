@@ -62,10 +62,10 @@ describe("homepage hero restructure + email/copy honesty", () => {
     expect(homepage).not.toMatch(/follows\s+up by email automatically/);
   });
 
-  it("trust line unchanged: price + first 3 free + not a CRM", () => {
+  it("trust line: price + first 3 free + no learning curve differentiator", () => {
     expect(homepage).toContain("$79/month");
     expect(homepage).toMatch(/first 3\s+quotes free, no card needed/);
-    expect(homepage).toMatch(/Not another\s+CRM\./);
+    expect(homepage).toMatch(/No learning curve\./);
   });
 });
 

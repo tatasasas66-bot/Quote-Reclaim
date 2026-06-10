@@ -17,20 +17,20 @@ export default function HomePage() {
           </Link>
         </header>
 
-        <section className="grid flex-1 items-center gap-8 py-12 md:py-16">
+        <section className="grid flex-1 items-center gap-8 py-6 md:py-8">
           <div className="grid gap-8 lg:grid-cols-[0.9fr_1.1fr] lg:items-end">
-            <div className="min-w-0 space-y-6">
+            <div className="min-w-0 space-y-4">
               <p className="text-xs font-semibold uppercase tracking-widest text-brand">
                 Silent Quote Command
               </p>
-              <h1 className="max-w-2xl text-balance text-5xl font-black leading-[0.98] text-ink-strong sm:text-6xl lg:text-7xl">
+              <h1 className="max-w-2xl text-[length:clamp(1.5rem,4vw,2.75rem)] font-black leading-[0.98] text-ink-strong">
                 Your quiet quotes aren&apos;t dead yet.
                 <br />
                 <span className="text-brand">
                   Run the audit before they are.
                 </span>
               </h1>
-              <p className="max-w-xl break-words text-lg leading-8 text-ink sm:text-xl">
+              <p className="max-w-xl break-words text-lg leading-7 text-ink">
                 Paste the estimates that went silent. Quote Reclaim totals
                 what&apos;s still sitting there, ranks which homeowners are
                 worth another shot, and writes the 5-message follow-up —
@@ -38,12 +38,6 @@ export default function HomePage() {
                 when there isn&apos;t. You step in when someone replies.
               </p>
               <div className="flex flex-wrap items-center gap-3 pt-1">
-                {/* One CTA. The old scroll-only secondary ("See How It
-                    Works") only jumped to the preview card sitting beside
-                    this text — decorative, split attention from the single
-                    action that matters. The audit link routes signed-out
-                    visitors through /sign-up?next=/onboarding/reveal so
-                    the first action after auth is the audit itself. */}
                 <Link href="/onboarding/reveal">
                   <Button size="lg" className="shadow-[0_0_42px_rgba(217,111,50,0.28)]">
                     Run the Free Silent Quote Audit →
@@ -52,7 +46,7 @@ export default function HomePage() {
               </div>
               <p className="max-w-md text-sm font-medium text-ink-muted">
                 Built for US home-service contractors. $79/month — first 3
-                quotes free, no card needed. Not another CRM.
+                quotes free, no card needed. No learning curve.
               </p>
             </div>
 
@@ -126,7 +120,7 @@ function ProductPreview() {
         <div className="grid gap-4 lg:grid-cols-[1.1fr_0.9fr]">
           <div className="rounded-lg border border-warning/35 bg-warning/10 p-5">
             <p className="text-xs font-bold uppercase tracking-widest text-warning">
-              Still Bleeding
+              Money on the Table
             </p>
             <p className="mt-2 text-5xl font-black tracking-tight text-ink-strong tabular-nums sm:text-6xl">
               $47,200
@@ -181,9 +175,9 @@ function ProductPreview() {
             />
             <PreviewStat
               icon={<CheckCircle2 className="h-4 w-4" aria-hidden="true" />}
-              label="Months paid for"
-              value="107x"
-              tone="text-success"
+              label="Price check"
+              value="107×"
+              tone="text-money"
             />
           </div>
         </div>
