@@ -243,25 +243,26 @@ describe("won-proof placement", () => {
 // 9. Quote detail — NEXT MOVE banner + email/copy honesty
 // ───────────────────────────────────────────────────────────────────────
 
-describe("quote detail NEXT MOVE banner", () => {
-  it("derives the soonest unsent, unpaused reminder", () => {
-    expect(quoteDetail).toMatch(/const nextReminder = reminders[\s\S]{0,200}!r\.sent && !r\.paused_at/);
+describe("quote detail NEXT MOVE banner (unified next-move source of truth)", () => {
+  it("derives the banner from computeNextMove — the shared single source", () => {
+    expect(quoteDetail).toMatch(/const move = computeNextMove\(/);
+    expect(quoteDetail).toMatch(/move\.kind !== "none" \?/);
   });
 
-  it("email mode says the system sends and the contractor steps in on reply", () => {
-    expect(quoteDetail).toMatch(/sends by email/);
+  it("queued email mode: nothing to send by hand, never 'send today'", () => {
+    expect(quoteDetail).toMatch(/is queued for/);
     expect(quoteDetail).toMatch(/Nothing to send by hand — step in when they reply\./);
   });
 
-  it("copy mode owns the manual send explicitly and deep-links the message", () => {
-    expect(quoteDetail).toMatch(/is yours to send/);
-    expect(quoteDetail).toMatch(/Copy it and send from your phone\./);
-    expect(quoteDetail).toMatch(/#followup-\$\{nextReminder\.followup_number\}/);
-    expect(quoteDetail).toMatch(/Jump to the message/);
+  it("due email mode: let it send, or send it today to move now", () => {
+    expect(quoteDetail).toMatch(/is due now and queued for\s+email/);
+    expect(quoteDetail).toMatch(/You can let it send, or send it today if you want to\s+move now\./);
   });
 
-  it("renders only while recovery is running", () => {
-    expect(quoteDetail).toMatch(/status === "running" && nextReminder \?/);
+  it("copy mode owns the manual send explicitly and deep-links the message", () => {
+    expect(quoteDetail).toMatch(/is ready to copy\. Send it from\s+your phone or email today\./);
+    expect(quoteDetail).toMatch(/#followup-\$\{move\.followupNumber\}/);
+    expect(quoteDetail).toMatch(/Jump to the message/);
   });
 });
 

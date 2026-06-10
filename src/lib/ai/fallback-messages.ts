@@ -316,9 +316,14 @@ export type VariantVars = {
 // DAY 1 — Estimate Check. Helpful, direct. "Hey {FirstName} — ..." opener.
 // Uses projectDetail so a known job ("the roofing estimate for the metal roof")
 // shows the contractor remembers the specific job on the very first touch.
+// Sender identity renders ONLY when the contractor first name is known —
+// there is no "Contractor here" placeholder. Unknown sender = no identity
+// clause at all, which still reads like a natural text.
 const DAY1_VARIANTS: ReadonlyArray<(v: VariantVars) => string> = [
-  ({ firstName, contractorFirstName, projectDetail }) =>
-    `Hey ${firstName} — ${contractorFirstName} here. I looked back over ${projectDetail}. Was there a number, timing question, or detail you wanted me to break down?`,
+  ({ firstName, contractorFirstName, projectDetail }) => {
+    const identity = contractorFirstName ? contractorFirstName + " here. " : "";
+    return `Hey ${firstName} — ${identity}I looked back over ${projectDetail}. Was there a number, timing question, or detail you wanted me to break down?`;
+  },
   ({ firstName, projectDetail }) =>
     `Hey ${firstName} — I went back through ${projectDetail}. Anything in the scope, timing, or total you want me to clarify?`,
   ({ firstName, projectDetail }) =>
@@ -351,7 +356,7 @@ const DAY7_VARIANTS: ReadonlyArray<(v: VariantVars) => string> = [
   ({ project }) =>
     `Do you want me to keep ${project} active, or should I close it out on my end?`,
   ({ project }) =>
-    `Should I leave ${project} open, or mark it closed? No rush on my end.`,
+    `Should I leave ${project} open, or mark it closed? Your call either way.`,
   ({ project }) =>
     `Do you still want me to keep ${project} on the board, or should I close it out?`,
   ({ project }) =>
@@ -376,7 +381,7 @@ const DAY14_VARIANTS: ReadonlyArray<(v: VariantVars) => string> = [
 // Job-aware via projectDetail so the final touch still names the exact job.
 const DAY30_VARIANTS: ReadonlyArray<(v: VariantVars) => string> = [
   ({ firstName, projectDetail }) =>
-    `${firstName}, I'll close out ${projectDetail} after this. All good either way. If anything changes later, reach out and I'll pick it back up.`,
+    `${firstName}, I'll close out ${projectDetail} after this. All good either way. If you want to revisit it later, just reply here and I'll pick it back up.`,
   ({ firstName, projectDetail }) =>
     `${firstName}, I'm going to close ${projectDetail} on my end. If you want me to keep it open, just let me know.`,
   ({ firstName, projectDetail }) =>
@@ -462,7 +467,10 @@ export function researchSequenceMessages(ctx: RecoveryContext): {
   const detail = jobDetail(ctx.trade, ctx.jobDescription);
   const vars: VariantVars = {
     firstName: cleanName(ctx.firstName, "there"),
-    contractorFirstName: cleanName(ctx.contractorFirstName, "Contractor"),
+    // No placeholder identity. When the contractor name is unknown the
+    // Day 1 opener simply omits the "<Name> here." clause — a message signed
+    // "Contractor here" reads like a bot and burns trust on the first touch.
+    contractorFirstName: cleanName(ctx.contractorFirstName, ""),
     project,
     projectDetail: projectDetailPhrase(project, detail),
     tradeWord: tradeWord(ctx.trade),

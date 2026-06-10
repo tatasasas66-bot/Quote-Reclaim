@@ -251,14 +251,14 @@ describe("quote detail page mounts the One-Tap Reply card", () => {
     expect(detailPage).toMatch(/<ReplyRadarCard reply=\{replyRadar\}/);
   });
 
-  it("WHY_THIS_WORKS source block matches the contractor-native rewrite", () => {
+  it("WHY_THIS_WORKS source block matches the no-overclaim rewrite", () => {
     expect(detailPage).toContain(
       `const WHY_THIS_WORKS: Record<FollowupStep, string> = {
-  1: "Asking what didn't land flips you from chaser to helper — and surfaces the real objection instead of begging for a reply.",
-  2: "Showing that your schedule has to be managed makes the homeowner choose instead of leaving you hanging.",
-  3: "Giving permission to say no feels safer than being pushed — so they rarely take it. Asking 'should I close it' lets the homeowner act instead of staying silent.",
-  4: "Most quiet quotes stall on price, not interest. Offering a phased path removes the real barrier without ever dropping your number.",
-  5: "Pulling back often gets the reply that pushing could not. Saying you'll close the estimate lets the homeowner re-engage on their own terms.",
+  1: "Asking which part to break down is easier to answer than 'any update?' — it gives them a specific, low-effort way back into the conversation.",
+  2: "A schedule question has a real answer. Keep it active or set it aside is a choice they can make in five seconds without committing to the job.",
+  3: "A clear keep-it-open-or-close-it-out question makes a reply easier than more silence — and saying no is allowed, which is what makes saying anything feel safe.",
+  4: "It lowers the effort to reply. Instead of asking them to approve the whole job, it lets them point at the one piece that still needs clarification.",
+  5: "A respectful close-out takes the pressure off both sides. The door stays open, so replying later is easy — nothing ended badly.",
 };`,
     );
   });

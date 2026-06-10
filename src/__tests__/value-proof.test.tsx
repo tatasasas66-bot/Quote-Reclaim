@@ -141,21 +141,18 @@ describe("Sequence detail 'Why this works' rationale", () => {
   });
 
   it("provides distinct rationale for all five follow-up steps", () => {
-    // Day 1 — Pattern Interrupt
-    expect(detailPage).toMatch(/flips you from chaser to helper/);
-    // Day 3 — Schedule frame (contractor-native rewrite)
-    expect(detailPage).toMatch(
-      /Showing that your schedule has to be managed/,
-    );
-    // Day 7 — Permission-to-say-no
-    expect(detailPage).toMatch(/Giving permission to say no/);
-    // Day 14 — Phased path (no price drop)
-    expect(detailPage).toMatch(/stall on price, not interest/);
-    expect(detailPage).toMatch(/phased path/);
-    // Day 30 — Pull-back (no academic "reactance" wording)
-    expect(detailPage).toMatch(
-      /Pulling back often gets the reply that pushing could not/,
-    );
+    // Day 1 — specific low-effort reopen
+    expect(detailPage).toMatch(/easier to answer than 'any update\?'/);
+    // Day 3 — schedule question with a real answer
+    expect(detailPage).toMatch(/A schedule question has a real answer/);
+    // Day 7 — close-the-loop clarity (saying no is allowed)
+    expect(detailPage).toMatch(/saying no is allowed/);
+    // Day 14 — effort reduction, NO claim that price is the stall reason
+    expect(detailPage).toMatch(/It lowers the effort to reply/);
+    expect(detailPage).toMatch(/point at the one piece that still needs clarification/);
+    expect(detailPage).not.toMatch(/stall on price/i);
+    // Day 30 — respectful close-out, door stays open
+    expect(detailPage).toMatch(/A respectful close-out takes the pressure off both sides/);
   });
 
   it("keys the rationale by follow-up number", () => {

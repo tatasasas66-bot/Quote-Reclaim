@@ -22,6 +22,13 @@ import { suggestResponse } from "@/lib/ai/suggest-response";
 import { requireUser } from "@/lib/auth/require-user";
 import { nextBestAction } from "@/lib/quotes/next-best-action";
 import {
+  computeNextMove,
+  nextMoveInstruction,
+  nextMoveSummaryLabel,
+  type NextMove,
+} from "@/lib/quotes/next-move";
+import { tradeLocationLine } from "@/lib/quotes/quote-display";
+import {
   getProfileStats,
   getQuoteById,
   listRemindersForQuote,
@@ -51,15 +58,16 @@ const CADENCE_DAYS: Record<FollowupStep, number> = {
   5: 30,
 };
 
-// Research rationale shown under each step. Contractor-native — names the
-// move and the outcome, no academic psychology terms. Replaces an earlier
-// version that used "scarcity", "loss aversion", and "reactance".
+// Rationale shown under each step. Contractor-native, plain English, and
+// careful about what it claims: it explains the move's mechanics (effort,
+// clarity, choice) — it never asserts why THIS homeowner went quiet, because
+// the app usually has no signal to back that up.
 const WHY_THIS_WORKS: Record<FollowupStep, string> = {
-  1: "Asking what didn't land flips you from chaser to helper — and surfaces the real objection instead of begging for a reply.",
-  2: "Showing that your schedule has to be managed makes the homeowner choose instead of leaving you hanging.",
-  3: "Giving permission to say no feels safer than being pushed — so they rarely take it. Asking 'should I close it' lets the homeowner act instead of staying silent.",
-  4: "Most quiet quotes stall on price, not interest. Offering a phased path removes the real barrier without ever dropping your number.",
-  5: "Pulling back often gets the reply that pushing could not. Saying you'll close the estimate lets the homeowner re-engage on their own terms.",
+  1: "Asking which part to break down is easier to answer than 'any update?' — it gives them a specific, low-effort way back into the conversation.",
+  2: "A schedule question has a real answer. Keep it active or set it aside is a choice they can make in five seconds without committing to the job.",
+  3: "A clear keep-it-open-or-close-it-out question makes a reply easier than more silence — and saying no is allowed, which is what makes saying anything feel safe.",
+  4: "It lowers the effort to reply. Instead of asking them to approve the whole job, it lets them point at the one piece that still needs clarification.",
+  5: "A respectful close-out takes the pressure off both sides. The door stays open, so replying later is easy — nothing ended badly.",
 };
 
 function computeStatus(
@@ -164,9 +172,19 @@ export default async function QuoteDetailPage({
         }
       : null;
 
+  // THE next actionable follow-up — single source of truth for the summary
+  // grid's Next Best Action, Quiet Signal's Best next move, the recovery
+  // plan's NEXT MOVE banner, the highlighted card, and the send button.
+  const move = computeNextMove({
+    status,
+    reminders,
+    hasEmail: Boolean(quote.client_email),
+    hasReply: hasReplyForQuote,
+  });
+
   // Quiet Signal: deterministic stall-reason diagnosis from existing signals.
   // No LLM, no cohort, no plan swap — see src/lib/quotes/quiet-signal.ts.
-  const quietSignal = computeQuietSignal({
+  const quietSignalRaw = computeQuietSignal({
     outcome: (quote.outcome ?? "pending") as "pending" | "won" | "closed",
     optedOut: Boolean(quote.client_opted_out),
     trade: quote.trade,
@@ -184,6 +202,25 @@ export default async function QuoteDetailPage({
     openCount: totalOpenCount,
     clickCount: totalClickCount,
   });
+  // When the engine recommends a sequence follow-up, align its Best Next
+  // Move with the unified next actionable follow-up. The diagnosis (reason +
+  // evidence) is the engine's; the ACTION is the shared one, so Quiet Signal
+  // can never tell the contractor to jump the sequence while the plan below
+  // highlights a different message. Reply-backed moves that point outside
+  // the cadence (Reply Radar, hold-the-schedule) pass through untouched.
+  const unifiedInstruction = nextMoveInstruction(move);
+  const quietSignal =
+    quietSignalRaw &&
+    quietSignalRaw.recommendedFollowupNumber !== null &&
+    move.kind !== "none" &&
+    unifiedInstruction
+      ? {
+          ...quietSignalRaw,
+          recommendedMove: unifiedInstruction,
+          recommendedFollowupNumber:
+            move.followupNumber as 1 | 2 | 3 | 4 | 5,
+        }
+      : quietSignalRaw;
 
   // One-Tap Reply state for this quote.
   const [latestOneTapReply, oneTapOptions] = await Promise.all([
@@ -225,6 +262,7 @@ export default async function QuoteDetailPage({
         status={status}
         hasReplyForQuote={hasReplyForQuote}
         allTimeRecovered={allTimeRecovered}
+        move={move}
       />
 
       <QuietSignalCard signal={quietSignal} />
@@ -240,6 +278,7 @@ export default async function QuoteDetailPage({
         reminders={reminders}
         status={status}
         nextDate={next}
+        move={move}
         hasPhone={Boolean(quote.client_phone)}
         hasEmail={Boolean(quote.client_email)}
         hasReplyForQuote={hasReplyForQuote}
@@ -253,11 +292,13 @@ function QuoteSummary({
   status,
   hasReplyForQuote,
   allTimeRecovered,
+  move,
 }: {
   quote: QuoteRow;
   status: RecoveryStatus;
   hasReplyForQuote: boolean;
   allTimeRecovered: number;
+  move: NextMove;
 }) {
   const badge = (() => {
     switch (status) {
@@ -283,7 +324,12 @@ function QuoteSummary({
           ? "danger"
           : "neutral";
   const daysQuiet = effectiveDaysSilent(quote);
+  // Plan-aware next action: the same source of truth as the NEXT MOVE banner
+  // and Quiet Signal. The band-based label is only the fallback for states
+  // with no actionable reminder (reply in hand, plan missing).
   const nba = nextBestAction(quote, hasReplyForQuote);
+  const nextActionLabel =
+    nextMoveSummaryLabel(move) ?? nba?.label ?? "Review plan";
 
   return (
     <section className="rounded-lg border border-line-subtle bg-surface-1 shadow-[0_24px_74px_rgba(0,0,0,0.32)]">
@@ -297,9 +343,7 @@ function QuoteSummary({
             {titleCaseName(quote.client_name)}
           </h1>
           <p className="mt-2 text-sm text-ink-muted">
-            {titleCaseName(quote.trade)}
-            {quote.city ? ` · ${titleCaseName(quote.city)}` : ""}
-            {quote.state ? `, ${quote.state.toUpperCase()}` : ""}
+            {tradeLocationLine(quote.trade, quote.city, quote.state)}
           </p>
         </div>
 
@@ -321,13 +365,10 @@ function QuoteSummary({
         />
         <IntelligenceField label="Days quiet" value={String(daysQuiet)} numeric />
         <IntelligenceField label="Recovery Priority" value={score.label} />
-        <IntelligenceField
-          label="Next Best Action"
-          value={nba?.label ?? "Review plan"}
-        />
+        <IntelligenceField label="Next Best Action" value={nextActionLabel} />
         <IntelligenceField label="Status" value={badge.label} />
         {quote.client_email ? (
-          <IntelligenceField label="Email" value={quote.client_email} />
+          <IntelligenceField label="Email" value={quote.client_email} truncate />
         ) : null}
         {quote.client_phone ? (
           <IntelligenceField label="Phone" value={quote.client_phone} />
@@ -362,24 +403,31 @@ function IntelligenceField({
   label,
   value,
   numeric = false,
+  truncate = false,
 }: {
   label: string;
   value: string;
   numeric?: boolean;
+  truncate?: boolean;
 }) {
-  // Text values (email, description, action labels) wrap with `break-words`
-  // so nothing clips mid-word. Numeric/currency values use `whitespace-nowrap`
-  // + `tabular-nums` so "$4,000" can never break across lines into "$4,00" /
-  // "0" — every digit stays on one line.
+  // Text values (description, action labels) wrap with `break-words` so
+  // nothing clips mid-word. Numeric/currency values use `whitespace-nowrap`
+  // + `tabular-nums` so "$4,000" can never break across lines. Emails use
+  // `truncate` — a mid-address wrap ("jessica.brown@exam / ple.com") reads
+  // broken; one line with an ellipsis + full value on hover reads intended.
   const valueClass = numeric
     ? "mt-1 whitespace-nowrap tabular-nums text-sm font-bold text-ink-strong"
-    : "mt-1 break-words text-sm font-bold text-ink-strong";
+    : truncate
+      ? "mt-1 truncate text-sm font-bold text-ink-strong"
+      : "mt-1 break-words text-sm font-bold text-ink-strong";
   return (
     <div className="min-w-0 rounded-lg border border-line-subtle bg-canvas/35 p-3">
       <dt className="text-[10px] font-black uppercase tracking-widest text-ink-muted">
         {label}
       </dt>
-      <dd className={valueClass}>{value}</dd>
+      <dd className={valueClass} title={truncate ? value : undefined}>
+        {value}
+      </dd>
     </div>
   );
 }
@@ -388,6 +436,7 @@ function RecoveryPlanSection({
   reminders,
   status,
   nextDate,
+  move,
   hasPhone,
   hasEmail,
   hasReplyForQuote,
@@ -395,6 +444,7 @@ function RecoveryPlanSection({
   reminders: ReminderRow[];
   status: RecoveryStatus;
   nextDate: Date | null;
+  move: NextMove;
   hasPhone: boolean;
   hasEmail: boolean;
   hasReplyForQuote: boolean;
@@ -406,13 +456,16 @@ function RecoveryPlanSection({
     ? "Quote Reclaim sends these follow-ups by email on schedule. Step in when they reply or the job comes back."
     : "Your recovery plan is ready. Copy each message and send it from your phone — Quote Reclaim tracks the timing for you.";
 
-  // NEXT MOVE — the one unmistakable answer to "what happens next with this
-  // quote, and do I have to do it?" Derived from the soonest unsent, unpaused
-  // reminder; copy mode tells the contractor it's their send, email mode says
-  // the system has it. Renders only while recovery is running.
-  const nextReminder = reminders
-    .filter((r) => !r.sent && !r.paused_at)
-    .sort((a, b) => Date.parse(a.send_at) - Date.parse(b.send_at))[0];
+  // The schedule chip mirrors the channel: "sends" is only true for email
+  // mode; copy mode says "scheduled" because the contractor does the sending.
+  // A customer reply auto-pauses the cadence, so the chip goes quiet too —
+  // claiming a send date while the sequence is reply-held would be false.
+  const scheduleChip =
+    status === "running" && nextDate && !hasReplyForQuote
+      ? hasEmail
+        ? `Next follow-up sends ${formatSendDate(nextDate)}`
+        : `Next follow-up scheduled ${formatSendDate(nextDate)}`
+      : null;
 
   return (
     <section className="space-y-4">
@@ -425,14 +478,18 @@ function RecoveryPlanSection({
             Recovery plan
           </h2>
         </div>
-        {status === "running" && nextDate ? (
+        {scheduleChip ? (
           <p className="rounded-md border border-line-subtle bg-surface-1 px-3 py-2 text-xs font-semibold text-ink-muted">
-            Next follow-up sends {formatSendDate(nextDate)}
+            {scheduleChip}
           </p>
         ) : null}
       </div>
 
-      {status === "running" && nextReminder ? (
+      {/* NEXT MOVE — the one unmistakable answer to "what happens next with
+          this quote, and do I have to do it?" Same source of truth as the
+          summary grid and Quiet Signal (computeNextMove), so the surfaces
+          can never contradict each other. */}
+      {move.kind !== "none" ? (
         <div
           data-testid="next-move-banner"
           className="flex flex-wrap items-center gap-x-4 gap-y-2 rounded-lg border border-brand/40 bg-surface-1 px-4 py-3.5"
@@ -440,32 +497,44 @@ function RecoveryPlanSection({
           <span className="text-[11px] font-black uppercase tracking-widest text-brand">
             Next move
           </span>
-          {nextReminder.message_type === "email" && hasEmail ? (
+          {move.kind === "email-queued" ? (
             <p className="min-w-0 flex-1 text-sm leading-6 text-ink">
-              Follow-up {nextReminder.followup_number} sends by email{" "}
+              Follow-up {move.followupNumber} is queued for{" "}
               <span className="font-bold text-ink-strong">
-                {formatSendDate(new Date(nextReminder.send_at))}
+                {move.sendAtLabel}
               </span>
               . Nothing to send by hand — step in when they reply.
             </p>
-          ) : (
+          ) : null}
+          {move.kind === "email-due" ? (
             <>
               <p className="min-w-0 flex-1 text-sm leading-6 text-ink">
-                Follow-up {nextReminder.followup_number} is yours to send —
-                scheduled{" "}
-                <span className="font-bold text-ink-strong">
-                  {formatSendDate(new Date(nextReminder.send_at))}
-                </span>
-                . Copy it and send from your phone.
+                Follow-up {move.followupNumber} is due now and queued for
+                email. You can let it send, or send it today if you want to
+                move now.
               </p>
               <a
-                href={`#followup-${nextReminder.followup_number}`}
+                href={`#followup-${move.followupNumber}`}
                 className="whitespace-nowrap rounded text-sm font-bold text-brand hover:text-ink-strong focus:outline-none focus-visible:ring-2 focus-visible:ring-focus"
               >
                 Jump to the message →
               </a>
             </>
-          )}
+          ) : null}
+          {move.kind === "manual-ready" ? (
+            <>
+              <p className="min-w-0 flex-1 text-sm leading-6 text-ink">
+                Follow-up {move.followupNumber} is ready to copy. Send it from
+                your phone or email today.
+              </p>
+              <a
+                href={`#followup-${move.followupNumber}`}
+                className="whitespace-nowrap rounded text-sm font-bold text-brand hover:text-ink-strong focus:outline-none focus-visible:ring-2 focus-visible:ring-focus"
+              >
+                Jump to the message →
+              </a>
+            </>
+          ) : null}
         </div>
       ) : null}
 
@@ -492,6 +561,7 @@ function RecoveryPlanSection({
               hasEmail={hasEmail}
               allReminders={reminders}
               hasReplyForQuote={hasReplyForQuote}
+              move={move}
             />
           ))}
         </ol>
@@ -507,6 +577,7 @@ function ReminderCard({
   hasEmail,
   allReminders,
   hasReplyForQuote,
+  move,
 }: {
   reminder: ReminderRow;
   recoveryStatus: RecoveryStatus;
@@ -514,6 +585,7 @@ function ReminderCard({
   hasEmail: boolean;
   allReminders: ReminderRow[];
   hasReplyForQuote: boolean;
+  move: NextMove;
 }) {
   const sendDate = new Date(r.send_at);
   const display = computeStepDisplay(r, allReminders, hasReplyForQuote);
@@ -543,14 +615,26 @@ function ReminderCard({
     recoveryStatus !== "running" ||
     !hasRecipientForChannel;
 
-  // Copy-only mode (no email, no phone): hide Send early entirely so Copy is
-  // the only obvious action.
-  const showSendEarly = hasEmail || hasPhone;
+  // SEND SAFETY: exactly one card — the unified next actionable follow-up —
+  // may carry the send button. Sent cards render "Sent"; future and
+  // queued-behind cards render their schedule state with Copy only, so a
+  // contractor can never fire all five follow-ups in one sitting. For an
+  // email reminder the button additionally waits until the message is due:
+  // a future-dated email sends itself, and "Send today" on it would be a
+  // lie about who acts next.
+  const isNextActionable = move.kind !== "none" && move.reminderId === r.id;
+  const showSendToday =
+    isNextActionable &&
+    !sendEarlyDisabled &&
+    (messageType === "email" ? move.kind === "email-due" : true);
 
   return (
     <li
       id={`followup-${r.followup_number}`}
-      className="scroll-mt-20 rounded-lg border border-line-subtle bg-surface-1 shadow-[0_16px_46px_rgba(0,0,0,0.2)]"
+      data-next-actionable={isNextActionable ? "true" : undefined}
+      className={`scroll-mt-20 rounded-lg border bg-surface-1 shadow-[0_16px_46px_rgba(0,0,0,0.2)] ${
+        isNextActionable ? "border-brand/50" : "border-line-subtle"
+      }`}
     >
       <div className="flex flex-wrap items-center justify-between gap-2 border-b border-line-subtle px-4 py-3">
         <div className="space-y-0.5">
@@ -579,9 +663,10 @@ function ReminderCard({
         </p>
         <div className="flex items-center gap-1">
           <CopyButton text={r.message_text} />
-          {showSendEarly ? (
+          {showSendToday ? (
             <SendEarlyButton
               reminderId={r.id}
+              followupNumber={r.followup_number}
               disabled={sendEarlyDisabled}
               messageType={messageType}
             />

@@ -179,14 +179,15 @@ describe("research framework fallback sequence", () => {
     expect(sequence.day7).toMatch(/close it out|mark it closed/i);
   });
 
-  it("uses a safe contractor-name fallback without changing the template", () => {
+  it("omits the sender identity clause when the contractor name is unknown (no 'Contractor here' placeholder)", () => {
     const sequence = researchSequenceMessages({
       firstName: "Rita",
       contractorFirstName: null,
       trade: "Roofing",
       estimateAmount: 9000,
     });
-    expect(sequence.day1).toMatch(/^Hey Rita — Contractor here\./);
+    expect(sequence.day1).toMatch(/^Hey Rita — I looked back over/);
+    expect(sequence.day1).not.toContain("Contractor here");
   });
 
   for (const { label, ctx } of SCENARIOS) {

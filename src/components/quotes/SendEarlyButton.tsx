@@ -11,14 +11,36 @@ type Props = {
   reminderId: string;
   disabled: boolean;
   messageType?: "email" | "sms";
+  followupNumber?: number;
 };
 
-export function SendEarlyButton({ reminderId, disabled, messageType = "sms" }: Props) {
-  const [state, setState] = React.useState<"idle" | "pending" | "sent" | "error">("idle");
+/**
+ * "Send today" — manual send for the ONE next actionable follow-up.
+ *
+ * Two-step confirm: the first click arms the button ("Confirm send"), the
+ * second click sends. A single stray tap can never fire a message, and the
+ * label names the follow-up so the contractor knows exactly what goes out.
+ * The page renders this button only on the next actionable card, and the
+ * server action independently rejects out-of-order sends — three layers,
+ * no accidental spam.
+ */
+export function SendEarlyButton({
+  reminderId,
+  disabled,
+  messageType = "sms",
+  followupNumber,
+}: Props) {
+  const [state, setState] = React.useState<
+    "idle" | "confirm" | "pending" | "sent" | "error"
+  >("idle");
   const [errorMsg, setErrorMsg] = React.useState<string | null>(null);
 
   async function handleClick() {
-    if (disabled || state !== "idle") return;
+    if (disabled || state === "pending" || state === "sent") return;
+    if (state === "idle") {
+      setState("confirm");
+      return;
+    }
     setState("pending");
     try {
       const result =
@@ -45,6 +67,13 @@ export function SendEarlyButton({ reminderId, disabled, messageType = "sms" }: P
     );
   }
 
+  const label =
+    state === "confirm"
+      ? followupNumber
+        ? `Confirm — send follow-up ${followupNumber}`
+        : "Confirm send"
+      : "Send today";
+
   return (
     <div className="flex flex-col items-end gap-1">
       <Button
@@ -55,8 +84,17 @@ export function SendEarlyButton({ reminderId, disabled, messageType = "sms" }: P
         loading={state === "pending"}
         onClick={handleClick}
       >
-        Send today
+        {label}
       </Button>
+      {state === "confirm" ? (
+        <button
+          type="button"
+          onClick={() => setState("idle")}
+          className="rounded text-xs text-ink-muted hover:text-ink-strong focus:outline-none focus-visible:ring-2 focus-visible:ring-focus"
+        >
+          Cancel
+        </button>
+      ) : null}
       {state === "error" && errorMsg ? (
         <p role="alert" className="text-xs text-danger">
           {errorMsg}

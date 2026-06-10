@@ -545,6 +545,42 @@ type QuoteForSend = {
   client_opted_out: boolean;
 };
 
+/**
+ * Sequence-order guard shared by both manual send paths.
+ *
+ * Returns an error string when `reminderId` is NOT the next unsent, unpaused
+ * follow-up for its quote (earliest send_at, ties broken by followup_number),
+ * null when the send is in order. The recovery sequence advances strictly one
+ * message at a time — the UI only renders the send button on the next card,
+ * and this guard enforces the same rule even against direct action calls.
+ */
+async function rejectOutOfOrderSend(
+  serviceClient: ReturnType<typeof createServiceSupabaseClient>,
+  quoteId: string,
+  userId: string,
+  reminderId: string,
+): Promise<string | null> {
+  const { data: siblingRows, error } = await serviceClient
+    .from("reminders")
+    .select("id, followup_number, send_at, sent, paused_at")
+    .eq("quote_id", quoteId)
+    .eq("user_id", userId);
+  if (error) return `Could not verify sequence order: ${error.message}`;
+
+  const nextInSequence = (siblingRows ?? [])
+    .filter((s) => !s.sent && !s.paused_at)
+    .sort(
+      (a, b) =>
+        Date.parse(a.send_at) - Date.parse(b.send_at) ||
+        a.followup_number - b.followup_number,
+    )[0];
+
+  if (nextInSequence && nextInSequence.id !== reminderId) {
+    return `Follow-up ${nextInSequence.followup_number} is next in the sequence — send that one first.`;
+  }
+  return null;
+}
+
 export async function sendReminderManualAction(
   reminderId: string,
 ): Promise<ActionResult> {
@@ -599,6 +635,17 @@ export async function sendReminderManualAction(
   if (!normalizedPhone) {
     return { ok: false, error: "Phone number is not a valid format" };
   }
+
+  // Sequence-order guard: only the next unsent, unpaused follow-up may be
+  // sent by hand. Firing #3 while #1 still waits would land messages out of
+  // order and read as spam to the homeowner.
+  const orderError = await rejectOutOfOrderSend(
+    serviceClient,
+    reminder.quote_id,
+    userId,
+    reminderId,
+  );
+  if (orderError) return { ok: false, error: orderError };
 
   // Atomic claim — prevents double send even under concurrent requests.
   const { data: claimed, error: claimError } = await serviceClient.rpc(
@@ -731,6 +778,16 @@ export async function sendReminderManualEmailAction(
   if (quote.client_opted_out) {
     return { ok: false, error: "Client has opted out of messages" };
   }
+
+  // Sequence-order guard — same rule as the SMS path: one message at a time,
+  // always the earliest unsent, unpaused follow-up first.
+  const orderError = await rejectOutOfOrderSend(
+    serviceClient,
+    reminder.quote_id,
+    userId,
+    reminderId,
+  );
+  if (orderError) return { ok: false, error: orderError };
 
   // Atomic claim — prevents double send even under concurrent requests.
   const { data: claimed, error: claimError } = await serviceClient.rpc(

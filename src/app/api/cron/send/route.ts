@@ -160,7 +160,33 @@ async function handleSend(request: NextRequest): Promise<NextResponse> {
     );
   }
 
-  const claimed = (claimedRows ?? []) as ClaimedReminder[];
+  const claimedAll = (claimedRows ?? []) as ClaimedReminder[];
+
+  // ONE MESSAGE PER QUOTE PER RUN. If several follow-ups for the same quote
+  // are overdue at once (cron downtime, freshly imported long-quiet quotes),
+  // sending them back-to-back would dump the whole sequence on the homeowner
+  // in one morning. Keep only the earliest step per quote (lowest
+  // followup_number) and release the rest — each later step goes out on a
+  // subsequent run, so the sequence advances one message at a time on the
+  // automated path exactly like the manual one.
+  const earliestPerQuote = new Map<string, ClaimedReminder>();
+  for (const r of claimedAll) {
+    const held = earliestPerQuote.get(r.quote_id);
+    if (!held || r.followup_number < held.followup_number) {
+      earliestPerQuote.set(r.quote_id, r);
+    }
+  }
+  const claimed: ClaimedReminder[] = [];
+  let sequenceDeferred = 0;
+  for (const r of claimedAll) {
+    if (earliestPerQuote.get(r.quote_id)?.reminder_id === r.reminder_id) {
+      claimed.push(r);
+    } else {
+      await releaseClaim(supabase, r.reminder_id);
+      sequenceDeferred++;
+    }
+  }
+
   let sent = 0;
   let failed = 0;
   let skipped = 0;
@@ -439,6 +465,7 @@ async function handleSend(request: NextRequest): Promise<NextResponse> {
       skipped,
       failed,
       cap_deferred: capDeferred,
+      sequence_deferred: sequenceDeferred,
       stale_claims_released: staleRelease.released,
       stale_release_error: staleRelease.error ?? null,
       per_user_cap: PER_USER_SEND_CAP_PER_RUN,
@@ -454,6 +481,7 @@ async function handleSend(request: NextRequest): Promise<NextResponse> {
     failed,
     skipped,
     cap_deferred: capDeferred,
+    sequence_deferred: sequenceDeferred,
     stale_claims_released: staleRelease.released,
   });
 }

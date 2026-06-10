@@ -299,7 +299,10 @@ describe("AI system prompt — contractor-native voice and labels", () => {
 
 describe("Fallback messages use the uploaded SMS research sequence", () => {
   it("Day 1 uses Hey + contractor-name pattern interrupt", () => {
-    expect(aiFallbacks).toMatch(/Hey \$\{firstName\} — \$\{contractorFirstName\} here/);
+    // Identity clause renders only when the contractor's name is known —
+    // an unknown sender omits it instead of falling back to "Contractor here".
+    expect(aiFallbacks).toMatch(/Hey \$\{firstName\} — \$\{identity\}I looked back over/);
+    expect(aiFallbacks).toMatch(/contractorFirstName \? contractorFirstName \+ " here\. " : ""/);
   });
 
   it("Day 3 uses the active-list / schedule framing (no fake slot scarcity)", () => {

@@ -64,6 +64,16 @@ export function computeStepDisplay(
   if (nextUp && nextUp.id === reminder.id) {
     return { status: "due", label: "Due now", tone: "rust" };
   }
+  // Overdue but NOT next in line: it cannot send (cron and manual send both
+  // advance one message at a time), so a stale "Scheduled <past date>" label
+  // would read like a bug. Name the real state: waiting on the one ahead.
+  if (nextUp) {
+    return {
+      status: "scheduled",
+      label: `Queued behind follow-up ${nextUp.followup_number}`,
+      tone: "neutral",
+    };
+  }
   return {
     status: "scheduled",
     label: `Scheduled ${formatScheduleDateTime(reminder.send_at)}`,

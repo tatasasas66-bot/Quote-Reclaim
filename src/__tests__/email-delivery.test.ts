@@ -354,9 +354,15 @@ describe("/quotes/[id]: channel-aware intro copy", () => {
     expect(detailPage).toMatch(/hasEmail[\s\S]*?ReminderCard/);
   });
 
-  it("hides Send early when both email and phone are missing (copy-only mode)", () => {
-    expect(detailPage).toContain("showSendEarly");
-    expect(detailPage).toMatch(/showSendEarly\s*=\s*hasEmail\s*\|\|\s*hasPhone/);
+  it("hides the send button in copy-only mode (no recipient on the channel)", () => {
+    // The render gate folds !hasRecipientForChannel into sendEarlyDisabled,
+    // and showSendToday requires !sendEarlyDisabled — so a quote with neither
+    // email nor phone renders Copy as the only action.
+    expect(detailPage).toContain("showSendToday");
+    expect(detailPage).toMatch(
+      /hasRecipientForChannel\s*=\s*messageType === "email" \? hasEmail : hasPhone/,
+    );
+    expect(detailPage).toMatch(/!sendEarlyDisabled &&/);
   });
 
   it("passes messageType to SendEarlyButton so it picks the right action", () => {

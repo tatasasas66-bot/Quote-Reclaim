@@ -153,9 +153,12 @@ describe("researchSequenceMessages variant selection", () => {
       estimateAmount: 0,
     });
     // firstName falls back to "there"; trade falls back to "the estimate".
+    // No contractor name → the identity clause is omitted entirely. The
+    // "Contractor here" placeholder is banned: it reads like a bot.
     expect(seq.day1).toBe(
-      "Hey there — Contractor here. I looked back over the estimate. Was there a number, timing question, or detail you wanted me to break down?",
+      "Hey there — I looked back over the estimate. Was there a number, timing question, or detail you wanted me to break down?",
     );
+    expect(seq.day1).not.toContain("Contractor here");
     expect(seq.day3.startsWith("there,")).toBe(true);
     expect(seq.day7).toMatch(/^Should I keep /);
   });
@@ -354,9 +357,9 @@ describe("v0 of every day stays verbatim — AI exact-match gate intact", () => 
     );
   });
 
-  it("Day 30 v0 is the new Final Closeout", () => {
+  it("Day 30 v0 is the new Final Closeout (reply-here reopen — lowest-effort door back in)", () => {
     expect(SEQUENCE_VARIANTS[30][0](vars)).toBe(
-      "Jane, I'll close out the roofing estimate after this. All good either way. If anything changes later, reach out and I'll pick it back up.",
+      "Jane, I'll close out the roofing estimate after this. All good either way. If you want to revisit it later, just reply here and I'll pick it back up.",
     );
   });
 });
