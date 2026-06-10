@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { LegalPage, LegalSection } from "@/components/legal/LegalPage";
+import { SUPPORT_EMAIL } from "@/lib/payments/disabled-provider";
 
 export const metadata: Metadata = {
   title: "Privacy Policy",
@@ -146,10 +147,10 @@ export default function PrivacyPage() {
         <p>
           To make a deletion or data request, email us at{" "}
           <a
-            href="mailto:support@quotereclaim.com"
+            href={`mailto:${SUPPORT_EMAIL}`}
             className="font-semibold text-brand hover:text-ink-strong"
           >
-            support@quotereclaim.com
+            {SUPPORT_EMAIL}
           </a>{" "}
           and we will respond within a reasonable time.
         </p>
@@ -194,10 +195,10 @@ export default function PrivacyPage() {
         <p>
           Questions or privacy requests? Email us at{" "}
           <a
-            href="mailto:support@quotereclaim.com"
+            href={`mailto:${SUPPORT_EMAIL}`}
             className="font-semibold text-brand hover:text-ink-strong"
           >
-            support@quotereclaim.com
+            {SUPPORT_EMAIL}
           </a>
           .
         </p>

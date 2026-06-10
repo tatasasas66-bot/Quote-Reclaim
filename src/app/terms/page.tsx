@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { LegalPage, LegalSection } from "@/components/legal/LegalPage";
+import { SUPPORT_EMAIL } from "@/lib/payments/disabled-provider";
 
 export const metadata: Metadata = {
   title: "Terms of Service",
@@ -171,10 +172,10 @@ export default function TermsPage() {
         <p>
           Questions about these Terms? Email us at{" "}
           <a
-            href="mailto:hello@quotereclaim.com"
+            href={`mailto:${SUPPORT_EMAIL}`}
             className="font-semibold text-brand hover:text-ink-strong"
           >
-            hello@quotereclaim.com
+            {SUPPORT_EMAIL}
           </a>
           .
         </p>

@@ -2,8 +2,9 @@
  * @vitest-environment happy-dom
  */
 import { afterEach, describe, expect, it } from "vitest";
-import { readFileSync } from "node:fs";
+import { readFileSync, readdirSync, statSync } from "node:fs";
 import { fileURLToPath } from "node:url";
+import { join } from "node:path";
 import { cleanup, render, screen } from "@testing-library/react";
 import * as React from "react";
 
@@ -453,6 +454,129 @@ describe("legal pages keep the honest-copy contract", () => {
       expect(src).not.toMatch(/\$49\b/);
       expect(src).not.toMatch(/\$99\b/);
       expect(src).not.toMatch(/\$29\b/);
+    }
+  });
+});
+
+// ───────────────────────────────────────────────────────────────────────
+// Support email centralization — single SUPPORT_EMAIL source of truth
+// ───────────────────────────────────────────────────────────────────────
+
+describe("centralized SUPPORT_EMAIL is wired into every public contact surface", () => {
+  it("Terms page routes contact to the support email (via mailto)", () => {
+    render(React.createElement(TermsPage));
+    const mailto = screen.getAllByRole("link", {
+      name: new RegExp(SUPPORT_EMAIL, "i"),
+    });
+    expect(mailto.length).toBeGreaterThan(0);
+    expect(mailto[0].getAttribute("href")).toBe(`mailto:${SUPPORT_EMAIL}`);
+  });
+
+  it("Terms and Privacy both import SUPPORT_EMAIL from the central module", () => {
+    for (const src of [termsSrc, privacySrc]) {
+      expect(src).toMatch(
+        /import\s*\{[^}]*\bSUPPORT_EMAIL\b[^}]*\}\s*from\s*["']@\/lib\/payments\/disabled-provider["']/,
+      );
+    }
+  });
+
+  it("no legal page hardcodes the prior hello@quotereclaim.com contact address", () => {
+    for (const src of [termsSrc, privacySrc, refundSrc, cancellationSrc, contactSrc]) {
+      expect(src).not.toMatch(/hello@quotereclaim\.com/i);
+    }
+  });
+
+  it("no public contact surface leaks a personal Gmail address", () => {
+    const userFacingSources = [
+      termsSrc,
+      privacySrc,
+      refundSrc,
+      cancellationSrc,
+      contactSrc,
+      legalChromeSrc,
+      homepageSrc,
+      authShellSrc,
+    ];
+    for (const src of userFacingSources) {
+      expect(src).not.toMatch(/[\w.+-]+@gmail\.com/i);
+    }
+  });
+
+  it("no public contact surface introduces an alternate support@ alias (single canonical mailbox)", () => {
+    // Only the canonical support@quotereclaim.com is used. Catches accidental
+    // contact@, hello@, help@ etc. coming back via copy-paste.
+    const userFacingSources = [
+      termsSrc,
+      privacySrc,
+      refundSrc,
+      cancellationSrc,
+      contactSrc,
+      legalChromeSrc,
+      homepageSrc,
+      authShellSrc,
+    ];
+    const ALLOWED = new RegExp(`^${SUPPORT_EMAIL.replace(".", "\\.")}$`, "i");
+    for (const src of userFacingSources) {
+      const hits = src.match(/[\w.+-]+@quotereclaim\.com/gi) ?? [];
+      for (const hit of hits) {
+        expect(
+          ALLOWED.test(hit),
+          `unexpected @quotereclaim.com address on a public surface: ${hit}`,
+        ).toBe(true);
+      }
+    }
+  });
+});
+
+// ───────────────────────────────────────────────────────────────────────
+// No dead checkout / no Lemon resurrection — the deleted routes stay gone
+// ───────────────────────────────────────────────────────────────────────
+
+// Walk the production tree at module top-level so this runs before
+// happy-dom replaces the global (which breaks fileURLToPath at describe-time).
+const PRODUCTION_SRC_ROOT = join(process.cwd(), "src");
+function collectProductionSources(dir: string): string[] {
+  const out: string[] = [];
+  for (const entry of readdirSync(dir)) {
+    if (entry === "__tests__") continue;
+    const full = join(dir, entry);
+    if (statSync(full).isDirectory()) out.push(...collectProductionSources(full));
+    else if (/\.(tsx?|css)$/.test(entry)) out.push(full);
+  }
+  return out;
+}
+const productionFiles = collectProductionSources(PRODUCTION_SRC_ROOT);
+
+describe("no dead checkout CTA or Lemon route returns to the codebase", () => {
+  it("no production source fetches the deleted /api/lemonsqueezy/checkout route", () => {
+    for (const path of productionFiles) {
+      const content = readFileSync(path, "utf8");
+      expect(
+        content.includes("/api/lemonsqueezy/checkout"),
+        `${path} must not reference the deleted Lemon checkout route`,
+      ).toBe(false);
+    }
+  });
+
+  it("no production source contains a Lemon Squeezy identifier in code or copy", () => {
+    for (const path of productionFiles) {
+      const content = readFileSync(path, "utf8");
+      expect(
+        /\blemonsqueezy\b|\blemon squeezy\b/i.test(content),
+        `${path} must not contain a Lemon Squeezy reference`,
+      ).toBe(false);
+    }
+  });
+
+  it("Paywall and UpgradeButton surface the billing-disabled support hint, not a checkout fetch", () => {
+    const paywallSrc = readSource("../components/billing/Paywall.tsx");
+    const upgradeSrc = readSource("../components/billing/UpgradeButton.tsx");
+    for (const src of [paywallSrc, upgradeSrc]) {
+      // No fake-checkout fetch. The disabled-state hint owns the conversion.
+      expect(src).not.toMatch(/fetch\([^)]*\/api\/lemonsqueezy/);
+      expect(src).toContain("SUPPORT_EMAIL");
+      expect(src).toMatch(/Billing is being updated\./);
+      expect(src).toMatch(/mailto:\$\{SUPPORT_EMAIL\}/);
     }
   });
 });
