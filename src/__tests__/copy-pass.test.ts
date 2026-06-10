@@ -39,9 +39,9 @@ describe("Homepage hero copy (honest conversion rewrite)", () => {
     expect(homepage).not.toMatch(/QUOTE RECLAIM · SILENT QUOTE COMMAND/);
   });
 
-  it("uses the quiet-quotes-aren't-dead headline (hard-mode rewrite)", () => {
-    expect(homepage).toMatch(/Your quiet quotes aren&apos;t dead yet\./);
-    expect(homepage).toMatch(/Run the audit before they are\./);
+  it("uses the contractor-native headline (you-already-priced rewrite)", () => {
+    expect(homepage).toMatch(/You already priced the job\./);
+    expect(homepage).toMatch(/Now find the quotes still worth chasing\./);
   });
 
   it("subhead is honest about email auto-send AND manual-copy fallback", () => {

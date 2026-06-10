@@ -40,9 +40,9 @@ afterEach(() => cleanup());
 // ───────────────────────────────────────────────────────────────────────
 
 describe("homepage hero restructure + email/copy honesty", () => {
-  it("headline is the quiet-quotes-aren't-dead pair", () => {
-    expect(homepage).toMatch(/Your quiet quotes aren&apos;t dead yet\./);
-    expect(homepage).toMatch(/Run the audit before they are\./);
+  it("headline is the contractor-native you-already-priced pair", () => {
+    expect(homepage).toMatch(/You already priced the job\./);
+    expect(homepage).toMatch(/Now find the quotes still worth chasing\./);
   });
 
   it("primary CTA routes straight into the reveal flow (auth gate carries next=)", () => {

@@ -22,9 +22,9 @@ const SURFACES: Record<string, string> = {
 // ---------------------------------------------------------------------------
 
 describe("honest conversion copy renders on each surface", () => {
-  it("homepage hero uses the quiet-quotes-aren't-dead headline + honest email+copy claim", () => {
-    expect(SURFACES.homepage).toMatch(/Your quiet quotes aren&apos;t dead yet\./);
-    expect(SURFACES.homepage).toMatch(/Run the audit before they are\./);
+  it("homepage hero uses the contractor-native headline + honest email+copy claim", () => {
+    expect(SURFACES.homepage).toMatch(/You already priced the job\./);
+    expect(SURFACES.homepage).toMatch(/Now find the quotes still worth chasing\./);
     // Tightened: email + copy, both disclosed in the same sentence.
     expect(SURFACES.homepage).toMatch(/sent by email when there&apos;s an address/);
     expect(SURFACES.homepage).toMatch(/ready to copy\s+when there isn&apos;t/);

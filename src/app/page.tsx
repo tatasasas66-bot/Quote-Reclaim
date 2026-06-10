@@ -24,10 +24,10 @@ export default function HomePage() {
                 Silent Quote Command
               </p>
               <h1 className="max-w-2xl text-[length:clamp(1.5rem,4vw,2.75rem)] font-black leading-[0.98] text-ink-strong">
-                Your quiet quotes aren&apos;t dead yet.
+                You already priced the job.
                 <br />
                 <span className="text-brand">
-                  Run the audit before they are.
+                  Now find the quotes still worth chasing.
                 </span>
               </h1>
               <p className="max-w-xl break-words text-lg leading-7 text-ink">
