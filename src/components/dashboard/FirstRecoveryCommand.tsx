@@ -17,6 +17,13 @@ type Props = {
    * never tells a proven winner this is their first time.
    */
   hasRecoveredBefore: boolean;
+  /**
+   * True when the user has already completed onboarding (either by importing
+   * or by skipping). Sends the bulk-paste CTA to the reusable /quotes/import
+   * door instead of /onboarding/reveal, so a returning empty-queue contractor
+   * is never bounced through onboarding framing again.
+   */
+  onboardingDone?: boolean;
 };
 
 /**
@@ -33,7 +40,15 @@ export function FirstRecoveryCommand({
   isPaid,
   freeRemaining,
   hasRecoveredBefore,
+  onboardingDone = false,
 }: Props) {
+  // Reusable bulk-import door for returning users; onboarding/reveal for
+  // first-run users. Same parser, same import action, different framing — so
+  // a returning empty-queue contractor is never sent back through onboarding.
+  const importHref = onboardingDone ? "/quotes/import" : "/onboarding/reveal";
+  const importCta = onboardingDone
+    ? "Paste more quotes"
+    : "Run the Silent Money Reveal";
   // A "fresh" free user still has the full first-3 allowance — only then is the
   // "first 3 free" language truthful.
   const freshFree = !isPaid && freeRemaining >= 3;
@@ -107,12 +122,12 @@ export function FirstRecoveryCommand({
       </ul>
 
       <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center">
-        <Link href="/onboarding/reveal" className="w-full sm:w-auto">
+        <Link href={importHref} className="w-full sm:w-auto">
           <Button
             size="lg"
             className="w-full shadow-[0_0_42px_rgba(217,111,50,0.28)] sm:w-auto"
           >
-            Run the Silent Money Reveal
+            {importCta}
           </Button>
         </Link>
         <Link href="/quotes/new" className="w-full sm:w-auto">

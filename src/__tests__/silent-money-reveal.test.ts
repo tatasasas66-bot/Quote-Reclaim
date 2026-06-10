@@ -309,9 +309,15 @@ describe("RevealClient — copy, CTAs, and brand guardrails", () => {
 
   it("offers the same skip path from every step (never traps the user)", () => {
     expect(revealClientSrc).toContain("skipOnboardingAction");
+    // Onboarding header skip names the alternative honestly — "skip" never
+    // reads as abandonment, it reads as "I will start with one quote".
     expect(revealClientSrc).toMatch(
-      /Skip — I&apos;ll add quotes one at a time/,
+      /Skip — start with one quote instead/,
     );
+    // In-flow secondary path beside the textarea reinforces the same idea,
+    // so a contractor who only sees CTAs next to inputs still finds it.
+    expect(revealClientSrc).toMatch(/No spreadsheet handy\?/);
+    expect(revealClientSrc).toContain("Start with one quote");
   });
 
   it("uses the brand palette tokens, not arbitrary colors", () => {

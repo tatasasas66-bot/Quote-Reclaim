@@ -54,8 +54,18 @@ export default async function NewQuotePage() {
                 Add a silent quote
               </h1>
               <p className="mt-3 text-base leading-7 text-ink-muted">
-                Turn one quiet estimate into a 3-step recovery plan in under a
-                minute.
+                Turn one quiet estimate into a 5-message recovery plan in under
+                a minute.
+              </p>
+              <p className="mt-3 text-sm text-ink-muted">
+                Have a stack of old estimates?{" "}
+                <Link
+                  href="/quotes/import"
+                  data-testid="new-quote-bulk-import-link"
+                  className="font-semibold text-brand hover:text-ink-strong"
+                >
+                  Paste them all at once →
+                </Link>
               </p>
             </div>
 

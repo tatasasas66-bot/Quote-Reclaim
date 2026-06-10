@@ -61,10 +61,11 @@ describe("Sticky '+ Add Silent Quote' CTA", () => {
   });
 
   it("desktop renders a SECOND '+ Add Silent Quote' in the queue header (hidden on mobile)", () => {
-    // The queue-header CTA is desktop-only (hidden sm:inline-flex) so it never
-    // competes with the sticky mobile bar. Both use the exact same label.
+    // The queue-header CTA cluster (Add + Paste more quotes) is desktop-only
+    // (hidden sm:flex on the wrapper) so it never competes with the sticky
+    // mobile bar. Both use the exact same primary label.
     expect(dashboard).toMatch(
-      /<Link href="\/quotes\/new" className="hidden sm:inline-flex">[\s\S]*?\+ Add Silent Quote/,
+      /hidden items-center gap-3 sm:flex[\s\S]*?<Link href="\/quotes\/new">[\s\S]*?\+ Add Silent Quote/,
     );
     // The label appears at least twice (desktop header + sticky mobile bar).
     const occurrences = dashboard.split("+ Add Silent Quote").length - 1;
@@ -73,10 +74,13 @@ describe("Sticky '+ Add Silent Quote' CTA", () => {
 
   it("the queue-header Add button sits to the right of 'IN THE QUEUE'", () => {
     const queueIdx = dashboard.indexOf("IN THE QUEUE");
-    const headerAddIdx = dashboard.indexOf('href="/quotes/new" className="hidden sm:inline-flex"');
+    // The desktop add CTA now lives inside a desktop-only cluster (hidden
+    // items-center gap-3 sm:flex) that wraps both Paste-more and Add.
+    const headerAddIdx = dashboard.indexOf("hidden items-center gap-3 sm:flex");
     const stickyIdx = dashboard.indexOf("fixed inset-x-3 bottom-3");
     expect(queueIdx).toBeGreaterThan(0);
-    // Desktop header Add comes after the queue label and before the sticky bar.
+    // Desktop header cluster comes after the queue label and before the
+    // sticky bar.
     expect(headerAddIdx).toBeGreaterThan(queueIdx);
     expect(headerAddIdx).toBeLessThan(stickyIdx);
   });

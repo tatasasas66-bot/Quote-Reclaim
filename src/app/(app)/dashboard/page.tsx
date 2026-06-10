@@ -144,6 +144,7 @@ export default async function DashboardPage() {
           isPaid={isPaid}
           freeRemaining={freeRemaining}
           hasRecoveredBefore={hasRecoveredBefore}
+          onboardingDone={Boolean(profile?.onboarding_done)}
         />
       ) : null}
 
@@ -195,12 +196,24 @@ export default async function DashboardPage() {
                   : `${stillBleedingValue} across ${pending.length} quote${pending.length === 1 ? "" : "s"}`}
               </p>
             </div>
-            {/* Desktop-only Add CTA — anchors the queue section header. On
-                mobile the sticky bottom CTA below is the single source for
-                this action so we never render two competing buttons. */}
-            <Link href="/quotes/new" className="hidden sm:inline-flex">
-              <Button size="sm">+ Add Silent Quote</Button>
-            </Link>
+            {/* Desktop-only action cluster — anchors the queue section header.
+                On mobile the sticky bottom CTA below is the single source for
+                "+ Add Silent Quote" so we never render two competing buttons.
+                Bulk import sits as a secondary text link beside Add so the
+                primary action stays dominant — but a contractor with 20 more
+                old estimates always has the door right where they expect it. */}
+            <div className="hidden items-center gap-3 sm:flex">
+              <Link
+                href="/quotes/import"
+                data-testid="queue-bulk-import-link"
+                className="rounded text-sm font-semibold text-ink-muted hover:text-ink-strong focus:outline-none focus-visible:ring-2 focus-visible:ring-focus"
+              >
+                Paste more quotes →
+              </Link>
+              <Link href="/quotes/new">
+                <Button size="sm">+ Add Silent Quote</Button>
+              </Link>
+            </div>
           </div>
 
           {pending.length === 0 ? (

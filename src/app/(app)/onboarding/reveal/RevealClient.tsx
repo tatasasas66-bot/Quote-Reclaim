@@ -20,6 +20,14 @@ type Props = {
   isPaid: boolean;
   usageCount: number;
   pendingCount: number;
+  /**
+   * Where this client is mounted. "onboarding" is the first-run flow; "import"
+   * is the reusable post-onboarding entry at /quotes/import. Drives the header
+   * label (Skip vs Back), the trade hint about already-imported quotes, and
+   * nothing else — parser, action, and ranking stay identical so there is
+   * exactly one bulk-import logic path.
+   */
+  surface?: "onboarding" | "import";
 };
 
 import {
@@ -51,7 +59,12 @@ const PASTE_PLACEHOLDER = [
   "or paste from a spreadsheet — name, amount, [date], [email]",
 ].join("\n");
 
-export function RevealClient({ isPaid, usageCount, pendingCount }: Props) {
+export function RevealClient({
+  isPaid,
+  usageCount,
+  pendingCount,
+  surface = "onboarding",
+}: Props) {
   const router = useRouter();
   const [step, setStep] = React.useState<Step>("input");
   const [trade, setTrade] = React.useState<string>("Roofing");
@@ -138,9 +151,20 @@ export function RevealClient({ isPaid, usageCount, pendingCount }: Props) {
   }
 
   async function handleSkip() {
+    if (surface === "import") {
+      // Reusable import surface: nothing onboarding-flag-like to flip; the
+      // contractor already lives in the app. Just take them back.
+      router.push("/dashboard");
+      return;
+    }
     await skipOnboardingAction();
     router.push("/dashboard");
   }
+
+  const headerSecondaryLabel =
+    surface === "import"
+      ? "Back to dashboard"
+      : "Skip — start with one quote instead →";
 
   // ── shared chrome ────────────────────────────────────────────────────
   return (
@@ -153,7 +177,7 @@ export function RevealClient({ isPaid, usageCount, pendingCount }: Props) {
             onClick={handleSkip}
             className="rounded text-xs font-medium text-ink-muted hover:text-ink-strong focus:outline-none focus-visible:ring-2 focus-visible:ring-focus"
           >
-            Skip — I&apos;ll add quotes one at a time →
+            {headerSecondaryLabel}
           </button>
         </header>
 
@@ -166,6 +190,7 @@ export function RevealClient({ isPaid, usageCount, pendingCount }: Props) {
             error={error}
             onScan={handleScan}
             pendingCount={pendingCount}
+            surface={surface}
           />
         )}
 
@@ -212,6 +237,7 @@ function InputStep({
   error,
   onScan,
   pendingCount,
+  surface,
 }: {
   trade: string;
   setTrade: (s: string) => void;
@@ -220,21 +246,25 @@ function InputStep({
   error: string | null;
   onScan: () => void;
   pendingCount: number;
+  surface: "onboarding" | "import";
 }) {
+  const isImport = surface === "import";
   return (
     <section className="mx-auto mt-8 grid w-full max-w-3xl gap-6">
       <div>
         <p className="text-xs font-black uppercase tracking-widest text-brand">
-          Silent Quote Audit
+          {isImport ? "Paste More Quotes" : "Silent Quote Audit"}
         </p>
         <h1 className="mt-3 text-balance text-4xl font-black leading-tight text-ink-strong sm:text-5xl">
-          Paste your last 30 estimates.
+          {isImport
+            ? "Audit another batch of estimates."
+            : "Paste your last 30 estimates."}
         </h1>
         <p className="mt-3 max-w-2xl text-base leading-7 text-ink">
           One quote per line. Name + amount is enough; date and email help
-          us time the follow-up. Quote Reclaim totals
-          what&apos;s sitting silent, ranks the homeowners still worth a
-          follow-up, and builds the recovery plan for your top 3 — free.
+          us time the follow-up. Quote Reclaim totals what&apos;s sitting
+          silent, ranks the homeowners still worth a follow-up, and builds
+          the 5-message recovery plan for each one.
           Nothing is saved until you confirm. No email on file? You still
           get all 5 messages, ready to copy.
         </p>
@@ -242,7 +272,7 @@ function InputStep({
           <p className="mt-3 text-xs text-ink-muted">
             You already have {pendingCount} quote{pendingCount === 1 ? "" : "s"}{" "}
             in your queue. Importing more adds to that list (subject to your
-            free-trial allowance).
+            free-plan allowance).
           </p>
         ) : null}
       </div>
@@ -302,6 +332,25 @@ function InputStep({
           </span>
         </div>
       </div>
+
+      {/* In-flow secondary path. The top header skip is unobtrusive on
+          purpose; some contractors only see CTAs that sit beside the
+          textarea. This one names the alternative honestly so "skip" never
+          feels like abandonment — it is "I want to start with one quote",
+          not "I am giving up". Hidden in the reusable-import surface where
+          there is no onboarding gate to cross. */}
+      {!isImport ? (
+        <p className="text-center text-xs text-ink-muted">
+          No spreadsheet handy?{" "}
+          <a
+            href="/quotes/new"
+            className="font-semibold text-brand hover:text-ink-strong"
+          >
+            Start with one quote
+          </a>{" "}
+          — you can paste a batch any time from the dashboard.
+        </p>
+      ) : null}
     </section>
   );
 }
@@ -309,6 +358,8 @@ function InputStep({
 // ─────────────────────────────────────────────────────────────────────────
 // Step 2 — Preview
 // ─────────────────────────────────────────────────────────────────────────
+
+const PREVIEW_COLLAPSE_THRESHOLD = 8;
 
 function PreviewStep({
   parsed,
@@ -324,6 +375,20 @@ function PreviewStep({
   onBack: () => void;
 }) {
   const count = parsed.rows.length;
+  // Large imports: hide everything past the top N rows behind a toggle so a
+  // 30/40/100-row paste never buries the Reveal CTA. The list is sorted by
+  // amount desc so the highest-value rows stay visible by default — exactly
+  // what the contractor wants to scan before confirming.
+  const isLarge = count > PREVIEW_COLLAPSE_THRESHOLD;
+  const [expanded, setExpanded] = React.useState(false);
+  const ranked = React.useMemo(
+    () => parsed.rows.map((row, i) => ({ row, i })).sort((a, b) => b.row.amount - a.row.amount),
+    [parsed.rows],
+  );
+  const visibleRanked =
+    isLarge && !expanded ? ranked.slice(0, PREVIEW_COLLAPSE_THRESHOLD) : ranked;
+  const hiddenCount = count - visibleRanked.length;
+
   return (
     <section className="mx-auto mt-8 grid w-full max-w-3xl gap-6">
       <div>
@@ -346,7 +411,7 @@ function PreviewStep({
 
       <div className="overflow-hidden rounded-lg border border-line-subtle bg-surface-1">
         <ul className="divide-y divide-line-subtle/60">
-          {parsed.rows.map((row, i) => (
+          {visibleRanked.map(({ row, i }) => (
             <li
               key={`${row.name}-${row.amount}-${i}`}
               className="flex items-center justify-between gap-3 px-4 py-2.5 sm:px-5"
@@ -378,6 +443,23 @@ function PreviewStep({
             </li>
           ))}
         </ul>
+        {isLarge ? (
+          <button
+            type="button"
+            onClick={() => setExpanded((e) => !e)}
+            data-testid="preview-toggle"
+            className="flex w-full items-center justify-between gap-3 border-t border-line-subtle bg-canvas/30 px-4 py-3 text-left text-xs font-bold text-ink-muted hover:text-ink-strong focus:outline-none focus-visible:ring-2 focus-visible:ring-focus sm:px-5"
+          >
+            <span>
+              {expanded
+                ? "Showing all rows — collapse to the top 8"
+                : `Show all ${count} rows (${hiddenCount} hidden — sorted by amount)`}
+            </span>
+            <span aria-hidden="true" className="font-black text-brand">
+              {expanded ? "↑" : "↓"}
+            </span>
+          </button>
+        ) : null}
         <div className="flex items-center justify-between gap-3 border-t border-line-subtle bg-surface-2 px-4 py-3 sm:px-5">
           <span className="text-xs font-black uppercase tracking-widest text-ink-muted">
             Sitting quiet total

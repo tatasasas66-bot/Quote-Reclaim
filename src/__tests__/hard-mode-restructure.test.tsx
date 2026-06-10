@@ -81,7 +81,10 @@ describe("reveal input copy", () => {
 
   it("body answers what-to-paste, what-happens, is-it-saved, and no-email", () => {
     expect(revealClient).toMatch(/One quote per line\. Name \+ amount is enough/);
-    expect(revealClient).toMatch(/builds the recovery plan for your top 3 — free/);
+    // Tightened: builds the 5-message recovery plan for EVERY row, not just
+    // the top 3 — the per-row recovery write was rebuilt in the bulk-import
+    // fix to guarantee every imported quote gets its full plan.
+    expect(revealClient).toMatch(/builds\s+the 5-message recovery plan for each one\./);
     expect(revealClient).toMatch(/Nothing is saved until you confirm\./);
     expect(revealClient).toMatch(/No email on file\? You still\s+get all 5 messages, ready to copy\./);
   });
