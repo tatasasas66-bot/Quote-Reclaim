@@ -5,6 +5,7 @@ import { Button } from "@/components/ui";
 import { UpgradeButton } from "@/components/billing";
 import { QuoteListItem } from "@/components/quotes";
 import { FirstRecoveryCommand } from "@/components/dashboard/FirstRecoveryCommand";
+import { PaidForItselfMeter } from "@/components/dashboard/PaidForItselfMeter";
 import { HeroMetric } from "@/components/dashboard/HeroMetric";
 import { MetricCards } from "@/components/dashboard/MetricCards";
 import { RecoveryWindowAlert } from "@/components/dashboard/RecoveryWindowAlert";
@@ -97,6 +98,14 @@ export default async function DashboardPage() {
     : Math.max(0, FREE_PLAN_LIMIT - usageCount);
   const hasRecoveredBefore = jobsWonLifetime > 0 || allTimeRecovered > 0;
   const showFirstRecoveryCommand = pending.length === 0;
+
+  // Paid-For-Itself Meter — biggest pending quote drives the months-covered
+  // anchor. Real data only; the component renders nothing when the queue is
+  // empty or the biggest quote is too small for the math to mean anything.
+  const biggestPending = pending.reduce<QuoteRow | null>((best, q) => {
+    if (!best) return q;
+    return Number(q.estimate_amount) > Number(best.estimate_amount) ? q : best;
+  }, null);
 
   return (
     <main className="mx-auto flex min-h-screen w-full max-w-7xl flex-col gap-8 bg-canvas px-4 pt-8 pb-[calc(6rem+env(safe-area-inset-bottom))] sm:px-6 sm:pb-8 lg:px-8">
@@ -211,6 +220,14 @@ export default async function DashboardPage() {
         </section>
 
         <aside className="flex min-w-0 flex-col gap-6 lg:sticky lg:top-8 lg:self-start">
+          {biggestPending ? (
+            <PaidForItselfMeter
+              biggestQuoteName={biggestPending.client_name}
+              biggestQuoteAmount={Number(biggestPending.estimate_amount)}
+              queueTotal={stillBleeding}
+              pendingCount={pending.length}
+            />
+          ) : null}
           <IntelligencePanel
             totalSequences={pending.length + jobsWonLifetime}
             unlockAt={5}
