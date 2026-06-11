@@ -21,6 +21,7 @@ import {
   type QuoteRow,
 } from "@/lib/quotes/repo";
 import { effectiveDaysSilent } from "@/lib/recovery/effective-days";
+import { tradeLabel } from "@/lib/quotes/quote-display";
 import { getRecoveryScore } from "@/lib/quotes/recovery-score";
 import { FREE_PLAN_LIMIT } from "@/lib/payments/entitlement";
 
@@ -158,7 +159,7 @@ export default async function DashboardPage() {
         // pending total — never a calendar-month counter that could show 0
         // on day 1 of a month while real recoveries are still in flight.
         quotesBeingWorked={pending.length}
-        emailFollowups={monthlyActivity.emailFollowups}
+        emailFollowupsSent={monthlyActivity.emailFollowupsSent}
         allTimeRecovered={allTimeRecovered}
         priorityClientName={priorityQuote?.client_name ?? null}
         priorityQuoteId={priorityQuote?.id ?? null}
@@ -177,7 +178,7 @@ export default async function DashboardPage() {
 
       <MetricCards
         coldestDays={coldest ? effectiveDaysSilent(coldest) : null}
-        coldestTrade={coldest?.trade ?? null}
+        coldestTrade={coldest?.trade ? tradeLabel(coldest.trade) : null}
         atRiskCount={atRiskCount}
         jobsWonLifetime={jobsWonLifetime}
         avgDaysToWin={avgDaysToWin}

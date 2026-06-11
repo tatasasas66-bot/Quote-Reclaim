@@ -2,6 +2,7 @@ import {
   MONTHLY_PRICE_USD,
   PAYWALL_PRICE_LABEL,
 } from "@/lib/payments/entitlement";
+import { roiFraming } from "@/lib/utils/roi-framing";
 import { formatCurrency } from "@/lib/utils/currency";
 import { titleCaseName } from "@/lib/utils/title-case";
 
@@ -41,6 +42,11 @@ export function PaidForItselfMeter({
   if (monthsCovered < 2) return null;
 
   const displayName = titleCaseName(biggestQuoteName);
+  // Above 24 months the raw months number (e.g. twelve-thousand covering
+  // one-hundred-fifty-one months) reads as comedic and argues against monthly
+  // renewal. roiFraming flips to "Nx a full year of Quote Reclaim" past the
+  // 24-month line so the punch line stays believable.
+  const roiPhrase = roiFraming(biggestQuoteAmount);
 
   return (
     <section
@@ -55,10 +61,7 @@ export function PaidForItselfMeter({
       </p>
       <p className="mt-3 text-2xl font-black leading-tight text-ink-strong">
         If this one comes back, that covers{" "}
-        <span className="whitespace-nowrap text-money tabular-nums">
-          {monthsCovered} months
-        </span>
-        .
+        <span className="whitespace-nowrap text-money">{roiPhrase}</span>.
       </p>
       <p className="mt-2 text-sm leading-6 text-ink">
         Your biggest quiet quote is{" "}
@@ -66,8 +69,7 @@ export function PaidForItselfMeter({
         <span className="whitespace-nowrap font-bold text-ink-strong tabular-nums">
           {formatCurrency(biggestQuoteAmount)}
         </span>
-        . If it comes back, that alone covers {monthsCovered} months of
-        Quote Reclaim.{" "}
+        . If it comes back, that alone covers {roiPhrase}.{" "}
         <span className="whitespace-nowrap tabular-nums">
           {formatCurrency(queueTotal)}
         </span>{" "}
@@ -76,8 +78,8 @@ export function PaidForItselfMeter({
       </p>
       <p className="mt-3 text-xs leading-5 text-ink-muted">
         Straight math from your own queue:{" "}
-        {formatCurrency(biggestQuoteAmount)} ÷ {PAYWALL_PRICE_LABEL}. No
-        promises — just the size of the opportunity.
+        {formatCurrency(biggestQuoteAmount)} ÷ {PAYWALL_PRICE_LABEL}.
+        No promises — just the size of the opportunity.
       </p>
     </section>
   );

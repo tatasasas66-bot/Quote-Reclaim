@@ -65,13 +65,43 @@ describe("RecoveryWindowAlert (Do This Today)", () => {
 // ---------------------------------------------------------------------------
 
 describe("WinMomentOverlay", () => {
-  it("shows the correct months-paid math (amount / 79)", () => {
+  it("shows the months-paid math when the win covers ≤24 months", () => {
+    const { container } = render(
+      <WinMomentOverlay amount={1580} allTimeRecovered={0} onDismiss={vi.fn()} />,
+    );
+    // floor(1580 / 79) = 20 → still inside the 24-month natural range.
+    expect(container.textContent).toContain("for 20 months");
+    expect(container.textContent).toContain("+$1,580");
+  });
+
+  it("flips to annual-multiple phrasing above 24 months — no comedic 'X months' line", () => {
     const { container } = render(
       <WinMomentOverlay amount={5000} allTimeRecovered={0} onDismiss={vi.fn()} />,
     );
-    // floor(5000 / 79) = 63
-    expect(container.textContent).toContain("63 months");
+    // floor(5000 / 948) = 5 → "5x over for a full year"
+    // The raw 63-month phrasing the old code produced read as silly and
+    // argued against monthly renewal; the annual frame stays believable.
+    expect(container.textContent).toContain("5x over for a full year");
+    expect(container.textContent).not.toContain("63 months");
     expect(container.textContent).toContain("+$5,000");
+  });
+
+  it("a $12,000 win never produces the comedic 151-month line", () => {
+    const { container } = render(
+      <WinMomentOverlay amount={12000} allTimeRecovered={0} onDismiss={vi.fn()} />,
+    );
+    // floor(12000 / 948) = 12 → "12x over for a full year"
+    expect(container.textContent).toContain("12x over for a full year");
+    expect(container.textContent).not.toContain("151 months");
+    expect(container.textContent).not.toMatch(/\d{3,} months/);
+  });
+
+  it("a sub-$79 win renders a humble line, never '0 months'", () => {
+    const { container } = render(
+      <WinMomentOverlay amount={50} allTimeRecovered={0} onDismiss={vi.fn()} />,
+    );
+    expect(container.textContent).toContain("This one job is on the board.");
+    expect(container.textContent).not.toContain("0 months");
   });
 
   it("adds the win to lifetime recovered", () => {

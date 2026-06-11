@@ -106,7 +106,7 @@ const HERO_BASE = {
   recoveredThisMonth: 0,
   jobsWonThisMonth: 0,
   quotesBeingWorked: 5,
-  emailFollowups: 4,
+  emailFollowupsSent: 4,
   allTimeRecovered: 0,
 } as const;
 
@@ -165,17 +165,24 @@ describe("dashboard hero TODAY / NEXT MOVE zone", () => {
 // ───────────────────────────────────────────────────────────────────────
 
 describe("actual vs potential separation", () => {
-  it("receipt footer with wins uses 'wins covered' actual language", () => {
+  it("receipt footer with wins names the honest dollar-back line — never months-paid framing", () => {
+    // The receipt is the dollars-only surface now. ROI/months-paid framing
+    // lives in exactly two places product-wide (Price Check + Win Moment),
+    // never here.
     render(
       React.createElement(RecoveryReceipt, {
         recoveredThisMonth: 8_500,
         jobsWonThisMonth: 1,
         quotesBeingWorked: 3,
-        emailFollowups: 2,
+        emailFollowupsSent: 2,
         allTimeRecovered: 8_500,
       }),
     );
-    expect(screen.getByText(/wins covered 107 months of Quote Reclaim\./i)).toBeTruthy();
+    expect(
+      screen.getByText(/real money back in the door this month/i),
+    ).toBeTruthy();
+    expect(screen.queryByText(/wins covered/i)).toBeNull();
+    expect(screen.queryByText(/months of Quote Reclaim/i)).toBeNull();
   });
 
   it("meter eyebrow is Price check, framed as potential ('If this one comes back')", () => {
@@ -187,7 +194,9 @@ describe("actual vs potential separation", () => {
   });
 
   it("meter never borrows the receipt's actual-proof vocabulary", () => {
-    expect(meterSrc).not.toMatch(/recovered for you|wins covered|months paid for|Recovered this month/);
+    expect(meterSrc).not.toMatch(/recovered for you|Recovered this month/);
+    // "wins covered" / "months paid for" no longer live on the receipt either —
+    // the receipt is dollars-only and the ROI equation is in Price Check.
   });
 
   it("receipt never borrows the meter's potential vocabulary", () => {

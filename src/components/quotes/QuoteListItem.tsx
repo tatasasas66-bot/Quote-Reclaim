@@ -2,7 +2,12 @@ import Link from "next/link";
 import { ArrowRight, ClipboardList } from "lucide-react";
 import { RiskBadge } from "@/components/dashboard/RiskBadge";
 import { nextBestAction } from "@/lib/quotes/next-best-action";
-import { getRecoveryScore, recoveryPriority } from "@/lib/quotes/recovery-score";
+import { tradeLocationLine } from "@/lib/quotes/quote-display";
+import {
+  getRecoveryScore,
+  priorityBarFill,
+  recoveryPriority,
+} from "@/lib/quotes/recovery-score";
 import type { QuoteRow } from "@/lib/quotes/repo";
 import { riskLevel } from "@/lib/recovery/risk";
 import { formatCurrency } from "@/lib/utils/currency";
@@ -31,9 +36,16 @@ export function QuoteListItem({
   const priorityLabel = score.band === "fresh" ? "Fresh" : priority.label;
   const nba = nextBestAction(quote, hasReply);
   const displayName = titleCaseName(quote.client_name);
-  const displayTrade = titleCaseName(quote.trade);
-  const displayCity = quote.city ? titleCaseName(quote.city) : "";
-  const displayState = quote.state ? quote.state.toUpperCase() : "";
+  // Trade + location collapse into one helper so every meta line uses the
+  // same separator ("HVAC · DC", "Roofing · Tampa, FL") and HVAC casing
+  // survives titleCase. Replaces the inline comma-glue that used to produce
+  // "Hvac, DC" on one surface and "HVAC · DC" on another.
+  const metaLine = tradeLocationLine(quote.trade, quote.city, quote.state);
+  // Bar fill is now banded so a HIGH label can never render a near-empty bar.
+  // Visual contract (LOW 15–30%, MEDIUM 35–55%, HIGH 60–80%, CRITICAL 85–100%)
+  // lives in recovery-score so the dashboard queue and any future surface
+  // can never drift.
+  const barFillPct = priorityBarFill(score.score);
 
   return (
     <li>
@@ -52,11 +64,7 @@ export function QuoteListItem({
               <p className="break-words text-xl font-black text-ink-strong sm:truncate">
                 {displayName}
               </p>
-              <p className="break-words text-sm text-ink-muted">
-                {displayTrade}
-                {displayCity ? ` · ${displayCity}` : ""}
-                {displayState ? `, ${displayState}` : ""}
-              </p>
+              <p className="break-words text-sm text-ink-muted">{metaLine}</p>
             </div>
 
             <div className="grid gap-2 sm:grid-cols-2">
@@ -72,7 +80,7 @@ export function QuoteListItem({
                 <div className="h-1.5 w-full overflow-hidden rounded-full bg-surface-2">
                   <div
                     className={`h-full ${priority.barClass} transition-[width] duration-500`}
-                    style={{ width: `${100 - score.score}%` }}
+                    style={{ width: `${barFillPct}%` }}
                     aria-label={`Priority score ${score.score} of 100`}
                   />
                 </div>

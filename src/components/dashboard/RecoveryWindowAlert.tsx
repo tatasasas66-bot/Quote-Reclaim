@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { AlertTriangle } from "lucide-react";
 import { formatCurrency } from "@/lib/utils/currency";
+import { tradeLabel } from "@/lib/quotes/quote-display";
 import { recoveryPriority } from "@/lib/quotes/recovery-score";
 import { titleCaseName } from "@/lib/utils/title-case";
 
@@ -23,7 +24,8 @@ export function RecoveryWindowAlert({
 }: RecoveryWindowAlertProps) {
   // Defensive normalization so legacy/lowercase data still reads cleanly.
   const displayName = titleCaseName(clientName);
-  const displayTrade = titleCaseName(trade);
+  // tradeLabel preserves acronyms (HVAC stays HVAC, not "Hvac").
+  const displayTrade = tradeLabel(trade);
 
   const { label: priority } = recoveryPriority(score);
   const urgencyLabel =

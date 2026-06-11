@@ -1,5 +1,14 @@
 /**
  * @vitest-environment happy-dom
+ *
+ * Recovery Receipt — actual proof only, no ROI/months-paid framing.
+ *
+ * The receipt used to host the ÷$79 months-paid equation in two places (top
+ * headline and footer). That was the third repetition of the same equation
+ * inside one screen (Price Check + Win Moment already carry it), and three
+ * repetitions read as pleading. The receipt now shows dollars and counts
+ * only; the ROI equation lives in exactly two places product-wide (Price
+ * Check + Win Moment).
  */
 import { afterEach, describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
@@ -26,7 +35,7 @@ function props(over: Partial<RecoveryReceiptProps> = {}): RecoveryReceiptProps {
     recoveredThisMonth: 0,
     jobsWonThisMonth: 0,
     quotesBeingWorked: 0,
-    emailFollowups: 0,
+    emailFollowupsSent: 0,
     allTimeRecovered: 0,
     ...over,
   };
@@ -40,11 +49,10 @@ describe("RecoveryReceipt — renders", () => {
   it("renders the RECOVERY RECEIPT header and This month section", () => {
     render(React.createElement(RecoveryReceipt, props()));
     expect(screen.getByText("Recovery Receipt")).toBeTruthy();
-    // Exact match so it does not collide with "Recovered this month".
     expect(screen.getByText("This month")).toBeTruthy();
   });
 
-  it("renders all five This-month line items", () => {
+  it("renders all four This-month line items", () => {
     render(
       React.createElement(
         RecoveryReceipt,
@@ -52,21 +60,22 @@ describe("RecoveryReceipt — renders", () => {
           recoveredThisMonth: 8_500,
           jobsWonThisMonth: 2,
           quotesBeingWorked: 9,
-          emailFollowups: 14,
+          emailFollowupsSent: 14,
         }),
       ),
     );
     expect(screen.getByText("Recovered this month")).toBeTruthy();
     expect(screen.getByText("Jobs won back")).toBeTruthy();
     expect(screen.getByText("Quotes being worked")).toBeTruthy();
-    // Polish: the old "Quiet quotes worked" label is gone.
-    expect(screen.queryByText("Quiet quotes worked")).toBeNull();
-    // Polish: clarified the monthly follow-up label.
-    expect(screen.getByText("Follow-ups this month")).toBeTruthy();
+    // The label flipped to "Follow-ups sent this month" because the underlying
+    // query now filters to sent = true. The vague "this month" label without
+    // "sent" left room for the contractor to think it included scheduled
+    // future-dated rows (the cause of the "2 quotes / 18 follow-ups" mismatch).
+    expect(screen.getByText("Follow-ups sent this month")).toBeTruthy();
+    expect(screen.queryByText("Follow-ups this month")).toBeNull();
     expect(screen.queryByText("Email follow-ups")).toBeNull();
-    // Hierarchy polish: the monthly total is now labeled "Months paid this
-    // month" (the all-time "months paid for" hero leads above it).
-    expect(screen.getByText("Months paid this month")).toBeTruthy();
+    // The old "Months paid this month" footer row is gone entirely.
+    expect(screen.queryByText("Months paid this month")).toBeNull();
     // Activity counts render.
     expect(screen.getByText("2")).toBeTruthy();
     expect(screen.getByText("9")).toBeTruthy();
@@ -87,18 +96,21 @@ describe("RecoveryReceipt — all-time proof leads the hierarchy", () => {
     expect(allTimeIdx).toBeLessThan(thisMonthIdx);
   });
 
-  it("all-time recovered + months paid are the large headline numbers", () => {
+  it("all-time recovered is the large headline dollar number (no months-paid stat)", () => {
     render(
       React.createElement(
         RecoveryReceipt,
         props({ recoveredThisMonth: 0, allTimeRecovered: 23_700 }),
       ),
     );
-    // $23,700 / 79 = 300, shown once (single source — no duplicate footer).
-    expect(screen.getByText("300")).toBeTruthy();
     expect(screen.getByText(/\$23,700/)).toBeTruthy();
     expect(screen.getByText("All-time recovered")).toBeTruthy();
-    expect(screen.getByText("months paid for")).toBeTruthy();
+    expect(screen.getByText("recovered for you")).toBeTruthy();
+    // The "months paid for" stat was removed; the dollars speak for themselves.
+    expect(screen.queryByText("months paid for")).toBeNull();
+    expect(screen.queryByText("month paid for")).toBeNull();
+    // The all-time months number is also gone from the receipt.
+    expect(screen.queryByText("300")).toBeNull();
   });
 
   it("stays non-empty on a fresh-month $0 day (all-time carries the proof)", () => {
@@ -109,9 +121,11 @@ describe("RecoveryReceipt — all-time proof leads the hierarchy", () => {
       ),
     );
     const text = container.textContent ?? "";
-    // $15,800 / 79 = 200 — the value proof is visible even with $0 this month.
+    // The dollar value is still visible even with $0 this month.
     expect(text).toContain("$15,800");
-    expect(text).toContain("200");
+    // The /79 derived number is NOT visible (it was 200; the receipt no
+    // longer renders months-paid math at all).
+    expect(text).not.toContain("200 months");
   });
 });
 
@@ -120,7 +134,7 @@ describe("RecoveryReceipt — all-time proof leads the hierarchy", () => {
 // ---------------------------------------------------------------------------
 
 describe("RecoveryReceipt — zero state stays quiet (actual proof only)", () => {
-  it("shows the quiet no-wins line instead of a months-paid prompt", () => {
+  it("shows the quiet no-wins line, never a months-paid prompt", () => {
     render(React.createElement(RecoveryReceipt, props()));
     expect(
       screen.getByText(/No wins marked this month yet\./i),
@@ -128,27 +142,19 @@ describe("RecoveryReceipt — zero state stays quiet (actual proof only)", () =>
     expect(
       screen.getByText(/When a job comes back, it shows\s+here\./i),
     ).toBeTruthy();
-    // The old big-zero framing and its prompt are gone.
     expect(
       screen.queryByText(/Mark a job as won to see how many months/i),
     ).toBeNull();
     expect(screen.queryByText(/wins covered/i)).toBeNull();
-  });
-
-  it("never renders 'Months paid this month' without a real win", () => {
-    // A prominent "0 months paid" was an anti-proof headline. With zero
-    // recovered this month the row simply does not exist; the potential
-    // math lives in the Price-check meter instead.
-    render(React.createElement(RecoveryReceipt, props()));
-    expect(screen.queryByText("Months paid this month")).toBeNull();
+    expect(screen.queryByText(/months paid/i)).toBeNull();
   });
 });
 
 // ---------------------------------------------------------------------------
-// Recovered value + months-paid math (floor(amount / 79))
+// Recovered value — dollars only, no /79 framing
 // ---------------------------------------------------------------------------
 
-describe("RecoveryReceipt — recovered value and months-paid math", () => {
+describe("RecoveryReceipt — recovered value renders, ROI framing removed", () => {
   it("shows the recovered amount with a + prefix", () => {
     render(
       React.createElement(
@@ -156,90 +162,38 @@ describe("RecoveryReceipt — recovered value and months-paid math", () => {
         props({ recoveredThisMonth: 8_500, jobsWonThisMonth: 1 }),
       ),
     );
-    // formatCurrency renders $8,500 (CountUp finalizes synchronously when
-    // value > 0 via rAF; assert via the recovered label + prefix presence).
     expect(screen.getByText("Recovered this month")).toBeTruthy();
     expect(screen.getByText(/\+\$/)).toBeTruthy();
   });
 
-  it("months paid uses floor(recovered / 79) — $8,500 -> 107", () => {
-    render(
+  it("with a real win, footer line is the honest dollar-back line — never months-paid", () => {
+    const { container } = render(
       React.createElement(
         RecoveryReceipt,
         props({ recoveredThisMonth: 8_500, jobsWonThisMonth: 1 }),
       ),
     );
-    expect(
-      screen.getByText(/wins covered 107 months of Quote Reclaim\./i),
-    ).toBeTruthy();
+    const text = container.textContent ?? "";
+    expect(text).toContain("real money back in the door this month");
+    // The old "wins covered N months of Quote Reclaim" line is gone.
+    expect(text).not.toMatch(/wins covered/i);
+    expect(text).not.toMatch(/months of Quote Reclaim/i);
   });
 
-  it("floor math: $200 -> 2 months, $158 -> 2, $237 -> 3", () => {
-    for (const [amount, months] of [
-      [200, 2],
-      [158, 2],
-      [237, 3],
-    ] as const) {
-      const { unmount } = render(
+  it("never says '0 months', '107 months', or any months-paid framing for any amount", () => {
+    for (const amount of [50, 79, 200, 1580, 8_500, 12_000]) {
+      const { container, unmount } = render(
         React.createElement(
           RecoveryReceipt,
           props({ recoveredThisMonth: amount, jobsWonThisMonth: 1 }),
         ),
       );
-      expect(
-        screen.getByText(
-          new RegExp(`wins covered ${months} months of Quote Reclaim\\.`, "i"),
-        ),
-      ).toBeTruthy();
+      const text = container.textContent ?? "";
+      expect(text).not.toMatch(/\d+ months of Quote Reclaim/);
+      expect(text).not.toMatch(/months paid/i);
+      expect(text).not.toMatch(/\bwins covered\b/i);
       unmount();
     }
-  });
-
-  it("singular 'month' for exactly 1, and a graceful line for sub-$79 recovery", () => {
-    // $79 -> 1 month (singular).
-    const { unmount } = render(
-      React.createElement(
-        RecoveryReceipt,
-        props({ recoveredThisMonth: 79, jobsWonThisMonth: 1 }),
-      ),
-    );
-    expect(
-      screen.getByText(/wins covered 1 month of Quote Reclaim\./i),
-    ).toBeTruthy();
-    unmount();
-
-    // $50 -> floor 0, but recovered > 0: never says "0 months".
-    render(
-      React.createElement(
-        RecoveryReceipt,
-        props({ recoveredThisMonth: 50, jobsWonThisMonth: 1 }),
-      ),
-    );
-    expect(screen.queryByText(/covered 0 months/i)).toBeNull();
-    expect(
-      screen.getByText(/wins started covering your Quote Reclaim subscription\./i),
-    ).toBeTruthy();
-  });
-});
-
-// ---------------------------------------------------------------------------
-// All-time proof stays visible
-// ---------------------------------------------------------------------------
-
-describe("RecoveryReceipt — all-time proof", () => {
-  it("shows all-time recovered and all-time months paid (floor / 79)", () => {
-    render(
-      React.createElement(
-        RecoveryReceipt,
-        props({ recoveredThisMonth: 0, allTimeRecovered: 23_700 }),
-      ),
-    );
-    // Hierarchy polish: all-time is now the leading headline block.
-    expect(screen.getByText("All-time recovered")).toBeTruthy();
-    expect(screen.getByText("months paid for")).toBeTruthy();
-    // 23,700 / 79 = 300 exactly, shown once (no duplicate footer).
-    expect(screen.getByText("300")).toBeTruthy();
-    expect(screen.getByText(/\$23,700/)).toBeTruthy();
   });
 });
 
@@ -256,13 +210,12 @@ describe("RecoveryReceipt — honest copy", () => {
           recoveredThisMonth: 5_000,
           jobsWonThisMonth: 1,
           quotesBeingWorked: 3,
-          emailFollowups: 4,
+          emailFollowupsSent: 4,
           allTimeRecovered: 5_000,
         }),
       ),
     );
     const text = container.textContent ?? "";
-    // No projection / guarantee / forecast language.
     expect(text).not.toMatch(/guarantee/i);
     expect(text).not.toMatch(/projected|estimated to|on track to|could recover|up to \$/i);
     expect(text).not.toMatch(/\bBid\b/);
@@ -284,43 +237,38 @@ describe("RecoveryReceipt — honest copy", () => {
 });
 
 // ---------------------------------------------------------------------------
-// Copy polish — exact label strings the spec requires
+// Copy polish — exact label strings the new spec requires
 // ---------------------------------------------------------------------------
 
 describe("RecoveryReceipt — polish copy", () => {
-  it("source contains the 'Quotes being worked' label exactly once and no longer the old one", () => {
+  it("source contains the 'Quotes being worked' label", () => {
     expect(receiptSrc).toContain("Quotes being worked");
     expect(receiptSrc).not.toContain("Quiet quotes worked");
   });
 
-  it("leads with an all-time headline block, not a small footer", () => {
+  it("leads with the all-time dollar headline (no months-paid stat)", () => {
     expect(receiptSrc).toContain("All-time recovered");
     expect(receiptSrc).toContain("recovered for you");
-    expect(receiptSrc).toContain("months paid for");
-    // The redundant duplicate "All-time …:" colon footer is gone (the numbers
-    // now appear exactly once, as the leading headline).
-    expect(receiptSrc).not.toContain("All-time recovered:");
-    expect(receiptSrc).not.toContain("All-time months paid for:");
-    // The monthly total is clearly scoped.
-    expect(receiptSrc).toContain("Months paid this month");
+    // The months-paid stat (top and footer) is removed entirely.
+    expect(receiptSrc).not.toContain("months paid for");
+    expect(receiptSrc).not.toContain("Months paid this month");
+    expect(receiptSrc).not.toContain("MONTHLY_PRICE_USD");
+    expect(receiptSrc).not.toContain("Math.floor");
   });
 });
 
 // ---------------------------------------------------------------------------
-// Pricing logic unchanged — display math only
+// Pricing — receipt no longer carries pricing math at all
 // ---------------------------------------------------------------------------
 
-describe("RecoveryReceipt — pricing untouched", () => {
-  it("uses 79 for the months-paid display math (floor)", () => {
-    expect(receiptSrc).toMatch(/MONTHLY_PRICE_USD\s*=\s*79/);
-    expect(receiptSrc).toMatch(/Math\.floor\([^)]*MONTHLY_PRICE_USD/);
-  });
-
+describe("RecoveryReceipt — pricing math removed", () => {
   it("does not import or call any billing / pricing module", () => {
-    // "subscription" is legitimate receipt prose; what matters is that the
-    // component pulls in no billing/checkout machinery.
     expect(receiptSrc).not.toMatch(/from\s+["']@\/(lib\/billing|components\/billing)/);
     expect(receiptSrc).not.toMatch(/checkout|stripe|lemonsqueezy|UpgradeButton/i);
+  });
+
+  it("does not import roiFraming either — the ROI equation lives in Price Check and Win Moment only", () => {
+    expect(receiptSrc).not.toMatch(/roi-framing|roiFraming|roiPieces/);
   });
 });
 
@@ -332,5 +280,10 @@ describe("HeroMetric integration", () => {
   it("preserves the Still Bleeding hero and mounts RecoveryReceipt", () => {
     expect(heroSrc).toContain("STILL BLEEDING");
     expect(heroSrc).toContain("RecoveryReceipt");
+  });
+
+  it("HeroMetric passes the renamed emailFollowupsSent prop through", () => {
+    expect(heroSrc).toContain("emailFollowupsSent={emailFollowupsSent}");
+    expect(heroSrc).not.toMatch(/emailFollowups[^S]/);
   });
 });

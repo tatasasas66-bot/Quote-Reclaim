@@ -142,14 +142,16 @@ function ev(overrides: Partial<ActivityEvent>): ActivityEvent {
 }
 
 describe("ActivityFeedView 0-state", () => {
-  it("renders the empty-state copy when there are no events", () => {
+  it("renders the empty-state copy when there are no events, without a 'Last 0' chip", () => {
     render(<ActivityFeedView events={[]} />);
     expect(
       screen.getByText(
         /Activity will appear here as Quote Reclaim works in the background\./,
       ),
     ).toBeTruthy();
-    expect(screen.getByText("Last 0")).toBeTruthy();
+    // The header count chip is hidden on an empty feed so the section never
+    // shows "Last 0" beside the empty-state copy.
+    expect(screen.queryByText("Last 0")).toBeNull();
   });
 
   it("renders an event row when events exist", () => {

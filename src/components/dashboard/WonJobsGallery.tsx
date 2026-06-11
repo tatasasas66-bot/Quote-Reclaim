@@ -1,4 +1,5 @@
 import { Trophy } from "lucide-react";
+import { tradeLabel } from "@/lib/quotes/quote-display";
 import { formatCurrency } from "@/lib/utils/currency";
 import { titleCaseName } from "@/lib/utils/title-case";
 import type { WonQuoteSummary } from "@/lib/quotes/repo";
@@ -63,7 +64,7 @@ export function WonJobsGallery({ wonQuotes, totalWon }: WonJobsGalleryProps) {
                 {titleCaseName(q.client_name) || "Client"}
               </p>
               <p className="text-xs uppercase tracking-wide text-ink-muted">
-                {titleCaseName(q.trade)}
+                {tradeLabel(q.trade)}
               </p>
               <p className="mt-1 text-2xl font-black tabular-nums text-money">
                 {formatCurrency(q.estimate_amount)}

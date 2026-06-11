@@ -3,8 +3,7 @@
 import { useEffect, useState } from "react";
 import { CheckCircle2 } from "lucide-react";
 import { formatCurrency } from "@/lib/utils/currency";
-
-const MONTHLY_PRICE_USD = 79;
+import { roiPieces } from "@/lib/utils/roi-framing";
 
 export function WinMomentOverlay({
   amount,
@@ -32,7 +31,11 @@ export function WinMomentOverlay({
     };
   }, [onDismiss]);
 
-  const monthsPaid = Math.floor(amount / MONTHLY_PRICE_USD);
+  // Honest ROI framing. Below 24 months the natural "paid for Quote Reclaim
+  // for N months" line works; above that it flips to "covered Quote Reclaim
+  // Nx over for a full year" so a $12,000 win never produces the comedic
+  // "151 months" punch line. Tiny wins fall back to a humble line.
+  const roi = roiPieces(amount);
   const lifetime = formatCurrency(allTimeRecovered + amount);
 
   return (
@@ -69,9 +72,21 @@ export function WinMomentOverlay({
         </div>
 
         <p className="text-lg font-semibold text-ink-strong">
-          This one job paid for Quote Reclaim
-          <br />
-          for {monthsPaid} months.
+          {roi.kind === "subMonth" ? (
+            <>This one job is on the board.</>
+          ) : roi.kind === "months" ? (
+            <>
+              This one job paid for Quote Reclaim
+              <br />
+              for {roi.months} months.
+            </>
+          ) : (
+            <>
+              This one job covered Quote Reclaim
+              <br />
+              {roi.yearMultiple}x over for a full year.
+            </>
+          )}
         </p>
 
         <p className="text-xs text-ink-muted">

@@ -139,7 +139,10 @@ describe("Recovery Window Alert copy (Value Proof v0.5)", () => {
 
   it("title-cases name and trade defensively at render", () => {
     expect(recoveryAlert).toMatch(/titleCaseName\(clientName\)/);
-    expect(recoveryAlert).toMatch(/titleCaseName\(trade\)/);
+    // Trade now flows through tradeLabel so HVAC stays HVAC instead of "Hvac";
+    // the call site is still defensive at render, just via the centralized
+    // trade display helper that preserves acronyms.
+    expect(recoveryAlert).toMatch(/tradeLabel\(trade\)/);
   });
 });
 

@@ -3,10 +3,6 @@ import type { ReactNode } from "react";
 import { formatCurrency } from "@/lib/utils/currency";
 import { CountUp } from "./CountUp";
 
-// Mirrors the price used elsewhere for the months-paid math. This is display
-// math only — it changes no billing/pricing logic.
-const MONTHLY_PRICE_USD = 79;
-
 export type RecoveryReceiptProps = {
   recoveredThisMonth: number;
   jobsWonThisMonth: number;
@@ -17,32 +13,37 @@ export type RecoveryReceiptProps = {
    * on the first day of a month while real recoveries are in flight.
    */
   quotesBeingWorked: number;
-  emailFollowups: number;
+  /**
+   * Email follow-ups actually SENT this month. The repo filters reminders by
+   * sent = true so this never counts scheduled/future rows — a "2 quotes,
+   * 18 follow-ups this month" mismatch on a 5-touch sequence reads as a bug.
+   */
+  emailFollowupsSent: number;
   allTimeRecovered: number;
 };
-
-function monthsWord(n: number): string {
-  return n === 1 ? "month" : "months";
-}
 
 /**
  * The dashboard value-proof column, read as a receipt.
  *
  * Hierarchy: the ALL-TIME proof leads — it is the strongest, never-empty
- * number and the clearest answer to "has this paid for itself." The current
- * month sits below as live activity, so a fresh-month $0 day never makes the
- * card read as empty. Every value is passed in honestly; nothing is projected
- * or fabricated, and the months-paid math is unchanged (floor(recovered/79)).
+ * dollar number and the clearest answer to "has this paid for itself." The
+ * current month sits below as live activity, so a fresh-month $0 day never
+ * makes the card read as empty. Every value is passed in honestly; nothing
+ * is projected or fabricated.
+ *
+ * Months-paid math used to live here (and twice — once at the top, once in
+ * the footer). It has been removed entirely: the ROI equation now lives in
+ * exactly two places product-wide (Price Check + Win Moment), so the
+ * contractor never sees the same ÷$79 punch line three times in one screen.
+ * The dollars on this card speak for themselves.
  */
 export function RecoveryReceipt({
   recoveredThisMonth,
   jobsWonThisMonth,
   quotesBeingWorked,
-  emailFollowups,
+  emailFollowupsSent,
   allTimeRecovered,
 }: RecoveryReceiptProps) {
-  const monthsPaidThisMonth = Math.floor(recoveredThisMonth / MONTHLY_PRICE_USD);
-  const allTimeMonthsPaid = Math.floor(allTimeRecovered / MONTHLY_PRICE_USD);
   const recoveredPositive = recoveredThisMonth > 0;
   const allTimePositive = allTimeRecovered > 0;
 
@@ -55,35 +56,18 @@ export function RecoveryReceipt({
         </p>
       </div>
 
-      {/* ALL-TIME — the strongest, never-empty proof, hoisted to the top as
-          two headline numbers. Single source: these numbers appear once. */}
+      {/* ALL-TIME — the strongest, never-empty proof. Just the dollar number. */}
       <p className="mt-4 text-[11px] font-black uppercase tracking-widest text-ink-muted">
         All-time recovered
       </p>
-      <div className="mt-2 grid grid-cols-2 gap-3">
-        <div className="min-w-0">
-          <p
-            className={`whitespace-nowrap text-4xl font-black tabular-nums ${
-              allTimePositive ? "text-success" : "text-ink-strong"
-            }`}
-          >
-            {formatCurrency(allTimeRecovered)}
-          </p>
-          <p className="mt-1 text-xs text-ink-muted">recovered for you</p>
-        </div>
-        <div className="min-w-0">
-          <p
-            className={`text-4xl font-black tabular-nums ${
-              allTimeMonthsPaid > 0 ? "text-success" : "text-ink-strong"
-            }`}
-          >
-            {allTimeMonthsPaid}
-          </p>
-          <p className="mt-1 text-xs text-ink-muted">
-            {allTimeMonthsPaid === 1 ? "month paid for" : "months paid for"}
-          </p>
-        </div>
-      </div>
+      <p
+        className={`mt-2 whitespace-nowrap text-4xl font-black tabular-nums ${
+          allTimePositive ? "text-success" : "text-ink-strong"
+        }`}
+      >
+        {formatCurrency(allTimeRecovered)}
+      </p>
+      <p className="mt-1 text-xs text-ink-muted">recovered for you</p>
 
       {/* THIS MONTH — live activity below the all-time proof. */}
       <p className="mt-5 text-[11px] font-black uppercase tracking-widest text-ink-muted">
@@ -98,30 +82,17 @@ export function RecoveryReceipt({
         </ReceiptRow>
         <ReceiptRow label="Jobs won back">{jobsWonThisMonth}</ReceiptRow>
         <ReceiptRow label="Quotes being worked">{quotesBeingWorked}</ReceiptRow>
-        <ReceiptRow label="Follow-ups this month">{emailFollowups}</ReceiptRow>
+        <ReceiptRow label="Follow-ups sent this month">
+          {emailFollowupsSent}
+        </ReceiptRow>
       </dl>
 
-      {/* Receipt footer = ACTUAL results only. Months-paid renders only once
-          a real win exists this month — a big "0 months paid" was an anti-
-          proof headline, and the potential-payback math lives in the Price-
-          check meter, not here. No wins yet: one quiet line. */}
+      {/* Footer = honest no-win or honest win line. No months-paid math. */}
       <div className="mt-auto border-t border-dashed border-line-subtle pt-3">
         {recoveredPositive ? (
-          <>
-            <div className="flex items-baseline justify-between gap-3">
-              <dt className="text-sm font-bold text-ink-strong">
-                Months paid this month
-              </dt>
-              <dd className="text-2xl font-black tabular-nums text-success">
-                {monthsPaidThisMonth}
-              </dd>
-            </div>
-            <p className="mt-2 text-sm leading-6 text-ink-muted">
-              {monthsPaidThisMonth >= 1
-                ? `This month's wins covered ${monthsPaidThisMonth} ${monthsWord(monthsPaidThisMonth)} of Quote Reclaim.`
-                : "This month's wins started covering your Quote Reclaim subscription."}
-            </p>
-          </>
+          <p className="text-sm leading-6 text-ink-muted">
+            That&apos;s real money back in the door this month.
+          </p>
         ) : (
           <p className="text-sm leading-6 text-ink-muted">
             No wins marked this month yet. When a job comes back, it shows

@@ -77,3 +77,40 @@ export function recoveryPriority(score: number): {
   }
   return { label: "CRITICAL", labelClass: "text-danger", barClass: "bg-danger" };
 }
+
+/**
+ * Visual fill percentage for the priority bar so the bar can never disagree
+ * with its label. The old formula (100 − score) collapsed HIGH into a near-
+ * empty bar (29–45%) — a HIGH label over an almost-empty bar reads as a bug.
+ *
+ * Each band gets its own visual range, increasing as urgency rises:
+ *   LOW      → 15–30%   (fresh)
+ *   MEDIUM   → 35–55%   (cooling)
+ *   HIGH     → 60–80%   (at_risk)
+ *   CRITICAL → 85–100%  (critical)
+ *
+ * Within each band the fill scales linearly with raw score so two HIGH quotes
+ * at different ages still read different from each other.
+ */
+export function priorityBarFill(score: number): number {
+  // Clamp first so a future score outside 0–100 cannot break the band math.
+  const s = Math.max(0, Math.min(100, Math.round(score)));
+  // LOW: score 86..100 (15-point band). Lower urgency at the healthy edge.
+  if (s >= 86) {
+    const t = (100 - s) / 14; // 0 at score 100, 1 at score 86
+    return Math.round(15 + t * 15); // 15..30
+  }
+  // MEDIUM: score 72..85 (14-point band).
+  if (s >= 72) {
+    const t = (85 - s) / 13;
+    return Math.round(35 + t * 20); // 35..55
+  }
+  // HIGH: score 55..71 (17-point band).
+  if (s >= 55) {
+    const t = (71 - s) / 16;
+    return Math.round(60 + t * 20); // 60..80
+  }
+  // CRITICAL: score 0..54 (55-point band).
+  const t = (54 - s) / 54;
+  return Math.round(85 + t * 15); // 85..100
+}

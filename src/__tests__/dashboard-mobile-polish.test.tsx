@@ -208,8 +208,15 @@ describe("Activity feed — system-log events are hidden, not shown as spam", ()
     ];
     render(React.createElement(ActivityFeedView, { events }));
     expect(screen.queryByText(/Recovery plan built/)).toBeNull();
-    // Empty visible list → the empty-state copy, not 5 log rows.
-    expect(screen.getByText("Last 0")).toBeTruthy();
+    // Empty visible list → the empty-state copy, not 5 log rows. The header
+    // count chip is hidden entirely when there are no visible events, so a
+    // misleading "Last 0" never renders alongside an empty list.
+    expect(screen.queryByText("Last 0")).toBeNull();
+    expect(
+      screen.getByText(
+        /Activity will appear here as Quote Reclaim works in the background/i,
+      ),
+    ).toBeTruthy();
   });
 
   it("renders the premium contractor lines and no plan-built spam", () => {
@@ -394,9 +401,13 @@ describe("SendEarlyButton label polish", () => {
 // ---------------------------------------------------------------------------
 
 describe("Lock rails — nothing under the hood moved", () => {
-  it("RecoveryReceipt still uses $79 floor math (pricing untouched)", () => {
-    expect(receiptSrc).toMatch(/MONTHLY_PRICE_USD\s*=\s*79/);
-    expect(receiptSrc).toMatch(/Math\.floor\([^)]*MONTHLY_PRICE_USD/);
+  it("RecoveryReceipt no longer carries the months-paid ROI equation (pricing math moved to Price Check + Win Moment)", () => {
+    // The receipt used to duplicate the ÷$79 equation here. The launch-polish
+    // pass removed it so the ROI equation lives in exactly two places product-
+    // wide. Pricing untouched everywhere it actually drives billing; what
+    // changed is one display surface stopped repeating it.
+    expect(receiptSrc).not.toMatch(/MONTHLY_PRICE_USD/);
+    expect(receiptSrc).not.toMatch(/Math\.floor/);
   });
 
   it("Dashboard page does not import billing / lemon / stripe modules", () => {

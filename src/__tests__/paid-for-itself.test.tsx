@@ -45,12 +45,19 @@ const BIG_QUOTE = {
 // Honest months math from real values only
 // ───────────────────────────────────────────────────────────────────────
 
-describe("PaidForItselfMeter — months math", () => {
-  it("computes months as floor(biggest quote ÷ $79) — $22,000 → 278 months", () => {
+describe("PaidForItselfMeter — months math via roiFraming", () => {
+  it("uses MONTHLY_PRICE_USD=79 as the source of truth", () => {
     expect(MONTHLY_PRICE_USD).toBe(79);
+  });
+
+  it("$22,000 flips to annual-multiple phrasing — never the silly 278-month line", () => {
     const text = renderText(React.createElement(PaidForItselfMeter, BIG_QUOTE));
-    expect(text).toContain(`${Math.floor(22000 / 79)} months`);
-    expect(text).toContain("278 months");
+    // floor(22000 / 948) = 23 → "23x a full year of Quote Reclaim"
+    expect(text).toContain("23x a full year of Quote Reclaim");
+    expect(text).not.toContain("278 months");
+    // No three-digit month count, no months phrasing at all at this size.
+    expect(text).not.toMatch(/\d{3,} months/);
+    expect(text).not.toMatch(/\d+ months of Quote Reclaim/);
   });
 
   it("anchors with the contractor's real quote: name (title-cased), amount, queue total, count", () => {
@@ -61,7 +68,7 @@ describe("PaidForItselfMeter — months math", () => {
     expect(text).toMatch(/5 quiet quotes/);
   });
 
-  it("shows the math transparently and disclaims any promise", () => {
+  it("shows the math transparently and disclaims any promise (line preserved)", () => {
     const text = renderText(React.createElement(PaidForItselfMeter, BIG_QUOTE));
     expect(text).toMatch(/Straight math from your own queue/);
     expect(text).toContain("$79/month");
@@ -81,14 +88,21 @@ describe("PaidForItselfMeter — months math", () => {
     }
   });
 
-  it("renders at exactly the 2-month threshold ($158)", () => {
-    const text = renderText(
-      React.createElement(PaidForItselfMeter, {
-        ...BIG_QUOTE,
-        biggestQuoteAmount: 158,
-      }),
-    );
-    expect(text).toContain("2 months");
+  it("renders 'N months of Quote Reclaim' when amount is inside the 24-month natural range", () => {
+    // $158 → 2 months, $1,580 → 20 months. Both under the 24-month flip line.
+    for (const [amount, months] of [
+      [158, 2],
+      [1_580, 20],
+    ] as const) {
+      const text = renderText(
+        React.createElement(PaidForItselfMeter, {
+          ...BIG_QUOTE,
+          biggestQuoteAmount: amount,
+        }),
+      );
+      expect(text).toContain(`${months} months of Quote Reclaim`);
+      cleanup();
+    }
   });
 });
 

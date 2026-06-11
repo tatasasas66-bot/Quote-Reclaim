@@ -16,7 +16,8 @@ type HeroMetricProps = {
   recoveredThisMonth: number;
   jobsWonThisMonth: number;
   quotesBeingWorked: number;
-  emailFollowups: number;
+  /** Email follow-ups actually sent this month. */
+  emailFollowupsSent: number;
   allTimeRecovered: number;
   /**
    * The single highest-value at-risk quote (same pick the DO THIS TODAY alert
@@ -35,7 +36,7 @@ export function HeroMetric({
   recoveredThisMonth,
   jobsWonThisMonth,
   quotesBeingWorked,
-  emailFollowups,
+  emailFollowupsSent,
   allTimeRecovered,
   priorityClientName = null,
   priorityQuoteId = null,
@@ -118,7 +119,7 @@ export function HeroMetric({
           recoveredThisMonth={recoveredThisMonth}
           jobsWonThisMonth={jobsWonThisMonth}
           quotesBeingWorked={quotesBeingWorked}
-          emailFollowups={emailFollowups}
+          emailFollowupsSent={emailFollowupsSent}
           allTimeRecovered={allTimeRecovered}
         />
       </div>

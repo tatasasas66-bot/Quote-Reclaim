@@ -94,13 +94,23 @@ export function cleanActivityEvents(events: ActivityEvent[]): ActivityEvent[] {
 
 export function ActivityFeedView({ events }: { events: ActivityEvent[] }) {
   const visibleEvents = cleanActivityEvents(events);
+  // "Last 1" reads as broken English. Singular case becomes "Latest", and an
+  // empty feed drops the count entirely so the header is never a lie.
+  const countLabel =
+    visibleEvents.length === 0
+      ? null
+      : visibleEvents.length === 1
+        ? "Latest"
+        : `Last ${visibleEvents.length}`;
   return (
     <section className="rounded-lg border border-line-subtle bg-surface-1 p-5">
       <div className="mb-4 flex items-baseline justify-between">
         <h2 className="text-xs font-semibold uppercase tracking-widest text-ink-muted">
           Activity
         </h2>
-        <span className="text-xs text-ink-muted">Last {visibleEvents.length}</span>
+        {countLabel ? (
+          <span className="text-xs text-ink-muted">{countLabel}</span>
+        ) : null}
       </div>
       {visibleEvents.length === 0 ? (
         <p className="text-sm text-ink-muted">

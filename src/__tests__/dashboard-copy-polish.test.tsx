@@ -55,7 +55,7 @@ function heroProps(over: Partial<React.ComponentProps<typeof HeroMetric>> = {}) 
     recoveredThisMonth: 0,
     jobsWonThisMonth: 0,
     quotesBeingWorked: 3,
-    emailFollowups: 0,
+    emailFollowupsSent: 0,
     allTimeRecovered: 0,
     ...over,
   };

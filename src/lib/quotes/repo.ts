@@ -124,17 +124,27 @@ export type WonQuoteSummary = {
 
 /** Read-only monthly activity proof for the Recovery Receipt. */
 export type MonthlyRecoveryActivity = {
-  /** Email follow-ups sent or scheduled this month (reminders, send_at in month). */
-  emailFollowups: number;
-  /** Distinct quotes with any follow-up sent or scheduled this month. */
+  /**
+   * Email follow-ups ACTUALLY sent this month — sent = true, sent_at in the
+   * month window. The old version counted send_at in the window without the
+   * sent gate, which let scheduled/future-dated reminders inflate the count
+   * (a "2 quotes / 18 follow-ups" mismatch on a 5-touch sequence read as a
+   * bug). This count is only what went out the door.
+   */
+  emailFollowupsSent: number;
+  /** Distinct quotes with any follow-up sent this month. */
   quietQuotesWorked: number;
 };
 
 /**
- * Count this month's follow-up activity from the reminders table. Read-only;
- * does not touch cron, Resend, or the send path. RLS-scoped via user_id +
- * the caller's authenticated client. send_at in [monthStart, monthEnd)
- * captures both already-sent and still-scheduled follow-ups for the month.
+ * Count this month's actually-sent follow-up activity from the reminders
+ * table. Read-only; does not touch cron, Resend, or the send path. RLS-scoped
+ * via user_id + the caller's authenticated client.
+ *
+ * sent_at in [monthStart, monthEnd) is the source of truth — sent = true
+ * guarantees the row reflects a real outbound message. Scheduled-but-not-yet-
+ * sent reminders never enter this count; "Follow-ups sent this month" must
+ * mean only what actually went out.
  */
 export async function getMonthlyRecoveryActivity(
   supabase: SupabaseClient,
@@ -144,21 +154,22 @@ export async function getMonthlyRecoveryActivity(
 ): Promise<MonthlyRecoveryActivity> {
   const { data, error } = await supabase
     .from("reminders")
-    .select("quote_id, message_type, send_at")
+    .select("quote_id, message_type, sent, sent_at")
     .eq("user_id", userId)
-    .gte("send_at", monthStartIso)
-    .lt("send_at", monthEndIso);
+    .eq("sent", true)
+    .gte("sent_at", monthStartIso)
+    .lt("sent_at", monthEndIso);
   if (error) {
     throw new Error(`getMonthlyRecoveryActivity failed: ${error.message}`);
   }
   const rows = data ?? [];
   const quotes = new Set<string>();
-  let emailFollowups = 0;
+  let emailFollowupsSent = 0;
   for (const r of rows) {
     if (r.quote_id) quotes.add(String(r.quote_id));
-    if (r.message_type === "email") emailFollowups += 1;
+    if (r.message_type === "email") emailFollowupsSent += 1;
   }
-  return { emailFollowups, quietQuotesWorked: quotes.size };
+  return { emailFollowupsSent, quietQuotesWorked: quotes.size };
 }
 
 /**
