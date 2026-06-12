@@ -13,8 +13,7 @@ import type { SmsResult } from "@/lib/messaging/types";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { createServiceSupabaseClient } from "@/lib/supabase/service";
 import { titleCaseName } from "@/lib/utils/title-case";
-import { normalizeToBusinessHour } from "./business-hours";
-import { persistRecoveryPlan } from "./recovery-plan-write";
+import { persistRecoveryPlan, scheduleSendAt } from "./recovery-plan-write";
 import { quoteInputSchema, quoteUpdateSchema } from "./schema";
 
 export type ActionResult =
@@ -85,12 +84,6 @@ function contractorFirstNameOf(user: {
   return fullName ? firstNameOf(fullName) : null;
 }
 
-function sendAtFromBase(quoteSentAt: string, daysAfter: number): string {
-  const d = new Date(quoteSentAt);
-  d.setUTCDate(d.getUTCDate() + daysAfter);
-  return normalizeToBusinessHour(d).toISOString();
-}
-
 type ReminderShape = {
   id: string;
   followup_number: number;
@@ -113,25 +106,31 @@ type RecoveryInput = {
 /**
  * Phase 6 schedule reconciliation. Called after a quote is updated.
  *
+ * The recovery schedule re-anchors to NOW (the moment of the edit), never to
+ * the estimate date. Days Quiet still tracks quote_sent_at — that column is
+ * updated by the caller — but the 1/3/7/14/30-day cadence restarts from the
+ * edit so an unsent reminder can never be pushed into the past when the
+ * contractor bumps a quote's age.
+ *
  * Rules:
  *   - If any reminder is already sent: preserve sent rows verbatim and only
- *     update unsent rows' send_at to match the new quote_sent_at.
+ *     re-anchor unsent rows' send_at from now.
  *   - If no reminders are sent yet: regenerate messages and send_at via
  *     generateRecoveryPlan() and update existing rows by followup_number.
- *   - If no reminders exist at all (legacy quote): insert the 3 fresh rows.
+ *   - If no reminders exist at all (legacy quote): insert the 5 fresh rows.
  *   - The (quote_id, followup_number) unique index in the DB enforces the
- *     3-row maximum and prevents duplication on update.
+ *     5-row maximum and prevents duplication on update.
  */
 async function reconcileReminders(params: {
   serviceClient: ReturnType<typeof createServiceSupabaseClient>;
   userId: string;
   quoteId: string;
-  newQuoteSentAt: string;
   recovery: RecoveryInput;
   channel: "sms" | "email";
 }): Promise<void> {
-  const { serviceClient, userId, quoteId, newQuoteSentAt, recovery, channel } =
-    params;
+  const { serviceClient, userId, quoteId, recovery, channel } = params;
+  // Re-anchor the cadence to the edit moment (now), not the estimate date.
+  const scheduleStartMs = Date.now();
 
   const { data, error } = await serviceClient
     .from("reminders")
@@ -149,7 +148,7 @@ async function reconcileReminders(params: {
     for (const r of existing.filter((x) => !x.sent)) {
       const fn = r.followup_number as 1 | 2 | 3 | 4 | 5;
       if (!CADENCE_DAYS[fn]) continue;
-      const sendAt = sendAtFromBase(newQuoteSentAt, CADENCE_DAYS[fn]);
+      const sendAt = scheduleSendAt(scheduleStartMs, CADENCE_DAYS[fn]);
       await serviceClient
         .from("reminders")
         .update({ send_at: sendAt })
@@ -180,7 +179,7 @@ async function reconcileReminders(params: {
       message_text: m.message,
       framework_used: m.framework,
       cta_type: m.cta_type,
-      send_at: sendAtFromBase(newQuoteSentAt, CADENCE_DAYS[m.followup_number]),
+      send_at: scheduleSendAt(scheduleStartMs, CADENCE_DAYS[m.followup_number]),
     }));
     await serviceClient.from("reminders").insert(rows);
     return;
@@ -198,7 +197,7 @@ async function reconcileReminders(params: {
         framework_used: m.framework,
         cta_type: m.cta_type,
         message_type: channel,
-        send_at: sendAtFromBase(newQuoteSentAt, CADENCE_DAYS[m.followup_number]),
+        send_at: scheduleSendAt(scheduleStartMs, CADENCE_DAYS[m.followup_number]),
       })
       .eq("id", target.id);
   }
@@ -280,19 +279,19 @@ export async function createQuoteAction(
   // sms reminders that the cron skips — the contractor uses Copy or "Send
   // early" instead.
   const channel: "sms" | "email" = input.client_email ? "email" : "sms";
-  const quoteSentAt = quoteSentAtFromDaysSilent(input.days_silent);
   const firstName = firstNameOf(normalizedClientName);
   const contractorFirstName = contractorFirstNameOf(userData.user);
 
   // Generate + persist the 5-step plan through the ONE shared writer that the
   // bulk-import flow also uses, so reminder shape can never diverge between the
-  // two paths again. Returns the written rows for activity-event emission.
+  // two paths again. The schedule starts NOW (default scheduleStartAt) — never
+  // the original estimate date — so an old/imported quote can never produce a
+  // recovery schedule in the past. Returns the written rows for activity events.
   const { rows: reminderRows } = await persistRecoveryPlan({
     serviceClient,
     userId: userData.user.id,
     quoteId,
     channel,
-    quoteSentAt,
     context: {
       firstName,
       contractorFirstName,
@@ -388,13 +387,14 @@ export async function updateQuoteAction(
     return { ok: false, error: "Quote not found" };
   }
 
-  // Phase 6: keep the reminder schedule consistent with the new quote_sent_at.
+  // Re-anchor the reminder schedule to now (the edit moment). quote_sent_at
+  // above carries the new estimate date for Days Quiet; the cadence restarts
+  // from now so editing a quote's age never pushes a reminder into the past.
   const serviceClient = createServiceSupabaseClient();
   await reconcileReminders({
     serviceClient,
     userId: userData.user.id,
     quoteId: id,
-    newQuoteSentAt,
     channel: input.client_email ? "email" : "sms",
     recovery: {
       firstName: firstNameOf(input.client_name),

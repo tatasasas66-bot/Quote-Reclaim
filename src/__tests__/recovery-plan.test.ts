@@ -174,8 +174,18 @@ describe("updateQuoteAction: reminder reconciliation", () => {
     expect(slice).toContain("reconcileReminders");
   });
 
-  it("passes the new quote_sent_at into the reconciler", () => {
-    expect(slice).toMatch(/newQuoteSentAt\s*[,:}]/);
+  it("writes the new quote_sent_at to the quotes column (Days Quiet), but the reconciler re-anchors the schedule from now", () => {
+    // newQuoteSentAt is the estimate date — it drives the quote_sent_at COLUMN
+    // (Days Quiet) only. It must NOT be threaded into reconcileReminders, whose
+    // schedule re-anchors to the edit moment so an unsent reminder can never be
+    // pushed into the past when a quote's age is bumped.
+    expect(slice).toMatch(/quote_sent_at: newQuoteSentAt/);
+    expect(slice).toMatch(/await reconcileReminders\(\{/);
+    const reconcileCall = slice.slice(
+      slice.indexOf("await reconcileReminders({"),
+      slice.indexOf("await reconcileReminders({") + 300,
+    );
+    expect(reconcileCall).not.toMatch(/newQuoteSentAt/);
   });
 
   it("uses the 5-touch cadence (1, 3, 7, 14, 30 days)", () => {

@@ -165,15 +165,18 @@ export async function importSilentQuotesAction(input: {
     // writer the single-quote create flow uses. This guarantees every imported
     // quote — email-ready OR manual-copy — gets a full plan, with deterministic
     // fallback messages when AI is unavailable, keyed by (quote_id,
-    // followup_number). The previous bulk path inserted a non-existent
-    // reminders.sequence_id column, so PostgREST rejected every insert and the
-    // error was swallowed — leaving every imported quote with no plan.
+    // followup_number).
+    //
+    // The schedule starts NOW (default scheduleStartAt), never the original
+    // estimate date. quote_sent_at above still carries the estimate date for
+    // Days Quiet, but a 28-day-quiet imported quote must NOT produce a recovery
+    // schedule in the past — that bug read "sends today" beside May dates and
+    // made the cron see all five reminders as overdue at once.
     const planResult = await persistRecoveryPlan({
       serviceClient,
       userId,
       quoteId,
       channel: messageType,
-      quoteSentAt: quoteSentAtFromDaysSilent(row.daysSilent),
       context: {
         firstName: normalizedName.split(/\s+/)[0] || "there",
         contractorFirstName: null,

@@ -89,9 +89,10 @@ describe("send_at is anchored to 09:00 America/Chicago", () => {
   });
 
   it("a chain of generated send_ats from a 3 AM UTC baseline never displays at 3 AM", () => {
-    // Simulate the production chain: quoteSentAt comes from a click at the
-    // off-hour moment, sendAtFromBase adds N days, then normalizeToBusinessHour
-    // rounds. Day 1/3/7/14/30 outputs must all land at 09:00 Central.
+    // Simulate the production chain: the plan-start instant comes from a click
+    // at an off-hour moment, scheduleSendAt adds N days, then
+    // normalizeToBusinessHour rounds. Day 1/3/7/14/30 outputs must all land at
+    // 09:00 Central.
     const base = new Date("2026-06-10T03:00:00Z");
     for (const days of [1, 3, 7, 14, 30]) {
       const d = new Date(base);

@@ -4,7 +4,7 @@ import { validateMessage } from "@/lib/ai/validate-message";
 import { normalizeToBusinessHour } from "./business-hours";
 
 /** Day-offset cadence for the 5-touch recovery sequence (Day 1, 3, 7, 14, 30). */
-const CADENCE_DAYS: Record<1 | 2 | 3 | 4 | 5, number> = {
+export const CADENCE_DAYS: Record<1 | 2 | 3 | 4 | 5, number> = {
   1: 1,
   2: 3,
   3: 7,
@@ -54,10 +54,34 @@ export type PersistRecoveryPlanResult = {
   rows: ReminderInsertRow[];
 };
 
-function sendAtFromBase(quoteSentAt: string, daysAfter: number): string {
-  const d = new Date(quoteSentAt);
+/**
+ * Compute a follow-up's send_at from the RECOVERY-PLAN START time (server now),
+ * NOT the original estimate date.
+ *
+ * Bug this prevents: anchoring the cadence to the estimate date meant an old
+ * quote (e.g. 28 days quiet) produced a schedule entirely in the past
+ * (FU1 yesterday-of-a-month-ago, etc.). The detail page then read "due now /
+ * sends today" while displaying a date in May, and the cron saw all five
+ * reminders as overdue at once. The schedule must start when the plan is
+ * created, so every send_at lands in the future on a 1/3/7/14/30-day cadence.
+ *
+ * `startMs` is the plan-creation instant (Date.now() in production, a frozen
+ * clock in tests). A defensive floor guarantees no send_at is ever at or
+ * before the start: with a positive cadence offset this never fires, but it
+ * makes "never schedule in the past" a structural property, not an emergent
+ * one that a future edit could quietly break.
+ */
+export function scheduleSendAt(startMs: number, daysAfter: number): string {
+  const base = Number.isFinite(startMs) ? startMs : Date.now();
+  const d = new Date(base);
   d.setUTCDate(d.getUTCDate() + daysAfter);
-  return normalizeToBusinessHour(d).toISOString();
+  let ms = normalizeToBusinessHour(d).getTime();
+  if (ms <= base) {
+    const bumped = new Date(base);
+    bumped.setUTCDate(bumped.getUTCDate() + 1);
+    ms = normalizeToBusinessHour(bumped).getTime();
+  }
+  return new Date(ms).toISOString();
 }
 
 /**
@@ -84,11 +108,19 @@ export async function persistRecoveryPlan(params: {
   userId: string;
   quoteId: string;
   channel: "email" | "sms";
-  quoteSentAt: string;
+  /**
+   * When the recovery plan STARTS — i.e. now. The 1/3/7/14/30-day cadence is
+   * measured from here, never from the original estimate date. Defaults to
+   * the current instant; tests inject a frozen clock. Quote age / Days Quiet
+   * is a separate concept driven by quote_sent_at and is unaffected.
+   */
+  scheduleStartAt?: string;
   context: RecoveryWriteContext;
 }): Promise<PersistRecoveryPlanResult> {
-  const { serviceClient, userId, quoteId, channel, quoteSentAt, context } =
-    params;
+  const { serviceClient, userId, quoteId, channel, context } = params;
+  const startMs = params.scheduleStartAt
+    ? Date.parse(params.scheduleStartAt)
+    : Date.now();
 
   const plan = await generateRecoveryPlan(context);
 
@@ -127,7 +159,7 @@ export async function persistRecoveryPlan(params: {
     message_text: m.message,
     framework_used: m.framework,
     cta_type: m.cta_type,
-    send_at: sendAtFromBase(quoteSentAt, CADENCE_DAYS[m.followup_number]),
+    send_at: scheduleSendAt(startMs, CADENCE_DAYS[m.followup_number]),
   }));
 
   const { error } = await serviceClient.from("reminders").insert(rows);
