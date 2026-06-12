@@ -18,6 +18,7 @@ import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 
 import {
+  canManualSendToday,
   computeNextMove,
   nextMoveInstruction,
   nextMoveSummaryLabel,
@@ -189,16 +190,40 @@ describe("computeNextMove — one answer for the whole page", () => {
 describe("next-move wording contract", () => {
   const base = importedPlan();
 
-  it("email-queued: 'queued for <date>… Nothing to send by hand' — never 'send today'", () => {
+  it("email-queued: keeps the future date AND offers the manual override — never claims the system sends today", () => {
     const plan = base.map((r) => (r.followup_number <= 2 ? { ...r, sent: true } : r));
     const move = computeNextMove({ status: "running", reminders: plan, hasEmail: true, hasReply: false, now: NOW });
+    expect(move.kind).toBe("email-queued");
+    if (move.kind === "none") throw new Error("unreachable");
+    // dueNow stays false — the automatic schedule is NOT today.
+    expect(move.dueNow).toBe(false);
     const line = nextMoveInstruction(move)!;
     expect(line).toMatch(/^Follow-up 3 is queued for /);
-    expect(line).toContain("Nothing to send by hand");
-    expect(line.toLowerCase()).not.toContain("send it today");
+    expect(line).toContain("Want to move now? Send it today.");
+    // No contradiction: it never says the system already sends today, and the
+    // old "nothing to send by hand" copy is gone now that a manual override
+    // is offered.
+    expect(line).not.toContain("Nothing to send by hand");
+    // The summary cell stays accurate about the AUTOMATIC date (not "today").
     const label = nextMoveSummaryLabel(move)!;
     expect(label).toMatch(/^Follow-up 3 queued — sends /);
     expect(label.toLowerCase()).not.toContain("today");
+  });
+
+  it("canManualSendToday is true for the next actionable EMAIL reminder whether due or queued, false otherwise", () => {
+    const dueMove = computeNextMove({ status: "running", reminders: base, hasEmail: true, hasReply: false, now: NOW });
+    expect(canManualSendToday(dueMove)).toBe(true); // email-due
+
+    const queuedPlan = base.map((r) => (r.followup_number <= 2 ? { ...r, sent: true } : r));
+    const queuedMove = computeNextMove({ status: "running", reminders: queuedPlan, hasEmail: true, hasReply: false, now: NOW });
+    expect(queuedMove.kind).toBe("email-queued");
+    expect(canManualSendToday(queuedMove)).toBe(true); // queued email still hand-sendable
+
+    const copyMove = computeNextMove({ status: "running", reminders: importedPlan("sms"), hasEmail: false, hasReply: false, now: NOW });
+    expect(canManualSendToday(copyMove)).toBe(false); // manual-ready (copy mode)
+
+    const noneMove = computeNextMove({ status: "won", reminders: base, hasEmail: true, hasReply: false, now: NOW });
+    expect(canManualSendToday(noneMove)).toBe(false); // no actionable move
   });
 
   it("email-due: offers both paths — let it send, or send today to move now", () => {
@@ -234,10 +259,15 @@ describe("send-button safety on the quote detail page", () => {
     expect(detailPage).toMatch(/\{showSendToday \?\s*\(?\s*<SendEarlyButton/);
   });
 
-  it("a future-dated email step never shows the send button (only email-due does)", () => {
+  it("the next actionable email step shows the manual send button whether due OR future-queued", () => {
+    // Manual-override eligibility is separated from the automatic due state:
+    // the gate uses canManualSendToday(move), which is true for both
+    // email-due and email-queued — so an old quiet quote can be sent by hand
+    // now even though its automatic send_at is a future window.
     expect(detailPage).toMatch(
-      /messageType === "email" \? move\.kind === "email-due" : true/,
+      /messageType === "email" \? canManualSendToday\(move\) : true/,
     );
+    expect(detailPage).not.toMatch(/messageType === "email" \? move\.kind === "email-due" : true/);
   });
 
   it("sent and queued-behind cards keep Copy but carry no send button", () => {

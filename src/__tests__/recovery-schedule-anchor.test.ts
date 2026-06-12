@@ -31,7 +31,12 @@ import {
   formatScheduleDateTime,
   DEFAULT_TIMEZONE,
 } from "@/lib/quotes/business-hours";
-import { computeNextMove } from "@/lib/quotes/next-move";
+import {
+  canManualSendToday,
+  computeNextMove,
+  nextMoveInstruction,
+  type NextMove,
+} from "@/lib/quotes/next-move";
 import type { ReminderRow } from "@/lib/quotes/repo";
 
 // Frozen "today" for the whole bug scenario: June 12, 2026, 14:00 UTC.
@@ -257,6 +262,224 @@ describe("UI never claims 'sends today' beside a past scheduled date", () => {
       .sort((a, b) => Date.parse(a.send_at) - Date.parse(b.send_at))[0];
     expect(Date.parse(soonest.send_at)).toBeGreaterThan(NOW_MS);
     expect(formatScheduleDateTime(soonest.send_at)).not.toMatch(/May/);
+  });
+});
+
+// ───────────────────────────────────────────────────────────────────────
+// Manual "Send today" override — the commercial command for old quiet quotes.
+// Automatic schedule stays future; the contractor can still send by hand now.
+// ───────────────────────────────────────────────────────────────────────
+
+/**
+ * Replicates the quote-detail page's per-card showSendToday gate so the test
+ * proves the exact rule the page renders: the next actionable email reminder
+ * gets the button (due OR queued), every other card does not.
+ */
+function showSendTodayFor(
+  reminder: ReminderRow,
+  move: NextMove,
+  opts: { hasEmail: boolean; hasPhone: boolean; status: string },
+): boolean {
+  const messageType: "email" | "sms" =
+    reminder.message_type === "email" ? "email" : "sms";
+  const hasRecipientForChannel =
+    messageType === "email" ? opts.hasEmail : opts.hasPhone;
+  const sendEarlyDisabled =
+    reminder.sent ||
+    reminder.paused_at !== null ||
+    opts.status !== "running" ||
+    !hasRecipientForChannel;
+  const isNextActionable = move.kind !== "none" && move.reminderId === reminder.id;
+  return (
+    isNextActionable &&
+    !sendEarlyDisabled &&
+    (messageType === "email" ? canManualSendToday(move) : true)
+  );
+}
+
+describe("manual Send today override for an old quiet quote (June 12, sent May 15)", () => {
+  async function emailReminders(): Promise<ReminderRow[]> {
+    const { rows } = await writeOldQuotePlan();
+    return rows.map((r) => ({
+      id: `r-${r.followup_number}`,
+      quote_id: "q-old-1",
+      user_id: "u-1",
+      followup_number: r.followup_number as number,
+      message_type: "email",
+      message_text: String(r.message_text ?? ""),
+      framework_used: String(r.framework_used ?? ""),
+      cta_type: String(r.cta_type ?? ""),
+      send_at: String(r.send_at),
+      sent: false,
+      sent_at: null,
+      paused_at: null,
+      claimed_by: null,
+      claimed_at: null,
+      created_at: NOW_ISO,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    })) as any;
+  }
+
+  it("the next unsent email reminder shows Send today even though its send_at is a FUTURE window", async () => {
+    const reminders = await emailReminders();
+    const move = computeNextMove({
+      status: "running",
+      reminders,
+      hasEmail: true,
+      hasReply: false,
+      now: NOW_MS,
+    });
+    expect(move.kind).toBe("email-queued");
+    if (move.kind === "none") throw new Error("unreachable");
+    // Automatic state is NOT today...
+    expect(move.dueNow).toBe(false);
+    expect(Date.parse(reminders[0].send_at)).toBeGreaterThan(NOW_MS);
+    // ...but the manual override is available on Follow-up 1.
+    const fu1 = reminders.find((r) => r.followup_number === 1)!;
+    expect(showSendTodayFor(fu1, move, { hasEmail: true, hasPhone: false, status: "running" })).toBe(true);
+  });
+
+  it("the UI copy offers the override without claiming the system sends today / is due now", async () => {
+    const reminders = await emailReminders();
+    const move = computeNextMove({
+      status: "running",
+      reminders,
+      hasEmail: true,
+      hasReply: false,
+      now: NOW_MS,
+    });
+    const line = nextMoveInstruction(move)!;
+    expect(line).toContain("queued for");
+    expect(line).toContain("Want to move now? Send it today.");
+    expect(line).not.toMatch(/Due now/i);
+    expect(line).not.toMatch(/sends today/i);
+    expect(line).not.toContain("Nothing to send by hand");
+  });
+
+  it("Follow-ups 2–5 do NOT show Send today while Follow-up 1 is unsent", async () => {
+    const reminders = await emailReminders();
+    const move = computeNextMove({
+      status: "running",
+      reminders,
+      hasEmail: true,
+      hasReply: false,
+      now: NOW_MS,
+    });
+    for (const fu of [2, 3, 4, 5]) {
+      const r = reminders.find((x) => x.followup_number === fu)!;
+      expect(showSendTodayFor(r, move, { hasEmail: true, hasPhone: false, status: "running" })).toBe(false);
+    }
+  });
+
+  it("once Follow-up 1 is sent, the override moves to Follow-up 2 (one at a time)", async () => {
+    const reminders = await emailReminders();
+    const afterFu1 = reminders.map((r) =>
+      r.followup_number === 1
+        ? { ...r, sent: true, sent_at: NOW_ISO }
+        : r,
+    );
+    const move = computeNextMove({
+      status: "running",
+      reminders: afterFu1,
+      hasEmail: true,
+      hasReply: false,
+      now: NOW_MS,
+    });
+    if (move.kind === "none") throw new Error("expected a move");
+    expect(move.followupNumber).toBe(2);
+    const fu2 = afterFu1.find((r) => r.followup_number === 2)!;
+    const fu3 = afterFu1.find((r) => r.followup_number === 3)!;
+    expect(showSendTodayFor(fu2, move, { hasEmail: true, hasPhone: false, status: "running" })).toBe(true);
+    expect(showSendTodayFor(fu3, move, { hasEmail: true, hasPhone: false, status: "running" })).toBe(false);
+  });
+
+  it("no-email / copy-mode quotes do NOT show an email Send today (stay copy/manual)", async () => {
+    // A no-email import is written as message_type "sms" (copy mode). With no
+    // phone either, the next move is manual-ready and the email send button is
+    // not eligible — canManualSendToday is false for copy mode.
+    const { rows } = await writeOldQuotePlan();
+    const smsReminders = rows.map((r) => ({
+      id: `r-${r.followup_number}`,
+      quote_id: "q-old-1",
+      user_id: "u-1",
+      followup_number: r.followup_number as number,
+      message_type: "sms",
+      message_text: String(r.message_text ?? ""),
+      framework_used: String(r.framework_used ?? ""),
+      cta_type: String(r.cta_type ?? ""),
+      send_at: String(r.send_at),
+      sent: false,
+      sent_at: null,
+      paused_at: null,
+      claimed_by: null,
+      claimed_at: null,
+      created_at: NOW_ISO,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    })) as any as ReminderRow[];
+    const move = computeNextMove({
+      status: "running",
+      reminders: smsReminders,
+      hasEmail: false,
+      hasReply: false,
+      now: NOW_MS,
+    });
+    expect(move.kind).toBe("manual-ready");
+    expect(canManualSendToday(move)).toBe(false);
+    const fu1 = smsReminders.find((r) => r.followup_number === 1)!;
+    // No email and no phone → the email Send today never renders.
+    expect(showSendTodayFor(fu1, move, { hasEmail: false, hasPhone: false, status: "running" })).toBe(false);
+  });
+
+  it("won/closed/paused quotes show no Send today at all", async () => {
+    const reminders = await emailReminders();
+    for (const status of ["won", "closed", "paused"] as const) {
+      const move = computeNextMove({
+        status,
+        reminders,
+        hasEmail: true,
+        hasReply: false,
+        now: NOW_MS,
+      });
+      expect(move.kind).toBe("none");
+      const fu1 = reminders.find((r) => r.followup_number === 1)!;
+      expect(showSendTodayFor(fu1, move, { hasEmail: true, hasPhone: false, status })).toBe(false);
+    }
+  });
+});
+
+// ───────────────────────────────────────────────────────────────────────
+// Server action keeps the same eligibility rules (no send_at gate, in-order)
+// ───────────────────────────────────────────────────────────────────────
+
+describe("server send action validates manual override the same way the UI gates it", () => {
+  const actionsSrc = readFileSync(
+    join(process.cwd(), "src/lib/quotes/actions.ts"),
+    "utf8",
+  );
+  // Slice the full sendReminderManualEmailAction body (start → next export).
+  const emailFnStart = actionsSrc.indexOf(
+    "export async function sendReminderManualEmailAction",
+  );
+  const nextExport = actionsSrc.indexOf("\nexport ", emailFnStart + 10);
+  const emailFn = actionsSrc.slice(
+    emailFnStart,
+    nextExport > emailFnStart ? nextExport : actionsSrc.length,
+  );
+
+  it("sendReminderManualEmailAction has NO send_at/due gate — a future-queued reminder is hand-sendable", () => {
+    // The action must never refuse to send a reminder just because its
+    // automatic send_at is in the future — that would break the manual
+    // override. It gates on sent/paused/outcome/opt-out/order only.
+    expect(emailFn).not.toMatch(/\.send_at\b/);
+    expect(emailFn).not.toMatch(/\bdue\b/i);
+  });
+
+  it("it still enforces sent/paused/outcome/opt-out and the out-of-order guard", () => {
+    expect(emailFn).toMatch(/if \(reminder\.sent\) return/);
+    expect(emailFn).toMatch(/if \(reminder\.paused_at\) return/);
+    expect(emailFn).toMatch(/quote\.outcome !== "pending"/);
+    expect(emailFn).toMatch(/quote\.client_opted_out/);
+    expect(emailFn).toMatch(/rejectOutOfOrderSend\(/);
   });
 });
 

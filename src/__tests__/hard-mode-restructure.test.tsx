@@ -261,9 +261,14 @@ describe("quote detail NEXT MOVE banner (unified next-move source of truth)", ()
     expect(quoteDetail).toMatch(/move\.kind !== "none" \?/);
   });
 
-  it("queued email mode: nothing to send by hand, never 'send today'", () => {
-    expect(quoteDetail).toMatch(/is queued for/);
-    expect(quoteDetail).toMatch(/Nothing to send by hand — step in when they reply\./);
+  it("queued email mode: offers the manual override without claiming the system sends today", () => {
+    // After the schedule-anchor fix, an old quote's first touch is future-
+    // queued. The banner keeps the accurate future date AND offers the manual
+    // "Send it today" override — it never claims the automatic schedule is today.
+    expect(quoteDetail).toMatch(/is queued for the next send\s+window/);
+    expect(quoteDetail).toMatch(/Want to move now\? Send it today\./);
+    // The contradictory old "nothing to send by hand" copy is gone.
+    expect(quoteDetail).not.toMatch(/Nothing to send by hand/);
   });
 
   it("due email mode: let it send, or send it today to move now", () => {

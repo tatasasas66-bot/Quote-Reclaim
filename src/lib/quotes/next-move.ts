@@ -16,8 +16,9 @@ import { formatScheduleDateTime } from "@/lib/quotes/business-hours";
  *     one message at a time even when several are overdue.
  *   - A customer reply suspends the sequence (kind: "none") — the next move
  *     is handling the reply, not firing another follow-up.
- *   - "email-queued"  → future-dated email. The system sends it; there is
- *     nothing to do by hand and no send button should render.
+ *   - "email-queued"  → future-dated email. The system will send it on the
+ *     next window; nothing is overdue. The contractor MAY still take command
+ *     and send it by hand now (manual override) — canManualSendToday is true.
  *   - "email-due"     → due/overdue email. The cron will send it; the
  *     contractor MAY send it now if they want to move first.
  *   - "manual-ready"  → copy mode (no email on the reminder's channel).
@@ -71,6 +72,25 @@ export function computeNextMove(args: {
 }
 
 /**
+ * Manual "Send today" eligibility — SEPARATE from the automatic due state.
+ *
+ * The next actionable EMAIL reminder can always be sent by hand: whether its
+ * automatic send_at is already due (email-due) or still in a future window
+ * (email-queued). This is the manual override the contractor uses to take
+ * command of an old quiet quote immediately. It sends ONLY that one reminder
+ * and never changes the rest of the schedule.
+ *
+ * Crucially, true for email-queued does NOT mean the automatic schedule is
+ * today — `move.dueNow` stays false and the UI keeps saying "queued for
+ * {future date}". Copy-mode (manual-ready, no email) and the no-actionable
+ * state (none) are not email-send-eligible; copy mode keeps its own
+ * Copy/manual affordance.
+ */
+export function canManualSendToday(move: NextMove): boolean {
+  return move.kind === "email-due" || move.kind === "email-queued";
+}
+
+/**
  * Short label for the Next Best Action cell in the quote summary grid.
  * Null when there is no actionable move (caller falls back to the
  * band-based label or "Review plan").
@@ -91,7 +111,10 @@ export function nextMoveSummaryLabel(move: NextMove): string | null {
 /**
  * Full one-sentence instruction for the NEXT MOVE banner and the Quiet
  * Signal "Best next move" panel. Wording contract:
- *   - never says "send today" for a future-dated email
+ *   - never claims the AUTOMATIC schedule is today when send_at is future
+ *     (queued copy keeps the future date and frames "Send it today" as a
+ *     manual choice — "Want to move now?")
+ *   - never says "Due now" unless the reminder is actually due
  *   - never says "nothing to send by hand" in copy mode
  *   - never implies automatic email when no email exists
  */
@@ -100,7 +123,7 @@ export function nextMoveInstruction(move: NextMove): string | null {
     case "none":
       return null;
     case "email-queued":
-      return `Follow-up ${move.followupNumber} is queued for ${move.sendAtLabel}. Nothing to send by hand — step in when they reply.`;
+      return `Follow-up ${move.followupNumber} is queued for ${move.sendAtLabel}. Want to move now? Send it today.`;
     case "email-due":
       return `Follow-up ${move.followupNumber} is due now and queued for email. You can let it send, or send it today if you want to move now.`;
     case "manual-ready":

@@ -22,6 +22,7 @@ import { suggestResponse } from "@/lib/ai/suggest-response";
 import { requireUser } from "@/lib/auth/require-user";
 import { nextBestAction } from "@/lib/quotes/next-best-action";
 import {
+  canManualSendToday,
   computeNextMove,
   nextMoveInstruction,
   nextMoveSummaryLabel,
@@ -503,13 +504,22 @@ function RecoveryPlanSection({
             Next move
           </span>
           {move.kind === "email-queued" ? (
-            <p className="min-w-0 flex-1 text-sm leading-6 text-ink">
-              Follow-up {move.followupNumber} is queued for{" "}
-              <span className="font-bold text-ink-strong">
-                {move.sendAtLabel}
-              </span>
-              . Nothing to send by hand — step in when they reply.
-            </p>
+            <>
+              <p className="min-w-0 flex-1 text-sm leading-6 text-ink">
+                Follow-up {move.followupNumber} is queued for the next send
+                window —{" "}
+                <span className="font-bold text-ink-strong">
+                  {move.sendAtLabel}
+                </span>
+                . Want to move now? Send it today.
+              </p>
+              <a
+                href={`#followup-${move.followupNumber}`}
+                className="whitespace-nowrap rounded text-sm font-bold text-brand hover:text-ink-strong focus:outline-none focus-visible:ring-2 focus-visible:ring-focus"
+              >
+                Jump to the message →
+              </a>
+            </>
           ) : null}
           {move.kind === "email-due" ? (
             <>
@@ -623,15 +633,20 @@ function ReminderCard({
   // SEND SAFETY: exactly one card — the unified next actionable follow-up —
   // may carry the send button. Sent cards render "Sent"; future and
   // queued-behind cards render their schedule state with Copy only, so a
-  // contractor can never fire all five follow-ups in one sitting. For an
-  // email reminder the button additionally waits until the message is due:
-  // a future-dated email sends itself, and "Send today" on it would be a
-  // lie about who acts next.
+  // contractor can never fire all five follow-ups in one sitting.
+  //
+  // MANUAL OVERRIDE: for an email reminder the button shows for BOTH the
+  // due-now case AND the future-queued case (canManualSendToday) — an old
+  // quiet quote schedules its first touch in a future window, but the
+  // contractor can still take command and send it by hand now. This is a
+  // manual command that sends ONLY this reminder; it does not change the
+  // automatic schedule, and the scheduled line below still shows the real
+  // (future) send_at, so nothing claims the system already sends today.
   const isNextActionable = move.kind !== "none" && move.reminderId === r.id;
   const showSendToday =
     isNextActionable &&
     !sendEarlyDisabled &&
-    (messageType === "email" ? move.kind === "email-due" : true);
+    (messageType === "email" ? canManualSendToday(move) : true);
 
   return (
     <li
