@@ -13,6 +13,18 @@ import {
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
+/**
+ * Mask a homeowner email for log lines. We log a SHA-1-derived 8-char prefix
+ * for cross-event correlation plus the domain (helps spot misconfiguration),
+ * but never the local part. Matches maskPhone's policy in lib/messaging/phone.
+ */
+function maskEmail(email: string): string {
+  const at = email.indexOf("@");
+  const domain = at >= 0 ? email.slice(at) : "";
+  const hash = createHash("sha1").update(email.toLowerCase()).digest("hex");
+  return `[em:${hash.slice(0, 8)}${domain}]`;
+}
+
 function ack(): NextResponse {
   // Inbound webhooks must ALWAYS 200-ack on shapes we choose to ignore —
   // returning anything else makes the provider retry indefinitely.
@@ -121,7 +133,9 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     (q) => !q.client_opted_out && q.outcome !== "won",
   );
   if (open.length === 0) {
-    console.log(`[email:inbound] no match from=${fromEmail} msgid=${messageId}`);
+    console.log(
+      `[email:inbound] no match from=${maskEmail(fromEmail)} msgid=${messageId}`,
+    );
     return ack();
   }
 

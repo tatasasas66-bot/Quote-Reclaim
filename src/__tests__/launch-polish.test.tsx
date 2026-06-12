@@ -24,6 +24,7 @@ import { roiFraming, roiPieces } from "@/lib/utils/roi-framing";
 import { tradeLabel, tradeLocationLine } from "@/lib/quotes/quote-display";
 import { priorityBarFill, recoveryPriority } from "@/lib/quotes/recovery-score";
 import { ActivityFeedView } from "@/components/dashboard/ActivityFeedView";
+import { PaidForItselfMeter } from "@/components/dashboard/PaidForItselfMeter";
 import type { ActivityEvent } from "@/lib/intelligence/list-recent-events";
 
 function readSource(rel: string): string {
@@ -97,6 +98,37 @@ describe("FIX 2 — ROI equation lives in exactly two places product-wide", () =
     expect(meterSrc).toContain("Straight math from your own queue");
     expect(meterSrc).toContain("No promises");
     expect(meterSrc).toContain("size of the opportunity");
+  });
+
+  it("Price Check headline uses the short emphasized phrase and wraps inside the card", () => {
+    // Headline: "If this one comes back, that's 12x a full year." — the long
+    // "covers 12x a full year of Quote Reclaim" headline could push outside
+    // the card. The emphasized span must NOT be nowrap; the card is min-w-0
+    // and both paragraphs break-words so nothing escapes at 125% zoom.
+    expect(meterSrc).toContain("that&apos;s");
+    expect(meterSrc).not.toMatch(/that covers/);
+    expect(meterSrc).toMatch(/min-w-0 rounded-lg border border-money\/30/);
+    expect(meterSrc).toMatch(/break-words text-2xl/);
+    expect(meterSrc).not.toMatch(/whitespace-nowrap text-money/);
+  });
+
+  it("Price Check $12,000: headline says \"that's 12x a full year\", body carries the full phrase once", () => {
+    const { container } = render(
+      React.createElement(PaidForItselfMeter, {
+        biggestQuoteName: "david harris",
+        biggestQuoteAmount: 12_000,
+        queueTotal: 31_000,
+        pendingCount: 4,
+      }),
+    );
+    const text = container.textContent ?? "";
+    expect(text).toContain("If this one comes back, that's 12x a full year.");
+    expect(text).toContain("If it comes back, that's 12x a full year of Quote Reclaim.");
+    expect(text).not.toContain("covers 12x a full year");
+    expect(text).not.toMatch(/151 months|\d{3,} months/);
+    // Disclaimer preserved exactly.
+    expect(text).toContain("Straight math from your own queue: $12,000 ÷ $79/month.");
+    expect(text).toContain("No promises — just the size of the opportunity.");
   });
 
   it("WinMomentOverlay imports roiPieces and switches phrasing above 24 months", () => {

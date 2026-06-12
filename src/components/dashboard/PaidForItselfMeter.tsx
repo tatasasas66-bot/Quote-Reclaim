@@ -2,7 +2,7 @@ import {
   MONTHLY_PRICE_USD,
   PAYWALL_PRICE_LABEL,
 } from "@/lib/payments/entitlement";
-import { roiFraming } from "@/lib/utils/roi-framing";
+import { roiFraming, roiPieces } from "@/lib/utils/roi-framing";
 import { formatCurrency } from "@/lib/utils/currency";
 import { titleCaseName } from "@/lib/utils/title-case";
 
@@ -45,13 +45,22 @@ export function PaidForItselfMeter({
   // Above 24 months the raw months number (e.g. twelve-thousand covering
   // one-hundred-fifty-one months) reads as comedic and argues against monthly
   // renewal. roiFraming flips to "Nx a full year of Quote Reclaim" past the
-  // 24-month line so the punch line stays believable.
+  // 24-month line so the punch line stays believable. The headline uses the
+  // SHORT form ("12x a full year") so the emphasized phrase always fits the
+  // card; the body carries the full "of Quote Reclaim" phrase once.
   const roiPhrase = roiFraming(biggestQuoteAmount);
+  const roi = roiPieces(biggestQuoteAmount);
+  const roiShort =
+    roi.kind === "years"
+      ? `${roi.yearMultiple}x a full year`
+      : roi.kind === "months"
+        ? `${roi.months} months`
+        : "less than 1 month";
 
   return (
     <section
       aria-labelledby="paid-for-itself-heading"
-      className="rounded-lg border border-money/30 bg-surface-1 p-5 shadow-[0_16px_46px_rgba(0,0,0,0.2)]"
+      className="min-w-0 rounded-lg border border-money/30 bg-surface-1 p-5 shadow-[0_16px_46px_rgba(0,0,0,0.2)]"
     >
       <p
         id="paid-for-itself-heading"
@@ -59,17 +68,17 @@ export function PaidForItselfMeter({
       >
         Price check
       </p>
-      <p className="mt-3 text-2xl font-black leading-tight text-ink-strong">
-        If this one comes back, that covers{" "}
-        <span className="whitespace-nowrap text-money">{roiPhrase}</span>.
+      <p className="mt-3 break-words text-2xl font-black leading-tight text-ink-strong">
+        If this one comes back, that&apos;s{" "}
+        <span className="text-money">{roiShort}</span>.
       </p>
-      <p className="mt-2 text-sm leading-6 text-ink">
+      <p className="mt-2 break-words text-sm leading-6 text-ink">
         Your biggest quiet quote is{" "}
         <span className="font-bold text-ink-strong">{displayName}</span>,{" "}
         <span className="whitespace-nowrap font-bold text-ink-strong tabular-nums">
           {formatCurrency(biggestQuoteAmount)}
         </span>
-        . If it comes back, that alone covers {roiPhrase}.{" "}
+        . If it comes back, that&apos;s {roiPhrase}.{" "}
         <span className="whitespace-nowrap tabular-nums">
           {formatCurrency(queueTotal)}
         </span>{" "}

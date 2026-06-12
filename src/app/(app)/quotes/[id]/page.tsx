@@ -124,12 +124,17 @@ export default async function QuoteDetailPage({
   // to "Paused - customer replied" without flagging the sequence as ended.
   // We also pull the open/click counters in the same query so Quiet Signal
   // can compute a stall reason without a second round-trip.
-  // Reads via service client to bypass RLS on outbound_messages.
+  // Reads via service client to bypass RLS on outbound_messages. The quote is
+  // already proven to belong to this user (getQuoteById scoped by user.id
+  // above), but we still scope this read by user_id for defense in depth —
+  // the recovery_events read below does the same, and a service-client query
+  // should never rely on a single id being un-guessable.
   const serviceClient = createServiceSupabaseClient();
   const { data: outboundRows } = await serviceClient
     .from("outbound_messages")
     .select("id, status, open_count, click_count")
-    .eq("quote_id", quote.id);
+    .eq("quote_id", quote.id)
+    .eq("user_id", user.id);
   const outbound = outboundRows ?? [];
   const hasReplyForQuote = outbound.some((r) => r.status === "replied");
   const totalOpenCount = outbound.reduce(

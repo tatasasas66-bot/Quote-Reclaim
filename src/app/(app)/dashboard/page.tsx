@@ -24,6 +24,7 @@ import { effectiveDaysSilent } from "@/lib/recovery/effective-days";
 import { tradeLabel } from "@/lib/quotes/quote-display";
 import { getRecoveryScore } from "@/lib/quotes/recovery-score";
 import { FREE_PLAN_LIMIT } from "@/lib/payments/entitlement";
+import { formatCurrency } from "@/lib/utils/currency";
 
 export const metadata: Metadata = { title: "Dashboard – Quote Reclaim" };
 export const dynamic = "force-dynamic";
@@ -62,11 +63,7 @@ export default async function DashboardPage() {
     (sum, q) => sum + Number(q.estimate_amount ?? 0),
     0,
   );
-  const stillBleedingValue = stillBleeding.toLocaleString("en-US", {
-    style: "currency",
-    currency: "USD",
-    maximumFractionDigits: 0,
-  });
+  const stillBleedingValue = formatCurrency(stillBleeding);
 
   const monthWon = wonQuotes.filter(
     (q) => Date.parse(q.won_at) >= monthStartMs,
@@ -250,11 +247,7 @@ export default async function DashboardPage() {
                   Jobs won back
                 </p>
                 <p className="mt-1 whitespace-nowrap text-xl font-black tabular-nums text-success">
-                  {wonTotal.toLocaleString("en-US", {
-                    style: "currency",
-                    currency: "USD",
-                    maximumFractionDigits: 0,
-                  })}
+                  {formatCurrency(wonTotal)}
                 </p>
               </div>
               <span className="whitespace-nowrap text-sm font-bold text-ink-muted group-hover:text-ink-strong">

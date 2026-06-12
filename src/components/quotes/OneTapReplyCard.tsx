@@ -201,10 +201,15 @@ function Panel({
       >
         {eyebrow}
       </p>
-      <p
-        className="mt-1 text-base font-bold leading-7 text-ink-strong"
-        dangerouslySetInnerHTML={{ __html: title }}
-      />
+      {/* Plain text content, never raw HTML. `title` can include a
+          homeowner-submitted question (one_tap_replies.question_text), so
+          rendering it via dangerouslySetInnerHTML was a stored-XSS vector —
+          a reply of "<img src=x onerror=...>" would execute in the
+          contractor's authenticated session. React escapes text children, so
+          the apostrophes/quotes in the hardcoded titles still render fine. */}
+      <p className="mt-1 break-words text-base font-bold leading-7 text-ink-strong">
+        {title}
+      </p>
       <p className="mt-2 text-xs leading-5 text-ink-muted">
         <span className="font-bold text-ink">Recommended next move:</span> {move}
       </p>
