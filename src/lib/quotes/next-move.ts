@@ -17,8 +17,11 @@ import { formatScheduleDateTime } from "@/lib/quotes/business-hours";
  *   - A customer reply suspends the sequence (kind: "none") — the next move
  *     is handling the reply, not firing another follow-up.
  *   - "email-queued"  → future-dated email. The system will send it on the
- *     next window; nothing is overdue. The contractor MAY still take command
- *     and send it by hand now (manual override) — canManualSendToday is true.
+ *     next window; nothing is overdue. The contractor may take command and
+ *     send it by hand now ONLY when it is the very first recovery touch
+ *     (nothing sent yet for this quote) — that is the `canSendEarly` flag.
+ *     Once any recovery email has gone out, a future-queued follow-up waits
+ *     for its window (no rapid-fire).
  *   - "email-due"     → due/overdue email. The cron will send it; the
  *     contractor MAY send it now if they want to move first.
  *   - "manual-ready"  → copy mode (no email on the reminder's channel).
@@ -33,6 +36,17 @@ export type NextMove =
       followupNumber: number;
       sendAtLabel: string;
       dueNow: boolean;
+      /**
+       * True when the next actionable EMAIL reminder may be sent by hand right
+       * now. Two cases only:
+       *   - it is genuinely due (dueNow), OR
+       *   - it is the FIRST recovery touch with nothing sent yet for the quote
+       *     (the "take command of an old quiet quote" override).
+       * After any recovery email has been sent, a future-queued follow-up is
+       * NOT early-sendable — it waits for its window, preventing rapid-fire
+       * back-to-back sends. Always false for copy mode / no actionable move.
+       */
+      canSendEarly: boolean;
     };
 
 export function computeNextMove(args: {
@@ -61,6 +75,11 @@ export function computeNextMove(args: {
 
   const dueNow = Date.parse(next.send_at) <= (args.now ?? Date.now());
   const emailMode = next.message_type === "email" && args.hasEmail;
+  // Has ANY recovery email already gone out for this quote? The first-touch
+  // manual override is only available before that. After the first send, a
+  // future-queued follow-up must wait for its window — no rapid-fire.
+  const anySent = args.reminders.some((r) => r.sent);
+  const canSendEarly = emailMode && (dueNow || !anySent);
 
   return {
     kind: emailMode ? (dueNow ? "email-due" : "email-queued") : "manual-ready",
@@ -68,26 +87,26 @@ export function computeNextMove(args: {
     followupNumber: next.followup_number,
     sendAtLabel: formatScheduleDateTime(next.send_at),
     dueNow,
+    canSendEarly,
   };
 }
 
 /**
  * Manual "Send today" eligibility — SEPARATE from the automatic due state.
  *
- * The next actionable EMAIL reminder can always be sent by hand: whether its
- * automatic send_at is already due (email-due) or still in a future window
- * (email-queued). This is the manual override the contractor uses to take
- * command of an old quiet quote immediately. It sends ONLY that one reminder
- * and never changes the rest of the schedule.
- *
- * Crucially, true for email-queued does NOT mean the automatic schedule is
- * today — `move.dueNow` stays false and the UI keeps saying "queued for
- * {future date}". Copy-mode (manual-ready, no email) and the no-actionable
- * state (none) are not email-send-eligible; copy mode keeps its own
- * Copy/manual affordance.
+ * True only when the move is the next actionable EMAIL reminder AND
+ * `canSendEarly` holds: either it is genuinely due, or it is the first
+ * recovery touch with nothing sent yet. After the first recovery email goes
+ * out, a future-queued follow-up returns false here, so the UI shows Copy
+ * only until that follow-up's send window actually arrives — this is what
+ * stops rapid-fire back-to-back sends. Copy-mode (manual-ready) and the
+ * no-actionable state (none) are never email-send-eligible.
  */
 export function canManualSendToday(move: NextMove): boolean {
-  return move.kind === "email-due" || move.kind === "email-queued";
+  return (
+    (move.kind === "email-due" || move.kind === "email-queued") &&
+    move.canSendEarly
+  );
 }
 
 /**
@@ -123,7 +142,12 @@ export function nextMoveInstruction(move: NextMove): string | null {
     case "none":
       return null;
     case "email-queued":
-      return `Follow-up ${move.followupNumber} is queued for ${move.sendAtLabel}. Want to move now? Send it today.`;
+      // First-touch override available → invite the manual send. Otherwise
+      // (a follow-up queued after an earlier send) just state the window — no
+      // "Want to move now?" so the contractor isn't nudged into rapid-fire.
+      return move.canSendEarly
+        ? `Follow-up ${move.followupNumber} is queued for ${move.sendAtLabel}. Want to move now? Send it today.`
+        : `Follow-up ${move.followupNumber} is queued for the next send window — ${move.sendAtLabel}.`;
     case "email-due":
       return `Follow-up ${move.followupNumber} is due now and queued for email. You can let it send, or send it today if you want to move now.`;
     case "manual-ready":

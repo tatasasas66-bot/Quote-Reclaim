@@ -1,6 +1,5 @@
 import { Resend } from "resend";
-
-const FROM_EMAIL = "Quote Reclaim <hello@quotereclaim.com>";
+import { DEFAULT_FROM } from "./sender-identity";
 
 export type EmailResult =
   | { ok: true; providerMessageId: string }
@@ -10,6 +9,14 @@ export type SendEmailParams = {
   to: string;
   subject: string;
   body: string;
+  /**
+   * Full From header, e.g. `"Roy's Painting via Quote Reclaim"
+   * <hello@quotereclaim.com>`. Customer-facing recovery sends pass the
+   * contractor identity via recoveryFromHeader(); internal/system mail omits
+   * it and falls back to the plain brand From. The address is always the
+   * verified sending domain regardless — deliverability is unaffected.
+   */
+  from?: string;
 };
 
 /**
@@ -30,7 +37,7 @@ export async function sendRecoveryEmail(
   try {
     const resend = new Resend(apiKey);
     const { data, error } = await resend.emails.send({
-      from: FROM_EMAIL,
+      from: params.from ?? DEFAULT_FROM,
       to: params.to,
       subject: params.subject,
       text: params.body,

@@ -6,6 +6,7 @@ import { generateRecoveryPlan } from "@/lib/ai/generate-recovery-plan";
 import { validateMessage } from "@/lib/ai/validate-message";
 import { emitRecoveryEvent } from "@/lib/intelligence/event-emitter";
 import { sendRecoveryEmail } from "@/lib/messaging/email-provider";
+import { recoveryFromHeader } from "@/lib/messaging/sender-identity";
 import { recoveryEmailSubject } from "@/lib/messaging/select-channel";
 import { normalizePhone } from "@/lib/messaging/phone";
 import { getMessagingService } from "@/lib/messaging/service";
@@ -804,10 +805,21 @@ export async function sendReminderManualEmailAction(
     };
   }
 
+  // Customer-facing sender identity: the homeowner should see the contractor,
+  // not the SaaS brand. Derived from the contractor's account email (the same
+  // source the cron uses, so both paths show an identical From). Address stays
+  // the verified sending domain.
+  const { data: senderProfile } = await serviceClient
+    .from("profiles")
+    .select("email")
+    .eq("id", userId)
+    .maybeSingle();
+
   const emailResult = await sendRecoveryEmail({
     to: quote.client_email,
     subject: recoveryEmailSubject(quote.trade),
     body: reminder.message_text,
+    from: recoveryFromHeader({ contractorEmail: senderProfile?.email ?? null }),
   });
 
   const now = new Date().toISOString();

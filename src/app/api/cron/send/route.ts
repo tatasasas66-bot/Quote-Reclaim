@@ -3,6 +3,7 @@ import { type NextRequest, NextResponse } from "next/server";
 import { createServiceSupabaseClient } from "@/lib/supabase/service";
 import { requireCronAuth } from "@/lib/security/require-cron";
 import { sendRecoveryEmail } from "@/lib/messaging/email-provider";
+import { recoveryFromHeader } from "@/lib/messaging/sender-identity";
 import { issueOneTapLink } from "@/lib/quotes/one-tap-reply-server";
 import { recoveryEmailSubject } from "@/lib/messaging/select-channel";
 import { getMessagingService } from "@/lib/messaging/service";
@@ -187,6 +188,24 @@ async function handleSend(request: NextRequest): Promise<NextResponse> {
     }
   }
 
+  // Customer-facing sender identity per contractor. Batch-load the account
+  // email for every distinct user in this run so each homeowner email shows
+  // "{Contractor} via Quote Reclaim" — identical to the manual Send-today path
+  // (both derive from profiles.email). The address stays the verified sender.
+  const senderEmailByUser = new Map<string, string | null>();
+  const distinctUserIds = Array.from(
+    new Set(claimed.map((r) => r.user_id)),
+  );
+  if (distinctUserIds.length > 0) {
+    const { data: senderProfiles } = await supabase
+      .from("profiles")
+      .select("id, email")
+      .in("id", distinctUserIds);
+    for (const p of senderProfiles ?? []) {
+      senderEmailByUser.set(String(p.id), (p.email as string | null) ?? null);
+    }
+  }
+
   let sent = 0;
   let failed = 0;
   let skipped = 0;
@@ -238,6 +257,9 @@ async function handleSend(request: NextRequest): Promise<NextResponse> {
         to,
         subject: recoveryEmailSubject(r.trade ?? "your"),
         body: messageBodyForSend,
+        from: recoveryFromHeader({
+          contractorEmail: senderEmailByUser.get(r.user_id) ?? null,
+        }),
       });
 
       const now = new Date().toISOString();

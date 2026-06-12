@@ -190,34 +190,55 @@ describe("computeNextMove — one answer for the whole page", () => {
 describe("next-move wording contract", () => {
   const base = importedPlan();
 
-  it("email-queued: keeps the future date AND offers the manual override — never claims the system sends today", () => {
+  // An all-future plan with NOTHING sent yet — the first-touch override case.
+  function firstTouchFuturePlan(): MoveReminder[] {
+    return [
+      reminder({ id: "f1", followup_number: 1, send_at: new Date(NOW + 1 * DAY).toISOString() }),
+      reminder({ id: "f2", followup_number: 2, send_at: new Date(NOW + 3 * DAY).toISOString() }),
+      reminder({ id: "f3", followup_number: 3, send_at: new Date(NOW + 7 * DAY).toISOString() }),
+      reminder({ id: "f4", followup_number: 4, send_at: new Date(NOW + 14 * DAY).toISOString() }),
+      reminder({ id: "f5", followup_number: 5, send_at: new Date(NOW + 30 * DAY).toISOString() }),
+    ];
+  }
+
+  it("email-queued FIRST TOUCH (nothing sent): offers the manual override, never claims the system sends today", () => {
+    const move = computeNextMove({ status: "running", reminders: firstTouchFuturePlan(), hasEmail: true, hasReply: false, now: NOW });
+    expect(move.kind).toBe("email-queued");
+    if (move.kind === "none") throw new Error("unreachable");
+    expect(move.dueNow).toBe(false);
+    expect(move.canSendEarly).toBe(true);
+    const line = nextMoveInstruction(move)!;
+    expect(line).toMatch(/^Follow-up 1 is queued for /);
+    expect(line).toContain("Want to move now? Send it today.");
+  });
+
+  it("email-queued AFTER an earlier send: states the window only — NO rapid-fire override copy", () => {
+    // r1/r2 already sent; the next unsent (r3) is future-queued. The override
+    // is gone — a future follow-up after a send must wait for its window.
     const plan = base.map((r) => (r.followup_number <= 2 ? { ...r, sent: true } : r));
     const move = computeNextMove({ status: "running", reminders: plan, hasEmail: true, hasReply: false, now: NOW });
     expect(move.kind).toBe("email-queued");
     if (move.kind === "none") throw new Error("unreachable");
-    // dueNow stays false — the automatic schedule is NOT today.
     expect(move.dueNow).toBe(false);
+    expect(move.canSendEarly).toBe(false);
     const line = nextMoveInstruction(move)!;
-    expect(line).toMatch(/^Follow-up 3 is queued for /);
-    expect(line).toContain("Want to move now? Send it today.");
-    // No contradiction: it never says the system already sends today, and the
-    // old "nothing to send by hand" copy is gone now that a manual override
-    // is offered.
-    expect(line).not.toContain("Nothing to send by hand");
-    // The summary cell stays accurate about the AUTOMATIC date (not "today").
-    const label = nextMoveSummaryLabel(move)!;
-    expect(label).toMatch(/^Follow-up 3 queued — sends /);
-    expect(label.toLowerCase()).not.toContain("today");
+    expect(line).toBe("Follow-up 3 is queued for the next send window — " + move.sendAtLabel + ".");
+    expect(line).not.toContain("Want to move now");
+    expect(line).not.toContain("Send it today");
   });
 
-  it("canManualSendToday is true for the next actionable EMAIL reminder whether due or queued, false otherwise", () => {
+  it("canManualSendToday: due → true; first-touch queued → true; queued-after-send → false; copy/none → false", () => {
     const dueMove = computeNextMove({ status: "running", reminders: base, hasEmail: true, hasReply: false, now: NOW });
-    expect(canManualSendToday(dueMove)).toBe(true); // email-due
+    expect(canManualSendToday(dueMove)).toBe(true); // email-due (r1 overdue)
 
-    const queuedPlan = base.map((r) => (r.followup_number <= 2 ? { ...r, sent: true } : r));
-    const queuedMove = computeNextMove({ status: "running", reminders: queuedPlan, hasEmail: true, hasReply: false, now: NOW });
-    expect(queuedMove.kind).toBe("email-queued");
-    expect(canManualSendToday(queuedMove)).toBe(true); // queued email still hand-sendable
+    const firstTouch = computeNextMove({ status: "running", reminders: firstTouchFuturePlan(), hasEmail: true, hasReply: false, now: NOW });
+    expect(firstTouch.kind).toBe("email-queued");
+    expect(canManualSendToday(firstTouch)).toBe(true); // first touch, nothing sent
+
+    const afterSend = base.map((r) => (r.followup_number <= 2 ? { ...r, sent: true } : r));
+    const afterSendMove = computeNextMove({ status: "running", reminders: afterSend, hasEmail: true, hasReply: false, now: NOW });
+    expect(afterSendMove.kind).toBe("email-queued");
+    expect(canManualSendToday(afterSendMove)).toBe(false); // queued after a send → no rapid-fire
 
     const copyMove = computeNextMove({ status: "running", reminders: importedPlan("sms"), hasEmail: false, hasReply: false, now: NOW });
     expect(canManualSendToday(copyMove)).toBe(false); // manual-ready (copy mode)
@@ -345,8 +366,11 @@ describe("all surfaces derive from computeNextMove", () => {
     );
   });
 
-  it("the NEXT MOVE banner renders from the same move object", () => {
-    expect(detailPage).toMatch(/move\.kind === "email-queued" \?/);
+  it("the NEXT MOVE banner renders from the same move object (queued split on canSendEarly)", () => {
+    // email-queued now branches: first-touch (canSendEarly) offers the
+    // override; queued-after-send (!canSendEarly) states the window only.
+    expect(detailPage).toMatch(/move\.kind === "email-queued" && move\.canSendEarly \?/);
+    expect(detailPage).toMatch(/move\.kind === "email-queued" && !move\.canSendEarly \?/);
     expect(detailPage).toMatch(/move\.kind === "email-due" \?/);
     expect(detailPage).toMatch(/move\.kind === "manual-ready" \?/);
   });

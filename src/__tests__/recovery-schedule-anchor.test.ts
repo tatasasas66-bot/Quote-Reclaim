@@ -371,7 +371,11 @@ describe("manual Send today override for an old quiet quote (June 12, sent May 1
     }
   });
 
-  it("once Follow-up 1 is sent, the override moves to Follow-up 2 (one at a time)", async () => {
+  it("after Follow-up 1 is sent, Follow-up 2 (still future) does NOT show Send today — no rapid-fire", async () => {
+    // This is the rapid-fire bug. FU1 is the next actionable and future-queued,
+    // so it has the first-touch override. The moment FU1 is sent, FU2 becomes
+    // the next move but it is still days away (Jun 15) — the override is gone,
+    // FU2 shows Copy only and the banner states the window with no "send today".
     const reminders = await emailReminders();
     const afterFu1 = reminders.map((r) =>
       r.followup_number === 1
@@ -387,10 +391,49 @@ describe("manual Send today override for an old quiet quote (June 12, sent May 1
     });
     if (move.kind === "none") throw new Error("expected a move");
     expect(move.followupNumber).toBe(2);
+    expect(move.kind).toBe("email-queued");
+    expect(move.dueNow).toBe(false);
+    expect(move.canSendEarly).toBe(false);
+    // The banner states the window, never invites a send.
+    const line = nextMoveInstruction(move)!;
+    expect(line).toContain("queued for the next send window");
+    expect(line).not.toContain("Send it today");
+    expect(line).not.toContain("Want to move now");
+    // FU2 + FU3 show NO Send today.
     const fu2 = afterFu1.find((r) => r.followup_number === 2)!;
     const fu3 = afterFu1.find((r) => r.followup_number === 3)!;
-    expect(showSendTodayFor(fu2, move, { hasEmail: true, hasPhone: false, status: "running" })).toBe(true);
+    expect(showSendTodayFor(fu2, move, { hasEmail: true, hasPhone: false, status: "running" })).toBe(false);
     expect(showSendTodayFor(fu3, move, { hasEmail: true, hasPhone: false, status: "running" })).toBe(false);
+  });
+
+  it("Follow-up 2 CAN be sent once it is actually due by send_at <= now", async () => {
+    // Advance time to after FU2's send window (FU2 = Jun 15). Now FU2 is
+    // genuinely due — email-due — and the normal send action is allowed even
+    // though an earlier email already went out.
+    const reminders = await emailReminders();
+    const afterFu1 = reminders.map((r) =>
+      r.followup_number === 1 ? { ...r, sent: true, sent_at: NOW_ISO } : r,
+    );
+    const fu2SendAt = Date.parse(
+      afterFu1.find((r) => r.followup_number === 2)!.send_at,
+    );
+    const laterNow = fu2SendAt + 60_000; // one minute after FU2's window
+    const move = computeNextMove({
+      status: "running",
+      reminders: afterFu1,
+      hasEmail: true,
+      hasReply: false,
+      now: laterNow,
+    });
+    expect(move.followupNumber).toBe(2);
+    expect(move.kind).toBe("email-due");
+    expect(canManualSendToday(move)).toBe(true);
+    const fu2 = afterFu1.find((r) => r.followup_number === 2)!;
+    // The page gate would render the send button (status running, has email).
+    const messageType = fu2.message_type === "email" ? "email" : "sms";
+    const sendEarlyDisabled = fu2.sent || fu2.paused_at !== null;
+    const isNextActionable = move.reminderId === fu2.id;
+    expect(isNextActionable && !sendEarlyDisabled && (messageType === "email" ? canManualSendToday(move) : true)).toBe(true);
   });
 
   it("no-email / copy-mode quotes do NOT show an email Send today (stay copy/manual)", async () => {

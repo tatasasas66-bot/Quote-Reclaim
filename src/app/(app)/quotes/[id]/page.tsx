@@ -503,7 +503,7 @@ function RecoveryPlanSection({
           <span className="text-[11px] font-black uppercase tracking-widest text-brand">
             Next move
           </span>
-          {move.kind === "email-queued" ? (
+          {move.kind === "email-queued" && move.canSendEarly ? (
             <>
               <p className="min-w-0 flex-1 text-sm leading-6 text-ink">
                 Follow-up {move.followupNumber} is queued for the next send
@@ -520,6 +520,19 @@ function RecoveryPlanSection({
                 Jump to the message →
               </a>
             </>
+          ) : null}
+          {move.kind === "email-queued" && !move.canSendEarly ? (
+            // A follow-up queued AFTER an earlier send. State the window only —
+            // no "send it today" override, so the contractor can't fire the
+            // next email back-to-back. It becomes sendable when it is due.
+            <p className="min-w-0 flex-1 text-sm leading-6 text-ink">
+              Follow-up {move.followupNumber} is queued for the next send
+              window —{" "}
+              <span className="font-bold text-ink-strong">
+                {move.sendAtLabel}
+              </span>
+              .
+            </p>
           ) : null}
           {move.kind === "email-due" ? (
             <>

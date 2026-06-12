@@ -123,9 +123,15 @@ describe("sendRecoveryEmail", () => {
 // ---------------------------------------------------------------------------
 
 describe("email-provider source invariants", () => {
-  it("uses the verified domain hello@quotereclaim.com as the From address", () => {
-    expect(emailProvider).toContain("hello@quotereclaim.com");
-    expect(emailProvider).toContain("Quote Reclaim");
+  it("uses the verified domain hello@quotereclaim.com as the From address (now centralized in sender-identity)", () => {
+    // The verified sending address + brand default moved to sender-identity.ts
+    // so the customer-facing display name can vary per contractor while the
+    // address (SPF/DKIM/DMARC anchor) never does. email-provider just consumes
+    // DEFAULT_FROM and the per-send `from` override.
+    const senderIdentity = readSource("../lib/messaging/sender-identity.ts");
+    expect(senderIdentity).toContain('"hello@quotereclaim.com"');
+    expect(senderIdentity).toContain("Quote Reclaim");
+    expect(emailProvider).toContain("DEFAULT_FROM");
   });
 
   it("imports the Resend SDK", () => {
