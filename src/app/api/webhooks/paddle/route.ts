@@ -1,8 +1,8 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { createServiceSupabaseClient } from "@/lib/supabase/service";
 import {
+  inspectPaddleSignature,
   shouldVerifyPaddleMode,
-  verifyPaddleSignature,
 } from "@/lib/payments/paddle-signature";
 import {
   mapPaddleEvent,
@@ -36,12 +36,35 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
   const sigHeader = request.headers.get("paddle-signature") ?? "";
 
   if (mode === "verify") {
-    const ok = verifyPaddleSignature({
-      secret: process.env.PADDLE_WEBHOOK_SECRET ?? "",
+    // Trim defensively — a paste into Vercel that captured a trailing newline
+    // would silently fail HMAC against a perfectly correct secret.
+    const secret = (process.env.PADDLE_WEBHOOK_SECRET ?? "").trim();
+    const inspection = inspectPaddleSignature({
+      secret,
       header: sigHeader,
       rawBody,
     });
-    if (!ok) return new NextResponse("Invalid signature", { status: 401 });
+    if (!inspection.ok) {
+      // Safe diagnostic line: presence + length + which check failed + ts age.
+      // Never logs the secret, the signature, or the body bytes. Operators can
+      // grep Vercel logs for "[paddle:webhook] signature" to see the cause.
+      const headerParts = parseHeaderPartsSafely(sigHeader);
+      const safeContext = [
+        `reason=${inspection.reason}`,
+        `secret_present=${secret.length > 0}`,
+        `secret_len=${secret.length}`,
+        `secret_prefix_ok=${secret.startsWith("pdl_ntfset_")}`,
+        `header_present=${sigHeader.length > 0}`,
+        `header_has_ts=${headerParts.hasTs}`,
+        `header_has_h1=${headerParts.hasH1}`,
+        `body_len=${rawBody.length}`,
+        inspection.tsAgeSeconds !== undefined
+          ? `ts_age_seconds=${inspection.tsAgeSeconds}`
+          : "ts_age_seconds=na",
+      ].join(" ");
+      console.warn(`[paddle:webhook] signature verification failed ${safeContext}`);
+      return new NextResponse("Invalid signature", { status: 401 });
+    }
   }
 
   let parsed: ReturnType<typeof parsePaddleWebhookPayload>;
@@ -91,6 +114,23 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
   await applyTransition(supabase, transition);
 
   return NextResponse.json({ ok: true });
+}
+
+/**
+ * Reports which Paddle-Signature parts are present, without ever returning
+ * the values themselves. Used only on the 401 diagnostic path.
+ */
+function parseHeaderPartsSafely(header: string): { hasTs: boolean; hasH1: boolean } {
+  let hasTs = false;
+  let hasH1 = false;
+  for (const part of header.split(";")) {
+    const eq = part.indexOf("=");
+    if (eq < 0) continue;
+    const key = part.slice(0, eq).trim();
+    if (key === "ts") hasTs = true;
+    else if (key === "h1") hasH1 = true;
+  }
+  return { hasTs, hasH1 };
 }
 
 async function applyTransition(

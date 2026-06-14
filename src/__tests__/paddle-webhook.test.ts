@@ -38,7 +38,7 @@ describe("Paddle webhook route — wiring invariants", () => {
     // verifyPaddleSignature).
     const textIdx = route.indexOf("request.text()");
     const jsonIdx = route.indexOf("JSON.parse(rawBody)");
-    const verifyCallIdx = route.indexOf("verifyPaddleSignature(");
+    const verifyCallIdx = route.indexOf("inspectPaddleSignature(");
     expect(textIdx).toBeGreaterThan(0);
     expect(verifyCallIdx).toBeGreaterThan(textIdx);
     expect(jsonIdx).toBeGreaterThan(verifyCallIdx);
@@ -51,6 +51,26 @@ describe("Paddle webhook route — wiring invariants", () => {
 
   it("rejects (401) when a verify-mode request fails signature check", () => {
     expect(route).toMatch(/Invalid signature[\s\S]*?status:\s*401/);
+  });
+
+  it("trims the secret so a Vercel paste with trailing whitespace still works", () => {
+    expect(route).toMatch(/PADDLE_WEBHOOK_SECRET[\s\S]{0,40}\.trim\(\)/);
+  });
+
+  it("logs a safe diagnostic on signature failure — reason + lengths + presence flags, never values", () => {
+    // The route must log WHY verification failed (reason) plus the safe
+    // metrics needed to diagnose the cause from Vercel logs. It must NEVER
+    // log the secret bytes, the signature bytes, or the body bytes.
+    expect(route).toContain("inspectPaddleSignature");
+    expect(route).toContain("signature verification failed");
+    expect(route).toMatch(/reason=\$\{inspection\.reason\}/);
+    expect(route).toMatch(/secret_len=\$\{secret\.length\}/);
+    expect(route).toMatch(/body_len=\$\{rawBody\.length\}/);
+    // Hard rule: nothing in the failure log expands the actual values.
+    // `${secret}`, `${rawBody}`, `${sigHeader}` would each leak — banned.
+    expect(route).not.toMatch(/\$\{secret\}/);
+    expect(route).not.toMatch(/\$\{rawBody\}/);
+    expect(route).not.toMatch(/\$\{sigHeader\}/);
   });
 
   it("dedupes by event_id via the paddle_events ledger (PK constraint)", () => {

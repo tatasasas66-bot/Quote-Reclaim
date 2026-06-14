@@ -66,16 +66,60 @@ export function verifyPaddleSignature(opts: {
   nowSeconds?: number;
   toleranceSeconds?: number;
 }): boolean {
-  if (!opts.secret || !opts.header || opts.rawBody === undefined) return false;
+  return inspectPaddleSignature(opts).ok;
+}
+
+/**
+ * Detailed verification result for failure-path diagnostics.
+ *
+ * Reason codes are safe to log: they identify WHICH check failed without
+ * ever exposing the secret, the header value, or the body. The webhook
+ * route can include this in its 401 line so operators can diagnose a
+ * misconfiguration from Vercel logs alone.
+ */
+export type PaddleSignatureReason =
+  | "ok"
+  | "missing_secret"
+  | "missing_header"
+  | "missing_body"
+  | "malformed_header"
+  | "non_numeric_timestamp"
+  | "timestamp_out_of_window"
+  | "hmac_compute_failed"
+  | "signature_mismatch";
+
+export type PaddleSignatureInspection = {
+  ok: boolean;
+  reason: PaddleSignatureReason;
+  /** Seconds between request timestamp and "now" (signed; negative = future).
+   *  Only populated when the timestamp parses; safe to log. */
+  tsAgeSeconds?: number;
+};
+
+export function inspectPaddleSignature(opts: {
+  secret: string;
+  header: string;
+  rawBody: string;
+  nowSeconds?: number;
+  toleranceSeconds?: number;
+}): PaddleSignatureInspection {
+  if (!opts.secret) return { ok: false, reason: "missing_secret" };
+  if (!opts.header) return { ok: false, reason: "missing_header" };
+  if (opts.rawBody === undefined || opts.rawBody === null) {
+    return { ok: false, reason: "missing_body" };
+  }
 
   const parsed = parsePaddleSignatureHeader(opts.header);
-  if (!parsed) return false;
+  if (!parsed) return { ok: false, reason: "malformed_header" };
 
   const ts = Number(parsed.ts);
-  if (!Number.isFinite(ts)) return false;
+  if (!Number.isFinite(ts)) return { ok: false, reason: "non_numeric_timestamp" };
   const now = opts.nowSeconds ?? Math.floor(Date.now() / 1000);
   const tolerance = opts.toleranceSeconds ?? 300;
-  if (Math.abs(now - ts) > tolerance) return false;
+  const tsAgeSeconds = now - ts;
+  if (Math.abs(tsAgeSeconds) > tolerance) {
+    return { ok: false, reason: "timestamp_out_of_window", tsAgeSeconds };
+  }
 
   let expected: string;
   try {
@@ -83,8 +127,11 @@ export function verifyPaddleSignature(opts: {
       .update(`${parsed.ts}:${opts.rawBody}`)
       .digest("hex");
   } catch {
-    return false;
+    return { ok: false, reason: "hmac_compute_failed", tsAgeSeconds };
   }
 
-  return constantTimeEqualHex(expected, parsed.h1);
+  if (!constantTimeEqualHex(expected, parsed.h1)) {
+    return { ok: false, reason: "signature_mismatch", tsAgeSeconds };
+  }
+  return { ok: true, reason: "ok", tsAgeSeconds };
 }

@@ -18,6 +18,7 @@ import { describe, expect, it } from "vitest";
 import { createHmac } from "node:crypto";
 
 import {
+  inspectPaddleSignature,
   parsePaddleSignatureHeader,
   shouldVerifyPaddleMode,
   verifyPaddleSignature,
@@ -163,6 +164,80 @@ describe("verifyPaddleSignature", () => {
         nowSeconds: ts,
       }),
     ).not.toThrow();
+  });
+});
+
+describe("inspectPaddleSignature — failure-path diagnostics", () => {
+  const rawBody = JSON.stringify({ event_id: "evt_1" });
+  const ts = 1_700_000_000;
+
+  it("ok when signature matches", () => {
+    const header = buildHeader(rawBody, ts);
+    const r = inspectPaddleSignature({ secret: SECRET, header, rawBody, nowSeconds: ts });
+    expect(r.ok).toBe(true);
+    expect(r.reason).toBe("ok");
+    expect(r.tsAgeSeconds).toBe(0);
+  });
+
+  it("reports missing_secret first, even with everything else present", () => {
+    const header = buildHeader(rawBody, ts);
+    const r = inspectPaddleSignature({ secret: "", header, rawBody, nowSeconds: ts });
+    expect(r.reason).toBe("missing_secret");
+  });
+
+  it("reports missing_header when the request had no Paddle-Signature", () => {
+    const r = inspectPaddleSignature({ secret: SECRET, header: "", rawBody, nowSeconds: ts });
+    expect(r.reason).toBe("missing_header");
+  });
+
+  it("reports malformed_header when the header has neither ts nor h1", () => {
+    const r = inspectPaddleSignature({
+      secret: SECRET,
+      header: "garbage",
+      rawBody,
+      nowSeconds: ts,
+    });
+    expect(r.reason).toBe("malformed_header");
+  });
+
+  it("reports non_numeric_timestamp when ts is not a number", () => {
+    const r = inspectPaddleSignature({
+      secret: SECRET,
+      header: "ts=not-a-number;h1=deadbeef",
+      rawBody,
+      nowSeconds: ts,
+    });
+    expect(r.reason).toBe("non_numeric_timestamp");
+  });
+
+  it("reports timestamp_out_of_window with the signed age in seconds", () => {
+    const header = buildHeader(rawBody, ts);
+    const r = inspectPaddleSignature({
+      secret: SECRET,
+      header,
+      rawBody,
+      nowSeconds: ts + 600,
+    });
+    expect(r.reason).toBe("timestamp_out_of_window");
+    expect(r.tsAgeSeconds).toBe(600);
+  });
+
+  it("reports signature_mismatch when ts/secret/header are fine but the body is tampered", () => {
+    const header = buildHeader(rawBody, ts);
+    const r = inspectPaddleSignature({
+      secret: SECRET,
+      header,
+      rawBody: rawBody.replace("evt_1", "evt_2"),
+      nowSeconds: ts,
+    });
+    expect(r.reason).toBe("signature_mismatch");
+    expect(r.tsAgeSeconds).toBe(0);
+  });
+
+  it("reports signature_mismatch when the secret is wrong (does NOT leak which check tripped first)", () => {
+    const header = buildHeader(rawBody, ts, "different-secret");
+    const r = inspectPaddleSignature({ secret: SECRET, header, rawBody, nowSeconds: ts });
+    expect(r.reason).toBe("signature_mismatch");
   });
 });
 
