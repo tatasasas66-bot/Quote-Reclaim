@@ -21,7 +21,10 @@ type Props = {
 const PADDLE_SCRIPT_ID = "paddle-js";
 const PADDLE_SCRIPT_URL = "https://cdn.paddle.com/paddle/v2/paddle.js";
 
-type PaddleEvent = { name: string };
+// Paddle.js v2 emits events as `entity.event_type`. We care about success
+// and — crucially — `checkout.error`, which carries the real reason the
+// overlay shows its generic "Something went wrong" message.
+type PaddleEvent = { name?: string; detail?: unknown; error?: unknown };
 type PaddleGlobal = {
   Initialize: (opts: {
     token: string;
@@ -43,6 +46,43 @@ declare global {
   }
 }
 
+// Paddle.Initialize must run exactly once per page. We register a single
+// eventCallback at init and route its events through this mutable holder so
+// the CURRENT button instance's setters are always used (no stale closures
+// when more than one checkout button mounts across a session).
+let paddleInitialized = false;
+const liveHandlers: {
+  onCompleted?: () => void;
+  onError?: (reason: string) => void;
+} = {};
+
+/** Classify a client token by environment WITHOUT logging the token itself.
+ *  Live tokens start with `live_`, sandbox tokens with `test_`. We only ever
+ *  surface the class word, never any token bytes. */
+function tokenEnvClass(token: string | undefined): "live" | "test" | "unknown" {
+  if (!token) return "unknown";
+  if (token.startsWith("live_")) return "live";
+  if (token.startsWith("test_")) return "test";
+  return "unknown";
+}
+
+/** Pull a human-readable reason out of a Paddle checkout.error/warning event.
+ *  Paddle nests the detail differently across builds, so probe defensively. */
+function readPaddleEventReason(event: PaddleEvent): string {
+  if (typeof event.detail === "string" && event.detail) return event.detail;
+  if (event.error && typeof event.error === "object") {
+    const e = event.error as {
+      detail?: unknown;
+      message?: unknown;
+      code?: unknown;
+    };
+    if (typeof e.detail === "string") return e.detail;
+    if (typeof e.message === "string") return e.message;
+    if (typeof e.code === "string") return e.code;
+  }
+  return event.name ?? "unknown checkout error";
+}
+
 function loadPaddleScript(): Promise<PaddleGlobal> {
   return new Promise((resolve, reject) => {
     if (typeof window === "undefined") {
@@ -53,23 +93,34 @@ function loadPaddleScript(): Promise<PaddleGlobal> {
       resolve(window.Paddle);
       return;
     }
+    const settle = () => {
+      if (window.Paddle) resolve(window.Paddle);
+      else reject(new Error("Paddle.js loaded but window.Paddle is missing"));
+    };
     const existing = document.getElementById(PADDLE_SCRIPT_ID);
     if (existing) {
-      existing.addEventListener("load", () => {
-        if (window.Paddle) resolve(window.Paddle);
-        else reject(new Error("Paddle.js loaded but window.Paddle is missing"));
-      });
-      existing.addEventListener("error", () => reject(new Error("Paddle.js failed to load")));
+      existing.addEventListener("load", settle);
+      existing.addEventListener("error", () =>
+        reject(new Error("Paddle.js failed to load")),
+      );
+      // If the tag already finished loading before we attached the listener,
+      // the load event never fires again — poll briefly for window.Paddle.
+      let tries = 0;
+      const timer = window.setInterval(() => {
+        if (window.Paddle) {
+          window.clearInterval(timer);
+          resolve(window.Paddle);
+        } else if (++tries > 40) {
+          window.clearInterval(timer);
+        }
+      }, 50);
       return;
     }
     const script = document.createElement("script");
     script.id = PADDLE_SCRIPT_ID;
     script.src = PADDLE_SCRIPT_URL;
     script.async = true;
-    script.onload = () => {
-      if (window.Paddle) resolve(window.Paddle);
-      else reject(new Error("Paddle.js loaded but window.Paddle is missing"));
-    };
+    script.onload = settle;
     script.onerror = () => reject(new Error("Paddle.js failed to load"));
     document.head.appendChild(script);
   });
@@ -115,29 +166,82 @@ export function PaddleCheckoutButton({
       setError("Checkout is being set up. Try again in a moment.");
       return;
     }
+
+    // Safe diagnostics — gated behind NEXT_PUBLIC_PADDLE_DEBUG so production
+    // is quiet by default. Logs booleans, env classification, and a REDACTED
+    // payload only. Never logs the token, the API key, or the webhook secret.
+    if (process.env.NEXT_PUBLIC_PADDLE_DEBUG === "true") {
+      const tokenEnv = tokenEnvClass(clientToken);
+      const mismatch =
+        tokenEnv !== "unknown" &&
+        ((environment === "production" && tokenEnv === "test") ||
+          (environment === "sandbox" && tokenEnv === "live"));
+      console.info("[paddle] checkout preflight", {
+        hasToken: Boolean(clientToken),
+        tokenEnv,
+        hasPriceId: Boolean(priceId),
+        priceIdLooksValid: priceId.startsWith("pri_"),
+        configuredEnvironment: environment,
+        environmentMismatch: mismatch,
+        customerEmailPresent: Boolean(userEmail),
+        // user_id is redacted; quote/customer PII is never attached at all.
+        customData: { user_id: "[redacted]", app: "quote_reclaim" },
+        items: [{ priceId, quantity: 1 }],
+      });
+      if (mismatch) {
+        console.warn(
+          `[paddle] environment mismatch: token is "${tokenEnv}" but NEXT_PUBLIC_PADDLE_ENVIRONMENT is "${environment}". The overlay will open but checkout creation will fail.`,
+        );
+      }
+    }
+
     setLoading(true);
     setError(null);
+
+    // Route Paddle's single eventCallback to THIS instance's setters.
+    liveHandlers.onCompleted = () => {
+      setCompleted(true);
+      onCompleted?.();
+    };
+    liveHandlers.onError = (reason) => setError(`Checkout error: ${reason}`);
+
     try {
       const paddle = await loadPaddleScript();
+
+      // Pin sandbox before Initialize when explicitly configured; production
+      // is Paddle.js's default and needs no call.
       if (environment === "sandbox" && paddle.Environment?.set) {
         paddle.Environment.set("sandbox");
       }
-      paddle.Initialize({
-        token: clientToken,
-        eventCallback: (event) => {
-          if (event.name === "checkout.completed") {
-            setCompleted(true);
-            onCompleted?.();
-          }
-        },
-      });
+
+      if (!paddleInitialized) {
+        paddle.Initialize({
+          token: clientToken,
+          eventCallback: (event) => {
+            const name = event?.name ?? "";
+            if (name === "checkout.completed") {
+              liveHandlers.onCompleted?.();
+            } else if (name === "checkout.error" || name === "checkout.warning") {
+              const reason = readPaddleEventReason(event);
+              // Surface the REAL reason Paddle hides behind its generic
+              // "Something went wrong" overlay message.
+              console.error(`[paddle] ${name}: ${reason}`);
+              liveHandlers.onError?.(reason);
+            }
+          },
+        });
+        paddleInitialized = true;
+      }
+
       paddle.Checkout.open({
         items: [{ priceId, quantity: 1 }],
         customer: userEmail ? { email: userEmail } : undefined,
         customData: { user_id: userId, app: "quote_reclaim" },
       });
     } catch (cause) {
-      const message = cause instanceof Error ? cause.message : "Checkout failed to open.";
+      const message =
+        cause instanceof Error ? cause.message : "Checkout failed to open.";
+      console.error(`[paddle] failed to open checkout: ${message}`);
       setError(message);
     } finally {
       setLoading(false);

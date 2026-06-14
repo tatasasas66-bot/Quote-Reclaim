@@ -446,6 +446,33 @@ describe("PaddleCheckoutButton component", () => {
     // Quote/customer dollar values and client identifiers are never attached.
     expect(checkoutButton).not.toMatch(/customData[\s\S]{0,200}(estimate|client_email|client_name|recovered_amount|quote_id)/i);
   });
+
+  it("listens for checkout.error so Paddle's real reason is surfaced, not swallowed", () => {
+    // The generic "Something went wrong" overlay hides the cause. We must
+    // handle checkout.error (and checkout.warning) and route the reason to
+    // the UI + console, not only checkout.completed.
+    expect(checkoutButton).toContain("checkout.error");
+    expect(checkoutButton).toContain("checkout.completed");
+    expect(checkoutButton).toMatch(/console\.error\(`\[paddle\]/);
+  });
+
+  it("initializes Paddle exactly once (guards against re-Initialize per click)", () => {
+    expect(checkoutButton).toMatch(/paddleInitialized/);
+    expect(checkoutButton).toMatch(/if \(!paddleInitialized\)/);
+  });
+
+  it("debug diagnostics are gated behind the public debug flag and never log the token", () => {
+    expect(checkoutButton).toContain("NEXT_PUBLIC_PADDLE_DEBUG");
+    // The token is only ever classified to a class word (live/test/unknown)
+    // or reduced to a boolean — never logged raw — and the debug payload
+    // redacts user_id.
+    expect(checkoutButton).toMatch(/tokenEnv(:|Class)/);
+    expect(checkoutButton).toContain('user_id: "[redacted]"');
+    // The diagnostic logs only the env CLASS word (live/test/unknown), never
+    // the token bytes — tokenEnvClass derives the class from a prefix check.
+    expect(checkoutButton).toMatch(/startsWith\("live_"\)/);
+    expect(checkoutButton).toMatch(/startsWith\("test_"\)/);
+  });
 });
 
 // ---------------------------------------------------------------------------
