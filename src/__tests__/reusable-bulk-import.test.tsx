@@ -346,32 +346,41 @@ describe("free-limit slot math (FREE_PLAN_LIMIT = 3, all states)", () => {
 // E. Billing-disabled activation screen
 // ─────────────────────────────────────────────────────────────────────────
 
-describe("import-blocked screen — billing-disabled activation copy uses support email", () => {
-  it("uses SUPPORT_EMAIL from the centralized module (no hardcoded address)", () => {
+describe("import-blocked screen — Paddle checkout when live, support-email fallback otherwise", () => {
+  it("offers real Paddle self-serve checkout when Paddle is configured", () => {
+    // Audit fix: the blocked screen must NOT tell a paying-intent user to
+    // 'email support' once Paddle checkout is live. It branches on
+    // paddleClientConfigured() and opens the overlay via PaddleCheckoutButton.
+    expect(importPageSrc).toContain(
+      'import { paddleClientConfigured } from "@/lib/payments/paddle-provider"',
+    );
+    expect(importPageSrc).toContain(
+      'import { PaddleCheckoutButton } from "@/components/billing/PaddleCheckoutButton"',
+    );
+    expect(importPageSrc).toMatch(/const canCheckout = paddleAvailable && Boolean\(userId\)/);
+    expect(importPageSrc).toContain("<PaddleCheckoutButton");
+    // Locked checkout copy.
+    expect(importPageSrc).toContain("Activate Quote Reclaim Pro — $79/month");
+    expect(importPageSrc).toMatch(/First 3 quotes are free\./);
+    expect(importPageSrc).toMatch(/Cancel\s+anytime\./);
+  });
+
+  it("keeps the honest support-email fallback for a deployment WITHOUT Paddle", () => {
     expect(importPageSrc).toContain(
       'import { SUPPORT_EMAIL } from "@/lib/payments/disabled-provider"',
     );
-    // Two mailto links: header button + body sentence.
-    const mailtos = importPageSrc.match(
-      /mailto:\$\{SUPPORT_EMAIL\}/g,
-    ) ?? [];
+    // Two mailto links in the fallback branch: header button + body sentence.
+    const mailtos = importPageSrc.match(/mailto:\$\{SUPPORT_EMAIL\}/g) ?? [];
     expect(mailtos.length).toBeGreaterThanOrEqual(2);
-  });
-
-  it("names the honest activation path (billing being updated) without a dead checkout", () => {
     expect(importPageSrc).toContain("Billing is being updated.");
     expect(importPageSrc).toContain("to activate more quotes");
-    // The "Email <addr> to activate" pairing is intact even though regex on
-    // a JSX <a> across a multi-line mailto would be brittle.
     expect(importPageSrc).toMatch(/Email\{?\s/);
-    expect(importPageSrc).not.toMatch(/checkout/i);
     expect(importPageSrc.toLowerCase()).not.toContain("lemon");
-    expect(importPageSrc.toLowerCase()).not.toContain("paddle");
   });
 
   it("preserves the contractor's running recovery — nothing is paused as a side effect", () => {
     expect(importPageSrc).toContain(
-      "Your existing recovery sequences keep running in the",
+      "Your existing recovery sequences keep running",
     );
   });
 

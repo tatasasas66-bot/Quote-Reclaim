@@ -105,6 +105,21 @@ describe("Paddle webhook route — wiring invariants", () => {
     expect(route).toMatch(/from\("profiles"\)[\s\S]*?update\(\{\s*is_paid:\s*t\.entitled\s*\}\)[\s\S]*?eq\("id",\s*userId\)/);
   });
 
+  it("NEVER downgrades on a status-less event (transaction.completed must not deactivate a paying user)", () => {
+    // Paddle delivers webhooks UNORDERED. transaction.completed maps to
+    // status=null/entitled=false; if applyTransition wrote it, it could land
+    // after subscription.activated and flip is_paid back to false. The guard
+    // bails out before any write when status is null.
+    expect(route).toMatch(/if \(t\.status === null\) return;/);
+    const guardIdx = route.indexOf("if (t.status === null) return;");
+    const upsertIdx = route.indexOf("upsert(");
+    const isPaidIdx = route.indexOf("is_paid: t.entitled");
+    expect(guardIdx).toBeGreaterThan(0);
+    // The guard precedes BOTH the subscriptions upsert and the is_paid write.
+    expect(guardIdx).toBeLessThan(upsertIdx);
+    expect(guardIdx).toBeLessThan(isPaidIdx);
+  });
+
   it("uses the service-role Supabase client — needed to bypass RLS on subscriptions and to satisfy migration 011's is_paid lockdown", () => {
     expect(route).toContain("createServiceSupabaseClient");
   });

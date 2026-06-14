@@ -137,6 +137,16 @@ async function applyTransition(
   supabase: ReturnType<typeof createServiceSupabaseClient>,
   t: SubscriptionTransition,
 ): Promise<void> {
+  // GUARD: a transition with a null status is NOT authoritative over
+  // subscription status or entitlement. Only `transaction.completed` (a
+  // payment signal, not a lifecycle event) and a malformed status-less
+  // subscription event produce this. Writing it would set status="inactive"
+  // and is_paid=false — which, because Paddle delivers webhooks UNORDERED,
+  // could land AFTER subscription.activated and silently deactivate a paying
+  // customer. The subscription.* events are the sole source of truth for
+  // entitlement; this event is already recorded in paddle_events for audit.
+  if (t.status === null) return;
+
   // Resolve the user_id. Prefer the one Paddle echoed back in custom_data,
   // fall back to the subscription row we may already have for this Paddle
   // subscription id (covers updated/canceled events that don't always
