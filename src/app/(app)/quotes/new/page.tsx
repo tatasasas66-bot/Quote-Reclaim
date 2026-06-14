@@ -8,6 +8,7 @@ import { requireUser } from "@/lib/auth/require-user";
 import { createQuoteAction } from "@/lib/quotes/actions";
 import { getProfileStats, listPendingQuotes } from "@/lib/quotes/repo";
 import { FREE_PLAN_LIMIT } from "@/lib/payments/entitlement";
+import { paddleClientConfigured } from "@/lib/payments/paddle-provider";
 import { formatCurrency } from "@/lib/utils/currency";
 
 export const metadata: Metadata = { title: "New quote - Quote Reclaim" };
@@ -42,7 +43,12 @@ export default async function NewQuotePage() {
       </header>
 
       {blocked ? (
-        <Paywall silentQuoteValue={silentValue} />
+        <Paywall
+          silentQuoteValue={silentValue}
+          userId={user.id}
+          userEmail={user.email ?? null}
+          paddleAvailable={paddleClientConfigured()}
+        />
       ) : (
         <div className="grid gap-6 lg:grid-cols-[0.78fr_1.22fr] lg:items-start">
           <section className="space-y-5">

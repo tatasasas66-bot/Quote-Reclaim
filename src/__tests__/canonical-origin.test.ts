@@ -98,9 +98,18 @@ describe("billing modules carry no app-origin URLs and no MoR name", () => {
     }
   });
 
-  it("no billing module names any specific MoR (provider-agnostic)", () => {
-    for (const src of [entitlement, disabled, providerSrc, types]) {
+  it("the entitlement + disabled + types modules stay MoR-agnostic in name", () => {
+    // The selector module (provider.ts) legitimately imports the active
+    // Paddle provider when wired, so it is allowed to name Paddle. The other
+    // three modules must remain provider-agnostic.
+    for (const src of [entitlement, disabled, types]) {
       expect(src.toLowerCase()).not.toMatch(/lemon|stripe|paddle/);
+    }
+  });
+
+  it("no billing module names Lemon or Stripe (legacy MoRs we never re-introduce)", () => {
+    for (const src of [entitlement, disabled, providerSrc, types]) {
+      expect(src.toLowerCase()).not.toMatch(/lemon|stripe/);
     }
   });
 

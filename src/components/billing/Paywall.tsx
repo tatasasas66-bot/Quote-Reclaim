@@ -4,44 +4,53 @@ import * as React from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui";
 import { SUPPORT_EMAIL } from "@/lib/payments/disabled-provider";
+import { PaddleCheckoutButton } from "./PaddleCheckoutButton";
 import { formatCurrency } from "@/lib/utils/currency";
 
 type Props = {
   silentQuoteValue?: number;
+  userId?: string | null;
+  userEmail?: string | null;
+  /** When set, the checkout overlay is wired through Paddle.js. When false
+   *  (env vars missing in this deployment), the CTA falls back to the
+   *  honest support-email mailto so the contractor still has a path. */
+  paddleAvailable?: boolean;
 };
 
 /**
  * Paywall — shown on /quotes/new when a free user hits the 3-quote limit.
  *
- * Quote Reclaim is between merchants of record. The conversion path stays
- * visible (we are not hiding the price, we are not removing the upgrade
- * intent) but the button does NOT fetch a dead checkout route. Clicking
- * surfaces the support email so a contractor who genuinely wants to
- * upgrade can do so manually while the new provider is wired up.
+ * When Paddle is configured for this deployment the CTA opens the Paddle
+ * overlay checkout for the locked $79/month price. When it is not (env
+ * vars missing), the CTA surfaces the support email + mailto so a
+ * contractor who genuinely wants to upgrade still has a path — no dead
+ * checkout button, no fake success state.
  *
  * Value anchoring is preserved: when we know the contractor's actual
  * silent-quote dollars, the number is the visual hero and the CTA reframes
- * as "Import the rest — $79/month". The original "Unlock Silent Quote
- * Command — $79/month" stays as the no-silent-value fallback so existing
- * trust-copy invariants are unaffected.
+ * as "Activate Pro — $79/month" so $79 reads as the answer to *their*
+ * number, not a generic SaaS pitch.
  */
-export function Paywall({ silentQuoteValue }: Props) {
+export function Paywall({
+  silentQuoteValue,
+  userId,
+  userEmail,
+  paddleAvailable,
+}: Props) {
   const [showContactHint, setShowContactHint] = React.useState(false);
 
-  function handleUpgrade() {
+  function handleFallbackClick() {
     // No fetch to a dead route. Show an honest contact line + mailto so
     // the contractor still has a path to convert while billing is updated.
     setShowContactHint(true);
   }
 
   const hasSilent = Boolean(silentQuoteValue && silentQuoteValue > 0);
-  // Ethical value anchoring: when we know the contractor's actual quiet
-  // dollars, the number is the headline — not a generic SaaS pitch. CTA
-  // flips to "Import the rest" so $79 reads as the answer to *their*
-  // number, not a feature unlock. Honest framing only.
   const ctaLabel = hasSilent
     ? "Import the rest — $79/month"
     : "Unlock Silent Quote Command — $79/month";
+
+  const canCheckout = Boolean(paddleAvailable && userId);
 
   return (
     <section className="space-y-5 rounded-xl border border-brand/30 bg-surface-2 p-6">
@@ -73,9 +82,18 @@ export function Paywall({ silentQuoteValue }: Props) {
       </div>
 
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-        <Button type="button" onClick={handleUpgrade}>
-          {ctaLabel}
-        </Button>
+        {canCheckout && userId ? (
+          <PaddleCheckoutButton
+            userId={userId}
+            userEmail={userEmail ?? null}
+            label={ctaLabel}
+            size="md"
+          />
+        ) : (
+          <Button type="button" onClick={handleFallbackClick}>
+            {ctaLabel}
+          </Button>
+        )}
         <Link
           href="/dashboard"
           className="text-sm text-ink-muted hover:text-ink-strong"
@@ -84,7 +102,7 @@ export function Paywall({ silentQuoteValue }: Props) {
         </Link>
       </div>
 
-      {showContactHint ? (
+      {!canCheckout && showContactHint ? (
         <p
           role="status"
           data-testid="paywall-billing-hint"
@@ -102,8 +120,8 @@ export function Paywall({ silentQuoteValue }: Props) {
       ) : null}
 
       <p className="text-xs text-ink-muted">
-        Lock in early access. Cancel anytime. Built for US home-service
-        contractors. Not another CRM.
+        First 3 quotes are free. Lock in early access. Cancel anytime. Built
+        for US home-service contractors. Not another CRM.
       </p>
     </section>
   );

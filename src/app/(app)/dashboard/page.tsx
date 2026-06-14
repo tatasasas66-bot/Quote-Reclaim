@@ -24,6 +24,7 @@ import { effectiveDaysSilent } from "@/lib/recovery/effective-days";
 import { tradeLabel } from "@/lib/quotes/quote-display";
 import { getRecoveryScore } from "@/lib/quotes/recovery-score";
 import { FREE_PLAN_LIMIT } from "@/lib/payments/entitlement";
+import { paddleClientConfigured } from "@/lib/payments/paddle-provider";
 import { formatCurrency } from "@/lib/utils/currency";
 
 export const metadata: Metadata = { title: "Dashboard – Quote Reclaim" };
@@ -115,7 +116,12 @@ export default async function DashboardPage() {
           {/* shrink-0 keeps the action group at its natural width so the
               Upgrade label and Sign out never compress + wrap at 375px. */}
           <div className="flex shrink-0 items-center gap-3">
-            <UpgradeButton />
+            <UpgradeButton
+              userId={user.id}
+              userEmail={user.email ?? null}
+              isPaid={isPaid}
+              paddleAvailable={paddleClientConfigured()}
+            />
             <form action="/api/auth/sign-out" method="post">
               <button
                 type="submit"

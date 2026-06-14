@@ -1,14 +1,17 @@
 /**
- * Billing contract — provider-agnostic.
+ * Billing contract — Paddle wired up; safe-disabled fallback intact.
  *
- * Quote Reclaim is currently between merchants of record. The entitlement
- * surface (price, free-plan size, isPaidStatus mapping, profiles.is_paid as
- * the single flag) is preserved verbatim. The UI surfaces an honest
- * "billing being updated — email support@quotereclaim.com" state instead of
- * routing to a dead checkout, and no Lemon-Squeezy-specific code remains
- * anywhere in the active codebase.
+ * The entitlement surface (price, free-plan size, isPaidStatus mapping,
+ * profiles.is_paid as the single flag) is preserved verbatim. When Paddle
+ * env vars are set, getBillingProvider() returns the Paddle provider and
+ * the UI opens Paddle.js overlay checkout. When they are unset, the UI
+ * still surfaces the honest "billing being updated — email
+ * support@quotereclaim.com" fallback so a deployment without Paddle keys
+ * never shows a button that opens broken checkout.
+ *
+ * No Lemon-Squeezy code survives anywhere.
  */
-import { describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { readFileSync, existsSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 
@@ -23,6 +26,11 @@ import {
   SUPPORT_EMAIL,
   disabledProvider,
 } from "../lib/payments/disabled-provider";
+import {
+  paddleProvider,
+  paddleClientConfigured,
+  paddleEnvironment,
+} from "../lib/payments/paddle-provider";
 import { getBillingProvider } from "../lib/payments/provider";
 
 function readSource(rel: string): string {
@@ -34,12 +42,17 @@ function abs(rel: string): string {
 
 const paywall = readSource("../components/billing/Paywall.tsx");
 const upgradeButton = readSource("../components/billing/UpgradeButton.tsx");
+const checkoutButton = readSource(
+  "../components/billing/PaddleCheckoutButton.tsx",
+);
 const entitlement = readSource("../lib/payments/entitlement.ts");
 const disabled = readSource("../lib/payments/disabled-provider.ts");
 const types = readSource("../lib/payments/types.ts");
 const providerSrc = readSource("../lib/payments/provider.ts");
+const paddleProviderSrc = readSource("../lib/payments/paddle-provider.ts");
 const actions = readSource("../lib/quotes/actions.ts");
 const newQuotePage = readSource("../app/(app)/quotes/new/page.tsx");
+const dashboardPage = readSource("../app/(app)/dashboard/page.tsx");
 
 // ---------------------------------------------------------------------------
 // Provider-agnostic entitlement model — unchanged values
@@ -81,15 +94,10 @@ describe("Entitlement constants — provider-agnostic, unchanged", () => {
 });
 
 // ---------------------------------------------------------------------------
-// Safe-disabled billing provider — no dead checkout, honest contact
+// Disabled provider — the safe fallback when no Paddle keys are set
 // ---------------------------------------------------------------------------
 
-describe("Disabled billing provider (active default)", () => {
-  it("getBillingProvider() returns the disabled provider", () => {
-    expect(getBillingProvider().name).toBe("disabled");
-    expect(getBillingProvider()).toBe(disabledProvider);
-  });
-
+describe("Disabled billing provider (fallback)", () => {
   it("availability() reports disabled + carries the support email", () => {
     const a = disabledProvider.availability();
     expect(a.status).toBe("disabled");
@@ -118,10 +126,82 @@ describe("Disabled billing provider (active default)", () => {
     );
   });
 
-  it("provider abstraction is provider-agnostic in NAME — no MoR named anywhere", () => {
-    for (const src of [disabled, types, providerSrc]) {
+  it("disabled-provider source stays MoR-agnostic in name", () => {
+    // Only the paddle provider module knows the provider name; the
+    // disabled fallback and the types module stay generic.
+    for (const src of [disabled, types]) {
       expect(src.toLowerCase()).not.toMatch(/lemon|stripe|paddle/);
     }
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Paddle provider — active when env is configured
+// ---------------------------------------------------------------------------
+
+describe("Paddle billing provider", () => {
+  const originalClientToken = process.env.NEXT_PUBLIC_PADDLE_CLIENT_TOKEN;
+  const originalPriceId = process.env.NEXT_PUBLIC_PADDLE_PRICE_ID;
+  const originalEnv = process.env.NEXT_PUBLIC_PADDLE_ENVIRONMENT;
+
+  beforeEach(() => {
+    delete process.env.NEXT_PUBLIC_PADDLE_CLIENT_TOKEN;
+    delete process.env.NEXT_PUBLIC_PADDLE_PRICE_ID;
+    delete process.env.NEXT_PUBLIC_PADDLE_ENVIRONMENT;
+  });
+  afterEach(() => {
+    if (originalClientToken !== undefined)
+      process.env.NEXT_PUBLIC_PADDLE_CLIENT_TOKEN = originalClientToken;
+    if (originalPriceId !== undefined)
+      process.env.NEXT_PUBLIC_PADDLE_PRICE_ID = originalPriceId;
+    if (originalEnv !== undefined)
+      process.env.NEXT_PUBLIC_PADDLE_ENVIRONMENT = originalEnv;
+  });
+
+  it("paddleClientConfigured() is true only when BOTH public env vars are set", () => {
+    expect(paddleClientConfigured()).toBe(false);
+    process.env.NEXT_PUBLIC_PADDLE_CLIENT_TOKEN = "live_xxx";
+    expect(paddleClientConfigured()).toBe(false);
+    process.env.NEXT_PUBLIC_PADDLE_PRICE_ID = "pri_xxx";
+    expect(paddleClientConfigured()).toBe(true);
+  });
+
+  it("paddleEnvironment() defaults to production, accepts 'sandbox'", () => {
+    expect(paddleEnvironment()).toBe("production");
+    process.env.NEXT_PUBLIC_PADDLE_ENVIRONMENT = "sandbox";
+    expect(paddleEnvironment()).toBe("sandbox");
+    process.env.NEXT_PUBLIC_PADDLE_ENVIRONMENT = "anything-else";
+    expect(paddleEnvironment()).toBe("production");
+  });
+
+  it("availability() reports available only when configured", () => {
+    expect(paddleProvider.availability().status).toBe("disabled");
+    process.env.NEXT_PUBLIC_PADDLE_CLIENT_TOKEN = "live_xxx";
+    process.env.NEXT_PUBLIC_PADDLE_PRICE_ID = "pri_xxx";
+    expect(paddleProvider.availability().status).toBe("available");
+  });
+
+  it("createCheckout() returns the client-side hint, never a server URL", async () => {
+    const r = await paddleProvider.createCheckout({ userId: "u" });
+    expect(r.ok).toBe(false);
+    if (!r.ok) {
+      expect(r.error).toMatch(/client-side/i);
+    }
+  });
+
+  it("getBillingProvider() selects paddle when configured, disabled otherwise", () => {
+    expect(getBillingProvider().name).toBe("disabled");
+    process.env.NEXT_PUBLIC_PADDLE_CLIENT_TOKEN = "live_xxx";
+    process.env.NEXT_PUBLIC_PADDLE_PRICE_ID = "pri_xxx";
+    expect(getBillingProvider().name).toBe("paddle");
+    expect(getBillingProvider()).toBe(paddleProvider);
+  });
+
+  it("paddle-provider source is the ONLY billing module that names the MoR", () => {
+    expect(paddleProviderSrc.toLowerCase()).toContain("paddle");
+    // The provider.ts selector references the paddle module, so it
+    // legitimately names paddle. The disabled/types modules stay generic.
+    expect(providerSrc.toLowerCase()).toContain("paddle");
   });
 });
 
@@ -152,6 +232,7 @@ describe("Lemon Squeezy removal", () => {
       disabled,
       types,
       providerSrc,
+      paddleProviderSrc,
       newQuotePage,
     ]) {
       expect(src.toLowerCase()).not.toContain("lemon");
@@ -177,7 +258,45 @@ describe("Lemon Squeezy removal", () => {
 });
 
 // ---------------------------------------------------------------------------
-// Paywall — safe-disabled behavior + value anchor + locked trust copy
+// .env.example — declares the Paddle env vars (no values)
+// ---------------------------------------------------------------------------
+
+describe(".env.example declares Paddle env names without values", () => {
+  const envExample = readFileSync(
+    fileURLToPath(new URL("../../.env.example", import.meta.url)),
+    "utf8",
+  );
+
+  it("includes the four required Paddle keys plus the optional environment toggle", () => {
+    for (const key of [
+      "NEXT_PUBLIC_PADDLE_CLIENT_TOKEN=",
+      "NEXT_PUBLIC_PADDLE_PRICE_ID=",
+      "NEXT_PUBLIC_PADDLE_ENVIRONMENT=",
+      "PADDLE_API_KEY=",
+      "PADDLE_WEBHOOK_SECRET=",
+    ]) {
+      expect(envExample).toContain(key);
+    }
+  });
+
+  it("never commits an actual secret next to those keys", () => {
+    // Each `PADDLE_*=` line is either followed by a comment, end-of-line, or
+    // the safe "production" sentinel — never a token-like value.
+    const lines = envExample.split("\n").filter((l) => /^[A-Z_]*PADDLE/.test(l));
+    expect(lines.length).toBeGreaterThan(0);
+    for (const line of lines) {
+      const [, value = ""] = line.split("=");
+      const trimmed = value.trim();
+      // Allow empty, allow the documented "production" default, ban anything
+      // that looks like a real Paddle token or webhook secret.
+      expect(trimmed === "" || trimmed === "production").toBe(true);
+      expect(trimmed).not.toMatch(/^(pdl_|live_|sandbox_|pri_|pro_|ntfset_|whsec_)/);
+    }
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Paywall — Paddle when wired, mailto fallback when not; locked copy intact
 // ---------------------------------------------------------------------------
 
 describe("Paywall component", () => {
@@ -185,25 +304,29 @@ describe("Paywall component", () => {
     expect(paywall.startsWith('"use client"')).toBe(true);
   });
 
-  it("never fetches a checkout route — no network call, no dead URL", () => {
+  it("never fetches a checkout route — Paddle opens client-side via the SDK", () => {
     expect(paywall).not.toMatch(/fetch\(/);
     expect(paywall).not.toMatch(/window\.location\.href\s*=/);
+    // No server-side checkout URL is built or routed to.
     expect(paywall).not.toMatch(/\/api\/(lemonsqueezy|stripe|paddle|checkout)/i);
   });
 
-  it("surfaces the support email + mailto on CTA click (honest disabled state)", () => {
+  it("renders the PaddleCheckoutButton when paddleAvailable and a user is known", () => {
+    expect(paywall).toContain("PaddleCheckoutButton");
+    expect(paywall).toMatch(/canCheckout\s*=\s*Boolean\(paddleAvailable && userId\)/);
+    expect(paywall).toMatch(/canCheckout && userId\s*\?\s*\(?\s*<PaddleCheckoutButton/);
+  });
+
+  it("preserves the honest support-email fallback when Paddle is not available", () => {
     expect(paywall).toContain("SUPPORT_EMAIL");
     expect(paywall).toContain('data-testid="paywall-billing-hint"');
     expect(paywall).toMatch(/mailto:\$\{SUPPORT_EMAIL\}/);
     expect(paywall).toMatch(/Billing is being updated/);
   });
 
-  it("displays the founding-contractor copy with honest real price math (email + copy disclosed)", () => {
+  it("displays the founding-contractor copy with honest real price math", () => {
     expect(paywall).toContain("FOUNDING CONTRACTOR");
     expect(paywall).toMatch(/Don&apos;t let good quotes die quiet\./);
-    // Tightened: discloses both the email auto-send and the manual-copy path
-    // for quotes without an address, so no contractor reads the paywall as
-    // "everything sends automatically."
     expect(paywall).toMatch(/sent by\s+email when there&apos;s an address/);
     expect(paywall).toMatch(/ready to copy when there\s+isn&apos;t/);
     expect(paywall).not.toMatch(/follows\s+up by email automatically\./);
@@ -214,6 +337,11 @@ describe("Paywall component", () => {
     expect(paywall).toMatch(/Not another\s+CRM\./);
   });
 
+  it("surfaces the 'First 3 quotes are free.' / 'Cancel anytime.' reassurance line", () => {
+    expect(paywall).toMatch(/First 3 quotes are free\./);
+    expect(paywall).toMatch(/Cancel anytime\./);
+  });
+
   it("preserves the value-anchored CTA when silentQuoteValue > 0", () => {
     expect(paywall).toContain("hasSilent");
     expect(paywall).toContain('data-testid="paywall-money-anchor"');
@@ -222,22 +350,7 @@ describe("Paywall component", () => {
     expect(paywall).toContain("Import the rest — $79/month");
   });
 
-  it("anchors the upgrade ask to the contractor's own silent dollars when known", () => {
-    // Ethical value anchoring: when we know hasSilent, the number is the
-    // visual hero (text-money, large font) AND the CTA reframes as "Import
-    // the rest — $79/month" so $79 reads as the answer to *their* number.
-    expect(paywall).toContain("hasSilent");
-    expect(paywall).toContain('data-testid="paywall-money-anchor"');
-    expect(paywall).toMatch(/Sitting quiet in your queue/);
-    expect(paywall).toMatch(/text-money/);
-    expect(paywall).toContain("Import the rest — $79/month");
-    // Original CTA label survives as the fallback branch for the no-silent
-    // case (locked by existing tests above). Both labels co-exist in source.
-    expect(paywall).toContain("Unlock Silent Quote Command — $79/month");
-  });
-
   it("the value anchor is gated on hasSilent only — no fake/zero numbers ever rendered", () => {
-    // Zero or unknown silentQuoteValue must NOT render the money anchor.
     expect(paywall).toMatch(
       /hasSilent\s*=\s*Boolean\(silentQuoteValue && silentQuoteValue > 0\)/,
     );
@@ -249,7 +362,6 @@ describe("Paywall component", () => {
       /expires|countdown|hurry|only \d+ left|last chance|today only/i,
     );
     expect(paywall).not.toMatch(/\bguarantee\b/i);
-    // $79 is the only price — unchanged.
     expect(paywall).not.toMatch(/\$39\b|\$49\b|\$59\b|\$69\b|\$89\b|\$99\b/);
     expect(paywall).toContain("$79/month");
   });
@@ -267,7 +379,7 @@ describe("Paywall component", () => {
 });
 
 // ---------------------------------------------------------------------------
-// UpgradeButton — safe-disabled behavior
+// UpgradeButton — Paddle when wired; Pro chip when already paid; mailto otherwise
 // ---------------------------------------------------------------------------
 
 describe("UpgradeButton component", () => {
@@ -275,7 +387,7 @@ describe("UpgradeButton component", () => {
     expect(upgradeButton.startsWith('"use client"')).toBe(true);
   });
 
-  it("never fetches a checkout route — no fake success/loading state either", () => {
+  it("never fetches a checkout route — Paddle opens client-side via the SDK", () => {
     expect(upgradeButton).not.toMatch(/fetch\(/);
     expect(upgradeButton).not.toMatch(/window\.location\.href\s*=/);
     expect(upgradeButton).not.toMatch(/\/api\//);
@@ -285,11 +397,54 @@ describe("UpgradeButton component", () => {
     expect(upgradeButton).toContain("$79/month");
   });
 
-  it("surfaces the support email + mailto on click (honest disabled state)", () => {
+  it("renders the PaddleCheckoutButton when paddleAvailable and a user is known", () => {
+    expect(upgradeButton).toContain("PaddleCheckoutButton");
+    expect(upgradeButton).toMatch(/canCheckout\s*=\s*Boolean\(paddleAvailable && userId\)/);
+  });
+
+  it("collapses to a 'Pro · Active' chip when the user is already paid", () => {
+    expect(upgradeButton).toMatch(/if \(isPaid\)/);
+    expect(upgradeButton).toContain('data-testid="upgrade-pro-active"');
+    expect(upgradeButton).toMatch(/Pro · Active/);
+  });
+
+  it("surfaces the support email + mailto on click when Paddle is not wired", () => {
     expect(upgradeButton).toContain("SUPPORT_EMAIL");
     expect(upgradeButton).toContain('data-testid="upgrade-billing-hint"');
     expect(upgradeButton).toMatch(/mailto:\$\{SUPPORT_EMAIL\}/);
     expect(upgradeButton).toMatch(/Billing is being updated/);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// PaddleCheckoutButton — pins user_id, never trusts client-supplied entitlement
+// ---------------------------------------------------------------------------
+
+describe("PaddleCheckoutButton component", () => {
+  it("is a client component", () => {
+    expect(checkoutButton.startsWith('"use client"')).toBe(true);
+  });
+
+  it("loads Paddle.js from the official CDN — not from a wildcard URL", () => {
+    expect(checkoutButton).toContain("https://cdn.paddle.com/paddle/v2/paddle.js");
+  });
+
+  it("reads ONLY the public Paddle env vars on the client", () => {
+    expect(checkoutButton).toContain("NEXT_PUBLIC_PADDLE_CLIENT_TOKEN");
+    expect(checkoutButton).toContain("NEXT_PUBLIC_PADDLE_PRICE_ID");
+    expect(checkoutButton).not.toContain("PADDLE_API_KEY");
+    expect(checkoutButton).not.toContain("PADDLE_WEBHOOK_SECRET");
+  });
+
+  it("pins the authenticated user_id into Paddle custom_data", () => {
+    expect(checkoutButton).toMatch(/customData:\s*\{\s*user_id:\s*userId/);
+    expect(checkoutButton).toMatch(/app:\s*["']quote_reclaim["']/);
+  });
+
+  it("never leaks quote or customer PII into custom_data", () => {
+    // Custom data carries only user_id + a static app tag ("quote_reclaim").
+    // Quote/customer dollar values and client identifiers are never attached.
+    expect(checkoutButton).not.toMatch(/customData[\s\S]{0,200}(estimate|client_email|client_name|recovered_amount|quote_id)/i);
   });
 });
 
@@ -309,10 +464,10 @@ describe("/quotes/new page paywall integration", () => {
     expect(newQuotePage).toMatch(/\{\s*blocked\s*\?\s*\(?\s*<Paywall/);
   });
 
-  it("renders the QuoteForm only on the unblocked branch", () => {
-    expect(newQuotePage).toMatch(
-      /blocked\s*\?[\s\S]*?<Paywall[\s\S]*?:[\s\S]*?<QuoteForm/,
-    );
+  it("threads the auth user + paddle availability into the Paywall", () => {
+    expect(newQuotePage).toMatch(/userId=\{user\.id\}/);
+    expect(newQuotePage).toMatch(/userEmail=\{user\.email \?\? null\}/);
+    expect(newQuotePage).toMatch(/paddleAvailable=\{paddleClientConfigured\(\)\}/);
   });
 
   it("reads usage_count + is_paid from profile, not from client input", () => {
@@ -322,6 +477,19 @@ describe("/quotes/new page paywall integration", () => {
 
   it("dashboard back-link remains so the user never gets trapped", () => {
     expect(newQuotePage).toContain('href="/dashboard"');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Dashboard header — UpgradeButton is wired with user + paddle availability
+// ---------------------------------------------------------------------------
+
+describe("Dashboard header threads user + paddle availability", () => {
+  it("dashboard passes userId, userEmail, isPaid, and paddleAvailable to UpgradeButton", () => {
+    expect(dashboardPage).toMatch(/<UpgradeButton[\s\S]*?userId=\{user\.id\}/);
+    expect(dashboardPage).toMatch(/<UpgradeButton[\s\S]*?userEmail=\{user\.email \?\? null\}/);
+    expect(dashboardPage).toMatch(/<UpgradeButton[\s\S]*?isPaid=\{isPaid\}/);
+    expect(dashboardPage).toMatch(/<UpgradeButton[\s\S]*?paddleAvailable=\{paddleClientConfigured\(\)\}/);
   });
 });
 

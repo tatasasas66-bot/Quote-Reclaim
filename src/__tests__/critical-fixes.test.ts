@@ -93,7 +93,7 @@ describe("A2: session cookie persistence", () => {
 describe("A3: Upgrade — $79/month button", () => {
   it("dashboard header renders the UpgradeButton", () => {
     expect(dashboard).toContain("UpgradeButton");
-    expect(dashboard).toMatch(/<UpgradeButton\s*\/?>/);
+    expect(dashboard).toMatch(/<UpgradeButton[\s\S]*?\/>/);
   });
 
   it("button is labeled Upgrade — $79/month", () => {
@@ -101,16 +101,15 @@ describe("A3: Upgrade — $79/month button", () => {
     expect(upgradeButton).toMatch(/Upgrade — \$\{PRICE_LABEL\}|Upgrade — \$79\/month/);
   });
 
-  it("does not route to a billing-provider-specific checkout URL (safe-disabled)", () => {
-    // Quote Reclaim is currently between merchants of record. The button
-    // never fetches any provider-specific checkout route — it surfaces the
-    // support email instead. When a future provider lands, replace this with
-    // a positive assertion against the new path.
-    expect(upgradeButton).not.toMatch(/\/api\/(lemonsqueezy|stripe|paddle)/i);
+  it("does not build a server-side checkout URL — Paddle opens client-side", () => {
+    // Checkout opens via Paddle.js overlay on the client; the button never
+    // fetches a server checkout route. The Lemon/Stripe routes are gone.
+    expect(upgradeButton).not.toMatch(/\/api\/(lemonsqueezy|stripe)/i);
+    expect(upgradeButton).not.toMatch(/\/api\/.+checkout/i);
     expect(upgradeButton).not.toMatch(/fetch\(/);
   });
 
-  it("surfaces a safe billing-disabled state on click (mailto, not a dead fetch)", () => {
+  it("surfaces a safe mailto fallback when Paddle is NOT wired (no dead fetch)", () => {
     expect(upgradeButton).toContain("SUPPORT_EMAIL");
     expect(upgradeButton).toContain("Billing is being updated");
     expect(upgradeButton).toMatch(/mailto:\$\{SUPPORT_EMAIL\}/);
@@ -118,7 +117,10 @@ describe("A3: Upgrade — $79/month button", () => {
     expect(upgradeButton).not.toMatch(/href\s*=\s*['"]#['"]/);
   });
 
-  it("never trusts a client-provided user_id (the future checkout call will derive it server-side)", () => {
-    expect(upgradeButton).not.toMatch(/user_id/);
+  it("pins the authenticated user id into the Paddle checkout custom_data — never trusts client input", () => {
+    // The button forwards the server-resolved userId into PaddleCheckoutButton.
+    // Server-side, the webhook re-validates against paddle_subscription_id.
+    expect(upgradeButton).toMatch(/userId=\{userId\}/);
+    expect(upgradeButton).not.toMatch(/user_id\s*:\s*['"]/);
   });
 });
