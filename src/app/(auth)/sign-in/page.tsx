@@ -6,7 +6,7 @@ import { safeRedirectPath } from "@/lib/auth/safe-redirect";
 
 export const metadata: Metadata = {
   title: "Sign in",
-  description: "Sign in to Quote Reclaim with Magic Link or Google.",
+  description: "Sign in to Quote Reclaim with a secure email link. No password.",
 };
 
 // Rendered fresh per request so an existing session is always detected and the

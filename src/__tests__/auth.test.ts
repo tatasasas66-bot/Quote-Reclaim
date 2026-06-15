@@ -222,3 +222,47 @@ describe("Google OAuth contract (Phase 2)", () => {
     expect(safeRedirectSource).toContain('next.startsWith("//")');
   });
 });
+
+// Launch decision (auth strategy study): Google is HIDDEN by default. The
+// backend OAuth handler + config stay intact (asserted above) so re-enabling
+// is a one-flag change — but nothing Google/Supabase-branded may render in the
+// auth UI unless NEXT_PUBLIC_ENABLE_GOOGLE_AUTH is explicitly "true". This lock
+// prevents a future edit from silently re-exposing the unbranded Google screen.
+describe("Google hidden by default — no visible social-login copy at launch", () => {
+  const formSource = readSource("../components/onboarding/AuthForm.tsx");
+  const shellSource = readSource("../components/onboarding/AuthShell.tsx");
+  const signInSource = readSource("../app/(auth)/sign-in/page.tsx");
+  const signUpSource = readSource("../app/(auth)/sign-up/page.tsx");
+
+  it("the Google button + 'OR' divider render ONLY when the flag is strictly 'true'", () => {
+    // Default-off gate: the constant compares === "true", so unset/false/any
+    // other value hides Google. Both the button and the divider sit behind it.
+    expect(formSource).toMatch(
+      /GOOGLE_AUTH_ENABLED\s*=\s*\n?\s*process\.env\.NEXT_PUBLIC_ENABLE_GOOGLE_AUTH === "true"/,
+    );
+    expect(formSource).toMatch(/!magicSent && GOOGLE_AUTH_ENABLED \?/);
+  });
+
+  it("AuthShell renders NO Google/Supabase social-login copy", () => {
+    expect(shellSource).not.toMatch(/google/i);
+    expect(shellSource).not.toMatch(/supabase/i);
+    // The visible subtitle is Magic-Link-only.
+    expect(shellSource).toContain("Sign in with Magic Link. No password.");
+  });
+
+  it("sign-in / sign-up page metadata does not advertise Google", () => {
+    expect(signInSource).not.toMatch(/google/i);
+    expect(signUpSource).not.toMatch(/google/i);
+  });
+
+  it("the magic-link path is unconditional (NOT behind any feature flag)", () => {
+    // signInWithOtp must always be reachable; only Google is flag-gated.
+    expect(formSource).toContain("signInWithOtp");
+    const otpIdx = formSource.indexOf("signInWithOtp");
+    const gateIdx = formSource.indexOf("GOOGLE_AUTH_ENABLED");
+    // The OTP call appears in handleMagicLink, outside the GOOGLE_AUTH_ENABLED
+    // render gate — they are independent code paths.
+    expect(otpIdx).toBeGreaterThan(0);
+    expect(gateIdx).toBeGreaterThan(0);
+  });
+});
