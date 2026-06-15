@@ -61,15 +61,17 @@ describe("AuthForm contract", () => {
 
   it("OTP UI copy is GATED — Magic Link UX is untouched when the flag is off", () => {
     // The old hybrid 'Link not working? Enter the 6-digit code' fallback is
-    // gone — we never show both at once. The 6-digit-code copy now belongs to
-    // the dedicated OTP mode and lives only inside the AUTH_OTP_MODE branch.
+    // gone — we never show both at once. The code-entry copy belongs to the
+    // dedicated OTP mode and lives only inside the AUTH_OTP_MODE branch.
     expect(source).not.toContain("Link not working?");
     expect(source).not.toContain("showOtpFallback");
-    expect(source).toContain("6-digit code");
-    // The code-entry UI (label "6-digit code") is only rendered inside the
+    // Token length is Supabase-configurable (the live project sends 8), so the
+    // UI must NOT promise a "6-digit" code anywhere.
+    expect(source).not.toMatch(/6-digit/);
+    // The code-entry UI (label "Sign-in code") is only rendered inside the
     // AUTH_OTP_MODE branch — never in the default Magic Link path.
     expect(source).toMatch(
-      /AUTH_OTP_MODE \? \([\s\S]*?label="6-digit code"[\s\S]*?\) : \(/,
+      /AUTH_OTP_MODE \? \([\s\S]*?label="Sign-in code"[\s\S]*?\) : \(/,
     );
   });
 
@@ -266,9 +268,13 @@ describe("Google hidden by default — no visible social-login copy at launch", 
     expect(shellSource).not.toMatch(/google/i);
     expect(shellSource).not.toMatch(/supabase/i);
     // Subtitles for BOTH auth modes are present in source — the
-    // AUTH_OTP_MODE flag selects which renders at build time.
+    // AUTH_OTP_MODE flag selects which renders at build time. The OTP subtitle
+    // is length-neutral (token can be 6-10 digits), so it must not say "6-digit".
     expect(shellSource).toContain("Sign in with Magic Link. No password.");
-    expect(shellSource).toContain("Sign in with a 6-digit code. No password.");
+    expect(shellSource).toContain(
+      "Sign in with a code from your email. No password.",
+    );
+    expect(shellSource).not.toMatch(/6-digit/);
   });
 
   it("sign-in / sign-up page metadata does not advertise Google", () => {
@@ -290,8 +296,10 @@ describe("Google hidden by default — no visible social-login copy at launch", 
 
 // Launch-readiness lock for the typed-OTP path. The verify flow exists and is
 // gated; when the flag flips on, the user sees code-entry copy and the typed
-// code is verified via supabase.auth.verifyOtp({ type: "email" }).
-describe("Email OTP (6-digit code) — flag-gated, default off", () => {
+// code is verified via supabase.auth.verifyOtp({ type: "email" }). The token
+// length is Supabase-configurable (6-10 digits; the live project sends 8), so
+// the UI must stay length-neutral.
+describe("Email OTP (numeric sign-in code) — flag-gated, default off", () => {
   const formSource = readSource("../components/onboarding/AuthForm.tsx");
 
   it("AUTH_OTP_MODE constant is the single source of truth for the flag", () => {
@@ -306,12 +314,31 @@ describe("Email OTP (6-digit code) — flag-gated, default off", () => {
     );
   });
 
-  it("renders the recommended OTP copy (under the gate)", () => {
-    expect(formSource).toContain("Enter the 6-digit code we sent to your email.");
+  it("NEVER claims a fixed '6-digit' length anywhere (the real token is 8)", () => {
+    expect(formSource).not.toMatch(/6-digit/);
+    expect(formSource).not.toMatch(/six.digit/i);
+  });
+
+  it("renders neutral, length-agnostic code copy (under the gate)", () => {
+    expect(formSource).toContain("Enter the code we sent to your email.");
+    expect(formSource).toContain('label="Sign-in code"');
     expect(formSource).toContain("send a new code");
     // Mobile-friendly input semantics: numeric keyboard + one-time-code autofill
     expect(formSource).toContain('autoComplete="one-time-code"');
     expect(formSource).toContain('inputMode="numeric"');
+  });
+
+  it("accepts the ACTUAL Supabase token length (6-10 digits) — never clamps to 6", () => {
+    // Validation accepts 6-10 digits; input is capped at the Supabase max (10),
+    // not truncated to 6 (which would silently chop the live 8-digit code).
+    expect(formSource).toMatch(/\^\\d\{6,10\}\$/);
+    expect(formSource).toMatch(/\.slice\(0, 10\)/);
+    expect(formSource).toContain("maxLength={10}");
+    expect(formSource).not.toMatch(/\.slice\(0, 6\)/);
+    expect(formSource).not.toMatch(/maxLength=\{6\}/);
+    // Verify button enables on the minimum supported length, not an exact one.
+    expect(formSource).toMatch(/otpCode\.length < 6/);
+    expect(formSource).not.toMatch(/otpCode\.length !== 6/);
   });
 
   it("invalid / expired codes show a safe message — never leaks the raw error", () => {
@@ -325,11 +352,11 @@ describe("Email OTP (6-digit code) — flag-gated, default off", () => {
     expect(formSource).not.toMatch(/console\.\w+\([^)]*\btoken\b/);
   });
 
-  it("the email-button label switches to 'Send 6-digit code' when the flag is on", () => {
+  it("the email-button label switches to 'Send sign-in code' when the flag is on", () => {
     // Both labels coexist in source; the runtime ternary picks one.
-    expect(formSource).toContain("Send 6-digit code");
+    expect(formSource).toContain("Send sign-in code");
     expect(formSource).toContain("Send secure link");
-    expect(formSource).toMatch(/AUTH_OTP_MODE[\s\S]{0,40}"Send 6-digit code"[\s\S]{0,40}"Send secure link"/);
+    expect(formSource).toMatch(/AUTH_OTP_MODE[\s\S]{0,40}"Send sign-in code"[\s\S]{0,40}"Send secure link"/);
   });
 
   it("Magic Link path stays identical when AUTH_OTP_MODE is off (regression guard)", () => {

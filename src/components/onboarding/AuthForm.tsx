@@ -139,14 +139,17 @@ function userFacingMagicLinkError(err: unknown): string {
 const GOOGLE_AUTH_ENABLED =
   process.env.NEXT_PUBLIC_ENABLE_GOOGLE_AUTH === "true";
 
-// OTP MODE — when set, the email entry sends a 6-digit code that the user
-// types into a code-entry form, and we verify via supabase.auth.verifyOtp.
-// Default OFF preserves the existing Magic Link flow exactly.
+// OTP MODE — when set, the email entry sends a numeric sign-in code that the
+// user types into a code-entry form, and we verify via
+// supabase.auth.verifyOtp. Default OFF preserves the existing Magic Link flow
+// exactly. The token length is dashboard-configurable (Supabase supports
+// 6-10 digits); the current Quote Reclaim project sends 8, so the UI never
+// hard-codes a length.
 //
 // PREREQUISITE BEFORE FLIPPING TO "true": the Supabase Auth email template
 // for Magic Link / Email OTP MUST render `{{ .Token }}` somewhere in the body
-// so the contractor sees a 6-digit code. Without that template edit, the user
-// will receive only the link and the code-entry UI will never succeed.
+// so the contractor sees the code. Without that template edit, the user will
+// receive only the link and the code-entry UI will never succeed.
 const AUTH_OTP_MODE = process.env.NEXT_PUBLIC_AUTH_OTP_MODE === "true";
 
 export function AuthForm({ mode }: AuthFormProps) {
@@ -379,8 +382,11 @@ export function AuthForm({ mode }: AuthFormProps) {
     event.preventDefault();
     setFormError(null);
     const code = otpCode.trim();
-    if (!/^\d{6}$/.test(code)) {
-      setFormError("Enter the 6-digit code from your email.");
+    // Supabase email OTP length is dashboard-configurable (6-10 digits); a
+    // real Quote Reclaim email currently sends an 8-digit token. Accept any
+    // length in that supported range rather than assuming 6.
+    if (!/^\d{6,10}$/.test(code)) {
+      setFormError("Enter the code from your email.");
       return;
     }
     setOtpVerifying(true);
@@ -483,7 +489,7 @@ export function AuthForm({ mode }: AuthFormProps) {
           <form onSubmit={handleVerifyOtp} noValidate className="space-y-3">
             <div className="rounded-lg border border-line-subtle bg-surface-2 p-3 text-sm">
               <p className="font-semibold text-ink-strong">
-                Enter the 6-digit code we sent to your email.
+                Enter the code we sent to your email.
               </p>
               <p className="mt-1 text-xs text-ink-muted">
                 Sent to <span className="font-medium">{sentEmail}</span>. The
@@ -491,17 +497,20 @@ export function AuthForm({ mode }: AuthFormProps) {
               </p>
             </div>
             <Input
-              label="6-digit code"
+              label="Sign-in code"
               type="text"
               value={otpCode}
               onChange={(e) =>
-                setOtpCode(e.target.value.replace(/\D/g, "").slice(0, 6))
+                // Numeric token of dashboard-configured length (6-10). Strip
+                // non-digits and cap at the Supabase maximum (10) — never
+                // clamp to 6, which would truncate the real 8-digit code.
+                setOtpCode(e.target.value.replace(/\D/g, "").slice(0, 10))
               }
-              placeholder="123456"
+              placeholder="Code from your email"
               required
               autoComplete="one-time-code"
               inputMode="numeric"
-              maxLength={6}
+              maxLength={10}
               disabled={otpVerifying}
             />
             <Button
@@ -509,7 +518,7 @@ export function AuthForm({ mode }: AuthFormProps) {
               fullWidth
               size="lg"
               loading={otpVerifying}
-              disabled={otpVerifying || otpCode.length !== 6}
+              disabled={otpVerifying || otpCode.length < 6}
             >
               {otpVerifying ? "Verifying..." : "Verify code"}
             </Button>
@@ -585,7 +594,7 @@ export function AuthForm({ mode }: AuthFormProps) {
               : cooldownRemaining > 0
                 ? `Try again in ${cooldownRemaining}s`
                 : AUTH_OTP_MODE
-                  ? "Send 6-digit code"
+                  ? "Send sign-in code"
                   : "Send secure link"}
           </Button>
         </form>
