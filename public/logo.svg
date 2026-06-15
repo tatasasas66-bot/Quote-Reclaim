@@ -1,0 +1,15 @@
+<svg viewBox="0 0 240 60" xmlns="http://www.w3.org/2000/svg" fill="none" role="img" aria-label="Quote Reclaim">
+  <title>Quote Reclaim</title>
+  <!-- Mark, scaled to 44px in a 60-tall canvas; left margin 8 -->
+  <g transform="translate(8 8)">
+    <circle cx="22" cy="22" r="15.5" stroke="#d96f32" stroke-width="6" />
+    <line x1="33" y1="33" x2="42" y2="42" stroke="#d96f32" stroke-width="6" stroke-linecap="round" />
+    <polygon points="23,23 34.5,25 25,34.5" fill="#d4a63a" />
+  </g>
+  <!-- Wordmark: "Quote" in ink-strong, " Reclaim" in brand rust -->
+  <text x="68" y="40"
+        font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif"
+        font-size="28" font-weight="900" letter-spacing="-0.6">
+    <tspan fill="#0a0a0a">Quote</tspan><tspan dx="6" fill="#d96f32">Reclaim</tspan>
+  </text>
+</svg>
