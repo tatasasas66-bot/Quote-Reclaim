@@ -16,10 +16,18 @@ type AuthShellProps = {
   mode: "sign-in" | "sign-up";
 };
 
+// AUTH_OTP_MODE flips the sign-in subtitle so the headline matches what the
+// AuthForm actually does. Off (default): "Sign in with Magic Link." On:
+// "Sign in with a 6-digit code." The sign-up subtitle is mode-independent
+// (it sells the free tier, not the auth mechanism).
+const AUTH_OTP_MODE = process.env.NEXT_PUBLIC_AUTH_OTP_MODE === "true";
+
 const COPY = {
   "sign-in": {
     title: "Start your recovery",
-    subtitle: "Sign in with Magic Link. No password.",
+    subtitle: AUTH_OTP_MODE
+      ? "Sign in with a 6-digit code. No password."
+      : "Sign in with Magic Link. No password.",
     crossLink: { href: "/sign-up", label: "New here? Start free ->" },
   },
   "sign-up": {

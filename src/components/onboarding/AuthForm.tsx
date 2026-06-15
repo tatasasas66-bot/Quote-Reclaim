@@ -139,7 +139,24 @@ function userFacingMagicLinkError(err: unknown): string {
 const GOOGLE_AUTH_ENABLED =
   process.env.NEXT_PUBLIC_ENABLE_GOOGLE_AUTH === "true";
 
+// OTP MODE — when set, the email entry sends a 6-digit code that the user
+// types into a code-entry form, and we verify via supabase.auth.verifyOtp.
+// Default OFF preserves the existing Magic Link flow exactly.
+//
+// PREREQUISITE BEFORE FLIPPING TO "true": the Supabase Auth email template
+// for Magic Link / Email OTP MUST render `{{ .Token }}` somewhere in the body
+// so the contractor sees a 6-digit code. Without that template edit, the user
+// will receive only the link and the code-entry UI will never succeed.
+const AUTH_OTP_MODE = process.env.NEXT_PUBLIC_AUTH_OTP_MODE === "true";
+
 export function AuthForm({ mode }: AuthFormProps) {
+  // `mode` is part of the public prop API (the AuthShell wraps both /sign-in
+  // and /sign-up around AuthForm) even though the form body is mode-agnostic
+  // today — the headline + subtitle live in AuthShell. The no-op reference
+  // below keeps the prop available for future per-mode UX without tripping
+  // the unused-arg lint rule. Removing it would force a breaking type change
+  // at every test/component call site.
+  void mode;
   const searchParams = useSearchParams();
   const auditToken = searchParams.get("audit_token") ?? undefined;
   const rawCallbackError = describeCallbackError(searchParams.get("error"));
@@ -162,6 +179,9 @@ export function AuthForm({ mode }: AuthFormProps) {
   const [googleLoading, setGoogleLoading] = React.useState(false);
   const [magicSent, setMagicSent] = React.useState(false);
   const [formError, setFormError] = React.useState<string | null>(null);
+  // OTP-mode-only state. Untouched when AUTH_OTP_MODE is off.
+  const [otpCode, setOtpCode] = React.useState("");
+  const [otpVerifying, setOtpVerifying] = React.useState(false);
   const [resendAvailableAt, setResendAvailableAt] = React.useState<
     number | null
   >(null);
@@ -355,6 +375,61 @@ export function AuthForm({ mode }: AuthFormProps) {
     }
   }
 
+  async function handleVerifyOtp(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setFormError(null);
+    const code = otpCode.trim();
+    if (!/^\d{6}$/.test(code)) {
+      setFormError("Enter the 6-digit code from your email.");
+      return;
+    }
+    setOtpVerifying(true);
+    try {
+      const supabase = createBrowserSupabaseClient();
+      const { error } = await supabase.auth.verifyOtp({
+        email: sentEmail,
+        token: code,
+        type: "email",
+      });
+      if (error) throw error;
+      // Cookies are written by Supabase on success; hard-navigate so the next
+      // server render reads the fresh session. Mirrors the OAuth callback
+      // self-heal pattern at the top of this component.
+      const explicitNext = searchParams.get("next");
+      const target = safeRedirectPath(
+        auditToken && !explicitNext
+          ? `/dashboard?audit_token=${encodeURIComponent(auditToken)}`
+          : explicitNext,
+      );
+      window.location.replace(target);
+    } catch (err) {
+      const safe = safeSupabaseError(err);
+      const lower = (safe.message ?? "").toLowerCase();
+      console.error("[auth:otp] verify failed", {
+        name: safe.name,
+        code: safe.code,
+        status: safe.status,
+        hadMessage: Boolean(safe.message),
+      });
+      if (isRateLimitError(err)) {
+        setFormError("Too many attempts. Wait a few minutes, then try again.");
+        startResendCooldown();
+      } else if (
+        lower.includes("invalid") ||
+        lower.includes("expired") ||
+        lower.includes("token")
+      ) {
+        setFormError("That code is invalid or expired. Send a new code.");
+      } else {
+        setFormError(
+          "Could not verify the code. Send a new one or contact support.",
+        );
+      }
+    } finally {
+      setOtpVerifying(false);
+    }
+  }
+
   async function handleGoogle() {
     setFormError(null);
     setGoogleLoading(true);
@@ -404,32 +479,85 @@ export function AuthForm({ mode }: AuthFormProps) {
       ) : null}
 
       {magicSent ? (
-        <div
-          role="status"
-          aria-live="polite"
-          className="rounded-lg border border-success/40 bg-success/10 p-4 text-sm"
-        >
-          <p className="font-semibold text-success">
-            If that email can receive mail, your secure link is on the way.
-          </p>
-          <p className="mt-1 text-ink">
-            This link expires shortly and can only be used once.
-          </p>
-          <p className="mt-1 text-xs text-ink-muted">
-            Sent to <span className="font-medium">{sentEmail}</span>
-          </p>
-          <button
-            type="button"
-            className="mt-3 text-xs text-ink-muted underline hover:text-ink-strong"
-            onClick={() => {
-              setMagicSent(false);
-              setSentEmail("");
-              setFormError(null);
-            }}
+        AUTH_OTP_MODE ? (
+          <form onSubmit={handleVerifyOtp} noValidate className="space-y-3">
+            <div className="rounded-lg border border-line-subtle bg-surface-2 p-3 text-sm">
+              <p className="font-semibold text-ink-strong">
+                Enter the 6-digit code we sent to your email.
+              </p>
+              <p className="mt-1 text-xs text-ink-muted">
+                Sent to <span className="font-medium">{sentEmail}</span>. The
+                code expires shortly.
+              </p>
+            </div>
+            <Input
+              label="6-digit code"
+              type="text"
+              value={otpCode}
+              onChange={(e) =>
+                setOtpCode(e.target.value.replace(/\D/g, "").slice(0, 6))
+              }
+              placeholder="123456"
+              required
+              autoComplete="one-time-code"
+              inputMode="numeric"
+              maxLength={6}
+              disabled={otpVerifying}
+            />
+            <Button
+              type="submit"
+              fullWidth
+              size="lg"
+              loading={otpVerifying}
+              disabled={otpVerifying || otpCode.length !== 6}
+            >
+              {otpVerifying ? "Verifying..." : "Verify code"}
+            </Button>
+            <p className="text-xs text-ink-muted">
+              Didn&apos;t get it? Check spam, or{" "}
+              <button
+                type="button"
+                className="underline hover:text-ink-strong"
+                onClick={() => {
+                  setMagicSent(false);
+                  setSentEmail("");
+                  setOtpCode("");
+                  setFormError(null);
+                }}
+              >
+                send a new code
+              </button>
+              .
+            </p>
+          </form>
+        ) : (
+          <div
+            role="status"
+            aria-live="polite"
+            className="rounded-lg border border-success/40 bg-success/10 p-4 text-sm"
           >
-            Use a different email
-          </button>
-        </div>
+            <p className="font-semibold text-success">
+              If that email can receive mail, your secure link is on the way.
+            </p>
+            <p className="mt-1 text-ink">
+              This link expires shortly and can only be used once.
+            </p>
+            <p className="mt-1 text-xs text-ink-muted">
+              Sent to <span className="font-medium">{sentEmail}</span>
+            </p>
+            <button
+              type="button"
+              className="mt-3 text-xs text-ink-muted underline hover:text-ink-strong"
+              onClick={() => {
+                setMagicSent(false);
+                setSentEmail("");
+                setFormError(null);
+              }}
+            >
+              Use a different email
+            </button>
+          </div>
+        )
       ) : (
         <form onSubmit={handleMagicLink} noValidate className="space-y-3">
           <Input
@@ -451,11 +579,13 @@ export function AuthForm({ mode }: AuthFormProps) {
             disabled={googleLoading || cooldownRemaining > 0}
           >
             {magicLoading
-              ? "Sending secure link..."
+              ? AUTH_OTP_MODE
+                ? "Sending code..."
+                : "Sending secure link..."
               : cooldownRemaining > 0
                 ? `Try again in ${cooldownRemaining}s`
-                : mode === "sign-up"
-                  ? "Send secure link"
+                : AUTH_OTP_MODE
+                  ? "Send 6-digit code"
                   : "Send secure link"}
           </Button>
         </form>

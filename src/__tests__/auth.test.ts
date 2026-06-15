@@ -13,9 +13,20 @@ describe("AuthForm contract", () => {
     expect(source).toContain("signInWithOtp");
   });
 
-  it("does not require verifyOtp in the sign-in UI", () => {
-    expect(source).not.toContain("verifyOtp");
-    expect(source).not.toContain('type: "email"');
+  it("verifyOtp is GATED behind NEXT_PUBLIC_AUTH_OTP_MODE (default off keeps Magic Link)", () => {
+    // The OTP code-entry path exists, but lives behind AUTH_OTP_MODE so the
+    // current Magic Link flow is unchanged when the flag is unset/"false".
+    // verifyOtp must therefore appear in the source AND its only callsite
+    // must be inside the AUTH_OTP_MODE-gated handler.
+    expect(source).toContain("AUTH_OTP_MODE");
+    expect(source).toMatch(
+      /AUTH_OTP_MODE\s*=\s*process\.env\.NEXT_PUBLIC_AUTH_OTP_MODE === "true"/,
+    );
+    expect(source).toContain("verifyOtp");
+    expect(source).toMatch(/type:\s*"email"/);
+    // The verifyOtp call lives in handleVerifyOtp, whose JSX is only rendered
+    // inside an `AUTH_OTP_MODE ?` branch — never in the default flow.
+    expect(source).toMatch(/AUTH_OTP_MODE \? \(\s*<form onSubmit=\{handleVerifyOtp\}/);
   });
 
   it("calls signInWithOAuth with provider google", () => {
@@ -48,10 +59,18 @@ describe("AuthForm contract", () => {
     );
   });
 
-  it("does not render OTP fallback UI", () => {
-    expect(source).not.toContain("6-digit code");
+  it("OTP UI copy is GATED — Magic Link UX is untouched when the flag is off", () => {
+    // The old hybrid 'Link not working? Enter the 6-digit code' fallback is
+    // gone — we never show both at once. The 6-digit-code copy now belongs to
+    // the dedicated OTP mode and lives only inside the AUTH_OTP_MODE branch.
     expect(source).not.toContain("Link not working?");
     expect(source).not.toContain("showOtpFallback");
+    expect(source).toContain("6-digit code");
+    // The code-entry UI (label "6-digit code") is only rendered inside the
+    // AUTH_OTP_MODE branch — never in the default Magic Link path.
+    expect(source).toMatch(
+      /AUTH_OTP_MODE \? \([\s\S]*?label="6-digit code"[\s\S]*?\) : \(/,
+    );
   });
 
   it("does not log auth tokens or secrets", () => {
@@ -246,8 +265,10 @@ describe("Google hidden by default — no visible social-login copy at launch", 
   it("AuthShell renders NO Google/Supabase social-login copy", () => {
     expect(shellSource).not.toMatch(/google/i);
     expect(shellSource).not.toMatch(/supabase/i);
-    // The visible subtitle is Magic-Link-only.
+    // Subtitles for BOTH auth modes are present in source — the
+    // AUTH_OTP_MODE flag selects which renders at build time.
     expect(shellSource).toContain("Sign in with Magic Link. No password.");
+    expect(shellSource).toContain("Sign in with a 6-digit code. No password.");
   });
 
   it("sign-in / sign-up page metadata does not advertise Google", () => {
@@ -264,5 +285,60 @@ describe("Google hidden by default — no visible social-login copy at launch", 
     // render gate — they are independent code paths.
     expect(otpIdx).toBeGreaterThan(0);
     expect(gateIdx).toBeGreaterThan(0);
+  });
+});
+
+// Launch-readiness lock for the typed-OTP path. The verify flow exists and is
+// gated; when the flag flips on, the user sees code-entry copy and the typed
+// code is verified via supabase.auth.verifyOtp({ type: "email" }).
+describe("Email OTP (6-digit code) — flag-gated, default off", () => {
+  const formSource = readSource("../components/onboarding/AuthForm.tsx");
+
+  it("AUTH_OTP_MODE constant is the single source of truth for the flag", () => {
+    expect(formSource).toMatch(
+      /const AUTH_OTP_MODE\s*=\s*\n?\s*process\.env\.NEXT_PUBLIC_AUTH_OTP_MODE === "true"/,
+    );
+  });
+
+  it("calls supabase.auth.verifyOtp with type 'email' (the code-from-email type)", () => {
+    expect(formSource).toMatch(
+      /verifyOtp\(\s*\{[\s\S]*?email:\s*sentEmail[\s\S]*?token:\s*code[\s\S]*?type:\s*"email"/,
+    );
+  });
+
+  it("renders the recommended OTP copy (under the gate)", () => {
+    expect(formSource).toContain("Enter the 6-digit code we sent to your email.");
+    expect(formSource).toContain("send a new code");
+    // Mobile-friendly input semantics: numeric keyboard + one-time-code autofill
+    expect(formSource).toContain('autoComplete="one-time-code"');
+    expect(formSource).toContain('inputMode="numeric"');
+  });
+
+  it("invalid / expired codes show a safe message — never leaks the raw error", () => {
+    expect(formSource).toContain(
+      "That code is invalid or expired. Send a new code.",
+    );
+    // The verify failure logger logs name/code/status/hadMessage only — never
+    // the token, email body, or raw message.
+    expect(formSource).toMatch(/console\.error\("\[auth:otp\] verify failed"/);
+    expect(formSource).not.toMatch(/console\.\w+\([^)]*otpCode/);
+    expect(formSource).not.toMatch(/console\.\w+\([^)]*\btoken\b/);
+  });
+
+  it("the email-button label switches to 'Send 6-digit code' when the flag is on", () => {
+    // Both labels coexist in source; the runtime ternary picks one.
+    expect(formSource).toContain("Send 6-digit code");
+    expect(formSource).toContain("Send secure link");
+    expect(formSource).toMatch(/AUTH_OTP_MODE[\s\S]{0,40}"Send 6-digit code"[\s\S]{0,40}"Send secure link"/);
+  });
+
+  it("Magic Link path stays identical when AUTH_OTP_MODE is off (regression guard)", () => {
+    // The original honest success copy is preserved verbatim in the off-branch.
+    expect(formSource).toContain(
+      "If that email can receive mail, your secure link is on the way.",
+    );
+    expect(formSource).toContain(
+      "This link expires shortly and can only be used once.",
+    );
   });
 });

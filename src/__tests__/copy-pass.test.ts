@@ -194,7 +194,13 @@ describe("Auth copy", () => {
     // Old absolute-claim copy is gone everywhere.
     expect(authForm).not.toMatch(/Secure link sent\. Open it from your inbox to sign in\./);
     expect(authForm).not.toMatch(/Link not working\?/);
-    expect(authForm).not.toMatch(/6-digit code/);
+    // The "6-digit code" copy now belongs to the OTP mode (AUTH_OTP_MODE flag),
+    // not a hybrid fallback. The honest Magic Link success copy still renders
+    // when AUTH_OTP_MODE is off — and the OTP copy is locked inside the
+    // AUTH_OTP_MODE branch so the two modes never blend.
+    expect(authForm).toMatch(
+      /AUTH_OTP_MODE \? \([\s\S]*?6-digit code[\s\S]*?\) : \(/,
+    );
   });
 });
 
