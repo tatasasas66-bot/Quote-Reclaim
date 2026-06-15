@@ -138,10 +138,10 @@ function ProductPreview() {
               </p>
             </div>
             <p className="mt-3 break-words text-2xl font-black text-ink-strong">
-              $8,500 roof quote is cooling fast.
+              An $8,500 roof quote is going cold fast.
             </p>
             <p className="mt-2 break-words text-sm text-ink-muted">
-              9 days quiet. Open the plan before the job goes cold.
+              9 days silent. Open the plan before the job goes cold.
             </p>
           </div>
         </div>
