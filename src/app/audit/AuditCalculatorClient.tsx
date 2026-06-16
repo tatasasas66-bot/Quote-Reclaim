@@ -4,6 +4,7 @@ import * as React from "react";
 import { Button } from "@/components/ui";
 import { formatCurrency } from "@/lib/utils/currency";
 import { track } from "@/lib/analytics/track";
+import { bucketCurrency, readUtms } from "@/lib/analytics/privacy";
 import {
   buildSignupHref,
   runSilentQuoteAudit,
@@ -25,20 +26,24 @@ export function AuditCalculatorClient() {
   const [copied, setCopied] = React.useState(false);
   const startedRef = React.useRef(false);
   const [signupHref, setSignupHref] = React.useState("/sign-up?next=/onboarding/reveal");
+  const [utms, setUtms] = React.useState<Record<string, string>>({});
   const resultRef = React.useRef<HTMLDivElement | null>(null);
 
   // Page view + UTM capture. Reading UTMs from the live URL on mount keeps the
   // server page fully static; we carry them into the existing /sign-up?next=
-  // flow so paid-traffic attribution survives the hop into the product.
+  // flow so paid-traffic attribution survives the hop into the product, and
+  // we attach them to every analytics event below for funnel attribution.
   React.useEffect(() => {
-    track("audit_page_viewed");
+    const captured = readUtms(window.location.search);
+    setUtms(captured);
     setSignupHref(buildSignupHref(window.location.search));
+    track("audit_page_viewed", captured);
   }, []);
 
   function markStarted() {
     if (startedRef.current) return;
     startedRef.current = true;
-    track("audit_started");
+    track("audit_started", utms);
   }
 
   function updateRow(i: number, key: keyof Row, value: string) {
@@ -62,9 +67,16 @@ export function AuditCalculatorClient() {
     setResult(audit);
     setCopied(false);
     track("audit_completed", {
-      total: audit.totalSilentQuoteValue,
-      quotes: audit.quotes.length,
-      priority_index: audit.priority?.index ?? 0,
+      // PRIVACY: never send raw dollar amounts. We bucket the total into a
+      // coarse range and report counts/flags only — never the customer's
+      // quote values, names, or any input string.
+      quote_count: audit.quotes.length,
+      has_days_silent: audit.quotes.some((q) => q.daysSilent != null),
+      total_silent_quote_value_bucket: bucketCurrency(
+        audit.totalSilentQuoteValue,
+      ),
+      priority_band: audit.priorityBandLabel ?? "unknown",
+      ...utms,
     });
     // Bring the result into view on mobile without a heavy scroll library.
     requestAnimationFrame(() => {
@@ -220,7 +232,7 @@ export function AuditCalculatorClient() {
             <a
               href={signupHref}
               data-testid="audit-signup-cta"
-              onClick={() => track("audit_signup_clicked")}
+              onClick={() => track("audit_signup_clicked", utms)}
               className="inline-flex min-h-12 w-full items-center justify-center rounded-lg border border-brand bg-brand px-4 py-3 text-base font-semibold text-canvas shadow-[0_0_36px_rgba(217,111,50,0.28)] transition-colors hover:bg-brand-dark focus:outline-none focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2 focus-visible:ring-offset-canvas"
             >
               Save this audit and run your first 3 quotes free

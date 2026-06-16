@@ -158,16 +158,40 @@ describe("copy guardrails", () => {
 // Analytics events wired (vendor-agnostic, no new vendor)
 // ---------------------------------------------------------------------------
 
-describe("analytics events are wired without adding a vendor", () => {
+describe("analytics events are wired without adding a vendor in /audit", () => {
   it("fires the four funnel events from the client", () => {
-    expect(clientSrc).toContain('track("audit_page_viewed")');
-    expect(clientSrc).toContain('track("audit_started")');
+    expect(clientSrc).toContain('track("audit_page_viewed"');
+    expect(clientSrc).toContain('track("audit_started"');
     expect(clientSrc).toContain('track("audit_completed"');
-    expect(clientSrc).toContain('track("audit_signup_clicked")');
+    expect(clientSrc).toContain('track("audit_signup_clicked"');
   });
 
   it("uses the internal vendor-agnostic track helper, not a new SDK import", () => {
     expect(clientSrc).toContain('from "@/lib/analytics/track"');
-    expect(clientSrc).not.toMatch(/from "posthog-js"|googletagmanager|segment/);
+    // The client must NOT import posthog-js directly (lazy-loaded by the
+    // provider in the root layout instead, keeping /audit lightweight).
+    expect(clientSrc).not.toMatch(/from ["']posthog-js["']/);
+    expect(clientSrc).not.toMatch(/from ["'][^"']*googletagmanager[^"']*["']/);
+    expect(clientSrc).not.toMatch(/from ["'][^"']*segment[^"']*["']/);
+  });
+
+  it("NEVER sends raw quote dollar amounts (privacy)", () => {
+    // The bucketed field replaces a raw 'total'. Anything that would expose
+    // the dollar figure verbatim is banned.
+    expect(clientSrc).toContain("total_silent_quote_value_bucket");
+    expect(clientSrc).toContain("bucketCurrency");
+    expect(clientSrc).not.toMatch(/total:\s*audit\.totalSilentQuoteValue/);
+    // No customer-identifying field names anywhere in the audit emit.
+    expect(clientSrc).not.toMatch(/(client_name|client_email|customer_email|customer_name|phone|address)/i);
+  });
+
+  it("attaches captured UTMs to every funnel event", () => {
+    expect(clientSrc).toContain('readUtms(window.location.search)');
+    // audit_page_viewed, audit_started, audit_completed, audit_signup_clicked
+    // each receive `utms` (or the captured set) as the props payload.
+    expect(clientSrc).toMatch(/track\("audit_page_viewed", captured\)/);
+    expect(clientSrc).toMatch(/track\("audit_started", utms\)/);
+    expect(clientSrc).toMatch(/track\("audit_completed",[\s\S]*?\.\.\.utms/);
+    expect(clientSrc).toMatch(/track\("audit_signup_clicked", utms\)/);
   });
 });

@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import localFont from "next/font/local";
 import { ToastProvider } from "@/components/ui";
+import { PostHogProvider } from "@/lib/analytics/PostHogProvider";
 import "./globals.css";
 
 const geistSans = localFont({
@@ -42,7 +43,9 @@ export default function RootLayout({
   return (
     <html lang="en" className={`${geistSans.variable} ${geistMono.variable}`}>
       <body className="min-h-screen bg-canvas font-sans text-ink antialiased">
-        <ToastProvider>{children}</ToastProvider>
+        <PostHogProvider>
+          <ToastProvider>{children}</ToastProvider>
+        </PostHogProvider>
       </body>
     </html>
   );
