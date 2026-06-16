@@ -17,19 +17,13 @@ export interface RecoveryScore {
 }
 
 /**
- * Maps a quote's outcome + effective days silent to a numeric score and
- * a contractor-facing band. Used by the dashboard queue row and the
- * sequence detail header. Reading order matters: the score decays
- * monotonically as the quote ages, so progress is always visible.
+ * Pure days-silent → recovery score/band mapping for an active (pending)
+ * quote. Extracted so surfaces that only know a quote's age — e.g. the cold
+ * /audit landing page, which has an amount + days but no full QuoteRow — can
+ * reuse the EXACT same bands the dashboard shows, instead of inventing a
+ * second, conflicting formula.
  */
-export function getRecoveryScore(quote: QuoteRow): RecoveryScore {
-  if (quote.outcome === "won") {
-    return { score: 100, band: "won", label: "WON", tone: "success" };
-  }
-  if (quote.outcome === "closed") {
-    return { score: 0, band: "closed", label: "CLOSED", tone: "neutral" };
-  }
-  const days = effectiveDaysSilent(quote);
+export function recoveryScoreForDays(days: number): RecoveryScore {
   if (days <= 2) {
     // 100, 93, 86 across days 0, 1, 2
     const score = Math.round(100 - days * 7);
@@ -48,6 +42,22 @@ export function getRecoveryScore(quote: QuoteRow): RecoveryScore {
   // 54 → 0 across days 14+
   const score = Math.max(0, Math.round(54 - (days - 14) * 2));
   return { score, band: "critical", label: "CRITICAL", tone: "danger" };
+}
+
+/**
+ * Maps a quote's outcome + effective days silent to a numeric score and
+ * a contractor-facing band. Used by the dashboard queue row and the
+ * sequence detail header. Reading order matters: the score decays
+ * monotonically as the quote ages, so progress is always visible.
+ */
+export function getRecoveryScore(quote: QuoteRow): RecoveryScore {
+  if (quote.outcome === "won") {
+    return { score: 100, band: "won", label: "WON", tone: "success" };
+  }
+  if (quote.outcome === "closed") {
+    return { score: 0, band: "closed", label: "CLOSED", tone: "neutral" };
+  }
+  return recoveryScoreForDays(effectiveDaysSilent(quote));
 }
 
 export type PriorityLabel = "LOW" | "MEDIUM" | "HIGH" | "CRITICAL";

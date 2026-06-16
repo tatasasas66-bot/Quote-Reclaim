@@ -64,7 +64,7 @@ describe("Bug 1: text wraps on mobile, no clipping at 360-390px", () => {
   it("landing Recovery Window Alert body wraps cleanly on mobile", () => {
     // "...before the job goes cold" was clipping. Allow wrapping.
     expect(homepage).toMatch(
-      /9 days quiet\. Open the plan before the job goes cold\./,
+      /9 days without a reply\. Open the plan before the job goes cold\./,
     );
     expect(homepage).toMatch(
       /mt-2 break-words text-sm text-ink-muted/,
