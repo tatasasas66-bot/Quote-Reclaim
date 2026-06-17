@@ -9,9 +9,13 @@ import { describe, expect, it } from "vitest";
 
 import {
   buildSignupHref,
+  buildWhyNotOthers,
+  describeRecoveryWindow,
+  NEXT_THREE_MOVES,
   parseDaysSilent,
   parseQuoteAmount,
   reasonForPriority,
+  recoveryWindowForDays,
   runSilentQuoteAudit,
   suggestedMessage,
   UTM_KEYS,
@@ -161,6 +165,191 @@ describe("suggestedMessage — honest, no weak 'just checking in'", () => {
 
   it("the cold-quote message uses the takeaway / close-out angle", () => {
     expect(suggestedMessage(60).toLowerCase()).toContain("close out");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Recovery-window bands — Warm / Cooling / Cold (no percentages)
+// ---------------------------------------------------------------------------
+
+describe("recoveryWindowForDays — honest day-band labels", () => {
+  it("0-14 days → warm", () => {
+    expect(recoveryWindowForDays(0)).toBe("warm");
+    expect(recoveryWindowForDays(7)).toBe("warm");
+    expect(recoveryWindowForDays(14)).toBe("warm");
+  });
+  it("15-30 days → cooling", () => {
+    expect(recoveryWindowForDays(15)).toBe("cooling");
+    expect(recoveryWindowForDays(21)).toBe("cooling");
+    expect(recoveryWindowForDays(30)).toBe("cooling");
+  });
+  it("31+ days → cold", () => {
+    expect(recoveryWindowForDays(31)).toBe("cold");
+    expect(recoveryWindowForDays(120)).toBe("cold");
+  });
+  it("null days → unknown", () => {
+    expect(recoveryWindowForDays(null)).toBe("unknown");
+  });
+});
+
+describe("describeRecoveryWindow — labels match the spec", () => {
+  it("warm shows 'Follow up while the job is still fresh.'", () => {
+    expect(describeRecoveryWindow(7)).toEqual({
+      window: "warm",
+      label: "Warm",
+      explanation: "Follow up while the job is still fresh.",
+    });
+  });
+  it("cooling shows 'Still worth chasing, but do it soon.'", () => {
+    expect(describeRecoveryWindow(21)).toEqual({
+      window: "cooling",
+      label: "Cooling",
+      explanation: "Still worth chasing, but do it soon.",
+    });
+  });
+  it("cold shows 'Needs a softer close-the-loop angle.'", () => {
+    expect(describeRecoveryWindow(60)).toEqual({
+      window: "cold",
+      label: "Cold",
+      explanation: "Needs a softer close-the-loop angle.",
+    });
+  });
+  it("uses NO percentage / reply-rate language", () => {
+    const all = [7, 21, 60, null].map((d) => describeRecoveryWindow(d));
+    for (const d of all) {
+      expect(d.explanation).not.toMatch(/%/);
+      expect(d.explanation.toLowerCase()).not.toMatch(/reply rate|odds|chance/);
+    }
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Ranked follow-up order + priority labels
+// ---------------------------------------------------------------------------
+
+describe("runSilentQuoteAudit — ranked follow-up order", () => {
+  it("includes every entered quote, each with a rank, window, and priority label", () => {
+    const r = runSilentQuoteAudit([
+      { amountRaw: "2500", daysSilentRaw: "5" },
+      { amountRaw: "4000", daysSilentRaw: "21" },
+      { amountRaw: "8500", daysSilentRaw: "120" },
+    ]);
+    expect(r.rankedQuotes).toHaveLength(3);
+    expect(r.rankedQuotes.map((q) => q.rank)).toEqual([1, 2, 3]);
+    expect(r.rankedQuotes.map((q) => q.priorityLabel)).toEqual([
+      "Follow up first",
+      "Next backup",
+      "Lower priority",
+    ]);
+    // Each row carries a windowLabel that matches its days.
+    expect(r.rankedQuotes[0].windowLabel).toMatch(/Warm|Cooling|Cold/);
+  });
+
+  it("ranks consistently with the standalone priority pick", () => {
+    const r = runSilentQuoteAudit([
+      { amountRaw: "2500", daysSilentRaw: "5" },
+      { amountRaw: "4000", daysSilentRaw: "21" },
+      { amountRaw: "8500", daysSilentRaw: "120" },
+    ]);
+    expect(r.rankedQuotes[0].index).toBe(r.priority?.index);
+  });
+
+  it("ties break toward bigger dollar amount, then earlier entry — deterministic", () => {
+    const r = runSilentQuoteAudit([
+      { amountRaw: "5000", daysSilentRaw: "20" },
+      { amountRaw: "5000", daysSilentRaw: "20" },
+    ]);
+    expect(r.rankedQuotes[0].index).toBe(1);
+    expect(r.rankedQuotes[1].index).toBe(2);
+  });
+
+  it("nextThreeMoves is the fixed 3-step practical plan", () => {
+    const r = runSilentQuoteAudit([{ amountRaw: "4000", daysSilentRaw: "20" }]);
+    expect(r.nextThreeMoves).toEqual(NEXT_THREE_MOVES);
+    expect(NEXT_THREE_MOVES).toEqual([
+      "Send this message today.",
+      "If there is no reply, follow up again in 3 days.",
+      "If it is still silent, close the loop after 7 days.",
+    ]);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Why-not-others — 0-2 short, deterministic insights, references quote NUMBERS
+// ---------------------------------------------------------------------------
+
+describe("buildWhyNotOthers", () => {
+  function rank(
+    inputs: Array<{ amount: number; days: number | null }>,
+  ): ReturnType<typeof runSilentQuoteAudit>["rankedQuotes"] {
+    return runSilentQuoteAudit(
+      inputs.map((i) => ({
+        amountRaw: String(i.amount),
+        daysSilentRaw: i.days == null ? "" : String(i.days),
+      })),
+    ).rankedQuotes;
+  }
+
+  it("returns [] when there's only one quote", () => {
+    expect(buildWhyNotOthers(rank([{ amount: 5000, days: 20 }]))).toEqual([]);
+  });
+
+  it("flags 'more money at stake' when #1 is meaningfully bigger than #2", () => {
+    const lines = buildWhyNotOthers(
+      rank([
+        { amount: 8000, days: 20 },
+        { amount: 3000, days: 20 },
+      ]),
+    );
+    expect(lines[0]).toMatch(/has more money at stake/);
+  });
+
+  it("flags 'more recent but lower value' when #2 is fresher but smaller", () => {
+    const lines = buildWhyNotOthers(
+      rank([
+        { amount: 6000, days: 30 },
+        { amount: 5500, days: 5 },
+      ]),
+    );
+    expect(lines[0]).toMatch(/more recent, but lower value/);
+  });
+
+  it("returns at most 2 insights, never more (keeps the result skimmable)", () => {
+    const lines = buildWhyNotOthers(
+      rank([
+        { amount: 8000, days: 10 },
+        { amount: 3000, days: 5 },
+        { amount: 1000, days: 90 },
+      ]),
+    );
+    expect(lines.length).toBeLessThanOrEqual(2);
+  });
+
+  it("references quote NUMBERS only — never dollar amounts (focus on the decision)", () => {
+    const lines = buildWhyNotOthers(
+      rank([
+        { amount: 8000, days: 10 },
+        { amount: 3000, days: 5 },
+      ]),
+    );
+    for (const line of lines) {
+      expect(line).toMatch(/Quote #\d/);
+      expect(line).not.toMatch(/\$/);
+    }
+  });
+
+  it("uses NO fabricated percentages or reply-rate claims", () => {
+    const lines = buildWhyNotOthers(
+      rank([
+        { amount: 8000, days: 60 },
+        { amount: 3000, days: 5 },
+        { amount: 2000, days: 90 },
+      ]),
+    );
+    for (const line of lines) {
+      expect(line).not.toMatch(/%/);
+      expect(line.toLowerCase()).not.toMatch(/reply rate|odds|guaranteed/);
+    }
   });
 });
 

@@ -30,8 +30,82 @@ export type AuditQuote = {
   daysSilent: number | null;
 };
 
+/**
+ * Recovery window — a contractor-native label keyed only to days since the
+ * estimate was sent. No probability model, no reply-rate claims.
+ *
+ *   warm    0-14 days  "Follow up while the job is still fresh."
+ *   cooling 15-30 days "Still worth chasing, but do it soon."
+ *   cold    31+ days   "Needs a softer close-the-loop angle."
+ *   unknown null       (contractor skipped the days field)
+ */
+export type RecoveryWindow = "warm" | "cooling" | "cold" | "unknown";
+
+export function recoveryWindowForDays(
+  daysSilent: number | null,
+): RecoveryWindow {
+  if (daysSilent == null) return "unknown";
+  if (daysSilent <= 14) return "warm";
+  if (daysSilent <= 30) return "cooling";
+  return "cold";
+}
+
+export type RecoveryWindowDescriptor = {
+  window: RecoveryWindow;
+  label: string;
+  explanation: string;
+};
+
+export function describeRecoveryWindow(
+  daysSilent: number | null,
+): RecoveryWindowDescriptor {
+  const window = recoveryWindowForDays(daysSilent);
+  switch (window) {
+    case "warm":
+      return {
+        window,
+        label: "Warm",
+        explanation: "Follow up while the job is still fresh.",
+      };
+    case "cooling":
+      return {
+        window,
+        label: "Cooling",
+        explanation: "Still worth chasing, but do it soon.",
+      };
+    case "cold":
+      return {
+        window,
+        label: "Cold",
+        explanation: "Needs a softer close-the-loop angle.",
+      };
+    default:
+      return { window, label: "Unknown", explanation: "" };
+  }
+}
+
+export type PriorityLabel = "Follow up first" | "Next backup" | "Lower priority";
+
+function priorityLabelForRank(rank: number): PriorityLabel {
+  if (rank === 1) return "Follow up first";
+  if (rank === 2) return "Next backup";
+  return "Lower priority";
+}
+
+export type RankedAuditQuote = AuditQuote & {
+  rank: number;
+  windowLabel: string;
+  windowExplanation: string;
+  window: RecoveryWindow;
+  priorityLabel: PriorityLabel;
+};
+
+export type NextMove = string;
+
 export type AuditResult = {
   quotes: AuditQuote[];
+  /** Same quotes, ranked by score and tagged with window + priority labels. */
+  rankedQuotes: RankedAuditQuote[];
   totalSilentQuoteValue: number;
   priority: AuditQuote | null;
   /** Age band for the priority quote (e.g. "AT RISK"), null if no days given. */
@@ -39,6 +113,10 @@ export type AuditResult = {
   /** Plain-English reason this quote is worth a touch first. */
   priorityReason: string;
   suggestedMessage: string;
+  /** 0-2 short "Quote #X vs #Y" lines, dynamic to the entered numbers. */
+  whyNotOthers: string[];
+  /** The fixed 3-step practical plan shown under the message. */
+  nextThreeMoves: NextMove[];
   /** Set when no valid amount was entered; result is otherwise empty. */
   error: string | null;
 };
@@ -115,6 +193,58 @@ export function reasonForPriority(
   return "Recent enough to follow up cleanly, and worth more than the few minutes it takes to send one message.";
 }
 
+/**
+ * Returns 0-2 short, dynamic insights explaining the ranking — never more.
+ * The lines reference quote NUMBERS the contractor entered, never amounts,
+ * so the output stays focused on the decision rather than the dollar value.
+ */
+export function buildWhyNotOthers(ranked: RankedAuditQuote[]): string[] {
+  if (ranked.length < 2) return [];
+  const out: string[] = [];
+  const first = ranked[0];
+  const second = ranked[1];
+
+  if (first.amount > second.amount * 1.4) {
+    out.push(
+      `Quote #${second.index} is still worth a follow-up, but Quote #${first.index} has more money at stake.`,
+    );
+  } else if (
+    first.daysSilent != null &&
+    second.daysSilent != null &&
+    second.daysSilent < first.daysSilent
+  ) {
+    out.push(
+      `Quote #${second.index} is more recent, but lower value, so it can wait behind the bigger quote.`,
+    );
+  } else {
+    out.push(
+      `Quote #${second.index} is your backup if Quote #${first.index} stays quiet.`,
+    );
+  }
+
+  if (ranked.length >= 3) {
+    const third = ranked[2];
+    if (third.daysSilent != null && third.daysSilent > 30) {
+      out.push(
+        `Quote #${third.index} is the coldest of the three — leave it for last and use a softer close-out angle.`,
+      );
+    } else if (third.amount < second.amount * 0.7) {
+      out.push(
+        `Quote #${third.index} is the smallest of the three, so it sits behind the bigger quotes.`,
+      );
+    }
+  }
+
+  return out.slice(0, 2);
+}
+
+/** The fixed 3-step practical plan shown under the suggested message. */
+export const NEXT_THREE_MOVES: NextMove[] = [
+  "Send this message today.",
+  "If there is no reply, follow up again in 3 days.",
+  "If it is still silent, close the loop after 7 days.",
+];
+
 export function runSilentQuoteAudit(inputs: AuditQuoteInput[]): AuditResult {
   const quotes: AuditQuote[] = [];
   inputs.forEach((input, i) => {
@@ -130,11 +260,14 @@ export function runSilentQuoteAudit(inputs: AuditQuoteInput[]): AuditResult {
   if (quotes.length === 0) {
     return {
       quotes: [],
+      rankedQuotes: [],
       totalSilentQuoteValue: 0,
       priority: null,
       priorityBandLabel: null,
       priorityReason: "",
       suggestedMessage: "",
+      whyNotOthers: [],
+      nextThreeMoves: [],
       error: "Enter at least one old quote amount to see your audit.",
     };
   }
@@ -142,21 +275,30 @@ export function runSilentQuoteAudit(inputs: AuditQuoteInput[]): AuditResult {
   const totalSilentQuoteValue =
     Math.round(quotes.reduce((sum, q) => sum + q.amount, 0) * 100) / 100;
 
-  // Priority = highest (dollars × age weight). Ties break toward the bigger
-  // dollar amount, then the earlier-entered quote — fully deterministic.
-  let priority = quotes[0];
-  let bestScore = -1;
-  for (const q of quotes) {
-    const score = q.amount * followUpWeight(q.daysSilent);
-    if (
-      score > bestScore ||
-      (score === bestScore && q.amount > priority.amount)
-    ) {
-      bestScore = score;
-      priority = q;
-    }
-  }
+  // Rank every quote by score = dollars × age weight. The top-ranked entry is
+  // the priority recommendation, so the standalone `priority` field and the
+  // first row of `rankedQuotes` are always consistent — no place for the UI
+  // to disagree with itself.
+  const rankedQuotes: RankedAuditQuote[] = quotes
+    .map((q) => ({ q, score: q.amount * followUpWeight(q.daysSilent) }))
+    .sort((a, b) => {
+      if (b.score !== a.score) return b.score - a.score;
+      if (b.q.amount !== a.q.amount) return b.q.amount - a.q.amount;
+      return a.q.index - b.q.index;
+    })
+    .map(({ q }, i) => {
+      const descriptor = describeRecoveryWindow(q.daysSilent);
+      return {
+        ...q,
+        rank: i + 1,
+        window: descriptor.window,
+        windowLabel: descriptor.label,
+        windowExplanation: descriptor.explanation,
+        priorityLabel: priorityLabelForRank(i + 1),
+      };
+    });
 
+  const priority = rankedQuotes[0];
   const priorityBandLabel =
     priority.daysSilent != null
       ? recoveryScoreForDays(priority.daysSilent).label
@@ -164,11 +306,14 @@ export function runSilentQuoteAudit(inputs: AuditQuoteInput[]): AuditResult {
 
   return {
     quotes,
+    rankedQuotes,
     totalSilentQuoteValue,
     priority,
     priorityBandLabel,
     priorityReason: reasonForPriority(priority, quotes),
     suggestedMessage: suggestedMessage(priority.daysSilent),
+    whyNotOthers: buildWhyNotOthers(rankedQuotes),
+    nextThreeMoves: NEXT_THREE_MOVES,
     error: null,
   };
 }
