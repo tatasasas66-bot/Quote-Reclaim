@@ -11,6 +11,7 @@ import {
   buildSignupHref,
   parseDaysSilent,
   parseQuoteAmount,
+  reasonForPriority,
   runSilentQuoteAudit,
   suggestedMessage,
   UTM_KEYS,
@@ -114,6 +115,34 @@ describe("runSilentQuoteAudit", () => {
     expect(prime.suggestedMessage).toBe(suggestedMessage(30));
     const cold = runSilentQuoteAudit([{ amountRaw: "4000", daysSilentRaw: "120" }]);
     expect(cold.suggestedMessage).toBe(suggestedMessage(120));
+  });
+});
+
+describe("reasonForPriority — honest 'why this first' line", () => {
+  it("top-value + prime window → the value+timing reason (matches the example card)", () => {
+    const quotes = [
+      { index: 1, amount: 3800, daysSilent: 21 },
+      { index: 2, amount: 1200, daysSilent: 30 },
+    ];
+    expect(reasonForPriority(quotes[0], quotes)).toMatch(
+      /High value and still recent enough/i,
+    );
+  });
+
+  it("a very fresh quote gets the 'not pushy' reason", () => {
+    const q = { index: 1, amount: 4000, daysSilent: 3 };
+    expect(reasonForPriority(q, [q]).toLowerCase()).toContain("won't feel pushy");
+  });
+
+  it("a cold quote gets the close-it-out-soon reason", () => {
+    const q = { index: 1, amount: 4000, daysSilent: 80 };
+    expect(reasonForPriority(q, [q]).toLowerCase()).toContain("going cold");
+  });
+
+  it("runSilentQuoteAudit returns a non-empty priorityReason for valid input, '' on error", () => {
+    expect(runSilentQuoteAudit([{ amountRaw: "5000", daysSilentRaw: "20" }]).priorityReason)
+      .not.toBe("");
+    expect(runSilentQuoteAudit([{ amountRaw: "" }]).priorityReason).toBe("");
   });
 });
 

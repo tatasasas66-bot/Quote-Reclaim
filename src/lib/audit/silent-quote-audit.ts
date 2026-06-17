@@ -36,6 +36,8 @@ export type AuditResult = {
   priority: AuditQuote | null;
   /** Age band for the priority quote (e.g. "AT RISK"), null if no days given. */
   priorityBandLabel: string | null;
+  /** Plain-English reason this quote is worth a touch first. */
+  priorityReason: string;
   suggestedMessage: string;
   /** Set when no valid amount was entered; result is otherwise empty. */
   error: string | null;
@@ -81,12 +83,36 @@ function followUpWeight(daysSilent: number | null): number {
  */
 export function suggestedMessage(daysSilent: number | null): string {
   if (daysSilent != null && daysSilent > 45) {
-    return "Hi — I'm about to close out the painting estimate I sent you, but wanted to give you first shot before I do. Still thinking about moving forward, or should I take it off my list for now?";
+    return "I'm about to close out the painting estimate I sent, but wanted to give you first shot before I do — still want to move forward?";
   }
   if (daysSilent != null && daysSilent <= 6) {
-    return "Hi — wanted to make sure the painting estimate I sent landed okay. Any questions on the scope or the price, or anything you'd want adjusted?";
+    return "Wanted to make sure the painting estimate I sent landed okay — any questions on the scope or the price, or anything you'd want changed?";
   }
-  return "Hi — circling back on the painting estimate I sent over. Are you still planning to move forward, or should I close it out on my end for now? Either way's no problem — I just don't want to leave it hanging.";
+  return "Are you still thinking about moving forward, or should I close this out for now?";
+}
+
+/**
+ * Plain-English reason the priority quote earns the first touch. Honest,
+ * contractor-native, and consistent with the on-page Example card — it
+ * explains the value + timing tradeoff, never a recovery promise.
+ */
+export function reasonForPriority(
+  priority: AuditQuote,
+  quotes: AuditQuote[],
+): string {
+  const maxAmount = Math.max(...quotes.map((q) => q.amount));
+  const isTopValue = priority.amount >= maxAmount;
+  const days = priority.daysSilent;
+  if (days != null && days < 7) {
+    return "It's recent, so a light follow-up now won't feel pushy.";
+  }
+  if (days != null && days > 45) {
+    return "It's the most valuable of the ones going cold — worth one respectful touch before you close it out.";
+  }
+  if (isTopValue) {
+    return "High value and still recent enough to follow up without sounding desperate.";
+  }
+  return "Recent enough to follow up cleanly, and worth more than the few minutes it takes to send one message.";
 }
 
 export function runSilentQuoteAudit(inputs: AuditQuoteInput[]): AuditResult {
@@ -107,6 +133,7 @@ export function runSilentQuoteAudit(inputs: AuditQuoteInput[]): AuditResult {
       totalSilentQuoteValue: 0,
       priority: null,
       priorityBandLabel: null,
+      priorityReason: "",
       suggestedMessage: "",
       error: "Enter at least one old quote amount to see your audit.",
     };
@@ -140,6 +167,7 @@ export function runSilentQuoteAudit(inputs: AuditQuoteInput[]): AuditResult {
     totalSilentQuoteValue,
     priority,
     priorityBandLabel,
+    priorityReason: reasonForPriority(priority, quotes),
     suggestedMessage: suggestedMessage(priority.daysSilent),
     error: null,
   };

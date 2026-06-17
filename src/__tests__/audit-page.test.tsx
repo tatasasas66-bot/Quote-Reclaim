@@ -26,14 +26,31 @@ afterEach(cleanup);
 // ---------------------------------------------------------------------------
 
 describe("/audit is a lightweight, no-auth landing page", () => {
-  it("renders the hero without requiring auth", () => {
+  it("renders the hero (with eyebrow) without requiring auth", () => {
     render(<AuditPage />);
     expect(
       screen.getByRole("heading", {
         level: 1,
-        name: /See what your silent painting quotes are worth\./i,
+        name: /You already did the work on these quotes\. Don.t let the money go quiet\./i,
       }),
     ).toBeTruthy();
+    expect(screen.getByText(/^For painting contractors$/i)).toBeTruthy();
+  });
+
+  it("shows a clearly-labeled EXAMPLE result before the form (not a real case)", () => {
+    render(<AuditPage />);
+    // The example block is labeled, and tagged 'Sample' so it can't read as
+    // real proof / a real customer case study.
+    expect(screen.getByText(/Example audit result/i)).toBeTruthy();
+    expect(screen.getByText(/^Sample$/i)).toBeTruthy();
+    expect(screen.getByText(/\$8,200/)).toBeTruthy();
+  });
+
+  it("renders the FAQ (Is this a CRM? / customer names / cost)", () => {
+    render(<AuditPage />);
+    expect(screen.getByText(/Is this a CRM\?/i)).toBeTruthy();
+    expect(screen.getByText(/Do I need customer names\?/i)).toBeTruthy();
+    expect(screen.getByText(/What does it cost\?/i)).toBeTruthy();
   });
 
   it("the page imports NO auth / Supabase / dashboard code", () => {
@@ -56,11 +73,19 @@ describe("/audit is a lightweight, no-auth landing page", () => {
 // ---------------------------------------------------------------------------
 
 describe("funnel — value first, signup only after the result", () => {
-  it("the initial primary action is the audit, NOT signup", () => {
+  const SUBMIT = /show me which quote to chase first/i;
+
+  it("does NOT show a validation error on initial load (only after submit)", () => {
     render(<AuditCalculatorClient />);
     expect(
-      screen.getByRole("button", { name: /show me which quote to follow up first/i }),
-    ).toBeTruthy();
+      screen.queryByText(/Enter at least one old quote amount/i),
+    ).toBeNull();
+    expect(screen.queryByRole("alert")).toBeNull();
+  });
+
+  it("the initial primary action is the audit, NOT signup", () => {
+    render(<AuditCalculatorClient />);
+    expect(screen.getByRole("button", { name: SUBMIT })).toBeTruthy();
     // No account CTA is shown before a result exists.
     expect(screen.queryByTestId("audit-signup-cta")).toBeNull();
   });
@@ -73,13 +98,13 @@ describe("funnel — value first, signup only after the result", () => {
     fireEvent.change(screen.getByLabelText(/quote #2 amount/i), {
       target: { value: "4000" },
     });
-    fireEvent.click(
-      screen.getByRole("button", { name: /show me which quote to follow up first/i }),
-    );
+    fireEvent.click(screen.getByRole("button", { name: SUBMIT }));
     const result = screen.getByTestId("audit-result");
     expect(result).toBeTruthy();
     expect(result.textContent).toContain("$12,500");
-    expect(result.textContent).toMatch(/Best first follow-up/i);
+    expect(result.textContent).toMatch(/sitting in your quiet quotes/i);
+    expect(result.textContent).toMatch(/Start with Quote #/i);
+    expect(result.textContent).toMatch(/Why this quote first/i);
     expect(result.textContent).toMatch(/Suggested message/i);
   });
 
@@ -88,29 +113,31 @@ describe("funnel — value first, signup only after the result", () => {
     fireEvent.change(screen.getByLabelText(/quote #1 amount/i), {
       target: { value: "5000" },
     });
-    fireEvent.click(
-      screen.getByRole("button", { name: /show me which quote to follow up first/i }),
-    );
+    fireEvent.click(screen.getByRole("button", { name: SUBMIT }));
     const cta = screen.getByTestId("audit-signup-cta");
     expect(cta).toBeTruthy();
     expect(cta.textContent).toMatch(/Save this audit and run your first 3 quotes free/i);
     expect(cta.getAttribute("href")).toMatch(/^\/sign-up\?next=/);
   });
 
-  it("shows a friendly validation message when no amount is entered", () => {
+  it("shows a friendly validation message ONLY after submitting empty", () => {
     render(<AuditCalculatorClient />);
-    fireEvent.click(
-      screen.getByRole("button", { name: /show me which quote to follow up first/i }),
-    );
+    fireEvent.click(screen.getByRole("button", { name: SUBMIT }));
     expect(
       screen.getByText(/Enter at least one old quote amount to see your audit\./i),
     ).toBeTruthy();
     expect(screen.queryByTestId("audit-result")).toBeNull();
   });
 
+  it("uses the 'Days since you sent it' label, not 'Days silent'", () => {
+    render(<AuditCalculatorClient />);
+    expect(screen.getAllByLabelText(/days since you sent it/i).length).toBe(3);
+    expect(screen.queryByLabelText(/^days silent$/i)).toBeNull();
+  });
+
   it("does not collect any customer name / email / phone field", () => {
     render(<AuditCalculatorClient />);
-    expect(screen.queryByLabelText(/name/i)).toBeNull();
+    expect(screen.queryByLabelText(/^name$/i)).toBeNull();
     expect(screen.queryByLabelText(/email/i)).toBeNull();
     expect(screen.queryByLabelText(/phone/i)).toBeNull();
   });
@@ -138,19 +165,37 @@ describe("copy guardrails", () => {
   });
 
   it("includes the required honest framing phrases", () => {
-    expect(both).toContain("no customer names needed for the audit");
-    expect(both).toContain("no card");
-    expect(both).toContain("not a crm");
-    expect(both).toContain("not lead generation");
+    // Whitespace-tolerant: JSX wraps these phrases across source lines.
+    expect(both).toMatch(/no signup until you see the result/);
+    expect(both).toMatch(/no customer names/);
+    expect(both).toMatch(/no card/);
+    expect(both).toMatch(/not a crm/);
+    expect(both).toMatch(/not\s+lead\s+generation/);
   });
 
-  it("uses the exact above-the-fold headline + subhead + CTA + trust line", () => {
-    expect(pageSrc).toContain("See what your silent painting quotes are worth.");
+  it("uses the upgraded hero + eyebrow + pain line + CTA + trust line", () => {
+    expect(pageSrc).toContain("For painting contractors");
     expect(pageSrc).toContain(
-      "Paste 3 old quote amounts. No customer names needed for the audit.",
+      "You already did the work on these quotes.",
     );
-    expect(clientSrc).toContain("Show me which quote to follow up first");
-    expect(clientSrc).toContain("First 3 quotes free. Not a CRM. Not lead generation.");
+    expect(pageSrc).toContain(
+      "Out of your last 10 painting quotes, how many never replied?",
+    );
+    expect(clientSrc).toContain("Show me which quote to chase first");
+    expect(clientSrc).toContain(
+      "First 3 free. No signup until you see the result. No card.",
+    );
+    expect(clientSrc).toMatch(
+      /we don&apos;t need customer names for the\s+audit/,
+    );
+  });
+
+  it("the example card is clearly a sample (no fake real-customer framing)", () => {
+    expect(pageSrc).toContain("Example audit result");
+    expect(pageSrc).toMatch(/Sample/);
+    // No fake-proof / case-study language.
+    expect(pageSrc.toLowerCase()).not.toContain("case study");
+    expect(pageSrc.toLowerCase()).not.toContain("real customer");
   });
 });
 

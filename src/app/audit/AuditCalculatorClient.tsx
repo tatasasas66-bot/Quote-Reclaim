@@ -117,10 +117,10 @@ export function AuditCalculatorClient() {
                   type="text"
                   inputMode="decimal"
                   autoComplete="off"
-                  placeholder="$2,500"
+                  placeholder="e.g. 2800"
                   value={row.amount}
                   onChange={(e) => updateRow(i, "amount", e.target.value)}
-                  className="h-11 rounded-lg border border-line-subtle bg-surface-2 px-3 text-base text-ink-strong placeholder:text-ink-muted focus:border-brand focus:outline-none focus:ring-2 focus:ring-focus/40"
+                  className="h-11 rounded-lg border border-line-subtle bg-surface-2 px-3 text-base text-ink-strong placeholder:font-normal placeholder:italic placeholder:text-ink-muted/70 focus:border-brand focus:outline-none focus:ring-2 focus:ring-focus/40"
                 />
               </div>
               <div className="flex flex-col gap-1.5">
@@ -128,7 +128,7 @@ export function AuditCalculatorClient() {
                   htmlFor={`days-${i}`}
                   className="text-sm font-medium text-ink-muted"
                 >
-                  Days silent
+                  Days since you sent it
                 </label>
                 <input
                   id={`days-${i}`}
@@ -138,7 +138,7 @@ export function AuditCalculatorClient() {
                   placeholder="14"
                   value={row.days}
                   onChange={(e) => updateRow(i, "days", e.target.value)}
-                  className="h-11 rounded-lg border border-line-subtle bg-surface-2 px-3 text-base text-ink-strong placeholder:text-ink-muted focus:border-brand focus:outline-none focus:ring-2 focus:ring-focus/40"
+                  className="h-11 rounded-lg border border-line-subtle bg-surface-2 px-3 text-base text-ink-strong placeholder:font-normal placeholder:italic placeholder:text-ink-muted/70 focus:border-brand focus:outline-none focus:ring-2 focus:ring-focus/40"
                 />
               </div>
             </div>
@@ -156,11 +156,15 @@ export function AuditCalculatorClient() {
         ) : null}
 
         <Button type="submit" fullWidth size="lg" data-testid="audit-submit">
-          Show me which quote to follow up first
+          Show me which quote to chase first →
         </Button>
 
         <p className="text-center text-xs text-ink-muted">
-          First 3 quotes free. Not a CRM. Not lead generation.
+          First 3 free. No signup until you see the result. No card.
+        </p>
+        <p className="text-center text-xs text-ink-muted">
+          You enter your own numbers — we don&apos;t need customer names for the
+          audit.
         </p>
       </form>
 
@@ -173,32 +177,32 @@ export function AuditCalculatorClient() {
           className="space-y-5 rounded-xl border border-brand/30 bg-surface-2 p-5 sm:p-6"
         >
           <div>
-            <p className="text-xs font-black uppercase tracking-widest text-money/80">
-              Your silent quote value
-            </p>
-            <p className="mt-1 text-4xl font-black leading-none tabular-nums text-money sm:text-5xl">
-              {formatCurrency(result.totalSilentQuoteValue)}
+            <p className="text-3xl font-black leading-tight text-ink-strong sm:text-4xl">
+              <span className="tabular-nums text-money">
+                {formatCurrency(result.totalSilentQuoteValue)}
+              </span>{" "}
+              sitting in your quiet quotes.
             </p>
             <p className="mt-2 text-sm text-ink-muted">
               Across {result.quotes.length} old painting{" "}
-              {result.quotes.length === 1 ? "quote" : "quotes"} that went silent.
+              {result.quotes.length === 1 ? "quote" : "quotes"} that went quiet.
             </p>
           </div>
 
           {result.priority ? (
             <div className="rounded-lg border border-line-subtle bg-surface-1 p-4">
               <p className="text-xs font-black uppercase tracking-widest text-brand">
-                Best first follow-up
+                Start here
               </p>
               <p className="mt-1 text-lg font-bold text-ink-strong">
-                Quote #{result.priority.index} ·{" "}
+                Start with Quote #{result.priority.index} —{" "}
                 <span className="tabular-nums">
                   {formatCurrency(result.priority.amount)}
                 </span>
                 {result.priority.daysSilent != null ? (
                   <>
                     {" "}
-                    · {result.priority.daysSilent} days silent
+                    — {result.priority.daysSilent} days since sent
                   </>
                 ) : null}
                 {result.priorityBandLabel ? (
@@ -206,6 +210,12 @@ export function AuditCalculatorClient() {
                     {result.priorityBandLabel}
                   </span>
                 ) : null}
+              </p>
+              <p className="mt-2 text-sm leading-6 text-ink-muted">
+                <span className="font-semibold text-ink">
+                  Why this quote first.
+                </span>{" "}
+                {result.priorityReason}
               </p>
             </div>
           ) : null}
