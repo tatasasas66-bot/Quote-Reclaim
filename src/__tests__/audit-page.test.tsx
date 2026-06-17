@@ -301,6 +301,24 @@ describe("funnel — value first, signup only after the result", () => {
     expect(screen.getByTestId("audit-sequence-preview")).toBeTruthy();
     expect(result.textContent).toMatch(/Send this today\. Keep it short/);
     expect(result.textContent).toMatch(/5-message follow-up sequence/);
+    // "This audit shows where to start" + depth-layer body sit BETWEEN the
+    // sequence preview and the signup CTA — framing Pro as the next layer.
+    const goesDeeper = screen.getByTestId("audit-goes-deeper");
+    expect(goesDeeper.textContent).toMatch(/This audit shows where to start\./);
+    expect(goesDeeper.textContent).toMatch(
+      /Quote Reclaim goes deeper after you save it/,
+    );
+    expect(goesDeeper.textContent).toMatch(
+      /today, in 3 days, and after 7 days/,
+    );
+    const previewIdx = result.textContent!.indexOf("5-message follow-up sequence");
+    const deeperIdx = result.textContent!.indexOf("This audit shows where to start");
+    const ctaIdx = result.textContent!.indexOf(
+      "Save this audit and run your first 3 quotes free",
+    );
+    expect(previewIdx).toBeGreaterThan(-1);
+    expect(deeperIdx).toBeGreaterThan(previewIdx);
+    expect(ctaIdx).toBeGreaterThan(deeperIdx);
   });
 
   it("renders every entered quote in the follow-up order", () => {

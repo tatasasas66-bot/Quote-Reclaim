@@ -453,6 +453,25 @@ export function AuditCalculatorClient() {
             the quote does not disappear from your list after one try.
           </p>
 
+          {/* Frames the saved-account product as the depth layer that takes
+              over from here — the audit named where to start; Pro keeps each
+              quote organized through the full 1/3/7-day cadence so the work
+              compounds. No outcome guarantees, no probability claims. */}
+          <div
+            data-testid="audit-goes-deeper"
+            className="rounded-lg border border-brand/30 bg-surface-1 p-4"
+          >
+            <p className="text-sm font-black uppercase tracking-widest text-brand">
+              This audit shows where to start.
+            </p>
+            <p className="mt-2 text-sm leading-6 text-ink">
+              Quote Reclaim goes deeper after you save it: it turns each quiet
+              quote into a follow-up sequence, keeps your next steps organized,
+              and shows what to send today, in 3 days, and after 7 days — so
+              old estimates do not disappear after one try.
+            </p>
+          </div>
+
           <div className="space-y-2">
             <a
               href={signupHref}
