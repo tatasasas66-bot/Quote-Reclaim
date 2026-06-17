@@ -111,12 +111,26 @@ describe("/audit is a lightweight, no-auth landing page", () => {
 describe("funnel — value first, signup only after the result", () => {
   const SUBMIT = /show me which quote to chase first/i;
 
+  let scrollSpy: ReturnType<typeof vi.fn>;
+  let realRaf: typeof window.requestAnimationFrame;
+
   beforeEach(() => {
     setMatchMedia(false); // normal motion by default
-    vi.useFakeTimers();
+    vi.useFakeTimers(); // default set — paces the analysis setTimeouts
+    // happy-dom doesn't implement scrollIntoView — install a spy.
+    scrollSpy = vi.fn();
+    Element.prototype.scrollIntoView = scrollSpy;
+    // Run the on-submit scroll rAF synchronously so it's observable without
+    // touching React's scheduler (faking rAF via toFake breaks event dispatch).
+    realRaf = window.requestAnimationFrame;
+    window.requestAnimationFrame = ((cb: FrameRequestCallback) => {
+      cb(0);
+      return 0;
+    }) as typeof window.requestAnimationFrame;
   });
 
   afterEach(() => {
+    window.requestAnimationFrame = realRaf;
     vi.useRealTimers();
   });
 
@@ -153,6 +167,56 @@ describe("funnel — value first, signup only after the result", () => {
       screen.getByTestId("audit-analysis-step").textContent,
     ).toMatch(/Totaling your quiet quotes/i);
     runFullAnalysis();
+  });
+
+  it("scrolls to the output container immediately on submit — BEFORE the result", () => {
+    render(<AuditCalculatorClient />);
+    fillFirstQuote();
+    fireEvent.click(screen.getByRole("button", { name: SUBMIT }));
+    // Flush the on-submit rAF (faked) without finishing the analysis.
+    act(() => {
+      vi.advanceTimersByTime(20);
+    });
+    // Scroll already happened while the analysis is still running.
+    expect(scrollSpy).toHaveBeenCalled();
+    expect(scrollSpy).toHaveBeenCalledWith(
+      expect.objectContaining({ behavior: "smooth", block: "start" }),
+    );
+    expect(screen.getByTestId("audit-analysis")).toBeTruthy();
+    expect(screen.queryByTestId("audit-result")).toBeNull();
+    runFullAnalysis();
+    expect(screen.getByTestId("audit-result")).toBeTruthy();
+  });
+
+  it("does NOT do a second scroll when the result reveals (one scroll only)", () => {
+    render(<AuditCalculatorClient />);
+    fillFirstQuote();
+    fireEvent.click(screen.getByRole("button", { name: SUBMIT }));
+    act(() => {
+      vi.advanceTimersByTime(20);
+    });
+    const callsAfterSubmit = scrollSpy.mock.calls.length;
+    runFullAnalysis();
+    // Result revealed in the same anchored container — no extra scroll.
+    expect(scrollSpy.mock.calls.length).toBe(callsAfterSubmit);
+  });
+
+  it("uses non-smooth 'auto' scroll under prefers-reduced-motion", () => {
+    setMatchMedia(true);
+    render(<AuditCalculatorClient />);
+    fillFirstQuote();
+    fireEvent.click(screen.getByRole("button", { name: SUBMIT }));
+    act(() => {
+      vi.advanceTimersByTime(20);
+    });
+    expect(scrollSpy).toHaveBeenCalledWith(
+      expect.objectContaining({ behavior: "auto", block: "start" }),
+    );
+    act(() => {
+      vi.advanceTimersByTime(
+        ANALYSIS_STEP_MS_REDUCED * ANALYSIS_STEPS.length + 50,
+      );
+    });
   });
 
   it("analysis state lasts ~3.5s in normal motion (5 steps × ~700ms)", () => {

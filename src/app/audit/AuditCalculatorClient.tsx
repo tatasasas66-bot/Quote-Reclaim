@@ -73,7 +73,9 @@ export function AuditCalculatorClient() {
     "/sign-up?next=/onboarding/reveal",
   );
   const [utms, setUtms] = React.useState<Record<string, string>>({});
-  const resultRef = React.useRef<HTMLDivElement | null>(null);
+  // Shared anchor for BOTH the analysis panel and the result. Scrolling to it
+  // on submit keeps the analysis sequence and the result in one stable spot.
+  const outputRef = React.useRef<HTMLDivElement | null>(null);
 
   // Analysis state — the brief between submit and result render. Step index
   // advances on a fixed schedule; the duration shrinks aggressively under
@@ -127,6 +129,7 @@ export function AuditCalculatorClient() {
       setError(audit.error);
       return;
     }
+    const reduced = prefersReducedMotion();
     setError(null);
     setResult(null); // hide any prior result while we re-analyze
     setCopied(false);
@@ -134,12 +137,25 @@ export function AuditCalculatorClient() {
     // Pace the reveal so the result lands with the weight of a real audit
     // instead of a calculator flash. The audit itself is already computed —
     // analysis is honest UI affordance, not a faked round-trip.
-    const stepMs = prefersReducedMotion()
+    const stepMs = reduced
       ? ANALYSIS_STEP_MS_REDUCED
       : ANALYSIS_STEP_MS_DEFAULT;
 
     clearAnalysisTimers();
     setAnalysisStep(0);
+
+    // Scroll to the shared output anchor IMMEDIATELY — not after analysis
+    // finishes — so the contractor actually watches the steps run. The
+    // analysis panel and the result render in the SAME anchored container,
+    // so this is the only scroll needed; the result reveals in place. rAF
+    // waits for React to commit the analysis panel before measuring.
+    requestAnimationFrame(() => {
+      outputRef.current?.scrollIntoView?.({
+        behavior: reduced ? "auto" : "smooth",
+        block: "start",
+      });
+    });
+
     for (let i = 1; i < ANALYSIS_STEPS.length; i++) {
       timersRef.current.push(
         window.setTimeout(() => setAnalysisStep(i), stepMs * i),
@@ -161,13 +177,8 @@ export function AuditCalculatorClient() {
           priority_band: audit.priorityBandLabel ?? "unknown",
           ...utms,
         });
-        // Bring the result into view on mobile without a heavy scroll library.
-        requestAnimationFrame(() => {
-          resultRef.current?.scrollIntoView?.({
-            behavior: "smooth",
-            block: "start",
-          });
-        });
+        // No second scroll: the result reveals inside the already-anchored
+        // output container, so the viewport stays where the user is reading.
       }, stepMs * ANALYSIS_STEPS.length),
     );
   }
@@ -263,6 +274,9 @@ export function AuditCalculatorClient() {
         </p>
       </form>
 
+      {/* Shared anchored output region: analysis transforms into the result
+          in the same place, and the on-submit scroll targets this container. */}
+      <div ref={outputRef} className="scroll-mt-4 empty:hidden">
       {analyzing ? (
         <div
           data-testid="audit-analysis"
@@ -303,7 +317,6 @@ export function AuditCalculatorClient() {
 
       {result && !result.error ? (
         <div
-          ref={resultRef}
           data-testid="audit-result"
           role="region"
           aria-label="Your silent quote audit"
@@ -453,6 +466,7 @@ export function AuditCalculatorClient() {
           </div>
         </div>
       ) : null}
+      </div>
     </div>
   );
 }
