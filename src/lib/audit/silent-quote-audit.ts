@@ -107,7 +107,7 @@ export type AuditResult = {
   /** Same quotes, ranked by score and tagged with window + priority labels. */
   rankedQuotes: RankedAuditQuote[];
   totalSilentQuoteValue: number;
-  priority: AuditQuote | null;
+  priority: RankedAuditQuote | null;
   /** Age band for the priority quote (e.g. "AT RISK"), null if no days given. */
   priorityBandLabel: string | null;
   /** Plain-English reason this quote is worth a touch first. */
@@ -167,10 +167,10 @@ function followUpWeight(daysSilent: number | null): number {
  */
 export function suggestedMessage(daysSilent: number | null): string {
   if (daysSilent != null && daysSilent > 45) {
-    return "I'm about to close out the painting estimate I sent, but wanted to give you first shot before I do — still want to move forward?";
+    return "I'm about to close out the estimate I sent, but wanted to give you first shot before I do — still want to move forward?";
   }
   if (daysSilent != null && daysSilent <= 6) {
-    return "Wanted to make sure the painting estimate I sent landed okay — any questions on the scope or the price, or anything you'd want changed?";
+    return "Wanted to make sure the project estimate I sent landed okay — any questions on the scope or the price, or anything you'd want changed?";
   }
   return "Are you still thinking about moving forward, or should I close this out for now?";
 }
@@ -187,6 +187,9 @@ export function reasonForPriority(
   const maxAmount = Math.max(...quotes.map((q) => q.amount));
   const isTopValue = priority.amount >= maxAmount;
   const days = priority.daysSilent;
+  if (isTopValue && days != null && days <= 14) {
+    return "It has the most money at stake and it is still fresh enough to reopen with a light follow-up.";
+  }
   if (days != null && days < 7) {
     return "It's recent, so a light follow-up now won't feel pushy.";
   }

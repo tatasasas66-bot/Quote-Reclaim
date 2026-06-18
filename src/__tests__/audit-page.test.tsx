@@ -70,7 +70,7 @@ describe("/audit is a lightweight, no-auth landing page", () => {
         name: /You already did the work on these quotes\. Don.t let the money go quiet\./i,
       }),
     ).toBeTruthy();
-    expect(screen.getByText(/^For painting contractors$/i)).toBeTruthy();
+    expect(screen.getByText(/^For home-service contractors$/i)).toBeTruthy();
   });
 
   it("shows a clearly-labeled EXAMPLE result before the form (not a real case)", () => {
@@ -359,6 +359,43 @@ describe("funnel — value first, signup only after the result", () => {
     );
   });
 
+  it("keeps Quote #3 warm and first for 2500/10, 5000/12, 7000/5", () => {
+    render(<AuditCalculatorClient />);
+    fireEvent.change(screen.getByLabelText(/quote #1 amount/i), {
+      target: { value: "2500" },
+    });
+    fireEvent.change(screen.getAllByLabelText(/days since you sent it/i)[0], {
+      target: { value: "10" },
+    });
+    fireEvent.change(screen.getByLabelText(/quote #2 amount/i), {
+      target: { value: "5000" },
+    });
+    fireEvent.change(screen.getAllByLabelText(/days since you sent it/i)[1], {
+      target: { value: "12" },
+    });
+    fireEvent.change(screen.getByLabelText(/quote #3 amount/i), {
+      target: { value: "7000" },
+    });
+    fireEvent.change(screen.getAllByLabelText(/days since you sent it/i)[2], {
+      target: { value: "5" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: SUBMIT }));
+    runFullAnalysis();
+
+    const result = screen.getByTestId("audit-result");
+    const startHere = screen.getByTestId("audit-start-here");
+    const rankOne = screen.getByTestId("audit-rank-row-1");
+
+    expect(startHere.textContent).toMatch(/Start with Quote #3/i);
+    expect(screen.getByTestId("audit-start-window-badge").textContent).toMatch(
+      /^Warm$/i,
+    );
+    expect(rankOne.textContent).toMatch(/Quote #3/);
+    expect(rankOne.textContent).toMatch(/Warm/);
+    expect(result.textContent).not.toMatch(/sent(?:Warm|Cooling|Cold)/i);
+    expect(result.textContent).toMatch(/most money at stake/i);
+  });
+
   it("shows the post-value account CTA only after the result appears", () => {
     render(<AuditCalculatorClient />);
     fillFirstQuote("5000", "");
@@ -439,12 +476,12 @@ describe("copy guardrails", () => {
   });
 
   it("uses the upgraded hero + eyebrow + pain line + CTA + trust line", () => {
-    expect(pageSrc).toContain("For painting contractors");
+    expect(pageSrc).toContain("For home-service contractors");
     expect(pageSrc).toContain(
       "You already did the work on these quotes.",
     );
     expect(pageSrc).toContain(
-      "Out of your last 10 painting quotes, how many never replied?",
+      "Out of your last 10 quotes, how many never replied?",
     );
     expect(clientSrc).toContain("Show me which quote to chase first");
     expect(clientSrc).toContain(
@@ -452,6 +489,12 @@ describe("copy guardrails", () => {
     );
     expect(clientSrc).toMatch(
       /we don&apos;t need customer names for the\s+audit/,
+    );
+  });
+
+  it("does not use painter-only copy in the main public funnel", () => {
+    expect(both).not.toMatch(
+      /\b(for painting contractors|painting quotes|painting quote|painting estimate|old painting quotes|silent painting quotes)\b/,
     );
   });
 

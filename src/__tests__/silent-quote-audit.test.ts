@@ -117,6 +117,8 @@ describe("runSilentQuoteAudit", () => {
     ]);
     expect(r.priority?.index).toBe(3);
     expect(r.priority?.amount).toBe(7000);
+    expect(r.priority?.windowLabel).toBe("Warm");
+    expect(r.priorityReason).toMatch(/most money at stake/i);
     expect(r.rankedQuotes.map((q) => q.index)).toEqual([3, 2, 1]);
   });
 
@@ -168,7 +170,10 @@ describe("reasonForPriority — honest 'why this first' line", () => {
 
   it("a very fresh quote gets the 'not pushy' reason", () => {
     const q = { index: 1, amount: 4000, daysSilent: 3 };
-    expect(reasonForPriority(q, [q]).toLowerCase()).toContain("won't feel pushy");
+    const biggerCold = { index: 2, amount: 6000, daysSilent: 80 };
+    expect(reasonForPriority(q, [q, biggerCold]).toLowerCase()).toContain(
+      "won't feel pushy",
+    );
   });
 
   it("a cold quote gets the close-it-out-soon reason", () => {

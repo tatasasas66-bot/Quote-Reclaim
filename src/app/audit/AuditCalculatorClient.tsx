@@ -198,7 +198,7 @@ export function AuditCalculatorClient() {
     <div className="space-y-6">
       <form onSubmit={handleSubmit} noValidate className="space-y-4">
         <fieldset className="space-y-3">
-          <legend className="sr-only">Your three oldest silent painting quotes</legend>
+          <legend className="sr-only">Your three oldest silent quotes</legend>
           {rows.map((row, i) => (
             <div
               key={i}
@@ -334,32 +334,49 @@ export function AuditCalculatorClient() {
               sitting in your quiet quotes.
             </p>
             <p className="mt-2 text-sm text-ink-muted">
-              Across {result.quotes.length} old painting{" "}
-              {result.quotes.length === 1 ? "quote" : "quotes"} that went quiet.
+              Across {result.quotes.length} old{" "}
+              {result.quotes.length === 1 ? "estimate" : "estimates"} that went
+              quiet.
             </p>
           </div>
 
           {result.priority ? (
-            <div className="rounded-lg border border-line-subtle bg-surface-1 p-4">
+            <div
+              data-testid="audit-start-here"
+              className="rounded-lg border border-line-subtle bg-surface-1 p-4"
+            >
               <p className="text-xs font-black uppercase tracking-widest text-brand">
                 Start here
               </p>
-              <p className="mt-1 text-lg font-bold text-ink-strong">
-                Start with Quote #{result.priority.index} —{" "}
+              <p className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-lg font-bold text-ink-strong">
+                <span>Start with Quote #{result.priority.index}</span>
+                <span aria-hidden="true" className="text-ink-muted">
+                  —
+                </span>
                 <span className="tabular-nums">
                   {formatCurrency(result.priority.amount)}
                 </span>
                 {result.priority.daysSilent != null ? (
                   <>
-                    {" "}
-                    — {result.priority.daysSilent} days since sent
+                    <span aria-hidden="true" className="text-sm text-ink-muted">
+                      &middot;
+                    </span>
+                    <span className="text-sm font-semibold text-ink-muted">
+                      {result.priority.daysSilent} days since sent
+                    </span>
                   </>
                 ) : null}
-                {result.priorityBandLabel ? (
-                  <span className="ml-2 text-xs font-black uppercase tracking-widest text-warning">
-                    {result.priorityBandLabel}
-                  </span>
-                ) : null}
+                <span aria-hidden="true" className="text-sm text-ink-muted">
+                  &middot;
+                </span>
+                <span
+                  data-testid="audit-start-window-badge"
+                  className={`rounded-full border px-2 py-0.5 text-[10px] font-bold uppercase tracking-widest ${
+                    WINDOW_TONES[result.priority.windowLabel] ?? WINDOW_TONES.Unknown
+                  }`}
+                >
+                  {result.priority.windowLabel}
+                </span>
               </p>
               <p className="mt-2 text-sm leading-6 text-ink-muted">
                 <span className="font-semibold text-ink">
@@ -527,7 +544,7 @@ function FollowUpOrder({ ranked }: { ranked: RankedAuditQuote[] }) {
               </p>
               {q.daysSilent != null ? (
                 <p className="text-xs text-ink-muted">
-                  · {q.daysSilent} days since sent
+                  · {q.daysSilent} days since sent{" "}
                 </p>
               ) : null}
             </div>

@@ -5,7 +5,7 @@ import { AuditCalculatorClient } from "./AuditCalculatorClient";
 export const metadata: Metadata = {
   title: "Free silent quote audit — Quote Reclaim",
   description:
-    "You already did the work on these painting quotes. Add up what's sitting quiet, see which to follow up first, and get the message to send. No customer names. No card.",
+    "You already did the work on these home-service estimates. Add up what's sitting quiet, see which to follow up first, and get the message to send. No customer names. No card.",
   robots: { index: true, follow: true },
 };
 
@@ -30,14 +30,14 @@ export default function AuditPage() {
 
         <div className="space-y-3 text-center">
           <p className="text-xs font-black uppercase tracking-widest text-brand">
-            For painting contractors
+            For home-service contractors
           </p>
           <h1 className="text-balance text-3xl font-black leading-tight text-ink-strong sm:text-4xl">
             You already did the work on these quotes. Don&apos;t let the money
             go quiet.
           </h1>
           <p className="text-pretty text-base leading-7 text-ink">
-            Drove out, measured, wrote the estimate — then the homeowner went
+            Drove out, measured, wrote the estimate — then the customer went
             dark. Add up what&apos;s actually sitting there. No customer names.
             No card.
           </p>
@@ -45,7 +45,7 @@ export default function AuditPage() {
 
         {/* Pain / math line — frames the number before the form. */}
         <p className="mt-6 rounded-lg border-l-2 border-brand bg-surface-1 px-4 py-3 text-sm leading-6 text-ink">
-          Out of your last 10 painting quotes, how many never replied? Multiply
+          Out of your last 10 quotes, how many never replied? Multiply
           by your average job. That&apos;s the number.
         </p>
 
