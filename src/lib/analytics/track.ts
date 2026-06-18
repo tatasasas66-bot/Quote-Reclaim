@@ -16,9 +16,17 @@ export type AuditEvent =
   | "audit_completed"
   | "audit_signup_clicked";
 
+export type CrewGapEvent =
+  | "crew_gap_page_viewed"
+  | "crew_gap_started"
+  | "crew_gap_completed"
+  | "crew_gap_signup_clicked";
+
+export type TrackEvent = AuditEvent | CrewGapEvent;
+
 export type TrackProps = Record<string, string | number | boolean | null>;
 
-export function track(event: AuditEvent, props: TrackProps = {}): void {
+export function track(event: TrackEvent, props: TrackProps = {}): void {
   if (typeof window === "undefined") return;
   try {
     const w = window as unknown as {

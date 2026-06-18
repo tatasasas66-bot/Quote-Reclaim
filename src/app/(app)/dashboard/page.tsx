@@ -97,6 +97,7 @@ export default async function DashboardPage() {
     : Math.max(0, FREE_PLAN_LIMIT - usageCount);
   const hasRecoveredBefore = jobsWonLifetime > 0 || allTimeRecovered > 0;
   const showFirstRecoveryCommand = pending.length === 0;
+  const hasPendingQuotes = pending.length !== 0;
 
   // Paid-For-Itself Meter — biggest pending quote drives the months-covered
   // anchor. Real data only; the component renders nothing when the queue is
@@ -177,6 +178,27 @@ export default async function DashboardPage() {
           daysSilent={effectiveDaysSilent(priorityQuote)}
           score={getRecoveryScore(priorityQuote).score}
         />
+      ) : null}
+
+      {hasPendingQuotes ? (
+        <Link
+          href="/crew-gap"
+          data-testid="crew-gap-dashboard-entry"
+          className="group flex flex-col gap-3 rounded-lg border border-line-subtle bg-surface-1 p-4 shadow-sm transition-colors hover:border-brand/60 focus:outline-none focus-visible:ring-2 focus-visible:ring-focus sm:flex-row sm:items-center sm:justify-between"
+        >
+          <div>
+            <p className="text-xs font-black uppercase tracking-widest text-brand">
+              Fill My Next Open Day
+            </p>
+            <p className="mt-1 text-sm leading-6 text-ink">
+              Have an open crew day? Find the quiet quote most likely to fill
+              it.
+            </p>
+          </div>
+          <span className="whitespace-nowrap text-sm font-bold text-ink-muted group-hover:text-ink-strong">
+            Run Crew Gap Rescue →
+          </span>
+        </Link>
       ) : null}
 
       <MetricCards
