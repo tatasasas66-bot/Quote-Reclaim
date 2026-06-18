@@ -46,7 +46,7 @@ export default function TermsPage() {
         <p>
           Quote Reclaim includes 3 free quotes so you can try the service before
           paying. After that, continued use requires a paid subscription of
-          $79/month.
+          $49/month.
         </p>
         <p>
           Subscription billing is handled by a third-party payment provider

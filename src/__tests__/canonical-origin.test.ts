@@ -113,8 +113,8 @@ describe("billing modules carry no app-origin URLs and no MoR name", () => {
     }
   });
 
-  it("pricing stays $79 (FREE_PLAN_LIMIT + price constants untouched)", () => {
-    expect(entitlement).toContain("MONTHLY_PRICE_USD = 79");
+  it("pricing is $49 (FREE_PLAN_LIMIT + price constants in sync)", () => {
+    expect(entitlement).toContain("MONTHLY_PRICE_USD = 49");
     expect(entitlement).toContain("FREE_PLAN_LIMIT = 3");
   });
 });

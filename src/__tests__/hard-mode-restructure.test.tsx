@@ -63,7 +63,7 @@ describe("homepage hero restructure + email/copy honesty", () => {
   });
 
   it("trust line: price + first 3 free + no learning curve differentiator", () => {
-    expect(homepage).toContain("$79/month");
+    expect(homepage).toContain("$49/month");
     expect(homepage).toMatch(/first 3\s+quotes free, no card needed/);
     expect(homepage).toMatch(/No learning curve\./);
   });

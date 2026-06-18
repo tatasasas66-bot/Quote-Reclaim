@@ -246,13 +246,13 @@ For the full test matrix, see `docs/REAL_E2E_TEST_PLAN.md`.
 
 | Rule | Value |
 |------|-------|
-| Monthly price | **$79/month** |
+| Monthly price | **$49/month** |
 | Free quote limit | **3** |
 | Discounts | **None** |
 | Other plans | **None** |
 
 The codebase enforces these at:
-- `src/lib/payments/entitlement.ts`: `MONTHLY_PRICE_USD = 79`, `FREE_PLAN_LIMIT = 3`
+- `src/lib/payments/entitlement.ts`: `MONTHLY_PRICE_USD = 49`, `FREE_PLAN_LIMIT = 3`
 - `src/components/billing/Paywall.tsx`: hardcoded copy
 - `src/lib/quotes/actions.ts`: `check_and_increment_usage` RPC gating
 

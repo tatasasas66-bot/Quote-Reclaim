@@ -95,7 +95,7 @@ describe("FirstRecoveryCommand — truthful entitlement variants", () => {
     );
     expect(text).toMatch(/Unlimited recovery is on/i);
     expect(text).not.toMatch(/first 3 free|3 quotes are free/i);
-    expect(text).not.toMatch(/\$79|subscribe|checkout/i);
+    expect(text).not.toMatch(/\$49|subscribe|checkout/i);
   });
 
   it("free user who already spent the allowance gets NO 'free' promise", () => {
@@ -153,7 +153,7 @@ describe("FirstRecoveryCommand — honest, no dark patterns", () => {
 
   it("makes no billing/checkout claim while billing is disabled", () => {
     expect(componentSrc).not.toMatch(/checkout|lemonsqueezy|stripe|paddle/i);
-    expect(componentSrc).not.toMatch(/\$79|subscribe/i);
+    expect(componentSrc).not.toMatch(/\$49|subscribe/i);
     expect(componentSrc).not.toMatch(/fetch\(/);
   });
 
@@ -227,6 +227,6 @@ describe("dashboard wires the panel to the empty queue only", () => {
     expect(dashboardSrc).toContain('"@/lib/payments/entitlement"');
     expect(dashboardSrc).not.toMatch(/FREE_PLAN_LIMIT\s*=\s*\d/); // imports, never redefines
     expect(dashboardSrc).not.toMatch(/is_paid\s*=\s*(true|false)/); // never writes is_paid
-    expect(dashboardSrc).not.toMatch(/\$79|checkout|subscribe/i);
+    expect(dashboardSrc).not.toMatch(/\$49|checkout|subscribe/i);
   });
 });

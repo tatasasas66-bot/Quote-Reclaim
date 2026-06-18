@@ -89,8 +89,8 @@ researched a public bid)
 >
 > [FIRST],
 >
-> Quick math: one $5,000 job back covers 63 months of Quote Reclaim
-> at $79/month. The product is built for roofers like [COMPANY] —
+> Quick math: one $5,000 job back covers 102 months of Quote Reclaim
+> at $49/month. The product is built for roofers like [COMPANY] —
 > independent shops with a lot of bids that go quiet.
 >
 > First 3 quotes are free, no card. I'll run a free 5-minute Autopsy
@@ -249,7 +249,7 @@ Meta.
    and writes the follow-up. First 3 free. I'll run yours on a free
    5-min video if you want."
 2. *Math-led.* "Tool for the bids you sent that nobody replied to.
-   One $5k job back covers 63 months of it. $79/month after the
+   One $5k job back covers 102 months of it. $49/month after the
    first 3 free."
 3. *Concrete.* "Quote Reclaim. You give it 10 estimates — name and
    amount — and it shows which are still alive and what to text
@@ -275,7 +275,7 @@ Meta.
    Autopsy I'd do for you is free too. You can use the free part
    forever — pricing kicks in beyond 3 active quote sequences."
 2. "Heard that. Worth the free Autopsy at least? It's 5 minutes,
-   you send 10 estimates, I send back a video. If $79 doesn't feel
+   you send 10 estimates, I send back a video. If $49 doesn't feel
    worth it after, you keep the free queue forever."
 3. "Most contractors I talk to say that, then one $5k job comes
    back and the math flips. First 3 are free — try them, don't pay
@@ -296,12 +296,12 @@ Meta.
 
 ### "how much?"
 
-1. "$79/month. First 3 quotes are free, no card needed. Billing's
+1. "$49/month. First 3 quotes are free, no card needed. Billing's
    being updated right now — when it relaunches, the people who
    used the Autopsy get founding pricing locked in."
-2. "$79/month after the free 3. One job back covers a few years of
+2. "$49/month after the free 3. One job back covers a few years of
    it."
-3. "$79/month. Honest math: $5k job ÷ $79 = 63 months. You're not
+3. "$49/month. Honest math: $5k job ÷ $49 = 102 months. You're not
    really paying for it; you're paying for one job not slipping
    through."
 
@@ -311,7 +311,7 @@ Meta.
    which old estimates are still worth a follow-up and writes the
    message. Whether the job comes back depends on the homeowner.
    Math anchor: if even one $5k job comes back, the product covers
-   itself for 63 months."
+   itself for 102 months."
 2. "No guarantee. It's a tool — points at the bids most likely
    still alive and gives you the words to send. The win or loss is
    between you and the homeowner."

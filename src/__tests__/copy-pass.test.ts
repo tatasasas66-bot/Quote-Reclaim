@@ -69,7 +69,7 @@ describe("Homepage hero copy (honest conversion rewrite)", () => {
 
   it("trust line names the audience, the price, and the no-learning-curve differentiator", () => {
     expect(homepage).toMatch(/Built for US home-service contractors\./);
-    expect(homepage).toContain("$79/month");
+    expect(homepage).toContain("$49/month");
     expect(homepage).toMatch(/No learning curve\./);
   });
 

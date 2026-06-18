@@ -56,9 +56,9 @@ describe("Terms of Service page", () => {
     expect(text).toMatch(/automated follow-up emails/i);
   });
 
-  it("states the subscription terms: $79/month, 3 free quotes, cancel anytime", () => {
+  it("states the subscription terms: $49/month, 3 free quotes, cancel anytime", () => {
     const text = renderText(React.createElement(TermsPage));
-    expect(text).toContain("$79/month");
+    expect(text).toContain("$49/month");
     expect(text).toContain("3 free quotes");
     expect(text).toMatch(/cancel anytime/i);
   });
@@ -169,9 +169,9 @@ describe("Refund Policy page", () => {
     ).toBeTruthy();
   });
 
-  it("states the standard $79/month price and that the product is a subscription", () => {
+  it("states the standard $49/month price and that the product is a subscription", () => {
     const text = renderText(React.createElement(RefundPolicyPage));
-    expect(text).toContain("$79/month");
+    expect(text).toContain("$49/month");
     expect(text).toMatch(/subscription/i);
   });
 
@@ -448,10 +448,10 @@ describe("legal pages keep the honest-copy contract", () => {
     }
   });
 
-  it("introduces no price other than $79", () => {
+  it("introduces no price other than $49", () => {
     for (const src of legalSources) {
       expect(src).not.toMatch(/\$39\b/);
-      expect(src).not.toMatch(/\$49\b/);
+      expect(src).not.toMatch(/\$79\b/); // old price must not linger
       expect(src).not.toMatch(/\$99\b/);
       expect(src).not.toMatch(/\$29\b/);
     }

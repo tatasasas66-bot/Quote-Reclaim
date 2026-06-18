@@ -21,14 +21,14 @@ type Props = {
  * Paywall — shown on /quotes/new when a free user hits the 3-quote limit.
  *
  * When Paddle is configured for this deployment the CTA opens the Paddle
- * overlay checkout for the locked $79/month price. When it is not (env
+ * overlay checkout for the locked $49/month price. When it is not (env
  * vars missing), the CTA surfaces the support email + mailto so a
  * contractor who genuinely wants to upgrade still has a path — no dead
  * checkout button, no fake success state.
  *
  * Value anchoring is preserved: when we know the contractor's actual
  * silent-quote dollars, the number is the visual hero and the CTA reframes
- * as "Activate Pro — $79/month" so $79 reads as the answer to *their*
+ * as "Activate Pro — $49/month" so $49 reads as the answer to *their*
  * number, not a generic SaaS pitch.
  */
 export function Paywall({
@@ -47,8 +47,8 @@ export function Paywall({
 
   const hasSilent = Boolean(silentQuoteValue && silentQuoteValue > 0);
   const ctaLabel = hasSilent
-    ? "Import the rest — $79/month"
-    : "Unlock Silent Quote Command — $79/month";
+    ? "Import the rest — $49/month"
+    : "Unlock Silent Quote Command — $49/month";
 
   const canCheckout = Boolean(paddleAvailable && userId);
 
@@ -75,7 +75,7 @@ export function Paywall({
           Quote Reclaim shows which silent estimates still matter and what
           they&apos;re worth — and writes the 5-message follow-up, sent by
           email when there&apos;s an address and ready to copy when there
-          isn&apos;t. At $79/month — about 1.5% of a single $5,000 job — it
+          isn&apos;t. At $49/month — about 1% of a single $5,000 job — it
           doesn&apos;t take many recovered jobs to look like a smart line
           item.
         </p>

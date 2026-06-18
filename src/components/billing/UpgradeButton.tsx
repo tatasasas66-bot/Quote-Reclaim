@@ -5,7 +5,7 @@ import { Button } from "@/components/ui";
 import { SUPPORT_EMAIL } from "@/lib/payments/disabled-provider";
 import { PaddleCheckoutButton } from "./PaddleCheckoutButton";
 
-const PRICE_LABEL = "$79/month";
+const PRICE_LABEL = "$49/month";
 
 type Props = {
   variant?: "primary" | "secondary" | "ghost";
@@ -27,11 +27,11 @@ type Props = {
  *
  * Three rendered states:
  *   1. Paid → small "Pro · Active" chip, no upsell.
- *   2. Paddle available + user known → PaddleCheckoutButton ($79/month).
+ *   2. Paddle available + user known → PaddleCheckoutButton ($49/month).
  *   3. Otherwise → safe-disabled button revealing the SUPPORT_EMAIL mailto.
  *
  * Mobile/desktop label split is preserved so the header never wraps at
- * 375px. The price label is the single source of truth for the $79/month
+ * 375px. The price label is the single source of truth for the $49/month
  * string — duplicating it here would risk drift.
  */
 export function UpgradeButton({
@@ -71,7 +71,7 @@ export function UpgradeButton({
           userEmail={userEmail ?? null}
           label={
             <>
-              <span className="sm:hidden">Upgrade $79</span>
+              <span className="sm:hidden">Upgrade $49</span>
               <span className="hidden sm:inline">Upgrade — {PRICE_LABEL}</span>
             </>
           }
@@ -97,7 +97,7 @@ export function UpgradeButton({
         title={`Upgrade — ${PRICE_LABEL}`}
         className={["whitespace-nowrap", className].filter(Boolean).join(" ")}
       >
-        <span className="sm:hidden">Upgrade $79</span>
+        <span className="sm:hidden">Upgrade $49</span>
         <span className="hidden sm:inline">Upgrade — {PRICE_LABEL}</span>
       </Button>
       {showHint ? (

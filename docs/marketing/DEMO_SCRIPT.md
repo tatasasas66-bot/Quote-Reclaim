@@ -13,7 +13,7 @@ ask them to send 10 first.
 
 The 5-minute Autopsy converts higher because it's done with their
 numbers and shareable. The live demo converts when there's hesitation
-on $79.
+on $49.
 
 ---
 
@@ -120,7 +120,7 @@ Sign in (or show a screenshot). Scroll to the dashboard aside.
 
 ### (4:15 – 4:50) Price and what's next
 
-> Pricing is $79/month. First 3 quotes are free, no card needed.
+> Pricing is $49/month. First 3 quotes are free, no card needed.
 > Billing's being updated right now, so until then I activate the
 > free queue for people by hand. The folks who used the Autopsy
 > get founding pricing locked in when billing relaunches.
@@ -199,7 +199,7 @@ That's the validation moment.
 
 Show the dashboard. Let the meter render off their biggest quote.
 
-> Quote Reclaim is $79/month. Your biggest quote, [Name], $[X], is
+> Quote Reclaim is $49/month. Your biggest quote, [Name], $[X], is
 > [N] months of the product covered if it comes back. The math is
 > on the screen, you can pull up the calculator.
 
@@ -267,7 +267,7 @@ Send this email immediately after the demo, regardless of outcome:
 > - **Months of Quote Reclaim covered by one job back:** [N]
 > - **Status today:** free queue [activated / available to
 >   activate / not activated per your call]
-> - **Billing:** updating; founding rate will be $79/month
+> - **Billing:** updating; founding rate will be $49/month
 >
 > If anything changes, you have my email. If you want the free
 > queue activated now and you weren't sure on the call, just reply
@@ -296,7 +296,7 @@ has to use their actual numbers.
    Reclaim is a silent-estimate ranker. They are different problems.
    Don't argue the point — show the Top 3 list and let it explain
    itself.
-6. **Hiding the price.** $79/month, said out loud, with the math
+6. **Hiding the price.** $49/month, said out loud, with the math
    anchor. Never make the contractor ask.
 7. **Forgetting the follow-up email.** Send it within 2 hours.
    Every demo without an email follow-up is a demo wasted.

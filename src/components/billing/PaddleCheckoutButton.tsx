@@ -135,7 +135,7 @@ function loadPaddleScript(): Promise<PaddleGlobal> {
  * row and the `paddle_subscription_id` index — custom_data is just the
  * link that the FIRST event uses to attach a fresh subscription to a user.
  *
- * Renders a clear "Activate Quote Reclaim Pro" CTA with the locked $79
+ * Renders a clear "Activate Quote Reclaim Pro" CTA with the locked $49
  * price + "Cancel anytime." reassurance line. The overlay handles the
  * actual payment UI; we don't show our own form.
  */

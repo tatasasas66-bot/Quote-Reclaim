@@ -119,7 +119,7 @@ export default function AuditPage() {
           </FaqItem>
           <FaqItem question="What does it cost?">
             Your first 3 quotes are free. No card. If it helps, the full plan is
-            $79/month.
+            $49/month.
           </FaqItem>
         </section>
 

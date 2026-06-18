@@ -45,7 +45,7 @@ export default function HomePage() {
                 </Link>
               </div>
               <p className="max-w-md text-sm font-medium text-ink-muted">
-                Built for US home-service contractors. $79/month — first 3
+                Built for US home-service contractors. $49/month — first 3
                 quotes free, no card needed. No learning curve.
               </p>
             </div>

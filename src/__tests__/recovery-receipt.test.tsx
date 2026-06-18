@@ -3,7 +3,7 @@
  *
  * Recovery Receipt — actual proof only, no ROI/months-paid framing.
  *
- * The receipt used to host the ÷$79 months-paid equation in two places (top
+ * The receipt used to host the ÷$49 months-paid equation in two places (top
  * headline and footer). That was the third repetition of the same equation
  * inside one screen (Price Check + Win Moment already carry it), and three
  * repetitions read as pleading. The receipt now shows dollars and counts

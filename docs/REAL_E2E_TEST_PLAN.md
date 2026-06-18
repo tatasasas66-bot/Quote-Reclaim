@@ -63,7 +63,7 @@ Repeat T2.1 twice. Each should succeed.
 1. Navigate to `/quotes/new`.
 2. **Expected:** paywall renders (not the form).
 3. Paywall copy must read: **"You've used your 3 free recovery plans."**
-4. CTA button: **"Unlock unlimited recovery — $79/month"**
+4. CTA button: **"Unlock unlimited recovery — $49/month"**
 5. Secondary link: **"Keep viewing existing recovery plans"** → links to `/dashboard`.
 
 ---

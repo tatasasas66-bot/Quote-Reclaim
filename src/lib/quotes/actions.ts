@@ -241,7 +241,7 @@ export async function createQuoteAction(
     });
     return {
       ok: false,
-      error: `Free plan limit reached. You have ${silentLabel} of silent quotes in your queue. Subscribe to unlock unlimited recovery — $79/month.`,
+      error: `Free plan limit reached. You have ${silentLabel} of silent quotes in your queue. Subscribe to unlock unlimited recovery — $49/month.`,
     };
   }
 

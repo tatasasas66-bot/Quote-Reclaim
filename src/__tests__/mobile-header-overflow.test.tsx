@@ -4,7 +4,7 @@
  * Rendered mobile-header guard. The previous polish pass missed a real layout
  * bug visible only at a ~375px viewport: the header action row wrapped to two
  * lines —
- *     "Upgrade —" / "$79/month"   and   "Sign" / "out"
+ *     "Upgrade —" / "$49/month"   and   "Sign" / "out"
  * — because the long Upgrade label plus Sign out were flex-shrunk next to the
  * brand eyebrow. Source inspection alone could not catch it (it's a flex-shrink
  * layout effect, not a string). These tests lock the responsive compact label
@@ -32,17 +32,17 @@ afterEach(cleanup);
 // ---------------------------------------------------------------------------
 
 describe("Mobile header — Upgrade button does not wrap at 375px", () => {
-  it("renders a compact one-line mobile label 'Upgrade $79'", () => {
+  it("renders a compact one-line mobile label 'Upgrade $49'", () => {
     render(React.createElement(UpgradeButton));
-    const compact = screen.getByText("Upgrade $79");
+    const compact = screen.getByText("Upgrade $49");
     expect(compact).toBeTruthy();
     // The compact label is the phone-only variant (hidden from sm: up).
     expect(compact.className).toContain("sm:hidden");
   });
 
-  it("keeps the full 'Upgrade — $79/month' label for sm+ (desktop unchanged)", () => {
+  it("keeps the full 'Upgrade — $49/month' label for sm+ (desktop unchanged)", () => {
     render(React.createElement(UpgradeButton));
-    const full = screen.getByText(/Upgrade — \$79\/month/);
+    const full = screen.getByText(/Upgrade — \$49\/month/);
     expect(full).toBeTruthy();
     // Full label is hidden on phones, shown from sm: up.
     expect(full.className).toContain("hidden");
@@ -59,10 +59,10 @@ describe("Mobile header — Upgrade button does not wrap at 375px", () => {
     expect(upgradeSrc).toMatch(/flex shrink-0 flex-col items-end/);
   });
 
-  it("price is unchanged — still $79/month (display-only fix, no pricing logic)", () => {
-    expect(upgradeSrc).toContain('PRICE_LABEL = "$79/month"');
-    // The compact label still surfaces the price ("$79"), just shorter.
-    expect(upgradeSrc).toContain("Upgrade $79");
+  it("price is unchanged — still $49/month (display-only fix, no pricing logic)", () => {
+    expect(upgradeSrc).toContain('PRICE_LABEL = "$49/month"');
+    // The compact label still surfaces the price ("$49"), just shorter.
+    expect(upgradeSrc).toContain("Upgrade $49");
   });
 });
 

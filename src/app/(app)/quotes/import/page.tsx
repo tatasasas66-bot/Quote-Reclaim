@@ -108,14 +108,14 @@ function ImportBlocked({
           <>
             <p className="mt-3 max-w-xl text-base leading-7 text-ink">
               Activate Quote Reclaim Pro to import and recover the rest of your
-              silent estimates. $79/month. First 3 quotes are free. Cancel
+              silent estimates. $49/month. First 3 quotes are free. Cancel
               anytime. Your existing recovery sequences keep running either way.
             </p>
             <div className="mt-6">
               <PaddleCheckoutButton
                 userId={userId}
                 userEmail={userEmail}
-                label="Activate Quote Reclaim Pro — $79/month"
+                label="Activate Quote Reclaim Pro — $49/month"
                 size="lg"
               />
             </div>

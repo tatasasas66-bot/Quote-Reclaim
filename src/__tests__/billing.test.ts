@@ -59,9 +59,9 @@ const dashboardPage = readSource("../app/(app)/dashboard/page.tsx");
 // ---------------------------------------------------------------------------
 
 describe("Entitlement constants — provider-agnostic, unchanged", () => {
-  it("monthly price is $79 and the label is stable", () => {
-    expect(MONTHLY_PRICE_USD).toBe(79);
-    expect(PAYWALL_PRICE_LABEL).toBe("$79/month");
+  it("monthly price is $49 and the label is stable", () => {
+    expect(MONTHLY_PRICE_USD).toBe(49);
+    expect(PAYWALL_PRICE_LABEL).toBe("$49/month");
   });
 
   it("free plan is 3 quotes", () => {
@@ -330,8 +330,8 @@ describe("Paywall component", () => {
     expect(paywall).toMatch(/sent by\s+email when there&apos;s an address/);
     expect(paywall).toMatch(/ready to copy when there\s+isn&apos;t/);
     expect(paywall).not.toMatch(/follows\s+up by email automatically\./);
-    expect(paywall).toMatch(/1\.5% of a single \$5,000 job/);
-    expect(paywall).toContain("Unlock Silent Quote Command — $79/month");
+    expect(paywall).toMatch(/1% of a single \$5,000 job/);
+    expect(paywall).toContain("Unlock Silent Quote Command — $49/month");
     expect(paywall).toContain("Not now");
     expect(paywall).toMatch(/Lock in early access\. Cancel anytime\./);
     expect(paywall).toMatch(/Not another\s+CRM\./);
@@ -347,7 +347,7 @@ describe("Paywall component", () => {
     expect(paywall).toContain('data-testid="paywall-money-anchor"');
     expect(paywall).toMatch(/Sitting quiet in your queue/);
     expect(paywall).toMatch(/text-money/);
-    expect(paywall).toContain("Import the rest — $79/month");
+    expect(paywall).toContain("Import the rest — $49/month");
   });
 
   it("the value anchor is gated on hasSilent only — no fake/zero numbers ever rendered", () => {
@@ -362,8 +362,8 @@ describe("Paywall component", () => {
       /expires|countdown|hurry|only \d+ left|last chance|today only/i,
     );
     expect(paywall).not.toMatch(/\bguarantee\b/i);
-    expect(paywall).not.toMatch(/\$39\b|\$49\b|\$59\b|\$69\b|\$89\b|\$99\b/);
-    expect(paywall).toContain("$79/month");
+    expect(paywall).not.toMatch(/\$39\b|\$59\b|\$69\b|\$79\b|\$89\b|\$99\b/);
+    expect(paywall).toContain("$49/month");
   });
 
   it("never shows feature-list paywall, fake urgency, or testimonials", () => {
@@ -393,8 +393,8 @@ describe("UpgradeButton component", () => {
     expect(upgradeButton).not.toMatch(/\/api\//);
   });
 
-  it("preserves the $79 price label so conversion intent stays visible", () => {
-    expect(upgradeButton).toContain("$79/month");
+  it("preserves the $49 price label so conversion intent stays visible", () => {
+    expect(upgradeButton).toContain("$49/month");
   });
 
   it("renders the PaddleCheckoutButton when paddleAvailable and a user is known", () => {
@@ -527,7 +527,7 @@ describe("Dashboard header threads user + paddle availability", () => {
 describe("createQuoteAction free-plan gate (unchanged)", () => {
   it("uses the up-to-date 'Subscribe to unlock' copy", () => {
     expect(actions).toContain("Subscribe to unlock");
-    expect(actions).toContain("$79/month");
+    expect(actions).toContain("$49/month");
   });
 
   it("still calls check_and_increment_usage for every row", () => {

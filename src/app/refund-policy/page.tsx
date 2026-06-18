@@ -23,7 +23,7 @@ export default function RefundPolicyPage() {
         <p>
           A Quote Reclaim subscription is access to a digital software service
           that organizes silent estimates, generates follow-up plans, and
-          tracks recovery activity. The standard price is $79/month unless a
+          tracks recovery activity. The standard price is $49/month unless a
           different price is shown to you at checkout.
         </p>
       </LegalSection>

@@ -21,7 +21,7 @@ front of a real contractor's actual numbers.
 
 Scored 1–5 on each axis. Higher score = better launch beachhead.
 
-| Niche | Pain | Est size | Leakage | Find them | Will pay $79 | Score |
+| Niche | Pain | Est size | Leakage | Find them | Will pay $49 | Score |
 |---|---|---|---|---|---|---|
 | **Independent roofing (1–15 emp, NOT storm-chasers)** | 5 | 5 | 5 | 5 | 4 | **24** |
 | Independent remodelers / GCs | 5 | 5 | 5 | 3 | 4 | 22 |
@@ -54,7 +54,7 @@ ONE mid-sized US metro you can drive to.**
 
 Why this wins as the first beachhead, not "all contractors":
 
-1. **Ticket size weaponizes the math.** A $12,000 roof × ÷ $79 = 151
+1. **Ticket size weaponizes the math.** A $12,000 roof ÷ $49 = 244
    months of Quote Reclaim. The Paid-For-Itself Meter screenshots
    sell themselves.
 2. **Bidding behavior is built into the trade.** Homeowners get 2–3
@@ -155,7 +155,7 @@ record.
 **What you tell them when billing is disabled:**
 
 > Billing's being updated right now — when it goes live, you'll get
-> founding pricing ($79/month). Until then, your queue is on the free
+> founding pricing ($49/month). Until then, your queue is on the free
 > plan and the first 3 quotes run end-to-end. Anything beyond that, I
 > activate by hand for the people who used the Autopsy.
 
@@ -238,7 +238,7 @@ founder, for a real contractor, using their actual 10 last estimates.
 4. (1:30) Click into one. Show the Day 1 → Day 30 plan.
 5. (3:00) Switch to dashboard view (mock if needed) — show the
    Paid-For-Itself Meter computed off their biggest quote.
-6. (4:00) "$79/month is X months covered by one job back. Billing is
+6. (4:00) "$49/month is X months covered by one job back. Billing is
    being updated; if you want me to activate the free queue for you
    today I can. Email back and we'll do it."
 7. (5:00) "Thanks for sending these over. Reply with the word
@@ -262,7 +262,7 @@ Full script lives in **`DEMO_SCRIPT.md`**.
 homepage already:
 
 - Names the audience and the trade in the hero.
-- States the price + free start: `$79/month — first 3 quotes free,
+- States the price + free start: `$49/month — first 3 quotes free,
   no card needed. Not another CRM.`
 - Has a primary CTA (`See What's Sitting Quiet`) pointing to sign-up.
 - Carries a working product preview with sample numbers labeled as
@@ -329,7 +329,7 @@ End-of-day 5 target: **2+ Autopsies booked, 1+ Autopsy delivered.**
   postcards at $6 each = $30).
 
 End-of-day-10 target: **3–5 Autopsies delivered, 1+ contractor using
-the free product, 1+ contractor verbally OK with $79.**
+the free product, 1+ contractor verbally OK with $49.**
 
 ### Days 11–14 — Iterate, close, decide
 
@@ -358,7 +358,7 @@ will run a fake plan.
 | Autopsies booked | 0 | 1–3 | 3–5 | 2–4 |
 | Autopsies delivered | 0 | 0–1 | 3–5 | 2–4 |
 | Free-queue activations | 0 | 0 | 1–2 | 2–3 |
-| "Yes to $79" verbal commits | 0 | 0 | 0–1 | 1–3 |
+| "Yes to $49" verbal commits | 0 | 0 | 0–1 | 1–3 |
 
 ### Target outcomes by day 14
 
@@ -368,7 +368,7 @@ will run a fake plan.
 | Autopsies delivered | 5 | 10 |
 | Free-product activations | 3 | 6 |
 | "Pain validated" — contractor says the problem is real in their words | 3 | 8 |
-| "Pricing validated" — contractor says $79 is fair/cheap | 1 | 3 |
+| "Pricing validated" — contractor says $49 is fair/cheap | 1 | 3 |
 
 ### Pain-validated signal (qualitative)
 
@@ -383,7 +383,7 @@ Three of those = pain validated.
 
 A contractor says (unprompted):
 - "What is it, like $50 a month?"
-- "Yeah, $79 — one job."
+- "Yeah, $49 — one job."
 - "If it gets me one quote back it pays for itself."
 
 One unprompted line like that = pricing not the bottleneck. (If
@@ -411,7 +411,7 @@ for what it does" you're not.)
 | **Billing not live → can't close the call** | Certain | Low | The Autopsy is a no-close call. Capture intent (`activate` keyword), activate by hand, follow up when billing is live. |
 | **Looks like debt collection / financial services** | Low (product is honest) | Critical | Never use the words: "recover money for you," "guaranteed," "collect," "debt," "owe." Stick to "the estimate you already sent." |
 | **You run out of energy on day 9** | High | High | Daily checklist in a sheet; reward yourself after every Autopsy delivered. |
-| **You answer "how much?" too early** | High | High | Always answer "first 3 are free, no card. After that it's $79/month and billing's being updated." Never lead with price. |
+| **You answer "how much?" too early** | High | High | Always answer "first 3 are free, no card. After that it's $49/month and billing's being updated." Never lead with price. |
 | **You write back to "send me info" with a brochure** | High | Med | The Autopsy IS the brochure. "Sure — send me 10 estimates and I'll record it for you." |
 | **No replies at all for 5 days** | Possible | Critical | Day 5 is the deliverability-check checkpoint. Run `mail-tester.com` again; pause and fix before sending more. |
 

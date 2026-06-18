@@ -68,24 +68,24 @@ describe("honest conversion copy renders on each surface", () => {
     expect(SURFACES.paywall).toMatch(/Don&apos;t let good quotes die quiet\./);
     expect(SURFACES.paywall).toMatch(/sent by\s+email when there&apos;s an address/);
     expect(SURFACES.paywall).toMatch(/ready to copy when there\s+isn&apos;t/);
-    expect(SURFACES.paywall).toMatch(/1\.5% of a single \$5,000 job/);
+    expect(SURFACES.paywall).toMatch(/1% of a single \$5,000 job/);
   });
 });
 
 // ---------------------------------------------------------------------------
-// $79 price intact on the surfaces that quote it
+// $49 price intact on the surfaces that quote it
 // ---------------------------------------------------------------------------
 
-describe("$79 price stays intact", () => {
-  it("homepage trust line and paywall both state $79/month", () => {
-    expect(SURFACES.homepage).toContain("$79/month");
-    expect(SURFACES.paywall).toContain("$79/month");
+describe("$49 price stays intact", () => {
+  it("homepage trust line and paywall both state $49/month", () => {
+    expect(SURFACES.homepage).toContain("$49/month");
+    expect(SURFACES.paywall).toContain("$49/month");
   });
 
   it("no surface introduces a different price point", () => {
     for (const src of Object.values(SURFACES)) {
       expect(src).not.toMatch(/\$39\b/);
-      expect(src).not.toMatch(/\$49\b/);
+      expect(src).not.toMatch(/\$79\b/); // old price must not linger anywhere
       expect(src).not.toMatch(/\$99\b/);
       expect(src).not.toMatch(/\$29\b/);
     }
@@ -181,12 +181,12 @@ describe("banned-content audit: no false claims anywhere in the UI", () => {
     });
   }
 
-  it("the only percentage in the conversion surfaces is the 1.5% price math", () => {
+  it("the only percentage in the conversion surfaces is the 1% price math", () => {
     for (const [name, src] of Object.entries(SURFACES)) {
       const percents = (src.match(/\d[\d.]*\s?%/g) ?? []).map((p) =>
         p.replace(/\s/g, ""),
       );
-      const offenders = percents.filter((p) => p !== "1.5%");
+      const offenders = percents.filter((p) => p !== "1%");
       expect(offenders, `unexpected percentage(s) in ${name}`).toEqual([]);
     }
   });

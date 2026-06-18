@@ -7,13 +7,13 @@ before flipping DNS or wiring a future billing provider against real money.
 
 | Item | Value |
 |------|-------|
-| Monthly price | **$79/month** |
+| Monthly price | **$49/month** |
 | Free quotes | **3** |
 | Discounts / founder pricing | **None** |
 
-Public price is $79/month. There is no $39 plan, no $49 founding offer,
-no coupon-driven discount. The free trial is enforced as a 3-quote
-usage limit, not a price reduction.
+Public price is $49/month — a single public price. There is no second
+tier, no separate founding offer, no coupon-driven discount. The free
+trial is enforced as a 3-quote usage limit, not a price reduction.
 
 ## Billing (currently disabled)
 
@@ -57,7 +57,7 @@ When a future provider (Paddle, Stripe-via-MoR, etc.) is wired up:
 2. Create 3 quotes — the third one should still succeed.
 3. Attempt a 4th quote — the Paywall renders. Confirm:
    - the headline anchors to the user's silent-quote dollars when known;
-   - the CTA reads "Import the rest — $79/month" (or the no-silent
+   - the CTA reads "Import the rest — $49/month" (or the no-silent
      fallback);
    - clicking the CTA surfaces the support email inline — there is no
      fetch to a 404 route, no fake "checkout coming soon" banner.
