@@ -145,10 +145,16 @@ export function parseDaysSilent(raw: string | undefined | null): number | null {
  * "already cooling but still realistic" 7–45 day window — too fresh and the
  * homeowner may still be deciding; too old and the trail is usually cold.
  * Unknown days → neutral (rank on dollars alone).
+ *
+ * Fresh penalty (days < 7): a small, intentional nudge. We don't punish
+ * fresh quotes harshly — a meaningfully bigger fresh quote should still
+ * outrank a smaller prime-window one. The 0.9 weight makes "size dominates
+ * timing once you're past ~11% bigger" the rule, which matches how a
+ * contractor would actually triage by hand.
  */
 function followUpWeight(daysSilent: number | null): number {
   if (daysSilent == null) return 1;
-  if (daysSilent < 7) return 0.7; // give a fresh quote a beat
+  if (daysSilent < 7) return 0.9; // give a fresh quote a small beat — but never a 30% one
   if (daysSilent <= 45) return 1; // prime window
   if (daysSilent <= 90) return 0.6; // cooling hard
   return 0.35; // likely cold
@@ -204,19 +210,60 @@ export function buildWhyNotOthers(ranked: RankedAuditQuote[]): string[] {
   const first = ranked[0];
   const second = ranked[1];
 
-  if (first.amount > second.amount * 1.4) {
+  // Each branch must hold true on the ACTUAL amounts / days before its line
+  // can render — never trust the rank alone to justify a value claim. A line
+  // like "lower value" is only emitted when the referenced quote really is
+  // smaller; "more money at stake" only when the winner really is bigger.
+  // The ordering below picks the most specific accurate branch first.
+
+  // 1. Winner is meaningfully bigger AND not penalized by a worse age window —
+  //    so calling out the dollar gap is the honest reason.
+  if (first.amount >= second.amount * 1.4) {
     out.push(
       `Quote #${second.index} is still worth a follow-up, but Quote #${first.index} has more money at stake.`,
     );
-  } else if (
+  }
+  // 2. Loser is FRESHER (closer to today) AND genuinely SMALLER. Both checks
+  //    are required — the old code only checked days, which let a bigger
+  //    fresher quote get mislabeled "lower value" and contradict the math.
+  else if (
     first.daysSilent != null &&
     second.daysSilent != null &&
-    second.daysSilent < first.daysSilent
+    second.daysSilent < first.daysSilent &&
+    second.amount < first.amount
   ) {
     out.push(
       `Quote #${second.index} is more recent, but lower value, so it can wait behind the bigger quote.`,
     );
-  } else {
+  }
+  // 3. Loser is BIGGER but very fresh while the winner sits in the prime
+  //    window — the value-but-fresh tradeoff. This is the inverse case of
+  //    Branch 2 and must NEVER call the loser "lower value".
+  else if (
+    second.amount > first.amount &&
+    second.daysSilent != null &&
+    second.daysSilent < 7 &&
+    (first.daysSilent == null || first.daysSilent >= 7)
+  ) {
+    out.push(
+      `Quote #${second.index} is bigger, but it's still fresh enough that a follow-up now could feel rushed.`,
+    );
+  }
+  // 4. Loser is OLDER (deeper in the cooling window) than the winner — value
+  //    and freshness both already favor the winner, so the timing angle is
+  //    the most honest one.
+  else if (
+    first.daysSilent != null &&
+    second.daysSilent != null &&
+    second.daysSilent > first.daysSilent
+  ) {
+    out.push(
+      `Quote #${second.index} has been quiet longer, so a follow-up there is more likely to feel forced.`,
+    );
+  }
+  // 5. Fallback — no specific honest comparison to draw, so just frame
+  //    Quote #2 as the backup.
+  else {
     out.push(
       `Quote #${second.index} is your backup if Quote #${first.index} stays quiet.`,
     );
@@ -228,7 +275,13 @@ export function buildWhyNotOthers(ranked: RankedAuditQuote[]): string[] {
       out.push(
         `Quote #${third.index} is the coldest of the three — leave it for last and use a softer close-out angle.`,
       );
-    } else if (third.amount < second.amount * 0.7) {
+    } else if (
+      // "Smallest" must hold against BOTH peers, not just the second row —
+      // otherwise a "smallest" claim contradicts the rendered amounts.
+      third.amount < first.amount &&
+      third.amount < second.amount &&
+      third.amount < second.amount * 0.7
+    ) {
       out.push(
         `Quote #${third.index} is the smallest of the three, so it sits behind the bigger quotes.`,
       );

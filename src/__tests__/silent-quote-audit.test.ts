@@ -94,13 +94,46 @@ describe("runSilentQuoteAudit", () => {
     // $8,500 is the biggest but 120 days silent (likely cold); $4,000 at 30
     // days sits in the prime window and should win.
     const r = runSilentQuoteAudit([
-      { amountRaw: "2500", daysSilentRaw: "5" }, // 2500 * 0.7  = 1750
+      { amountRaw: "2500", daysSilentRaw: "5" }, // 2500 * 0.9  = 2250
       { amountRaw: "4000", daysSilentRaw: "30" }, // 4000 * 1.0 = 4000  ← priority
       { amountRaw: "8500", daysSilentRaw: "120" }, // 8500 * 0.35 = 2975
     ]);
     expect(r.priority?.index).toBe(2);
     expect(r.priority?.amount).toBe(4000);
     expect(r.priorityBandLabel).toBe(recoveryScoreForDays(30).label);
+  });
+
+  // ---------------------------------------------------------------------------
+  // Regression: the fresh-penalty bug that let a $5K prime quote beat a $7K
+  // fresh quote by 100 points and then mislabel the bigger quote as "lower
+  // value". The fix uses a 0.9 fresh weight so size dominates timing past
+  // ~11% bigger, and buildWhyNotOthers fact-checks every claim.
+  // ---------------------------------------------------------------------------
+  it("BUG: 2500/10, 5000/12, 7000/5 → Quote #3 ranks first (size > tiny fresh penalty)", () => {
+    const r = runSilentQuoteAudit([
+      { amountRaw: "2500", daysSilentRaw: "10" }, // 2500 * 1.0 = 2500
+      { amountRaw: "5000", daysSilentRaw: "12" }, // 5000 * 1.0 = 5000
+      { amountRaw: "7000", daysSilentRaw: "5" }, //  7000 * 0.9 = 6300  ← priority
+    ]);
+    expect(r.priority?.index).toBe(3);
+    expect(r.priority?.amount).toBe(7000);
+    expect(r.rankedQuotes.map((q) => q.index)).toEqual([3, 2, 1]);
+  });
+
+  it("BUG: the why-not-others lines for 2500/10, 5000/12, 7000/5 never call Quote #3 'lower value'", () => {
+    const r = runSilentQuoteAudit([
+      { amountRaw: "2500", daysSilentRaw: "10" },
+      { amountRaw: "5000", daysSilentRaw: "12" },
+      { amountRaw: "7000", daysSilentRaw: "5" },
+    ]);
+    const all = r.whyNotOthers.join(" ");
+    // Quote #3 ($7000) is the WINNER. Nothing should make it the SUBJECT of
+    // a "lower value" or "more recent but lower value" line.
+    expect(all).not.toMatch(/Quote #3 is more recent, but lower value/);
+    expect(all).not.toMatch(/Quote #3.*lower value/);
+    // Conversely, Quote #2 ($5000) cannot be the SUBJECT of "more money at
+    // stake" — that would name the smaller quote as the bigger one.
+    expect(all).not.toMatch(/Quote #2 has more money at stake/);
   });
 
   it("with no days given, ranks by raw amount and shows no band", () => {
@@ -349,6 +382,168 @@ describe("buildWhyNotOthers", () => {
     for (const line of lines) {
       expect(line).not.toMatch(/%/);
       expect(line.toLowerCase()).not.toMatch(/reply rate|odds|guaranteed/);
+    }
+  });
+
+  // ---------------------------------------------------------------------------
+  // Factual-consistency invariants — copy can NEVER contradict the amounts
+  // ---------------------------------------------------------------------------
+
+  // Walks each emitted line and verifies its embedded value claim is true
+  // against the ranked list it was generated from. Subject-targeted regexes
+  // (no greedy `[\s\S]*?`) so we always validate the actual claim subject,
+  // never the leftmost Quote #N that happens to appear in the line.
+  function assertFactual(
+    lines: string[],
+    ranked: ReturnType<typeof rank>,
+  ): void {
+    const byIndex = new Map(ranked.map((q) => [q.index, q]));
+    const first = ranked[0];
+    for (const line of lines) {
+      // "Quote #X is more recent, but lower value" — X must be genuinely smaller
+      // than the priority pick, and X must also be more recent (lower days).
+      const lowerValueMatch = /Quote #(\d) is more recent, but lower value/.exec(
+        line,
+      );
+      if (lowerValueMatch) {
+        const q = byIndex.get(Number(lowerValueMatch[1]))!;
+        expect(q.amount).toBeLessThan(first.amount);
+        if (q.daysSilent != null && first.daysSilent != null) {
+          expect(q.daysSilent).toBeLessThan(first.daysSilent);
+        }
+      }
+      // "Quote #X has more money at stake" — X must be the priority (winner)
+      // AND must be genuinely bigger than the row it's compared to.
+      const moneyAtStakeMatch = /Quote #(\d) has more money at stake/.exec(line);
+      if (moneyAtStakeMatch) {
+        const q = byIndex.get(Number(moneyAtStakeMatch[1]))!;
+        expect(q.index).toBe(first.index); // subject is the priority pick
+        for (const other of ranked) {
+          if (other.index !== q.index) {
+            expect(q.amount).toBeGreaterThan(other.amount);
+          }
+        }
+      }
+      // "Quote #X is bigger, but it's still fresh" — X must be genuinely
+      // bigger than the priority AND very fresh.
+      const biggerFreshMatch = /Quote #(\d) is bigger, but it/.exec(line);
+      if (biggerFreshMatch) {
+        const q = byIndex.get(Number(biggerFreshMatch[1]))!;
+        expect(q.amount).toBeGreaterThan(first.amount);
+        expect(q.daysSilent ?? 100).toBeLessThan(7);
+      }
+      // "wait behind the bigger quote" — used in pair with "Quote #X lower value";
+      // implicitly references the priority pick, which must really be bigger.
+      if (/wait behind the bigger quote/.test(line)) {
+        const lvMatch = /Quote #(\d) is more recent, but lower value/.exec(line);
+        if (lvMatch) {
+          const q = byIndex.get(Number(lvMatch[1]))!;
+          expect(first.amount).toBeGreaterThan(q.amount);
+        }
+      }
+      // "Quote #X is the smallest of the three" — X must be the smallest amount.
+      const smallestMatch = /Quote #(\d) is the smallest of the three/.exec(line);
+      if (smallestMatch) {
+        const q = byIndex.get(Number(smallestMatch[1]))!;
+        for (const other of ranked) {
+          if (other.index !== q.index) {
+            expect(q.amount).toBeLessThan(other.amount);
+          }
+        }
+      }
+    }
+  }
+
+  it("a HIGHER amount in a warm window outranks a LOWER amount with a similar warm window", () => {
+    const ranked = rank([
+      { amount: 4000, days: 10 },
+      { amount: 7000, days: 5 },
+    ]);
+    expect(ranked[0].amount).toBe(7000); // bigger wins despite slight fresh penalty
+    assertFactual(buildWhyNotOthers(ranked), ranked);
+  });
+
+  it("'lower value' copy NEVER fires when the compared quote is actually bigger", () => {
+    // Reproduces the original bug shape and asserts the factual guard.
+    const ranked = rank([
+      { amount: 2500, days: 10 },
+      { amount: 5000, days: 12 },
+      { amount: 7000, days: 5 },
+    ]);
+    const lines = buildWhyNotOthers(ranked);
+    assertFactual(lines, ranked);
+    expect(lines.join(" ")).not.toMatch(/Quote #3[\s\S]*lower value/);
+  });
+
+  it("'more money at stake' copy NEVER fires when the priority quote is smaller than the second pick", () => {
+    // Build a case where the priority pick is smaller (forced via the cooling weight):
+    const ranked = rank([
+      { amount: 5000, days: 20 }, // 5000 * 1.0 = 5000  ← priority
+      { amount: 6000, days: 80 }, // 6000 * 0.6 = 3600
+    ]);
+    expect(ranked[0].amount).toBe(5000);
+    const lines = buildWhyNotOthers(ranked);
+    assertFactual(lines, ranked);
+    expect(lines.join(" ")).not.toMatch(/has more money at stake/);
+  });
+
+  it("'smallest of the three' copy only fires when the row truly has the smallest amount", () => {
+    const ranked = rank([
+      { amount: 8000, days: 20 },
+      { amount: 6000, days: 22 },
+      { amount: 2000, days: 25 }, // genuinely smallest
+    ]);
+    assertFactual(buildWhyNotOthers(ranked), ranked);
+  });
+
+  it("when the loser is BIGGER but very fresh, copy explains via timing, not value", () => {
+    // 5000/12 → 5000 prime;  5400/5 → 4860 fresh — winner is SMALLER + older.
+    const ranked = rank([
+      { amount: 5000, days: 12 },
+      { amount: 5400, days: 5 },
+    ]);
+    expect(ranked[0].amount).toBe(5000);
+    const lines = buildWhyNotOthers(ranked);
+    assertFactual(lines, ranked);
+    // No "lower value" claim, no "more money at stake" claim — the only
+    // honest framing is the "bigger but fresh" timing tradeoff.
+    expect(lines.join(" ")).not.toMatch(/lower value/);
+    expect(lines.join(" ")).not.toMatch(/more money at stake/);
+    expect(lines[0]).toMatch(/bigger, but it&apos;s still fresh|bigger, but it's still fresh/);
+  });
+
+  it("ranking list and explanation always agree on which quote is the priority", () => {
+    const cases: Array<Array<{ amount: number; days: number | null }>> = [
+      [
+        { amount: 2500, days: 10 },
+        { amount: 5000, days: 12 },
+        { amount: 7000, days: 5 },
+      ],
+      [
+        { amount: 8000, days: 60 },
+        { amount: 3000, days: 5 },
+        { amount: 2000, days: 90 },
+      ],
+      [
+        { amount: 4000, days: 14 },
+        { amount: 4500, days: 12 },
+      ],
+      [
+        { amount: 5000, days: null },
+        { amount: 9000, days: null },
+      ],
+    ];
+    for (const c of cases) {
+      const r = runSilentQuoteAudit(
+        c.map((i) => ({
+          amountRaw: String(i.amount),
+          daysSilentRaw: i.days == null ? "" : String(i.days),
+        })),
+      );
+      // Ranking row 1 must be the priority pick.
+      expect(r.rankedQuotes[0].index).toBe(r.priority?.index);
+      // And the why-not-others copy must not contradict the amounts.
+      assertFactual(r.whyNotOthers, r.rankedQuotes);
     }
   });
 });
