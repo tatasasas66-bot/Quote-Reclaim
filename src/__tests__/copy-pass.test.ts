@@ -217,13 +217,13 @@ describe("Recovery plan product framing", () => {
 
   it("quote detail no longer says 'We'll send these on schedule'", () => {
     expect(quoteDetail).not.toMatch(/We'll send these on schedule/);
-    expect(quoteDetail).toMatch(/Your recovery plan is ready/);
+    expect(quoteDetail).toMatch(/The rest of the sequence stays behind this message/);
   });
 
-  it("visible UI says Recovery Priority, not Recovery Score", () => {
+  it("visible UI says Priority or Recovery Priority, not Recovery Score", () => {
     const visibleUi = [quoteDetail, quoteListItem, authShell].join("\n");
     expect(visibleUi).not.toMatch(/Recovery Score/);
-    expect(visibleUi).toMatch(/Recovery Priority/);
+    expect(visibleUi).toMatch(/Recovery Priority|Priority/);
   });
 });
 

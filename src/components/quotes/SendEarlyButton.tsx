@@ -12,6 +12,10 @@ type Props = {
   disabled: boolean;
   messageType?: "email" | "sms";
   followupNumber?: number;
+  variant?: "primary" | "secondary" | "ghost" | "danger" | "success" | "google";
+  size?: "sm" | "md" | "lg";
+  fullWidth?: boolean;
+  className?: string;
 };
 
 /**
@@ -29,6 +33,10 @@ export function SendEarlyButton({
   disabled,
   messageType = "sms",
   followupNumber,
+  variant = "ghost",
+  size = "sm",
+  fullWidth = false,
+  className,
 }: Props) {
   const [state, setState] = React.useState<
     "idle" | "confirm" | "pending" | "sent" | "error"
@@ -73,13 +81,16 @@ export function SendEarlyButton({
         ? `Confirm — send follow-up ${followupNumber}`
         : "Confirm send"
       : "Send today";
+  const wrapperClass = fullWidth ? "items-stretch" : "items-end";
 
   return (
-    <div className="flex flex-col items-end gap-1">
+    <div className={`flex flex-col gap-1 ${wrapperClass}`}>
       <Button
         type="button"
-        size="sm"
-        variant="ghost"
+        size={size}
+        variant={variant}
+        fullWidth={fullWidth}
+        className={className}
         disabled={disabled || state === "pending"}
         loading={state === "pending"}
         onClick={handleClick}

@@ -22,21 +22,21 @@ describe("Recovery Plan UI: /quotes/[id]", () => {
     expect(detailPage).toMatch(/reminders\.map/);
   });
 
-  it("uses automation-first status copy", () => {
-    expect(detailPage).toContain("Recovery running");
-    expect(detailPage).toContain("Recovery paused");
+  it("uses plainer status copy after the command panel", () => {
+    expect(detailPage).toContain('label: "Running"');
+    expect(detailPage).toContain('label: "Paused"');
     expect(detailPage).toContain("Next follow-up sends");
+    expect(detailPage).not.toContain("Recovery running");
   });
 
   it("renders both channel-aware intro variants (automated email + manual copy)", () => {
     // Email channel: automated via Resend on the cron schedule.
     expect(detailPage).toContain(
-      "Quote Reclaim sends these follow-ups by email on schedule",
+      "The rest of the sequence stays behind this message and sends by email on schedule",
     );
     // Copy mode (no email): contractor sends manually.
-    expect(detailPage).toContain("Your recovery plan is ready");
     expect(detailPage).toContain(
-      "Copy each message and send it from your phone",
+      "The rest of the sequence stays here, ready to copy when each touch comes due",
     );
   });
 

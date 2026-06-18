@@ -255,31 +255,32 @@ describe("won-proof placement", () => {
 // 9. Quote detail — NEXT MOVE banner + email/copy honesty
 // ───────────────────────────────────────────────────────────────────────
 
-describe("quote detail NEXT MOVE banner (unified next-move source of truth)", () => {
-  it("derives the banner from computeNextMove — the shared single source", () => {
+describe("quote detail command panel (unified next-move source of truth)", () => {
+  it("derives the command panel from computeNextMove — the shared single source", () => {
     expect(quoteDetail).toMatch(/const move = computeNextMove\(/);
-    expect(quoteDetail).toMatch(/move\.kind !== "none" \?/);
+    expect(quoteDetail).toContain("<CommandActionPanel");
+    expect(quoteDetail).toContain("activeReminderForMove(reminders, move)");
+    expect(quoteDetail).toContain('data-testid="quote-command-panel"');
   });
 
-  it("queued email mode: offers the manual override without claiming the system sends today", () => {
-    // After the schedule-anchor fix, an old quote's first touch is future-
-    // queued. The banner keeps the accurate future date AND offers the manual
-    // "Send it today" override — it never claims the automatic schedule is today.
-    expect(quoteDetail).toMatch(/is queued for the next send\s+window/);
-    expect(quoteDetail).toMatch(/Want to move now\? Send it today\./);
-    // The contradictory old "nothing to send by hand" copy is gone.
+  it("queued email mode: command panel uses nextMoveInstruction without duplicating schedule logic", () => {
+    expect(quoteDetail).toContain("const instruction = nextMoveInstruction(move)");
+    expect(quoteDetail).toMatch(/\{instruction\}/);
     expect(quoteDetail).not.toMatch(/Nothing to send by hand/);
   });
 
-  it("due email mode: let it send, or send it today to move now", () => {
-    expect(quoteDetail).toMatch(/is due now and queued for\s+email/);
-    expect(quoteDetail).toMatch(/You can let it send, or send it today if you want to\s+move now\./);
+  it("dominant action is the existing safe Send today button plus Copy", () => {
+    expect(quoteDetail).toMatch(
+      /<SendEarlyButton[\s\S]{0,260}variant="primary"[\s\S]{0,120}size="lg"[\s\S]{0,80}fullWidth/,
+    );
+    expect(quoteDetail).toContain('<CopyButton text={activeReminder.message_text} label="Copy"');
   });
 
-  it("copy mode owns the manual send explicitly and deep-links the message", () => {
-    expect(quoteDetail).toMatch(/is ready to copy\. Send it from\s+your phone or email today\./);
-    expect(quoteDetail).toMatch(/#followup-\$\{move\.followupNumber\}/);
-    expect(quoteDetail).toMatch(/Jump to the message/);
+  it("future follow-ups are collapsed but still rendered in the 5-message plan", () => {
+    expect(quoteDetail).toContain("5-message plan");
+    expect(quoteDetail).toContain('data-followup-collapsed="true"');
+    expect(quoteDetail).toContain("<details");
+    expect(quoteDetail).toMatch(/reminders\.map/);
   });
 });
 

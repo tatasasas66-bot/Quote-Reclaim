@@ -345,13 +345,13 @@ describe("SendEarlyButton: channel-aware dispatch", () => {
 describe("/quotes/[id]: channel-aware intro copy", () => {
   it("uses the automated email intro when the quote has an email", () => {
     expect(detailPage).toContain(
-      "Quote Reclaim sends these follow-ups by email on schedule",
+      "The rest of the sequence stays behind this message and sends by email on schedule",
     );
   });
 
   it("uses the copy-mode intro when the quote has no email", () => {
     expect(detailPage).toContain(
-      "Copy each message and send it from your phone",
+      "The rest of the sequence stays here, ready to copy when each touch comes due",
     );
   });
 

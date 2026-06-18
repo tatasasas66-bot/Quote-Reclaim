@@ -281,9 +281,9 @@ describe("QuietSignalCard — UI contract", () => {
       baseSignals({ hasReply: true, replyIntent: "price_objection" }),
     );
     render(React.createElement(QuietSignalCard, { signal }));
-    expect(screen.getByText(/Likely stall reason/i)).toBeTruthy();
-    expect(screen.getByText(/Signal strength/i)).toBeTruthy();
-    expect(screen.getByText(/What we see/i)).toBeTruthy();
+    expect(screen.getByText(/Possible stall reason/i)).toBeTruthy();
+    expect(screen.getByText(/^Signal$/i)).toBeTruthy();
+    expect(screen.getByText(/What we can see/i)).toBeTruthy();
     expect(screen.getByText(/Best next move/i)).toBeTruthy();
     expect(screen.getByText("Price uncertainty")).toBeTruthy();
     expect(screen.getByText("Strong")).toBeTruthy();
@@ -337,11 +337,12 @@ describe("QuietSignalCard — UI contract", () => {
 // ---------------------------------------------------------------------------
 
 describe("QuietSignalCard source — locked vocabulary", () => {
-  it("uses 'Likely stall reason' / 'Signal strength' / 'What we see' / 'Best next move'", () => {
-    expect(cardSrc).toContain("Likely stall reason");
-    expect(cardSrc).toContain("Signal strength");
-    expect(cardSrc).toContain("What we see");
+  it("uses 'Possible stall reason' / 'Signal' / 'What we can see' / 'Best next move'", () => {
+    expect(cardSrc).toContain("Possible stall reason");
+    expect(cardSrc).toContain("Signal");
+    expect(cardSrc).toContain("What we can see");
     expect(cardSrc).toContain("Best next move");
+    expect(cardSrc).not.toContain("Likely stall reason");
   });
 
   it("does NOT use any forbidden vocabulary", () => {

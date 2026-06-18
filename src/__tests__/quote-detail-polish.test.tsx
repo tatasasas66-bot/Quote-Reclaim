@@ -30,7 +30,12 @@ import {
   type SilenceSignals,
 } from "@/lib/quotes/quiet-signal";
 import { nextBestAction } from "@/lib/quotes/next-best-action";
-import { SEQUENCE_VARIANTS, projectLabel, tradeWord } from "@/lib/ai/fallback-messages";
+import {
+  SEQUENCE_VARIANTS,
+  projectLabel,
+  researchSequenceMessages,
+  tradeWord,
+} from "@/lib/ai/fallback-messages";
 import type { QuoteRow } from "@/lib/quotes/repo";
 
 function readSource(rel: string): string {
@@ -41,6 +46,66 @@ const detailPage = readSource("../app/(app)/quotes/[id]/page.tsx");
 const quoteActions = readSource("../components/quotes/QuoteActions.tsx");
 const quietCard = readSource("../components/quotes/QuietSignalCard.tsx");
 const stepStatusSrc = readSource("../lib/quotes/step-status.ts");
+
+// ---------------------------------------------------------------------------
+// 0. Command-center hierarchy: one quote, one message, one action
+// ---------------------------------------------------------------------------
+
+describe("quote detail command-center hierarchy", () => {
+  it("renders the command action panel before the old summary grid", () => {
+    const commandIdx = detailPage.indexOf("<CommandActionPanel");
+    const summaryIdx = detailPage.indexOf("<QuoteSummary");
+    expect(commandIdx).toBeGreaterThan(-1);
+    expect(summaryIdx).toBeGreaterThan(commandIdx);
+    expect(detailPage).toContain('data-testid="quote-command-panel"');
+    expect(detailPage).toContain('data-testid="quote-command-message"');
+    expect(detailPage).toContain('data-testid="quote-command-actions"');
+  });
+
+  it("uses the existing safe Send today control as the dominant command action", () => {
+    expect(detailPage).toMatch(
+      /<SendEarlyButton[\s\S]{0,260}variant="primary"[\s\S]{0,120}size="lg"[\s\S]{0,80}fullWidth/,
+    );
+    expect(detailPage).toContain('<CopyButton text={activeReminder.message_text} label="Copy"');
+  });
+
+  it("shows one active reason in the command panel and collapses future reasons", () => {
+    expect(detailPage).toContain('data-testid="quote-command-reason"');
+    expect(detailPage).toMatch(
+      /WHY_THIS_WORKS\[activeReminder\.followup_number as FollowupStep\]/,
+    );
+    expect(detailPage).toContain('data-followup-collapsed="true"');
+    expect(detailPage).toContain("<details");
+  });
+
+  it("keeps the 5-message sequence intact behind the active command", () => {
+    expect(detailPage).toContain("5-message plan");
+    expect(detailPage).toMatch(/reminders\.map/);
+    expect(detailPage).toMatch(
+      /CADENCE_DAYS[^=]*=\s*\{\s*1:\s*1,\s*2:\s*3,\s*3:\s*7,\s*4:\s*14,\s*5:\s*30/,
+    );
+  });
+
+  it("does not hardcode painting copy for non-painting quote messages", () => {
+    expect(detailPage).not.toMatch(/painting estimate|painting quote/i);
+    const seq = researchSequenceMessages({
+      firstName: "Jane",
+      contractorFirstName: "Mike",
+      trade: "Roofing",
+      estimateAmount: 8500,
+      quoteId: "roofing-non-painting",
+    });
+    const all = Object.values(seq).join(" ");
+    expect(all).toMatch(/roofing/i);
+    expect(all).not.toMatch(/painting/i);
+  });
+
+  it("softens Quiet Signal stall copy so it does not overclaim certainty", () => {
+    expect(quietCard).toContain("Possible stall reason");
+    expect(quietCard).toContain("What we can see");
+    expect(quietCard).not.toContain("Likely stall reason");
+  });
+});
 
 // ---------------------------------------------------------------------------
 // 1 + 2. Send time: business-hour anchor, no 3 AM in the UI

@@ -15,6 +15,7 @@ export type StepStatus =
 export interface StepDisplay {
   status: StepStatus;
   label: string;
+  helperLabel?: string;
   tone: "neutral" | "rust" | "success" | "warning" | "danger";
 }
 
@@ -48,35 +49,42 @@ export function computeStepDisplay(
       tone: "success",
     };
   }
+  const nextUp = [...allRemindersForQuote]
+    .filter((r) => !r.sent && !r.paused_at)
+    .sort((a, b) => +new Date(a.send_at) - +new Date(b.send_at))[0];
+  const queuedBehind =
+    nextUp && nextUp.id !== reminder.id
+      ? `Queued behind follow-up ${nextUp.followup_number}`
+      : undefined;
+  const scheduledLabel = `Scheduled ${formatScheduleDateTime(reminder.send_at)}`;
   const now = Date.now();
   const due = new Date(reminder.send_at).getTime() <= now;
   if (!due) {
     return {
       status: "scheduled",
-      label: `Scheduled ${formatScheduleDateTime(reminder.send_at)}`,
+      label: scheduledLabel,
+      helperLabel: queuedBehind,
       tone: "neutral",
     };
   }
   // Past send_at, unsent. Only the nearest one in this quote gets "due".
-  const nextUp = [...allRemindersForQuote]
-    .filter((r) => !r.sent && !r.paused_at)
-    .sort((a, b) => +new Date(a.send_at) - +new Date(b.send_at))[0];
   if (nextUp && nextUp.id === reminder.id) {
     return { status: "due", label: "Due now", tone: "rust" };
   }
   // Overdue but NOT next in line: it cannot send (cron and manual send both
-  // advance one message at a time), so a stale "Scheduled <past date>" label
-  // would read like a bug. Name the real state: waiting on the one ahead.
+  // advance one message at a time). Keep the scheduled date as the primary
+  // label for contractor clarity; name the blocker as secondary context.
   if (nextUp) {
     return {
       status: "scheduled",
-      label: `Queued behind follow-up ${nextUp.followup_number}`,
+      label: scheduledLabel,
+      helperLabel: queuedBehind,
       tone: "neutral",
     };
   }
   return {
     status: "scheduled",
-    label: `Scheduled ${formatScheduleDateTime(reminder.send_at)}`,
+    label: scheduledLabel,
     tone: "neutral",
   };
 }

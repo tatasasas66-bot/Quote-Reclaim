@@ -352,11 +352,11 @@ describe("cron sends at most ONE follow-up per quote per run", () => {
 // ───────────────────────────────────────────────────────────────────────
 
 describe("all surfaces derive from computeNextMove", () => {
-  it("summary Next Best Action uses nextMoveSummaryLabel(move) first", () => {
+  it("summary Next move uses nextMoveSummaryLabel(move) first", () => {
     expect(detailPage).toMatch(
       /nextMoveSummaryLabel\(move\) \?\? nba\?\.label \?\? "Review plan"/,
     );
-    expect(detailPage).toMatch(/label="Next Best Action" value=\{nextActionLabel\}/);
+    expect(detailPage).toMatch(/label="Next move" value=\{nextActionLabel\}/);
   });
 
   it("Quiet Signal's Best next move is overridden with the unified instruction", () => {
@@ -366,13 +366,11 @@ describe("all surfaces derive from computeNextMove", () => {
     );
   });
 
-  it("the NEXT MOVE banner renders from the same move object (queued split on canSendEarly)", () => {
-    // email-queued now branches: first-touch (canSendEarly) offers the
-    // override; queued-after-send (!canSendEarly) states the window only.
-    expect(detailPage).toMatch(/move\.kind === "email-queued" && move\.canSendEarly \?/);
-    expect(detailPage).toMatch(/move\.kind === "email-queued" && !move\.canSendEarly \?/);
-    expect(detailPage).toMatch(/move\.kind === "email-due" \?/);
-    expect(detailPage).toMatch(/move\.kind === "manual-ready" \?/);
+  it("the command panel renders from the same move object", () => {
+    expect(detailPage).toContain("activeReminderForMove(reminders, move)");
+    expect(detailPage).toContain("nextMoveInstruction(move)");
+    expect(detailPage).toContain('data-testid="quote-command-panel"');
+    expect(detailPage).toMatch(/move\.kind !== "none" &&/);
   });
 
   it("the schedule chip never claims a send while a reply holds the sequence", () => {
@@ -385,14 +383,15 @@ describe("all surfaces derive from computeNextMove", () => {
   });
 });
 
-describe("queued-behind state names the real blocker", () => {
+describe("queued-behind state keeps scheduled date primary", () => {
   const all: ReminderRow[] = importedPlan() as ReminderRow[];
 
-  it("an overdue NOT-next step renders 'Queued behind follow-up 1', not a stale date", () => {
+  it("an overdue NOT-next step keeps the scheduled date and names the blocker second", () => {
     const second = all.find((r) => r.followup_number === 2)!;
     const display = computeStepDisplay(second, all, false);
     expect(display.status).toBe("scheduled");
-    expect(display.label).toBe("Queued behind follow-up 1");
+    expect(display.label).toMatch(/^Scheduled /);
+    expect(display.helperLabel).toBe("Queued behind follow-up 1");
   });
 
   it("the earliest overdue step still reads Due now", () => {
@@ -404,6 +403,7 @@ describe("queued-behind state names the real blocker", () => {
     const third = all.find((r) => r.followup_number === 3)!;
     const display = computeStepDisplay(third, all, false);
     expect(display.label).toMatch(/^Scheduled /);
+    expect(display.helperLabel).toBe("Queued behind follow-up 1");
   });
 });
 

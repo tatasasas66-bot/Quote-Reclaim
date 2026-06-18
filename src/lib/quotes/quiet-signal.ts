@@ -20,7 +20,7 @@
  *     "comparison shopping" from "on vacation" using behavior alone.
  *
  * UI vocabulary (locked):
- *   "Likely stall reason" · "Signal strength" · "What we see" · "Best next move".
+ *   "Possible stall reason" · "Signal" · "What we can see" · "Best next move".
  * Forbidden vocabulary anywhere in this engine's output:
  *   "Silent because", "% confident", "decoder", "AI diagnosis",
  *   "loss aversion", "reactance", "psychological trigger".
@@ -77,10 +77,10 @@ export type SilenceSignals = {
 
 export type QuietSignal = {
   reason: StallReason;
-  /** Title-case label used in "Likely stall reason: <label>". */
+  /** Title-case label used in "Possible stall reason: <label>". */
   reasonLabel: string;
   strength: SignalStrength;
-  /** Bulleted lines for "What we see". Already plain English, no jargon. */
+  /** Bulleted lines for "What we can see". Already plain English, no jargon. */
   evidence: string[];
   /** One-line copy for "Best next move". */
   recommendedMove: string;

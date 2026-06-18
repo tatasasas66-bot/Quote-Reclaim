@@ -100,6 +100,28 @@ function formatSendDate(date: Date): string {
   return formatScheduleDateTime(date);
 }
 
+function activeReminderForMove(
+  reminders: ReminderRow[],
+  move: NextMove,
+): ReminderRow | null {
+  if (move.kind === "none") return null;
+  return reminders.find((r) => r.id === move.reminderId) ?? null;
+}
+
+function commandStatusLabel(status: RecoveryStatus): string {
+  switch (status) {
+    case "won":
+      return "Won";
+    case "closed":
+      return "Closed";
+    case "paused":
+      return "Paused";
+    case "running":
+    default:
+      return "Running";
+  }
+}
+
 export default async function QuoteDetailPage({
   params,
 }: {
@@ -179,7 +201,7 @@ export default async function QuoteDetailPage({
       : null;
 
   // THE next actionable follow-up — single source of truth for the summary
-  // grid's Next Best Action, Quiet Signal's Best next move, the recovery
+  // grid's Next move, Quiet Signal's Best next move, the recovery
   // plan's NEXT MOVE banner, the highlighted card, and the send button.
   const move = computeNextMove({
     status,
@@ -234,6 +256,7 @@ export default async function QuoteDetailPage({
     listActiveReplyOptions(serviceClient, String(quote.id)),
   ]);
   const clientFirstName = titleCaseName(quote.client_name).split(/\s+/)[0] || "Customer";
+  const activeReminder = activeReminderForMove(reminders, move);
 
   return (
     <main className="mx-auto flex min-h-screen w-full max-w-5xl flex-col gap-8 bg-canvas px-4 py-8 sm:px-6">
@@ -263,6 +286,24 @@ export default async function QuoteDetailPage({
         </p>
       </div>
 
+      <CommandActionPanel
+        quote={quote}
+        status={status}
+        activeReminder={activeReminder}
+        move={move}
+        hasEmail={Boolean(quote.client_email)}
+        hasPhone={Boolean(quote.client_phone)}
+        hasReplyForQuote={hasReplyForQuote}
+      />
+
+      <ReplyRadarCard reply={replyRadar} />
+      <OneTapReplyCard
+        quoteId={String(quote.id)}
+        clientFirstName={clientFirstName}
+        latestReply={latestOneTapReply}
+        options={oneTapOptions}
+      />
+
       <QuoteSummary
         quote={quote}
         status={status}
@@ -270,15 +311,6 @@ export default async function QuoteDetailPage({
         allTimeRecovered={allTimeRecovered}
         move={move}
       />
-
-      <QuietSignalCard signal={quietSignal} />
-      <OneTapReplyCard
-        quoteId={String(quote.id)}
-        clientFirstName={clientFirstName}
-        latestReply={latestOneTapReply}
-        options={oneTapOptions}
-      />
-      <ReplyRadarCard reply={replyRadar} />
 
       <RecoveryPlanSection
         reminders={reminders}
@@ -289,7 +321,162 @@ export default async function QuoteDetailPage({
         hasEmail={Boolean(quote.client_email)}
         hasReplyForQuote={hasReplyForQuote}
       />
+
+      <QuietSignalCard signal={quietSignal} />
     </main>
+  );
+}
+
+function CommandActionPanel({
+  quote,
+  status,
+  activeReminder,
+  move,
+  hasEmail,
+  hasPhone,
+  hasReplyForQuote,
+}: {
+  quote: QuoteRow;
+  status: RecoveryStatus;
+  activeReminder: ReminderRow | null;
+  move: NextMove;
+  hasEmail: boolean;
+  hasPhone: boolean;
+  hasReplyForQuote: boolean;
+}) {
+  const displayName = titleCaseName(quote.client_name);
+  const metaLine = tradeLocationLine(quote.trade, quote.city, quote.state);
+  const daysQuiet = effectiveDaysSilent(quote);
+  const score = getRecoveryScore(quote);
+  const instruction = nextMoveInstruction(move);
+  const messageType: "email" | "sms" =
+    activeReminder?.message_type === "email" ? "email" : "sms";
+  const hasRecipientForChannel = messageType === "email" ? hasEmail : hasPhone;
+  const sendDisabled =
+    !activeReminder ||
+    activeReminder.sent ||
+    activeReminder.paused_at !== null ||
+    status !== "running" ||
+    !hasRecipientForChannel;
+  const showSendToday =
+    activeReminder != null &&
+    move.kind !== "none" &&
+    !sendDisabled &&
+    (messageType === "email" ? canManualSendToday(move) : true);
+  const nextMoveLabel = activeReminder
+    ? `Follow-up ${activeReminder.followup_number}`
+    : hasReplyForQuote
+      ? "Reply first"
+      : commandStatusLabel(status);
+
+  return (
+    <section
+      data-testid="quote-command-panel"
+      aria-labelledby="quote-command-heading"
+      className="rounded-xl border border-brand/45 bg-surface-1 shadow-[0_28px_86px_rgba(0,0,0,0.34)]"
+    >
+      <div className="grid gap-5 border-b border-line-subtle p-5 sm:p-6 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-start">
+        <div className="min-w-0">
+          <p className="text-xs font-black uppercase tracking-widest text-brand">
+            Next move
+          </p>
+          <h1
+            id="quote-command-heading"
+            className="mt-2 text-3xl font-black leading-tight text-ink-strong sm:text-4xl"
+          >
+            {activeReminder ? `Send this to ${displayName}` : `Work ${displayName}`}
+          </h1>
+          <p className="mt-2 break-words text-sm text-ink-muted">{metaLine}</p>
+        </div>
+
+        <div className="grid grid-cols-2 gap-3 sm:min-w-[280px]">
+          <div className="rounded-lg border border-line-subtle bg-canvas/35 p-3">
+            <p className="text-[10px] font-black uppercase tracking-widest text-ink-muted">
+              Amount quiet
+            </p>
+            <p className="mt-1 whitespace-nowrap text-2xl font-black tabular-nums text-ink-strong">
+              {formatCurrency(quote.estimate_amount)}
+            </p>
+          </div>
+          <div className="rounded-lg border border-line-subtle bg-canvas/35 p-3">
+            <p className="text-[10px] font-black uppercase tracking-widest text-ink-muted">
+              Days quiet
+            </p>
+            <p className="mt-1 text-2xl font-black tabular-nums text-ink-strong">
+              {daysQuiet}
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <div className="grid gap-5 p-5 sm:p-6 lg:grid-cols-[minmax(0,1fr)_220px]">
+        <div className="min-w-0">
+          <div className="flex flex-wrap gap-2">
+            <span className="rounded-full border border-line-subtle bg-canvas/35 px-3 py-1 text-xs font-bold text-ink">
+              Priority: {score.label}
+            </span>
+            <span className="rounded-full border border-line-subtle bg-canvas/35 px-3 py-1 text-xs font-bold text-ink">
+              Status: {commandStatusLabel(status)}
+            </span>
+            <span className="rounded-full border border-brand/35 bg-brand/10 px-3 py-1 text-xs font-bold text-brand">
+              Next move: {nextMoveLabel}
+            </span>
+          </div>
+
+          {activeReminder ? (
+            <div className="mt-4 rounded-lg border border-line-subtle bg-canvas/40 p-4">
+              <p className="text-xs font-black uppercase tracking-widest text-brand">
+                Recommended message
+              </p>
+              {instruction ? (
+                <p className="mt-2 text-sm leading-6 text-ink-muted">
+                  {instruction}
+                </p>
+              ) : null}
+              <p
+                data-testid="quote-command-message"
+                className="mt-3 whitespace-pre-wrap text-base font-semibold leading-7 text-ink-strong"
+              >
+                {activeReminder.message_text}
+              </p>
+              <p
+                data-testid="quote-command-reason"
+                className="mt-3 text-sm leading-6 text-ink-muted"
+              >
+                <span className="font-semibold text-ink">Why this works:</span>{" "}
+                {WHY_THIS_WORKS[activeReminder.followup_number as FollowupStep]}
+              </p>
+            </div>
+          ) : (
+            <p className="mt-4 rounded-lg border border-line-subtle bg-canvas/40 p-4 text-sm leading-6 text-ink">
+              {hasReplyForQuote
+                ? "A customer reply is waiting. Handle that before sending another follow-up."
+                : "No follow-up is ready to send right now. Review the status below."}
+            </p>
+          )}
+        </div>
+
+        <div
+          data-testid="quote-command-actions"
+          className="flex flex-col justify-start gap-2 lg:items-stretch"
+        >
+          {showSendToday && activeReminder ? (
+            <SendEarlyButton
+              reminderId={activeReminder.id}
+              followupNumber={activeReminder.followup_number}
+              disabled={sendDisabled}
+              messageType={messageType}
+              variant="primary"
+              size="lg"
+              fullWidth
+            />
+          ) : null}
+          {activeReminder ? (
+            <CopyButton text={activeReminder.message_text} label="Copy" />
+          ) : null}
+        </div>
+      </div>
+    </section>
   );
 }
 
@@ -313,10 +500,10 @@ function QuoteSummary({
       case "closed":
         return { variant: "neutral" as const, label: "Closed" };
       case "paused":
-        return { variant: "warning" as const, label: "Recovery paused" };
+        return { variant: "warning" as const, label: "Paused" };
       case "running":
       default:
-        return { variant: "brand" as const, label: "Recovery running" };
+        return { variant: "brand" as const, label: "Running" };
     }
   })();
 
@@ -370,8 +557,8 @@ function QuoteSummary({
           numeric
         />
         <IntelligenceField label="Days quiet" value={String(daysQuiet)} numeric />
-        <IntelligenceField label="Recovery Priority" value={score.label} />
-        <IntelligenceField label="Next Best Action" value={nextActionLabel} />
+        <IntelligenceField label="Priority" value={score.label} />
+        <IntelligenceField label="Next move" value={nextActionLabel} />
         <IntelligenceField label="Status" value={badge.label} />
         {quote.client_email ? (
           <IntelligenceField label="Email" value={quote.client_email} truncate />
@@ -459,8 +646,8 @@ function RecoveryPlanSection({
   // there's an address on file. No email = copy mode (contractor sends
   // manually from their phone). The intro picks the truthful sentence.
   const runningIntro = hasEmail
-    ? "Quote Reclaim sends these follow-ups by email on schedule. Step in when they reply or the job comes back."
-    : "Your recovery plan is ready. Copy each message and send it from your phone — Quote Reclaim tracks the timing for you.";
+    ? "The rest of the sequence stays behind this message and sends by email on schedule."
+    : "The rest of the sequence stays here, ready to copy when each touch comes due.";
 
   // The schedule chip mirrors the channel: "sends" is only true for email
   // mode; copy mode says "scheduled" because the contractor does the sending.
@@ -478,10 +665,10 @@ function RecoveryPlanSection({
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <p className="text-xs font-black uppercase tracking-widest text-brand">
-            Recovery Messages
+            Recovery sequence
           </p>
           <h2 className="mt-1 text-2xl font-black text-ink-strong">
-            Recovery plan
+            5-message plan
           </h2>
         </div>
         {scheduleChip ? (
@@ -490,81 +677,6 @@ function RecoveryPlanSection({
           </p>
         ) : null}
       </div>
-
-      {/* NEXT MOVE — the one unmistakable answer to "what happens next with
-          this quote, and do I have to do it?" Same source of truth as the
-          summary grid and Quiet Signal (computeNextMove), so the surfaces
-          can never contradict each other. */}
-      {move.kind !== "none" ? (
-        <div
-          data-testid="next-move-banner"
-          className="flex flex-wrap items-center gap-x-4 gap-y-2 rounded-lg border border-brand/40 bg-surface-1 px-4 py-3.5"
-        >
-          <span className="text-[11px] font-black uppercase tracking-widest text-brand">
-            Next move
-          </span>
-          {move.kind === "email-queued" && move.canSendEarly ? (
-            <>
-              <p className="min-w-0 flex-1 text-sm leading-6 text-ink">
-                Follow-up {move.followupNumber} is queued for the next send
-                window —{" "}
-                <span className="font-bold text-ink-strong">
-                  {move.sendAtLabel}
-                </span>
-                . Want to move now? Send it today.
-              </p>
-              <a
-                href={`#followup-${move.followupNumber}`}
-                className="whitespace-nowrap rounded text-sm font-bold text-brand hover:text-ink-strong focus:outline-none focus-visible:ring-2 focus-visible:ring-focus"
-              >
-                Jump to the message →
-              </a>
-            </>
-          ) : null}
-          {move.kind === "email-queued" && !move.canSendEarly ? (
-            // A follow-up queued AFTER an earlier send. State the window only —
-            // no "send it today" override, so the contractor can't fire the
-            // next email back-to-back. It becomes sendable when it is due.
-            <p className="min-w-0 flex-1 text-sm leading-6 text-ink">
-              Follow-up {move.followupNumber} is queued for the next send
-              window —{" "}
-              <span className="font-bold text-ink-strong">
-                {move.sendAtLabel}
-              </span>
-              .
-            </p>
-          ) : null}
-          {move.kind === "email-due" ? (
-            <>
-              <p className="min-w-0 flex-1 text-sm leading-6 text-ink">
-                Follow-up {move.followupNumber} is due now and queued for
-                email. You can let it send, or send it today if you want to
-                move now.
-              </p>
-              <a
-                href={`#followup-${move.followupNumber}`}
-                className="whitespace-nowrap rounded text-sm font-bold text-brand hover:text-ink-strong focus:outline-none focus-visible:ring-2 focus-visible:ring-focus"
-              >
-                Jump to the message →
-              </a>
-            </>
-          ) : null}
-          {move.kind === "manual-ready" ? (
-            <>
-              <p className="min-w-0 flex-1 text-sm leading-6 text-ink">
-                Follow-up {move.followupNumber} is ready to copy. Send it from
-                your phone or email today.
-              </p>
-              <a
-                href={`#followup-${move.followupNumber}`}
-                className="whitespace-nowrap rounded text-sm font-bold text-brand hover:text-ink-strong focus:outline-none focus-visible:ring-2 focus-visible:ring-focus"
-              >
-                Jump to the message →
-              </a>
-            </>
-          ) : null}
-        </div>
-      ) : null}
 
       {(status === "running" || status === "paused") && reminders.length > 0 ? (
         <p className="max-w-3xl text-sm leading-6 text-ink-muted">
@@ -661,39 +773,48 @@ function ReminderCard({
     !sendEarlyDisabled &&
     (messageType === "email" ? canManualSendToday(move) : true);
 
-  return (
-    <li
-      id={`followup-${r.followup_number}`}
-      data-next-actionable={isNextActionable ? "true" : undefined}
-      className={`scroll-mt-20 rounded-lg border bg-surface-1 shadow-[0_16px_46px_rgba(0,0,0,0.2)] ${
-        isNextActionable ? "border-brand/50" : "border-line-subtle"
-      }`}
-    >
-      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-line-subtle px-4 py-3">
-        <div className="space-y-0.5">
-          <span className="text-xs font-black uppercase tracking-widest text-brand">
-            Follow-up {r.followup_number} · Day {dayLabel}
-          </span>
-          <p className="text-xs text-ink-muted">
-            {r.framework_used ?? "Manual recovery message"}
-          </p>
-        </div>
-        <Badge variant={statusVariant}>{statusLabel}</Badge>
+  const header = (
+    <div className="flex flex-wrap items-center justify-between gap-2 border-b border-line-subtle px-4 py-3">
+      <div className="space-y-0.5">
+        <span className="text-xs font-black uppercase tracking-widest text-brand">
+          Follow-up {r.followup_number} · Day {dayLabel}
+        </span>
+        <p className="text-xs text-ink-muted">
+          {r.framework_used ?? "Manual recovery message"}
+        </p>
       </div>
+      <Badge variant={statusVariant}>{statusLabel}</Badge>
+    </div>
+  );
 
+  const messageBody = (
+    <>
       <p className="whitespace-pre-wrap px-4 pt-4 text-sm leading-7 text-ink-strong">
         {r.message_text}
       </p>
 
-      <p className="mt-3 px-4 pb-4 text-xs italic text-ink-muted">
-        <span className="font-semibold not-italic">Why this works:</span>{" "}
-        {WHY_THIS_WORKS[r.followup_number as FollowupStep]}
-      </p>
+      {!isNextActionable ? (
+        <details className="mx-4 mt-3 rounded-md border border-line-subtle bg-canvas/35 px-3 py-2 text-xs text-ink-muted">
+          <summary className="cursor-pointer font-semibold text-ink">
+            Why this works
+          </summary>
+          <p className="mt-2 leading-5">
+            {WHY_THIS_WORKS[r.followup_number as FollowupStep]}
+          </p>
+        </details>
+      ) : null}
 
-      <div className="flex flex-wrap items-center justify-between gap-2 border-t border-line-subtle px-4 py-3">
-        <p className="text-xs text-ink-muted">
-          Scheduled {formatSendDate(sendDate)} · {r.message_type.toUpperCase()}
-        </p>
+      <div className="mt-4 flex flex-wrap items-center justify-between gap-2 border-t border-line-subtle px-4 py-3">
+        <div className="text-xs text-ink-muted">
+          <p>
+            Scheduled {formatSendDate(sendDate)} · {r.message_type.toUpperCase()}
+          </p>
+          {display.helperLabel ? (
+            <p className="mt-1 font-semibold text-ink-muted">
+              {display.helperLabel}
+            </p>
+          ) : null}
+        </div>
         <div className="flex items-center gap-1">
           <CopyButton text={r.message_text} />
           {showSendToday ? (
@@ -706,6 +827,36 @@ function ReminderCard({
           ) : null}
         </div>
       </div>
+    </>
+  );
+
+  if (!isNextActionable) {
+    return (
+      <li
+        id={`followup-${r.followup_number}`}
+        data-followup-collapsed="true"
+        className="scroll-mt-20 rounded-lg border border-line-subtle bg-surface-1 shadow-[0_10px_30px_rgba(0,0,0,0.16)]"
+      >
+        <details>
+          <summary className="list-none cursor-pointer [&::-webkit-details-marker]:hidden">
+            {header}
+          </summary>
+          {messageBody}
+        </details>
+      </li>
+    );
+  }
+
+  return (
+    <li
+      id={`followup-${r.followup_number}`}
+      data-next-actionable={isNextActionable ? "true" : undefined}
+      className={`scroll-mt-20 rounded-lg border bg-surface-1 shadow-[0_16px_46px_rgba(0,0,0,0.2)] ${
+        isNextActionable ? "border-brand/50" : "border-line-subtle"
+      }`}
+    >
+      {header}
+      {messageBody}
     </li>
   );
 }

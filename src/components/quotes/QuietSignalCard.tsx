@@ -5,7 +5,7 @@ import type { QuietSignal, SignalStrength } from "@/lib/quotes/quiet-signal";
  * QuietSignal card — read-only diagnostic surface on the quote detail page.
  *
  * UI contract (locked):
- *   - Vocabulary: "Likely stall reason" · "Signal strength" · "What we see" ·
+ *   - Vocabulary: "Possible stall reason" · "Signal" · "What we can see" ·
  *     "Best next move".
  *   - Strength chip: Early / Medium / Strong only — never a numeric %.
  *   - Renders nothing when the engine returns null (won, opted-out, positive
@@ -59,7 +59,7 @@ export function QuietSignalCard({ signal }: { signal: QuietSignal | null }) {
       <div className="grid gap-4 sm:grid-cols-[1fr_auto] sm:items-end">
         <div className="min-w-0">
           <p className="text-xs font-semibold uppercase tracking-widest text-ink-muted">
-            Likely stall reason
+            Possible stall reason
           </p>
           <p className="mt-1 text-2xl font-black text-ink-strong">
             {signal.reasonLabel}
@@ -67,7 +67,7 @@ export function QuietSignalCard({ signal }: { signal: QuietSignal | null }) {
         </div>
         <div className="text-left sm:text-right">
           <p className="text-xs font-semibold uppercase tracking-widest text-ink-muted">
-            Signal strength
+            Signal
           </p>
           <p className={`mt-1 text-base font-bold ${strengthTone}`}>
             {strengthLabel}
@@ -77,7 +77,7 @@ export function QuietSignalCard({ signal }: { signal: QuietSignal | null }) {
 
       <div>
         <p className="text-xs font-semibold uppercase tracking-widest text-ink-muted">
-          What we see
+          What we can see
         </p>
         <ul className="mt-2 space-y-1.5 text-sm leading-6 text-ink">
           {signal.evidence.map((line) => (
