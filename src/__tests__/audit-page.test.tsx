@@ -42,7 +42,7 @@ function fillFirstQuote(amount = "5000", days = "20") {
     target: { value: amount },
   });
   if (days) {
-    fireEvent.change(screen.getAllByLabelText(/days since you sent it/i)[0], {
+    fireEvent.change(screen.getAllByLabelText(/days since sent/i)[0], {
       target: { value: days },
     });
   }
@@ -67,26 +67,25 @@ describe("/audit is a lightweight, no-auth landing page", () => {
     expect(
       screen.getByRole("heading", {
         level: 1,
-        name: /You already did the work on these quotes\. Don.t let the money go quiet\./i,
+        name: /Painting estimates going quiet\?/i,
       }),
     ).toBeTruthy();
-    expect(screen.getByText(/^For home-service contractors$/i)).toBeTruthy();
+    expect(screen.getByText(/^For residential painting contractors$/i)).toBeTruthy();
   });
 
-  it("shows a clearly-labeled EXAMPLE result before the form (not a real case)", () => {
+  it("shows the real audit form before any sample/result content", () => {
     render(<AuditPage />);
-    // The example block is labeled, and tagged 'Sample' so it can't read as
-    // real proof / a real customer case study.
-    expect(screen.getByText(/Example audit result/i)).toBeTruthy();
-    expect(screen.getByText(/^Sample$/i)).toBeTruthy();
-    expect(screen.getByText(/\$8,200/)).toBeTruthy();
+    expect(screen.getByText(/Use real-ish amounts/i)).toBeTruthy();
+    expect(
+      screen.getByRole("button", { name: /Find the quote to reopen first/i }),
+    ).toBeTruthy();
+    expect(screen.queryByText(/Example audit result/i)).toBeNull();
   });
 
-  it("renders the FAQ (Is this a CRM? / customer names / cost)", () => {
+  it("does not render a FAQ before the 60-second diagnostic", () => {
     render(<AuditPage />);
-    expect(screen.getByText(/Is this a CRM\?/i)).toBeTruthy();
-    expect(screen.getByText(/Do I need customer names\?/i)).toBeTruthy();
-    expect(screen.getByText(/What does it cost\?/i)).toBeTruthy();
+    expect(screen.queryByLabelText(/Frequently asked questions/i)).toBeNull();
+    expect(screen.queryByText(/Is this a CRM\?/i)).toBeNull();
   });
 
   it("the page imports NO auth / Supabase / dashboard code", () => {
@@ -109,7 +108,7 @@ describe("/audit is a lightweight, no-auth landing page", () => {
 // ---------------------------------------------------------------------------
 
 describe("funnel — value first, signup only after the result", () => {
-  const SUBMIT = /show me which quote to chase first/i;
+  const SUBMIT = /find the quote to reopen first/i;
 
   let scrollSpy: ReturnType<typeof vi.fn>;
   let realRaf: typeof window.requestAnimationFrame;
@@ -263,28 +262,31 @@ describe("funnel — value first, signup only after the result", () => {
     expect(reducedTotal).toBeLessThanOrEqual(900);
   });
 
-  it("shows 'Your audit is ready.' + the full restructured result", () => {
+  it("shows the 60-second audit result + the full restructured result", () => {
     render(<AuditCalculatorClient />);
     fireEvent.change(screen.getByLabelText(/quote #1 amount/i), {
       target: { value: "$8,500" },
     });
-    fireEvent.change(screen.getAllByLabelText(/days since you sent it/i)[0], {
+    fireEvent.change(screen.getAllByLabelText(/days since sent/i)[0], {
       target: { value: "10" },
     });
     fireEvent.change(screen.getByLabelText(/quote #2 amount/i), {
       target: { value: "4000" },
     });
-    fireEvent.change(screen.getAllByLabelText(/days since you sent it/i)[1], {
+    fireEvent.change(screen.getAllByLabelText(/days since sent/i)[1], {
       target: { value: "20" },
     });
     fireEvent.click(screen.getByRole("button", { name: SUBMIT }));
     runFullAnalysis();
 
     const result = screen.getByTestId("audit-result");
-    expect(result.textContent).toMatch(/Your audit is ready/i);
+    expect(result.textContent).toMatch(/60-second audit result/i);
     expect(result.textContent).toContain("$12,500");
-    expect(result.textContent).toMatch(/sitting in your quiet quotes/i);
+    expect(result.textContent).toMatch(/Money sitting quiet/i);
+    expect(result.textContent).toMatch(/in old estimates/i);
+    expect(result.textContent).toMatch(/Reopen this quote first/i);
     expect(result.textContent).toMatch(/Start with Quote #/i);
+    expect(result.textContent).toMatch(/Message to send today/i);
 
     // Recovery-window labels for Warm + Cooling appear on the right rows.
     const order = screen.getByTestId("audit-follow-up-order");
@@ -301,6 +303,10 @@ describe("funnel — value first, signup only after the result", () => {
     expect(screen.getByTestId("audit-sequence-preview")).toBeTruthy();
     expect(result.textContent).toMatch(/Send this today\. Keep it short/);
     expect(result.textContent).toMatch(/5-message follow-up sequence/);
+    const messageIdx = result.textContent!.indexOf("Message to send today");
+    const orderIdx = result.textContent!.indexOf("Follow-up order");
+    expect(messageIdx).toBeGreaterThan(-1);
+    expect(orderIdx).toBeGreaterThan(messageIdx);
     // "This audit shows where to start" + depth-layer body sit BETWEEN the
     // sequence preview and the signup CTA — framing Pro as the next layer.
     const goesDeeper = screen.getByTestId("audit-goes-deeper");
@@ -349,7 +355,7 @@ describe("funnel — value first, signup only after the result", () => {
     fireEvent.change(screen.getByLabelText(/quote #1 amount/i), {
       target: { value: "6000" },
     });
-    fireEvent.change(screen.getAllByLabelText(/days since you sent it/i)[0], {
+    fireEvent.change(screen.getAllByLabelText(/days since sent/i)[0], {
       target: { value: "60" },
     });
     fireEvent.click(screen.getByRole("button", { name: SUBMIT }));
@@ -364,19 +370,19 @@ describe("funnel — value first, signup only after the result", () => {
     fireEvent.change(screen.getByLabelText(/quote #1 amount/i), {
       target: { value: "2500" },
     });
-    fireEvent.change(screen.getAllByLabelText(/days since you sent it/i)[0], {
+    fireEvent.change(screen.getAllByLabelText(/days since sent/i)[0], {
       target: { value: "10" },
     });
     fireEvent.change(screen.getByLabelText(/quote #2 amount/i), {
       target: { value: "5000" },
     });
-    fireEvent.change(screen.getAllByLabelText(/days since you sent it/i)[1], {
+    fireEvent.change(screen.getAllByLabelText(/days since sent/i)[1], {
       target: { value: "12" },
     });
     fireEvent.change(screen.getByLabelText(/quote #3 amount/i), {
       target: { value: "7000" },
     });
-    fireEvent.change(screen.getAllByLabelText(/days since you sent it/i)[2], {
+    fireEvent.change(screen.getAllByLabelText(/days since sent/i)[2], {
       target: { value: "5" },
     });
     fireEvent.click(screen.getByRole("button", { name: SUBMIT }));
@@ -421,10 +427,20 @@ describe("funnel — value first, signup only after the result", () => {
     expect(screen.queryByTestId("audit-result")).toBeNull();
   });
 
-  it("uses the 'Days since you sent it' label, not 'Days silent'", () => {
+  it("uses the 'Days since sent' label, not 'Days silent'", () => {
     render(<AuditCalculatorClient />);
-    expect(screen.getAllByLabelText(/days since you sent it/i).length).toBe(3);
+    expect(screen.getAllByLabelText(/days since sent/i).length).toBe(3);
     expect(screen.queryByLabelText(/^days silent$/i)).toBeNull();
+  });
+
+  it("uses painter-test example placeholders that make the form feel fast", () => {
+    render(<AuditCalculatorClient />);
+    expect(screen.getByPlaceholderText("$3,200")).toBeTruthy();
+    expect(screen.getByPlaceholderText("14 days")).toBeTruthy();
+    expect(screen.getByPlaceholderText("$5,800")).toBeTruthy();
+    expect(screen.getByPlaceholderText("24 days")).toBeTruthy();
+    expect(screen.getByPlaceholderText("$2,400")).toBeTruthy();
+    expect(screen.getByPlaceholderText("7 days")).toBeTruthy();
   });
 
   it("does not collect any customer name / email / phone field", () => {
@@ -470,38 +486,42 @@ describe("copy guardrails", () => {
     // Whitespace-tolerant: JSX wraps these phrases across source lines.
     expect(both).toMatch(/no signup until you see the result/);
     expect(both).toMatch(/no customer names/);
+    expect(both).toMatch(/no phone numbers/);
     expect(both).toMatch(/no card/);
     expect(both).toMatch(/not a crm/);
     expect(both).toMatch(/not\s+lead\s+generation/);
   });
 
   it("uses the upgraded hero + eyebrow + pain line + CTA + trust line", () => {
-    expect(pageSrc).toContain("For home-service contractors");
+    expect(pageSrc).toContain("For residential painting contractors");
     expect(pageSrc).toContain(
-      "You already did the work on these quotes.",
+      "Painting estimates going quiet?",
     );
     expect(pageSrc).toContain(
-      "Out of your last 10 quotes, how many never replied?",
+      "Before buying another lead, check the estimates you already sent.",
     );
-    expect(clientSrc).toContain("Show me which quote to chase first");
+    expect(pageSrc).toContain("No phone numbers");
+    expect(pageSrc).toContain("60 seconds");
+    expect(clientSrc).toContain("Find the quote to reopen first");
     expect(clientSrc).toContain(
-      "First 3 free. No signup until you see the result. No card.",
+      "No signup until you see the result. First 3 quotes free. No card.",
     );
     expect(clientSrc).toMatch(
-      /we don&apos;t need customer names for the\s+audit/,
+      /No customer names or phone numbers/,
     );
   });
 
-  it("does not use painter-only copy in the main public funnel", () => {
-    expect(both).not.toMatch(
-      /\b(for painting contractors|painting quotes|painting quote|painting estimate|old painting quotes|silent painting quotes)\b/,
-    );
+  it("leans painting-specific for the paid test without turning into CRM or lead-gen copy", () => {
+    expect(both).toMatch(/residential painting contractors/);
+    expect(both).toMatch(/painting estimate/);
+    expect(both).toMatch(/old estimates/);
+    expect(both).toMatch(/us home-service contractors/);
+    expect(both).not.toMatch(/jobber|housecall pro|project management|estimate creation/i);
   });
 
-  it("the example card is clearly a sample (no fake real-customer framing)", () => {
-    expect(pageSrc).toContain("Example audit result");
-    expect(pageSrc).toMatch(/Sample/);
-    // No fake-proof / case-study language.
+  it("does not show a sample result before the contractor's own numbers", () => {
+    expect(pageSrc).not.toContain("Example audit result");
+    expect(pageSrc).not.toMatch(/Sample/);
     expect(pageSrc.toLowerCase()).not.toContain("case study");
     expect(pageSrc.toLowerCase()).not.toContain("real customer");
   });
@@ -534,8 +554,11 @@ describe("analytics events are wired without adding a vendor in /audit", () => {
     expect(clientSrc).toContain("total_silent_quote_value_bucket");
     expect(clientSrc).toContain("bucketCurrency");
     expect(clientSrc).not.toMatch(/total:\s*audit\.totalSilentQuoteValue/);
-    // No customer-identifying field names anywhere in the audit emit.
-    expect(clientSrc).not.toMatch(/(client_name|client_email|customer_email|customer_name|phone|address)/i);
+    // No customer-identifying event field names anywhere in the audit emit.
+    // Visible trust copy may say "No phone numbers"; payload keys may not.
+    expect(clientSrc).not.toMatch(
+      /(client_name|client_email|client_phone|customer_email|customer_name|customer_phone|address\s*:)/i,
+    );
   });
 
   it("attaches captured UTMs to every funnel event", () => {

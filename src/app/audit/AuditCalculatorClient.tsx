@@ -14,6 +14,11 @@ import {
 } from "@/lib/audit/silent-quote-audit";
 
 const ROW_COUNT = 3;
+const EXAMPLE_ROWS = [
+  { amount: "$3,200", days: "14 days" },
+  { amount: "$5,800", days: "24 days" },
+  { amount: "$2,400", days: "7 days" },
+] as const;
 
 /**
  * Honest analysis steps shown between submit and the result render. Each
@@ -23,9 +28,9 @@ const ROW_COUNT = 3;
 export const ANALYSIS_STEPS: readonly string[] = [
   "Totaling your quiet quotes...",
   "Scoring by value and days since sent...",
-  "Finding the best first follow-up...",
+  "Finding the quote to reopen first...",
   "Building your follow-up order...",
-  "Preparing your next message...",
+  "Preparing the message to send today...",
 ];
 
 /** Default per-step duration: ~700ms × 5 steps = 3.5s total. */
@@ -198,47 +203,56 @@ export function AuditCalculatorClient() {
     <div className="space-y-6">
       <form onSubmit={handleSubmit} noValidate className="space-y-4">
         <fieldset className="space-y-3">
-          <legend className="sr-only">Your three oldest silent quotes</legend>
+          <legend className="sr-only">
+            Enter three quiet painting estimates
+          </legend>
           {rows.map((row, i) => (
             <div
               key={i}
-              className="grid grid-cols-[1.5fr_1fr] gap-3 rounded-lg border border-line-subtle bg-surface-1 p-3"
+              className="rounded-lg border border-line-subtle bg-surface-1 p-3"
             >
-              <div className="flex flex-col gap-1.5">
-                <label
-                  htmlFor={`amount-${i}`}
-                  className="text-sm font-medium text-ink"
-                >
-                  Quote #{i + 1} amount
-                </label>
-                <input
-                  id={`amount-${i}`}
-                  type="text"
-                  inputMode="decimal"
-                  autoComplete="off"
-                  placeholder="e.g. 2800"
-                  value={row.amount}
-                  onChange={(e) => updateRow(i, "amount", e.target.value)}
-                  className="h-11 rounded-lg border border-line-subtle bg-surface-2 px-3 text-base text-ink-strong placeholder:font-normal placeholder:italic placeholder:text-ink-muted/70 focus:border-brand focus:outline-none focus:ring-2 focus:ring-focus/40"
-                />
-              </div>
-              <div className="flex flex-col gap-1.5">
-                <label
-                  htmlFor={`days-${i}`}
-                  className="text-sm font-medium text-ink-muted"
-                >
-                  Days since you sent it
-                </label>
-                <input
-                  id={`days-${i}`}
-                  type="text"
-                  inputMode="numeric"
-                  autoComplete="off"
-                  placeholder="14"
-                  value={row.days}
-                  onChange={(e) => updateRow(i, "days", e.target.value)}
-                  className="h-11 rounded-lg border border-line-subtle bg-surface-2 px-3 text-base text-ink-strong placeholder:font-normal placeholder:italic placeholder:text-ink-muted/70 focus:border-brand focus:outline-none focus:ring-2 focus:ring-focus/40"
-                />
+              <p className="mb-2 text-xs font-black uppercase tracking-widest text-ink-muted">
+                Quote {i + 1}
+              </p>
+              <div className="grid grid-cols-[1.35fr_1fr] gap-3">
+                <div className="flex flex-col gap-1.5">
+                  <label
+                    htmlFor={`amount-${i}`}
+                    className="text-sm font-medium text-ink"
+                  >
+                    Quote amount
+                  </label>
+                  <input
+                    id={`amount-${i}`}
+                    aria-label={`Quote #${i + 1} amount`}
+                    type="text"
+                    inputMode="decimal"
+                    autoComplete="off"
+                    placeholder={EXAMPLE_ROWS[i]?.amount ?? "$3,200"}
+                    value={row.amount}
+                    onChange={(e) => updateRow(i, "amount", e.target.value)}
+                    className="h-11 rounded-lg border border-line-subtle bg-surface-2 px-3 text-base text-ink-strong placeholder:font-normal placeholder:text-ink-muted/70 focus:border-brand focus:outline-none focus:ring-2 focus:ring-focus/40"
+                  />
+                </div>
+                <div className="flex flex-col gap-1.5">
+                  <label
+                    htmlFor={`days-${i}`}
+                    className="text-sm font-medium text-ink"
+                  >
+                    Days since sent
+                  </label>
+                  <input
+                    id={`days-${i}`}
+                    aria-label={`Quote #${i + 1} days since sent`}
+                    type="text"
+                    inputMode="numeric"
+                    autoComplete="off"
+                    placeholder={EXAMPLE_ROWS[i]?.days ?? "14 days"}
+                    value={row.days}
+                    onChange={(e) => updateRow(i, "days", e.target.value)}
+                    className="h-11 rounded-lg border border-line-subtle bg-surface-2 px-3 text-base text-ink-strong placeholder:font-normal placeholder:text-ink-muted/70 focus:border-brand focus:outline-none focus:ring-2 focus:ring-focus/40"
+                  />
+                </div>
               </div>
             </div>
           ))}
@@ -262,15 +276,14 @@ export function AuditCalculatorClient() {
           disabled={analyzing}
           data-testid="audit-submit"
         >
-          {analyzing ? "Auditing..." : "Show me which quote to chase first →"}
+          {analyzing ? "Auditing..." : "Find the quote to reopen first"}
         </Button>
 
         <p className="text-center text-xs text-ink-muted">
-          First 3 free. No signup until you see the result. No card.
+          No signup until you see the result. First 3 quotes free. No card.
         </p>
         <p className="text-center text-xs text-ink-muted">
-          You enter your own numbers — we don&apos;t need customer names for the
-          audit.
+          Quote amounts and timing only. No customer names or phone numbers.
         </p>
       </form>
 
@@ -323,15 +336,18 @@ export function AuditCalculatorClient() {
           className="space-y-5 rounded-xl border border-brand/30 bg-surface-2 p-5 sm:p-6"
         >
           <p className="text-xs font-black uppercase tracking-widest text-success">
-            Your audit is ready.
+            60-second audit result
           </p>
 
           <div>
+            <p className="text-xs font-black uppercase tracking-widest text-ink-muted">
+              Money sitting quiet
+            </p>
             <p className="text-3xl font-black leading-tight text-ink-strong sm:text-4xl">
               <span className="tabular-nums text-money">
                 {formatCurrency(result.totalSilentQuoteValue)}
               </span>{" "}
-              sitting in your quiet quotes.
+              in old estimates.
             </p>
             <p className="mt-2 text-sm text-ink-muted">
               Across {result.quotes.length} old{" "}
@@ -346,7 +362,7 @@ export function AuditCalculatorClient() {
               className="rounded-lg border border-line-subtle bg-surface-1 p-4"
             >
               <p className="text-xs font-black uppercase tracking-widest text-brand">
-                Start here
+                Reopen this quote first
               </p>
               <p className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-lg font-bold text-ink-strong">
                 <span>Start with Quote #{result.priority.index}</span>
@@ -380,12 +396,33 @@ export function AuditCalculatorClient() {
               </p>
               <p className="mt-2 text-sm leading-6 text-ink-muted">
                 <span className="font-semibold text-ink">
-                  Why this quote first.
+                  Why this estimate first.
                 </span>{" "}
                 {result.priorityReason}
               </p>
             </div>
           ) : null}
+
+          <div className="rounded-lg border border-line-subtle bg-surface-1 p-4">
+            <div className="flex items-center justify-between gap-2">
+              <p className="text-xs font-black uppercase tracking-widest text-ink-muted">
+                Message to send today
+              </p>
+              <button
+                type="button"
+                onClick={copyMessage}
+                className="rounded text-xs font-semibold text-brand hover:text-ink-strong focus:outline-none focus-visible:ring-2 focus-visible:ring-focus"
+              >
+                {copied ? "Copied" : "Copy"}
+              </button>
+            </div>
+            <p className="mt-2 whitespace-pre-wrap text-sm leading-7 text-ink-strong">
+              {result.suggestedMessage}
+            </p>
+            <p className="mt-3 text-xs italic text-ink-muted">
+              Send this today. Keep it short. Do not over-explain.
+            </p>
+          </div>
 
           <FollowUpOrder ranked={result.rankedQuotes} />
 
@@ -419,33 +456,12 @@ export function AuditCalculatorClient() {
             ) : null}
           </div>
 
-          <div className="rounded-lg border border-line-subtle bg-surface-1 p-4">
-            <div className="flex items-center justify-between gap-2">
-              <p className="text-xs font-black uppercase tracking-widest text-ink-muted">
-                Suggested message
-              </p>
-              <button
-                type="button"
-                onClick={copyMessage}
-                className="rounded text-xs font-semibold text-brand hover:text-ink-strong focus:outline-none focus-visible:ring-2 focus-visible:ring-focus"
-              >
-                {copied ? "Copied" : "Copy"}
-              </button>
-            </div>
-            <p className="mt-2 whitespace-pre-wrap text-sm leading-7 text-ink-strong">
-              {result.suggestedMessage}
-            </p>
-            <p className="mt-3 text-xs italic text-ink-muted">
-              Send this today. Keep it short. Do not over-explain.
-            </p>
-          </div>
-
           <div
             data-testid="audit-next-moves"
             className="rounded-lg border border-line-subtle bg-surface-1 p-4"
           >
             <p className="text-xs font-black uppercase tracking-widest text-brand">
-              Next 3 moves
+              Next move
             </p>
             <ol className="mt-2 space-y-2 text-sm leading-6 text-ink">
               {result.nextThreeMoves.map((move, i) => (
@@ -514,7 +530,7 @@ function FollowUpOrder({ ranked }: { ranked: RankedAuditQuote[] }) {
       className="rounded-lg border border-line-subtle bg-surface-1 p-4"
     >
       <p className="text-xs font-black uppercase tracking-widest text-brand">
-        Your follow-up order
+        Follow-up order
       </p>
       <ol className="mt-3 space-y-2">
         {ranked.map((q) => (

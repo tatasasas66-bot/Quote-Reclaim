@@ -131,13 +131,14 @@ export function parseQuoteAmount(raw: string): number | null {
   return Math.round(n * 100) / 100;
 }
 
-/** Optional. Bare integer days, clamped 0–365. Blank/garbage → null. */
+/** Optional. Accepts "14" or "14 days", clamped 0-365. Blank/garbage -> null. */
 export function parseDaysSilent(raw: string | undefined | null): number | null {
   if (raw == null) return null;
   const trimmed = String(raw).trim();
   if (trimmed === "") return null;
-  if (!/^\d{1,3}$/.test(trimmed)) return null;
-  return Math.max(0, Math.min(MAX_DAYS, Number(trimmed)));
+  const match = /^(\d{1,3})(?:\s*days?)?$/i.exec(trimmed);
+  if (!match) return null;
+  return Math.max(0, Math.min(MAX_DAYS, Number(match[1])));
 }
 
 /**

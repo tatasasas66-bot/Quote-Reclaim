@@ -3,148 +3,80 @@ import { LogoFull } from "@/components/brand/Logo";
 import { AuditCalculatorClient } from "./AuditCalculatorClient";
 
 export const metadata: Metadata = {
-  title: "Free silent quote audit — Quote Reclaim",
+  title: "Free painting estimate audit - Quote Reclaim",
   description:
-    "You already did the work on these home-service estimates. Add up what's sitting quiet, see which to follow up first, and get the message to send. No customer names. No card.",
+    "Painting estimates going quiet? Enter 3 old quote amounts and days since sent. No customer names, no phone numbers, no card.",
   robots: { index: true, follow: true },
 };
 
 /**
- * /audit — the cold paid-traffic landing page (Reddit + Meta).
+ * /audit - the cold paid-traffic landing page.
  *
  * Deliberately lightweight: a static server component with one small client
- * island for the calculator. No auth, no backend client, no dashboard
- * imports — a cold visitor gets the loss framing, sees an example of the
- * result, then sees their OWN number before any account exists, and only
- * after that is offered the existing /sign-up?next=/onboarding/reveal flow
- * (UTMs preserved). No navigation menu above the fold.
+ * island for the calculator. No auth, no backend client, no dashboard imports.
+ * A cold visitor sees the painter-specific pain, enters three quiet estimates,
+ * gets their own result before any account exists, and only then sees the
+ * existing /sign-up?next=/onboarding/reveal flow with UTMs preserved.
  */
 export default function AuditPage() {
   return (
     <main className="min-h-screen w-full bg-canvas px-4 py-8 sm:px-6">
       <div className="mx-auto w-full max-w-md">
-        <header className="mb-8 flex justify-center">
-          {/* Brand mark only — intentionally not a nav menu. */}
+        <header className="mb-7 flex justify-center">
           <LogoFull />
         </header>
 
-        <div className="space-y-3 text-center">
+        <div className="space-y-4 text-center">
           <p className="text-xs font-black uppercase tracking-widest text-brand">
-            For home-service contractors
+            For residential painting contractors
           </p>
-          <h1 className="text-balance text-3xl font-black leading-tight text-ink-strong sm:text-4xl">
-            You already did the work on these quotes. Don&apos;t let the money
-            go quiet.
+          <h1 className="text-balance text-4xl font-black leading-[0.98] text-ink-strong sm:text-5xl">
+            Painting estimates going quiet?
           </h1>
           <p className="text-pretty text-base leading-7 text-ink">
-            Drove out, measured, wrote the estimate — then the customer went
-            dark. Add up what&apos;s actually sitting there. No customer names.
-            No card.
+            Before buying another lead, check the estimates you already sent.
+            Enter 3 old quote amounts and how long they&apos;ve been quiet.
+            Quote Reclaim shows which one to reopen first and what message to
+            send today.
           </p>
-        </div>
-
-        {/* Pain / math line — frames the number before the form. */}
-        <p className="mt-6 rounded-lg border-l-2 border-brand bg-surface-1 px-4 py-3 text-sm leading-6 text-ink">
-          Out of your last 10 quotes, how many never replied? Multiply
-          by your average job. That&apos;s the number.
-        </p>
-
-        {/* Example result — labeled Sample so it never reads as genuine proof. */}
-        <section
-          aria-label="Example audit result"
-          className="mt-6 space-y-4 rounded-xl border border-dashed border-line-strong bg-surface-1/60 p-5"
-        >
-          <div className="flex items-center justify-between gap-2">
-            <p className="text-xs font-black uppercase tracking-widest text-ink-muted">
-              Example audit result
-            </p>
-            <span className="rounded-full border border-line-subtle px-2 py-0.5 text-[10px] font-bold uppercase tracking-widest text-ink-muted">
-              Sample
+          <div className="grid grid-cols-2 gap-2 text-xs font-bold uppercase tracking-widest text-ink-muted sm:grid-cols-4">
+            <span className="rounded-full border border-line-subtle bg-surface-1 px-3 py-2">
+              No names
+            </span>
+            <span className="rounded-full border border-line-subtle bg-surface-1 px-3 py-2">
+              No phone numbers
+            </span>
+            <span className="rounded-full border border-line-subtle bg-surface-1 px-3 py-2">
+              No card
+            </span>
+            <span className="rounded-full border border-line-subtle bg-surface-1 px-3 py-2">
+              60 seconds
             </span>
           </div>
+        </div>
 
-          <p className="text-2xl font-black leading-none text-ink-strong">
-            <span className="tabular-nums text-money">$8,200</span> sitting in 3
-            quiet quotes
-          </p>
+        <p className="mt-5 rounded-lg border-l-2 border-brand bg-surface-1 px-4 py-3 text-sm leading-6 text-ink">
+          Drove out, measured, wrote the painting estimate, then the homeowner
+          went quiet? Check the old estimates before you pay for a fresh lead.
+        </p>
 
-          <div className="rounded-lg border border-line-subtle bg-surface-2 p-3">
-            <p className="text-xs font-black uppercase tracking-widest text-brand">
-              Best first follow-up
-            </p>
-            <p className="mt-1 text-sm font-bold text-ink-strong">
-              Quote #2 · <span className="tabular-nums">$3,800</span> · 21 days
-              since last reply
-            </p>
-            <p className="mt-2 text-sm leading-6 text-ink-muted">
-              <span className="font-semibold text-ink">Why this quote first:</span>{" "}
-              High value and still recent enough to follow up without sounding
-              desperate.
-            </p>
-          </div>
-
-          <div className="rounded-lg border border-line-subtle bg-surface-2 p-3">
-            <p className="text-xs font-black uppercase tracking-widest text-ink-muted">
-              Message preview
-            </p>
-            <p className="mt-1 text-sm leading-6 text-ink-strong">
-              &ldquo;Are you still thinking about moving forward, or should I
-              close this out for now?&rdquo;
-            </p>
-          </div>
-        </section>
-
-        {/* The real thing — their numbers. */}
-        <div className="mt-8">
+        <div className="mt-6">
           <p className="mb-4 text-center text-sm font-semibold text-ink">
-            Now run it on your own quiet quotes ↓
+            Use real-ish amounts. Do not enter customer names.
           </p>
           <AuditCalculatorClient />
         </div>
 
-        {/* Privacy reassurance — after the form, before the FAQ. */}
         <p className="mt-8 rounded-lg border border-line-subtle bg-surface-1 p-4 text-xs leading-6 text-ink-muted">
-          You typed quote totals, not customer info. Nothing here is shared,
-          sold, or used for anything except your audit.
+          This free audit only needs quote totals and days since sent. Nothing
+          here asks for customer names, phone numbers, emails, or addresses.
         </p>
 
-        {/* FAQ — native details/summary, zero JS, fully keyboard accessible. */}
-        <section aria-label="Frequently asked questions" className="mt-8 space-y-2">
-          <FaqItem question="Is this a CRM?">
-            No. Quote Reclaim is a focused audit and follow-up tool for old
-            estimates. It does not replace your CRM or job software.
-          </FaqItem>
-          <FaqItem question="Do I need customer names?">
-            Not for this audit. Use quote amounts and timing only.
-          </FaqItem>
-          <FaqItem question="What does it cost?">
-            Your first 3 quotes are free. No card. If it helps, the full plan is
-            $49/month.
-          </FaqItem>
-        </section>
-
         <footer className="mt-10 text-center text-xs leading-6 text-ink-muted">
-          Built for US home-service contractors. Not a CRM. Not lead
-          generation. Not debt collection.
+          Built for painting crews and US home-service contractors. Not a CRM.
+          Not lead generation. Not scheduling software.
         </footer>
       </div>
     </main>
-  );
-}
-
-function FaqItem({
-  question,
-  children,
-}: {
-  question: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <details className="group rounded-lg border border-line-subtle bg-surface-1 p-4">
-      <summary className="cursor-pointer list-none text-sm font-semibold text-ink-strong marker:content-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus">
-        {question}
-      </summary>
-      <p className="mt-2 text-sm leading-6 text-ink-muted">{children}</p>
-    </details>
   );
 }

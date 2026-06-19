@@ -48,6 +48,12 @@ describe("parseDaysSilent", () => {
     expect(parseDaysSilent("999")).toBe(365);
   });
 
+  it("also accepts the user-typed 'days' suffix from the placeholder", () => {
+    expect(parseDaysSilent("14 days")).toBe(14);
+    expect(parseDaysSilent("1 day")).toBe(1);
+    expect(parseDaysSilent("22 DAYS")).toBe(22);
+  });
+
   it("blank/garbage/undefined → null (it is optional)", () => {
     expect(parseDaysSilent("")).toBeNull();
     expect(parseDaysSilent(undefined)).toBeNull();
