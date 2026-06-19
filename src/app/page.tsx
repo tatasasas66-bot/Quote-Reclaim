@@ -1,6 +1,12 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
-import { AlertTriangle, CheckCircle2, ClipboardList, ShieldAlert } from "lucide-react";
+import {
+  AlertTriangle,
+  CalendarClock,
+  CheckCircle2,
+  ClipboardList,
+  ShieldAlert,
+} from "lucide-react";
 import { Badge, Button, Logo } from "@/components/ui";
 
 export default function HomePage() {
@@ -32,7 +38,7 @@ export default function HomePage() {
               </h1>
               <p className="max-w-xl break-words text-lg leading-7 text-ink">
                 Paste the estimates that went silent. Quote Reclaim totals
-                what&apos;s still sitting there, ranks which homeowners are
+                what&apos;s still sitting there, ranks which customers are
                 worth another shot, and writes the 5-message follow-up —
                 sent by email when there&apos;s an address, ready to copy
                 when there isn&apos;t. You step in when someone replies.
@@ -40,8 +46,14 @@ export default function HomePage() {
               <div className="flex flex-wrap items-center gap-3 pt-1">
                 <Link href="/onboarding/reveal">
                   <Button size="lg" className="shadow-[0_0_42px_rgba(217,111,50,0.28)]">
-                    Run the Free Silent Quote Audit →
+                    Run the Free Quiet Quote Audit -&gt;
                   </Button>
+                </Link>
+                <Link
+                  href="#crew-gap-rescue"
+                  className="rounded text-sm font-bold text-ink-muted hover:text-ink-strong focus:outline-none focus-visible:ring-2 focus-visible:ring-focus"
+                >
+                  See Crew Gap Rescue
                 </Link>
               </div>
               <p className="max-w-md text-sm font-medium text-ink-muted">
@@ -53,6 +65,8 @@ export default function HomePage() {
             <ProductPreview />
           </div>
         </section>
+
+        <CrewGapRescueBlock />
 
         <OneTapReplyBlock />
 
@@ -134,7 +148,7 @@ function ProductPreview() {
             <div className="flex items-center gap-2">
               <ShieldAlert className="h-5 w-5 text-danger" aria-hidden="true" />
               <p className="text-xs font-bold uppercase tracking-widest text-danger">
-                Recovery Window Alert
+                Going Cold Alert
               </p>
             </div>
             <p className="mt-3 break-words text-2xl font-black text-ink-strong">
@@ -163,20 +177,20 @@ function ProductPreview() {
           <div className="mt-4 grid gap-3 sm:grid-cols-3">
             <PreviewStat
               icon={<AlertTriangle className="h-4 w-4" aria-hidden="true" />}
-              label="Recovery Priority"
+              label="Priority"
               value="87"
               tone="text-warning"
             />
             <PreviewStat
               icon={<ClipboardList className="h-4 w-4" aria-hidden="true" />}
-              label="Next Best Action"
+              label="Next move"
               value="Call today"
               tone="text-brand"
             />
             <PreviewStat
               icon={<CheckCircle2 className="h-4 w-4" aria-hidden="true" />}
               label="Price check"
-              value="107×"
+              value="In range"
               tone="text-money"
             />
           </div>
@@ -208,6 +222,60 @@ function PreviewStat({
   );
 }
 
+function CrewGapRescueBlock() {
+  return (
+    <section
+      id="crew-gap-rescue"
+      aria-label="Crew Gap Rescue"
+      className="mb-8 scroll-mt-8 rounded-lg border border-brand/35 bg-surface-1 p-5 shadow-[0_16px_46px_rgba(0,0,0,0.18)] sm:p-6"
+    >
+      <div className="grid gap-6 lg:grid-cols-[1fr_0.9fr] lg:items-center">
+        <div className="min-w-0">
+          <p className="text-xs font-black uppercase tracking-widest text-brand">
+            Crew Gap Rescue
+          </p>
+          <h2 className="mt-2 text-balance text-2xl font-black leading-tight text-ink-strong sm:text-3xl">
+            Fill the open day from quotes you already sent.
+          </h2>
+          <p className="mt-3 max-w-xl text-sm leading-7 text-ink">
+            Enter the crew slot you need to fill. Quote Reclaim points at the
+            quiet estimate most worth reopening for that day, then gives you
+            the message to send.
+          </p>
+        </div>
+        <div className="rounded-lg border border-brand/30 bg-brand/10 p-4">
+          <div className="flex items-center gap-2 text-brand">
+            <CalendarClock className="h-5 w-5" aria-hidden="true" />
+            <p className="text-[11px] font-black uppercase tracking-widest">
+              Next Thursday is open
+            </p>
+          </div>
+          <dl className="mt-4 grid gap-3 sm:grid-cols-3 lg:grid-cols-1">
+            <CrewGapStat label="Open crew day" value="Thu - Jun 25" />
+            <CrewGapStat label="Best quiet quote" value="$8,500 roof" />
+            <CrewGapStat label="Next move" value="Reopen today" />
+          </dl>
+          <p className="mt-4 text-xs leading-6 text-ink-muted">
+            Not lead gen. Not a CRM. Just the quiet quote most likely to put a
+            crew back on the calendar.
+          </p>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function CrewGapStat({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-md border border-brand/20 bg-canvas/45 p-3">
+      <dt className="text-[10px] font-bold uppercase tracking-widest text-ink-muted">
+        {label}
+      </dt>
+      <dd className="mt-1 text-sm font-black text-ink-strong">{value}</dd>
+    </div>
+  );
+}
+
 function OneTapReplyBlock() {
   return (
     <section
@@ -223,7 +291,7 @@ function OneTapReplyBlock() {
             Turn silence into a yes, a question, or a clean no.
           </h2>
           <p className="mt-3 max-w-md text-sm leading-7 text-ink">
-            Give homeowners a simple way to reply to the estimate without
+            Give customers a simple way to reply to the estimate without
             writing a full email.
           </p>
         </div>

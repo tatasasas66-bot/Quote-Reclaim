@@ -188,15 +188,15 @@ export default async function DashboardPage() {
         >
           <div>
             <p className="text-xs font-black uppercase tracking-widest text-brand">
-              Fill My Next Open Day
+              Crew Gap Rescue
             </p>
             <p className="mt-1 text-sm leading-6 text-ink">
               Have an open crew day? Find the quiet quote most likely to fill
-              it.
+              it before buying another lead.
             </p>
           </div>
           <span className="whitespace-nowrap text-sm font-bold text-ink-muted group-hover:text-ink-strong">
-            Run Crew Gap Rescue →
+            Run Crew Gap Rescue -&gt;
           </span>
         </Link>
       ) : null}

@@ -202,7 +202,9 @@ describe("QuoteForm works with no voice interaction", () => {
       expect(el?.hasAttribute("disabled")).toBe(false);
     }
 
-    const submit = screen.getByRole("button", { name: "Build Recovery Plan" });
+    const submit = screen.getByRole("button", {
+      name: "Build 5-message recovery plan",
+    });
     expect(submit).toBeTruthy();
     expect((submit as HTMLButtonElement).disabled).toBe(false);
   });

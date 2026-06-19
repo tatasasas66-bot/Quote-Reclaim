@@ -23,17 +23,17 @@ const heroMetric = readFileSync(
 afterEach(cleanup);
 
 // ---------------------------------------------------------------------------
-// HeroMetric now hosts the Recovery Receipt in its value-proof column, while
-// preserving the Still Bleeding hero. (Detailed receipt behavior lives in
+// HeroMetric now hosts the Recovered So Far proof column, while preserving the
+// money-still-quiet hero. (Detailed receipt behavior lives in
 // recovery-receipt.test.tsx.)
 // ---------------------------------------------------------------------------
 
-describe("HeroMetric — value column is the Recovery Receipt", () => {
-  it("preserves the Still Bleeding hero", () => {
-    expect(heroMetric).toContain("STILL BLEEDING");
+describe("HeroMetric — value column is the recovered proof", () => {
+  it("preserves the Money Still Quiet hero", () => {
+    expect(heroMetric).toContain("MONEY STILL QUIET");
   });
 
-  it("renders the Recovery Receipt in the right value column", () => {
+  it("renders the Recovered So Far column component on the right", () => {
     expect(heroMetric).toContain("RecoveryReceipt");
   });
 

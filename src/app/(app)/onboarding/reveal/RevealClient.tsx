@@ -263,7 +263,7 @@ function InputStep({
         <p className="mt-3 max-w-2xl text-base leading-7 text-ink">
           One quote per line. Name + amount is enough; date and email help
           us time the follow-up. Quote Reclaim totals what&apos;s sitting
-          silent, ranks the homeowners still worth a follow-up, and builds
+          silent, ranks the customers still worth a follow-up, and builds
           the 5-message recovery plan for each one.
           Nothing is saved until you confirm. No email on file? You still
           get all 5 messages, ready to copy.

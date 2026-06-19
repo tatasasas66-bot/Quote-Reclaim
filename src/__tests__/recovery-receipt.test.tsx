@@ -1,7 +1,7 @@
 /**
  * @vitest-environment happy-dom
  *
- * Recovery Receipt — actual proof only, no ROI/months-paid framing.
+ * Recovered So Far - actual proof only, no ROI/months-paid framing.
  *
  * The receipt used to host the ÷$49 months-paid equation in two places (top
  * headline and footer). That was the third repetition of the same equation
@@ -45,10 +45,10 @@ function props(over: Partial<RecoveryReceiptProps> = {}): RecoveryReceiptProps {
 // Renders the receipt
 // ---------------------------------------------------------------------------
 
-describe("RecoveryReceipt — renders", () => {
-  it("renders the RECOVERY RECEIPT header and This month section", () => {
+describe("RecoveryReceipt - renders", () => {
+  it("renders the RECOVERED SO FAR header and This month section", () => {
     render(React.createElement(RecoveryReceipt, props()));
-    expect(screen.getByText("Recovery Receipt")).toBeTruthy();
+    expect(screen.getByText("Recovered So Far")).toBeTruthy();
     expect(screen.getByText("This month")).toBeTruthy();
   });
 
@@ -273,12 +273,12 @@ describe("RecoveryReceipt — pricing math removed", () => {
 });
 
 // ---------------------------------------------------------------------------
-// Integration — HeroMetric still owns Still Bleeding and mounts the receipt
+// Integration - HeroMetric still owns the warning hero and mounts the receipt
 // ---------------------------------------------------------------------------
 
 describe("HeroMetric integration", () => {
-  it("preserves the Still Bleeding hero and mounts RecoveryReceipt", () => {
-    expect(heroSrc).toContain("STILL BLEEDING");
+  it("preserves the Money Still Quiet hero and mounts RecoveryReceipt", () => {
+    expect(heroSrc).toContain("MONEY STILL QUIET");
     expect(heroSrc).toContain("RecoveryReceipt");
   });
 

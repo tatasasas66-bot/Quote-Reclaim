@@ -80,7 +80,7 @@ describe("first-session routing", () => {
 
   it("the homepage CTA preserves /onboarding/reveal through the auth gate", () => {
     expect(homepageSrc).toMatch(/href="\/onboarding\/reveal"/);
-    expect(homepageSrc).toMatch(/Run the Free Silent Quote Audit/);
+    expect(homepageSrc).toMatch(/Run the Free Quiet Quote Audit/);
   });
 
   it("the /onboarding/reveal page itself uses requireUser + sign-up next= so a homepage clicker lands back here after auth", () => {
@@ -418,7 +418,7 @@ describe("regression — homepage, support email, no Lemon, no dead checkout, no
   });
 
   it("homepage CTA unchanged", () => {
-    expect(homepageSrc).toContain("Run the Free Silent Quote Audit");
+    expect(homepageSrc).toContain("Run the Free Quiet Quote Audit");
   });
 
   it("support@quotereclaim.com remains the public support email", () => {

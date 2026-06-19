@@ -8,9 +8,8 @@ type HeroMetricProps = {
   pendingCount: number;
   /**
    * Count of quotes that are At Risk or Critical (effective days silent >= 7).
-   * Drives the state-aware hero: with zero at-risk quotes the alarm framing
-   * ("STILL BLEEDING") is wrong, so we switch to the calmer "MONEY ON THE
-   * TABLE" / "in recovery" copy.
+   * Drives the state-aware hero: with zero at-risk quotes the warning frame is
+   * wrong, so we switch to calmer "MONEY IN RECOVERY" copy.
    */
   atRiskCount: number;
   recoveredThisMonth: number;
@@ -41,11 +40,10 @@ export function HeroMetric({
   priorityClientName = null,
   priorityQuoteId = null,
 }: HeroMetricProps) {
-  // Only sound the alarm ("STILL BLEEDING") when something is actually at
-  // risk. If every active quote is still Fresh/Cooling, the money is on the
-  // table — not bleeding. Eyebrow color token is unchanged in both states.
+  // Only use the warning frame when something is actually at risk. If every
+  // active quote is still Fresh/Cooling, the money is in recovery.
   const hasAtRisk = atRiskCount > 0;
-  const heading = hasAtRisk ? "STILL BLEEDING" : "MONEY ON THE TABLE";
+  const heading = hasAtRisk ? "MONEY STILL QUIET" : "MONEY IN RECOVERY";
   const subtext =
     pendingCount === 0
       ? "No quiet estimates right now. The command center is clear."

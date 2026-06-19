@@ -11,7 +11,7 @@ import {
 import { FREE_PLAN_LIMIT } from "@/lib/payments/entitlement";
 
 export const metadata: Metadata = {
-  title: "Fill My Next Open Day - Quote Reclaim",
+  title: "Crew Gap Rescue - Quote Reclaim",
   description:
     "Find the quiet quote most likely to fill an upcoming crew gap.",
 };
@@ -44,7 +44,7 @@ export default async function CrewGapPage() {
         </Link>
         <div className="mt-5 max-w-3xl">
           <p className="text-xs font-black uppercase tracking-widest text-brand">
-            Fill My Next Open Day
+            Crew Gap Rescue
           </p>
           <h1 className="mt-2 text-3xl font-black leading-tight text-ink-strong sm:text-5xl">
             Fill your next open crew day from quotes that already went quiet.

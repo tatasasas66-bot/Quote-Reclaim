@@ -47,7 +47,7 @@ describe("homepage hero restructure + email/copy honesty", () => {
 
   it("primary CTA routes straight into the reveal flow (auth gate carries next=)", () => {
     expect(homepage).toMatch(
-      /href="\/onboarding\/reveal"[\s\S]{0,200}Run the Free Silent Quote Audit/,
+      /href="\/onboarding\/reveal"[\s\S]{0,200}Run the Free Quiet Quote Audit/,
     );
   });
 

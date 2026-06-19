@@ -55,9 +55,16 @@ describe("Homepage hero copy (honest conversion rewrite)", () => {
   });
 
   it("primary CTA runs the free audit and routes into the reveal flow", () => {
-    expect(homepage).toMatch(/Run the Free Silent Quote Audit/);
+    expect(homepage).toMatch(/Run the Free Quiet Quote Audit/);
     expect(homepage).toMatch(/href="\/onboarding\/reveal"/);
     expect(homepage).not.toMatch(/Find Silent Money/);
+  });
+
+  it("homepage explains Crew Gap Rescue as a core feature", () => {
+    expect(homepage).toMatch(/See Crew Gap Rescue/);
+    expect(homepage).toMatch(/Crew Gap Rescue/);
+    expect(homepage).toMatch(/Fill the open day from quotes you already sent\./);
+    expect(homepage).toMatch(/Not lead gen\. Not a CRM\./);
   });
 
   it("no decorative secondary CTA — the See How It Works scroll button is gone", () => {
@@ -151,7 +158,7 @@ describe("Recovery Window Alert copy (Value Proof v0.5)", () => {
 // ---------------------------------------------------------------------------
 
 describe("Recovery Ledger eyebrow contrast + color discipline (v0.4)", () => {
-  it("STILL BLEEDING keeps the softer warning/80 token", () => {
+  it("MONEY STILL QUIET keeps the softer warning/80 token", () => {
     expect(heroMetric).toMatch(/text-warning\/80/);
   });
 
@@ -160,7 +167,7 @@ describe("Recovery Ledger eyebrow contrast + color discipline (v0.4)", () => {
     expect(recoveryReceipt).toMatch(/text-success/);
   });
 
-  it("the value-proof column stays off gold (gold lives only on STILL BLEEDING)", () => {
+  it("the value-proof column stays off gold (gold lives only on the warning hero)", () => {
     expect(heroMetric).not.toMatch(/text-money\/80/);
     expect(recoveryReceipt).not.toMatch(/text-money/);
   });
@@ -211,7 +218,7 @@ describe("Recovery plan product framing", () => {
     expect(quoteForm).not.toMatch(/schedule follow-ups automatically/);
     expect(quoteForm).not.toMatch(/We'll send these follow-ups on schedule/);
     expect(quoteForm).not.toMatch(/Approve & Schedule Recovery/);
-    expect(quoteForm).toMatch(/Build Recovery Plan/);
+    expect(quoteForm).toMatch(/Build 5-message recovery plan/);
     expect(quoteForm).toMatch(/ready to copy or send manually/);
   });
 

@@ -295,7 +295,7 @@ function SubmitButton({ mode }: { mode: "create" | "edit" }) {
           ? "Saving…"
           : "Updating…"
         : mode === "create"
-          ? "Build Recovery Plan"
+          ? "Build 5-message recovery plan"
           : "Save changes"}
     </Button>
   );

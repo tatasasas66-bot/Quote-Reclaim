@@ -193,9 +193,9 @@ describe("Crew Gap source guardrails", () => {
   const crewGapSrc = `${pageSrc}\n${clientSrc}\n${matchSrc}`;
 
   it("adds the /crew-gap route and dashboard entry point", () => {
-    expect(pageSrc).toContain("Fill My Next Open Day");
+    expect(pageSrc).toContain("Crew Gap Rescue");
     expect(dashboardSrc).toContain('href="/crew-gap"');
-    expect(dashboardSrc).toContain("Have an open crew day?");
+    expect(dashboardSrc).toContain("before buying another lead");
   });
 
   it("uses broad contractor language, not painter-only Crew Gap copy", () => {

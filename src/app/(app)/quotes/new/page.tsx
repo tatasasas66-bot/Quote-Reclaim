@@ -83,8 +83,8 @@ export default async function NewQuotePage() {
                 {formatCurrency(silentValue)}
               </p>
               <p className="mt-2 text-sm leading-6 text-ink-muted">
-                New files join the command queue with a Recovery Priority and
-                Next Best Action.
+                New files join the command queue with a priority, a next move,
+                and a 5-message plan.
               </p>
             </div>
           </section>

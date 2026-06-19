@@ -49,7 +49,7 @@ function heroProps(over: Partial<React.ComponentProps<typeof HeroMetric>> = {}) 
   return {
     stillBleeding: 8_500,
     pendingCount: 3,
-    // Default to an at-risk dashboard so the "STILL BLEEDING" grammar lines
+    // Default to an at-risk dashboard so the warning-state grammar lines
     // render; the calm-state cases override atRiskCount: 0 explicitly.
     atRiskCount: 1,
     recoveredThisMonth: 0,
@@ -62,10 +62,10 @@ function heroProps(over: Partial<React.ComponentProps<typeof HeroMetric>> = {}) 
 }
 
 // ---------------------------------------------------------------------------
-// 1. Still Bleeding grammar — has/have agreement (at-risk dashboards)
+// 1. Warning-state grammar - has/have agreement (at-risk dashboards)
 // ---------------------------------------------------------------------------
 
-describe("HeroMetric — Still Bleeding grammar", () => {
+describe("HeroMetric - warning-state grammar", () => {
   it("singular: '1 quiet estimate still has money on the table.'", () => {
     render(
       React.createElement(HeroMetric, heroProps({ pendingCount: 1, atRiskCount: 1 })),
@@ -92,20 +92,20 @@ describe("HeroMetric — Still Bleeding grammar", () => {
     ).toBeTruthy();
   });
 
-  it("at-risk dashboard keeps the STILL BLEEDING heading", () => {
+  it("at-risk dashboard keeps the MONEY STILL QUIET heading", () => {
     render(
       React.createElement(HeroMetric, heroProps({ pendingCount: 3, atRiskCount: 1 })),
     );
-    expect(screen.getByText("STILL BLEEDING")).toBeTruthy();
-    expect(screen.queryByText("MONEY ON THE TABLE")).toBeNull();
+    expect(screen.getByText("MONEY STILL QUIET")).toBeTruthy();
+    expect(screen.queryByText("MONEY IN RECOVERY")).toBeNull();
   });
 
-  it("Fresh-only dashboard (no at-risk) shows MONEY ON THE TABLE, not STILL BLEEDING", () => {
+  it("Fresh-only dashboard (no at-risk) shows MONEY IN RECOVERY, not MONEY STILL QUIET", () => {
     render(
       React.createElement(HeroMetric, heroProps({ pendingCount: 3, atRiskCount: 0 })),
     );
-    expect(screen.getByText("MONEY ON THE TABLE")).toBeTruthy();
-    expect(screen.queryByText("STILL BLEEDING")).toBeNull();
+    expect(screen.getByText("MONEY IN RECOVERY")).toBeTruthy();
+    expect(screen.queryByText("MONEY STILL QUIET")).toBeNull();
     expect(
       screen.getByText("3 estimates are in recovery."),
     ).toBeTruthy();
@@ -115,7 +115,7 @@ describe("HeroMetric — Still Bleeding grammar", () => {
     render(
       React.createElement(HeroMetric, heroProps({ pendingCount: 1, atRiskCount: 0 })),
     );
-    expect(screen.getByText("MONEY ON THE TABLE")).toBeTruthy();
+    expect(screen.getByText("MONEY IN RECOVERY")).toBeTruthy();
     expect(screen.getByText("1 estimate is in recovery.")).toBeTruthy();
   });
 

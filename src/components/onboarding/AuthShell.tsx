@@ -54,7 +54,7 @@ function PreviewCard() {
       <div className="grid gap-4 p-4">
         <div className="rounded-lg border border-warning/35 bg-warning/10 p-5">
           <p className="text-xs font-bold uppercase tracking-widest text-warning">
-            Still Bleeding
+            Money Still Quiet
           </p>
           <p className="mt-2 text-5xl font-black text-ink-strong tabular-nums">
             {formatCurrency(47200)}
@@ -68,7 +68,7 @@ function PreviewCard() {
           <div className="flex items-center gap-2">
             <ShieldAlert className="h-4 w-4 text-danger" aria-hidden="true" />
             <p className="text-xs font-bold uppercase tracking-widest text-danger">
-              Recovery Window Alert
+              Going Cold Alert
             </p>
           </div>
           <p className="mt-2 break-words text-lg font-bold text-ink-strong">
@@ -82,20 +82,20 @@ function PreviewCard() {
         <div className="grid grid-cols-3 gap-2">
           <PreviewChip
             icon={<AlertTriangle className="h-4 w-4" aria-hidden="true" />}
-            label="Recovery Priority"
+            label="Priority"
             value="High"
             tone="text-warning"
           />
           <PreviewChip
             icon={<ClipboardList className="h-4 w-4" aria-hidden="true" />}
-            label="Next Best Action"
+            label="Next move"
             value="Call"
             tone="text-brand"
           />
           <PreviewChip
             icon={<CheckCircle2 className="h-4 w-4" aria-hidden="true" />}
-            label="Months paid"
-            value="107x"
+            label="Price check"
+            value="In range"
             tone="text-success"
           />
         </div>

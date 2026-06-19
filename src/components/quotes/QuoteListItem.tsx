@@ -71,7 +71,7 @@ export function QuoteListItem({
               <div className="grid gap-2 rounded-lg border border-line-subtle bg-canvas/35 px-3 py-2">
                 <div className="flex items-center justify-between gap-2">
                   <span className="text-[10px] font-bold uppercase tracking-widest text-ink-muted">
-                    Recovery Priority
+                    Priority
                   </span>
                   <span className={`text-xs font-bold ${priority.labelClass}`}>
                     {priorityLabel}
@@ -87,12 +87,12 @@ export function QuoteListItem({
               </div>
               {nba ? (
                 <QuoteStat
-                  label="Next Best Action"
+                  label="Next move"
                   value={nba.label}
                   valueClassName={severityClass[nba.severity]}
                 />
               ) : (
-                <QuoteStat label="Next Best Action" value="Review plan" />
+                <QuoteStat label="Next move" value="Review plan" />
               )}
             </div>
           </div>
@@ -108,7 +108,7 @@ export function QuoteListItem({
             </div>
             <span className="inline-flex min-h-10 items-center justify-center gap-2 rounded-lg bg-brand px-3 py-2 text-sm font-black text-canvas transition-colors group-hover:bg-brand-dark">
               <ClipboardList className="h-4 w-4" aria-hidden="true" />
-              Open Recovery Plan
+              Open plan
               <ArrowRight className="h-4 w-4" aria-hidden="true" />
             </span>
           </div>
