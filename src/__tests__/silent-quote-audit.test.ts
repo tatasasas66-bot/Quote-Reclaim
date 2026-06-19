@@ -70,7 +70,7 @@ describe("runSilentQuoteAudit", () => {
       { amountRaw: "abc" },
       { amountRaw: "0" },
     ]);
-    expect(r.error).toBe("Enter at least one old quote amount to see your audit.");
+    expect(r.error).toBe("Enter a quote amount.");
     expect(r.totalSilentQuoteValue).toBe(0);
     expect(r.priority).toBeNull();
   });
@@ -237,25 +237,26 @@ describe("recoveryWindowForDays — honest day-band labels", () => {
 });
 
 describe("describeRecoveryWindow — labels match the spec", () => {
-  it("warm shows 'Follow up while the job is still fresh.'", () => {
+  it("warm shows the direct follow-up definition", () => {
     expect(describeRecoveryWindow(7)).toEqual({
       window: "warm",
       label: "Warm",
-      explanation: "Follow up while the job is still fresh.",
+      explanation: "Recent enough for a direct, simple follow-up.",
     });
   });
-  it("cooling shows 'Still worth chasing, but do it soon.'", () => {
+  it("cooling shows the reopen-now definition", () => {
     expect(describeRecoveryWindow(21)).toEqual({
       window: "cooling",
       label: "Cooling",
-      explanation: "Still worth chasing, but do it soon.",
+      explanation: "Worth reopening now before it gets harder to restart.",
     });
   });
-  it("cold shows 'Needs a softer close-the-loop angle.'", () => {
+  it("cold shows the lighter-check-in definition", () => {
     expect(describeRecoveryWindow(60)).toEqual({
       window: "cold",
       label: "Cold",
-      explanation: "Needs a softer close-the-loop angle.",
+      explanation:
+        "Use a lighter check-in. Still worth testing, but expect lower response.",
     });
   });
   it("uses NO percentage / reply-rate language", () => {

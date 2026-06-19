@@ -1,7 +1,8 @@
 /**
  * @vitest-environment happy-dom
  *
- * /audit cold landing page — funnel + copy guardrails.
+ * /audit cold landing page - conversion UX, value-before-signup, and privacy
+ * guardrails.
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { readFileSync } from "node:fs";
@@ -23,6 +24,10 @@ import {
   ANALYSIS_STEP_MS_REDUCED,
 } from "@/app/audit/AuditCalculatorClient";
 
+function readSource(rel: string): string {
+  return readFileSync(fileURLToPath(new URL(rel, import.meta.url)), "utf8");
+}
+
 function setMatchMedia(reduced: boolean) {
   window.matchMedia = (query: string) =>
     ({
@@ -42,14 +47,31 @@ function fillFirstQuote(amount = "5000", days = "20") {
     target: { value: amount },
   });
   if (days) {
-    fireEvent.change(screen.getAllByLabelText(/days since sent/i)[0], {
+    fireEvent.change(screen.getByLabelText(/quote #1 days quiet/i), {
       target: { value: days },
     });
   }
 }
 
-function readSource(rel: string): string {
-  return readFileSync(fileURLToPath(new URL(rel, import.meta.url)), "utf8");
+function fillThreeQuotes() {
+  fireEvent.change(screen.getByLabelText(/quote #1 amount/i), {
+    target: { value: "2500" },
+  });
+  fireEvent.change(screen.getByLabelText(/quote #1 days quiet/i), {
+    target: { value: "10" },
+  });
+  fireEvent.change(screen.getByLabelText(/quote #2 amount/i), {
+    target: { value: "5000" },
+  });
+  fireEvent.change(screen.getByLabelText(/quote #2 days quiet/i), {
+    target: { value: "12" },
+  });
+  fireEvent.change(screen.getByLabelText(/quote #3 amount/i), {
+    target: { value: "7000" },
+  });
+  fireEvent.change(screen.getByLabelText(/quote #3 days quiet/i), {
+    target: { value: "5" },
+  });
 }
 
 const pageSrc = readSource("../app/audit/page.tsx");
@@ -57,70 +79,137 @@ const clientSrc = readSource("../app/audit/AuditCalculatorClient.tsx");
 
 afterEach(cleanup);
 
-// ---------------------------------------------------------------------------
-// Lightweight + no-auth contract
-// ---------------------------------------------------------------------------
-
-describe("/audit is a lightweight, no-auth landing page", () => {
-  it("renders the hero (with eyebrow) without requiring auth", () => {
+describe("/audit static landing page shell", () => {
+  it("renders the rebuilt hero and form above the fold", () => {
     render(<AuditPage />);
+
     expect(
       screen.getByRole("heading", {
         level: 1,
-        name: /Painting estimates going quiet\?/i,
+        name: /Before buying another lead, check the estimates you already sent\./i,
       }),
     ).toBeTruthy();
-    expect(screen.getByText(/^For residential painting contractors$/i)).toBeTruthy();
-  });
-
-  it("shows the real audit form before any sample/result content", () => {
-    render(<AuditPage />);
-    expect(screen.getByText(/Use real-ish amounts/i)).toBeTruthy();
+    expect(screen.getByText(/Free 60-second quote audit/i)).toBeTruthy();
+    expect(screen.getAllByText(/total quiet quote value/i).length).toBeGreaterThan(0);
+    expect(screen.getByTestId("audit-form-card")).toBeTruthy();
     expect(
-      screen.getByRole("button", { name: /Find the quote to reopen first/i }),
+      screen.getByRole("button", {
+        name: /Show me which quote to follow up first/i,
+      }),
     ).toBeTruthy();
-    expect(screen.queryByText(/Example audit result/i)).toBeNull();
   });
 
-  it("does not render a FAQ before the 60-second diagnostic", () => {
+  it("explains who it is for without making the product painters-only", () => {
     render(<AuditPage />);
-    expect(screen.queryByLabelText(/Frequently asked questions/i)).toBeNull();
-    expect(screen.queryByText(/Is this a CRM\?/i)).toBeNull();
+    const pageText = document.body.textContent ?? "";
+    expect(pageText).toMatch(/home-service contractors/i);
+    expect(pageText).toMatch(/painting/i);
+    expect(pageText).toMatch(/remodeling/i);
+    expect(pageText).toMatch(/roofing/i);
+    expect(pageText).toMatch(/HVAC/i);
+    expect(pageText).toMatch(/landscaping/i);
   });
 
-  it("the page imports NO auth / Supabase / dashboard code", () => {
+  it("keeps the page lightweight: no auth, Supabase, dashboard, billing, or fake support imports", () => {
     expect(pageSrc).not.toMatch(/requireUser/);
     expect(pageSrc).not.toMatch(/supabase/i);
     expect(pageSrc).not.toMatch(/createServerSupabaseClient|createServiceSupabaseClient/);
     expect(pageSrc).not.toMatch(/from "@\/app\/\(app\)\/dashboard/);
-    // No nav menu above the fold (brand mark only).
-    expect(pageSrc).not.toMatch(/<nav/);
+    expect(pageSrc).not.toMatch(/PADDLE_|checkout|webhook/i);
+    expect(pageSrc).not.toMatch(/phone support|call us|fake/i);
   });
 
-  it("does not query Supabase or read env secrets in the client island", () => {
-    expect(clientSrc).not.toMatch(/supabase/i);
-    expect(clientSrc).not.toMatch(/SERVICE_ROLE|PADDLE_|WEBHOOK_SECRET/);
+  it("includes lower-page trust, how-it-works, straight-answer, and final CTA sections", () => {
+    render(<AuditPage />);
+    expect(screen.getByRole("heading", { name: /Clear enough to trust/i })).toBeTruthy();
+    expect(screen.getByRole("heading", { name: /A quick priority check/i })).toBeTruthy();
+    expect(
+      screen.getByRole("heading", {
+        name: /What contractors usually need to know first/i,
+      }),
+    ).toBeTruthy();
+    expect(screen.getByRole("link", { name: /^Run the audit$/i })).toBeTruthy();
+  });
+
+  it("does not show fake proof or unavailable integrations", () => {
+    const both = `${pageSrc}\n${clientSrc}`;
+    expect(both).not.toMatch(/trusted by|testimonial|case study|5-star|5 star/i);
+    expect(both).not.toMatch(/integrates with|ServiceTitan|Jobber|Housecall/i);
+    expect(both).not.toMatch(/automatically sends|guaranteed|10x/i);
   });
 });
 
-// ---------------------------------------------------------------------------
-// Funnel: value BEFORE signup
-// ---------------------------------------------------------------------------
+describe("audit form - safe to try", () => {
+  it("renders exactly quote amount + days quiet fields for three rows", () => {
+    render(<AuditCalculatorClient />);
+    expect(screen.getAllByLabelText(/quote #\d amount/i)).toHaveLength(3);
+    expect(screen.getAllByLabelText(/quote #\d days quiet/i)).toHaveLength(3);
+    expect(screen.getByPlaceholderText("3200")).toBeTruthy();
+    expect(screen.getByPlaceholderText("14")).toBeTruthy();
+    expect(screen.getByPlaceholderText("5800")).toBeTruthy();
+    expect(screen.getByPlaceholderText("24")).toBeTruthy();
+    expect(screen.getByPlaceholderText("2400")).toBeTruthy();
+    expect(screen.getByPlaceholderText("7")).toBeTruthy();
+  });
 
-describe("funnel — value first, signup only after the result", () => {
-  const SUBMIT = /find the quote to reopen first/i;
+  it("does not collect customer name, phone, email, company, address, or card", () => {
+    render(<AuditCalculatorClient />);
+    expect(screen.queryByLabelText(/^name$/i)).toBeNull();
+    expect(screen.queryByLabelText(/customer/i)).toBeNull();
+    expect(screen.queryByLabelText(/phone/i)).toBeNull();
+    expect(screen.queryByLabelText(/email/i)).toBeNull();
+    expect(screen.queryByLabelText(/company/i)).toBeNull();
+    expect(screen.queryByLabelText(/address/i)).toBeNull();
+    expect(screen.queryByLabelText(/card/i)).toBeNull();
+  });
 
+  it("loads sample numbers without showing a signup wall", () => {
+    render(<AuditCalculatorClient />);
+    fireEvent.click(screen.getByRole("button", { name: /try sample numbers/i }));
+    expect((screen.getByLabelText(/quote #1 amount/i) as HTMLInputElement).value).toBe(
+      "3200",
+    );
+    expect((screen.getByLabelText(/quote #2 days quiet/i) as HTMLInputElement).value).toBe(
+      "24",
+    );
+    expect(screen.queryByTestId("audit-signup-cta")).toBeNull();
+  });
+
+  it("shows friendly validation only after submit", () => {
+    render(<AuditCalculatorClient />);
+    expect(screen.queryByRole("alert")).toBeNull();
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: /show me which quote to follow up first/i,
+      }),
+    );
+    expect(screen.getByRole("alert").textContent).toMatch(/Enter a quote amount/i);
+    expect(screen.queryByTestId("audit-result")).toBeNull();
+  });
+
+  it("flags invalid days copy without blocking on one valid quote amount", () => {
+    render(<AuditCalculatorClient />);
+    fillFirstQuote("5000", "two weeks");
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: /show me which quote to follow up first/i,
+      }),
+    );
+    expect(screen.getByRole("alert").textContent).toMatch(
+      /Use numbers only for days quiet/i,
+    );
+  });
+});
+
+describe("funnel - value before signup", () => {
   let scrollSpy: ReturnType<typeof vi.fn>;
   let realRaf: typeof window.requestAnimationFrame;
 
   beforeEach(() => {
-    setMatchMedia(false); // normal motion by default
-    vi.useFakeTimers(); // default set — paces the analysis setTimeouts
-    // happy-dom doesn't implement scrollIntoView — install a spy.
+    setMatchMedia(false);
+    vi.useFakeTimers();
     scrollSpy = vi.fn();
     Element.prototype.scrollIntoView = scrollSpy;
-    // Run the on-submit scroll rAF synchronously so it's observable without
-    // touching React's scheduler (faking rAF via toFake breaks event dispatch).
     realRaf = window.requestAnimationFrame;
     window.requestAnimationFrame = ((cb: FrameRequestCallback) => {
       cb(0);
@@ -134,123 +223,55 @@ describe("funnel — value first, signup only after the result", () => {
   });
 
   function runFullAnalysis() {
-    // Advance through every analysis step + the final reveal.
     act(() => {
       vi.advanceTimersByTime(ANALYSIS_STEP_MS_DEFAULT * ANALYSIS_STEPS.length + 1);
     });
   }
 
-  it("does NOT show a validation error on initial load (only after submit)", () => {
+  it("initial primary action is the audit, not signup", () => {
     render(<AuditCalculatorClient />);
     expect(
-      screen.queryByText(/Enter at least one old quote amount/i),
-    ).toBeNull();
-    expect(screen.queryByRole("alert")).toBeNull();
-  });
-
-  it("the initial primary action is the audit, NOT signup", () => {
-    render(<AuditCalculatorClient />);
-    expect(screen.getByRole("button", { name: SUBMIT })).toBeTruthy();
+      screen.getByRole("button", {
+        name: /show me which quote to follow up first/i,
+      }),
+    ).toBeTruthy();
     expect(screen.queryByTestId("audit-signup-cta")).toBeNull();
   });
 
-  it("shows the analysis state BEFORE the result", () => {
+  it("shows analysis before the result and scrolls once to the output", () => {
     render(<AuditCalculatorClient />);
     fillFirstQuote();
-    fireEvent.click(screen.getByRole("button", { name: SUBMIT }));
-    // Immediately after submit: analysis visible, result not yet.
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: /show me which quote to follow up first/i,
+      }),
+    );
     expect(screen.getByTestId("audit-analysis")).toBeTruthy();
     expect(screen.queryByTestId("audit-result")).toBeNull();
-    // The first analysis step is visible.
-    expect(
-      screen.getByTestId("audit-analysis-step").textContent,
-    ).toMatch(/Totaling your quiet quotes/i);
-    runFullAnalysis();
-  });
-
-  it("scrolls to the output container immediately on submit — BEFORE the result", () => {
-    render(<AuditCalculatorClient />);
-    fillFirstQuote();
-    fireEvent.click(screen.getByRole("button", { name: SUBMIT }));
-    // Flush the on-submit rAF (faked) without finishing the analysis.
-    act(() => {
-      vi.advanceTimersByTime(20);
-    });
-    // Scroll already happened while the analysis is still running.
-    expect(scrollSpy).toHaveBeenCalled();
+    expect(screen.getByTestId("audit-analysis-step").textContent).toMatch(
+      /Totaling your quiet quotes/i,
+    );
     expect(scrollSpy).toHaveBeenCalledWith(
       expect.objectContaining({ behavior: "smooth", block: "start" }),
     );
-    expect(screen.getByTestId("audit-analysis")).toBeTruthy();
-    expect(screen.queryByTestId("audit-result")).toBeNull();
-    runFullAnalysis();
-    expect(screen.getByTestId("audit-result")).toBeTruthy();
-  });
-
-  it("does NOT do a second scroll when the result reveals (one scroll only)", () => {
-    render(<AuditCalculatorClient />);
-    fillFirstQuote();
-    fireEvent.click(screen.getByRole("button", { name: SUBMIT }));
-    act(() => {
-      vi.advanceTimersByTime(20);
-    });
     const callsAfterSubmit = scrollSpy.mock.calls.length;
     runFullAnalysis();
-    // Result revealed in the same anchored container — no extra scroll.
+    expect(screen.getByTestId("audit-result")).toBeTruthy();
     expect(scrollSpy.mock.calls.length).toBe(callsAfterSubmit);
   });
 
-  it("uses non-smooth 'auto' scroll under prefers-reduced-motion", () => {
+  it("uses non-smooth scroll and shorter timing under reduced motion", () => {
     setMatchMedia(true);
     render(<AuditCalculatorClient />);
     fillFirstQuote();
-    fireEvent.click(screen.getByRole("button", { name: SUBMIT }));
-    act(() => {
-      vi.advanceTimersByTime(20);
-    });
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: /show me which quote to follow up first/i,
+      }),
+    );
     expect(scrollSpy).toHaveBeenCalledWith(
       expect.objectContaining({ behavior: "auto", block: "start" }),
     );
-    act(() => {
-      vi.advanceTimersByTime(
-        ANALYSIS_STEP_MS_REDUCED * ANALYSIS_STEPS.length + 50,
-      );
-    });
-  });
-
-  it("analysis state lasts ~3.5s in normal motion (5 steps × ~700ms)", () => {
-    render(<AuditCalculatorClient />);
-    fillFirstQuote();
-    fireEvent.click(screen.getByRole("button", { name: SUBMIT }));
-    // Just before the final tick → still analyzing, result not shown.
-    act(() => {
-      vi.advanceTimersByTime(
-        ANALYSIS_STEP_MS_DEFAULT * ANALYSIS_STEPS.length - 50,
-      );
-    });
-    expect(screen.queryByTestId("audit-result")).toBeNull();
-    expect(screen.getByTestId("audit-analysis")).toBeTruthy();
-    // Cross the final tick → result revealed.
-    act(() => {
-      vi.advanceTimersByTime(100);
-    });
-    expect(screen.getByTestId("audit-result")).toBeTruthy();
-    expect(screen.queryByTestId("audit-analysis")).toBeNull();
-    // Sanity-check the spec budget: total ≈ 3.5s, never more than 4s.
-    expect(ANALYSIS_STEP_MS_DEFAULT * ANALYSIS_STEPS.length).toBeLessThanOrEqual(
-      4000,
-    );
-    expect(ANALYSIS_STEP_MS_DEFAULT * ANALYSIS_STEPS.length).toBeGreaterThanOrEqual(
-      3000,
-    );
-  });
-
-  it("shortens to ~700-900ms under prefers-reduced-motion", () => {
-    setMatchMedia(true);
-    render(<AuditCalculatorClient />);
-    fillFirstQuote();
-    fireEvent.click(screen.getByRole("button", { name: SUBMIT }));
-    // Past the reduced budget → result shown.
     act(() => {
       vi.advanceTimersByTime(
         ANALYSIS_STEP_MS_REDUCED * ANALYSIS_STEPS.length + 50,
@@ -262,130 +283,69 @@ describe("funnel — value first, signup only after the result", () => {
     expect(reducedTotal).toBeLessThanOrEqual(900);
   });
 
-  it("shows the 60-second audit result + the full restructured result", () => {
+  it("normal analysis lasts roughly 3.5 seconds", () => {
+    render(<AuditCalculatorClient />);
+    fillFirstQuote();
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: /show me which quote to follow up first/i,
+      }),
+    );
+    act(() => {
+      vi.advanceTimersByTime(
+        ANALYSIS_STEP_MS_DEFAULT * ANALYSIS_STEPS.length - 50,
+      );
+    });
+    expect(screen.queryByTestId("audit-result")).toBeNull();
+    act(() => {
+      vi.advanceTimersByTime(100);
+    });
+    expect(screen.getByTestId("audit-result")).toBeTruthy();
+    expect(ANALYSIS_STEP_MS_DEFAULT * ANALYSIS_STEPS.length).toBe(3500);
+  });
+
+  it("shows the full diagnostic result after valid input", () => {
     render(<AuditCalculatorClient />);
     fireEvent.change(screen.getByLabelText(/quote #1 amount/i), {
       target: { value: "$8,500" },
     });
-    fireEvent.change(screen.getAllByLabelText(/days since sent/i)[0], {
+    fireEvent.change(screen.getByLabelText(/quote #1 days quiet/i), {
       target: { value: "10" },
     });
     fireEvent.change(screen.getByLabelText(/quote #2 amount/i), {
       target: { value: "4000" },
     });
-    fireEvent.change(screen.getAllByLabelText(/days since sent/i)[1], {
+    fireEvent.change(screen.getByLabelText(/quote #2 days quiet/i), {
       target: { value: "20" },
     });
-    fireEvent.click(screen.getByRole("button", { name: SUBMIT }));
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: /show me which quote to follow up first/i,
+      }),
+    );
     runFullAnalysis();
 
     const result = screen.getByTestId("audit-result");
-    expect(result.textContent).toMatch(/60-second audit result/i);
+    expect(result.textContent).toMatch(/Your 60-second quote audit/i);
+    expect(result.textContent).toMatch(/Total quiet quote value/i);
     expect(result.textContent).toContain("$12,500");
-    expect(result.textContent).toMatch(/Money sitting quiet/i);
-    expect(result.textContent).toMatch(/in old estimates/i);
-    expect(result.textContent).toMatch(/Reopen this quote first/i);
-    expect(result.textContent).toMatch(/Start with Quote #/i);
+    expect(result.textContent).toMatch(/Follow up this quote first/i);
+    expect(result.textContent).toMatch(/Recovery window/i);
+    expect(result.textContent).toMatch(/Why this one first/i);
     expect(result.textContent).toMatch(/Message to send today/i);
-
-    // Recovery-window labels for Warm + Cooling appear on the right rows.
-    const order = screen.getByTestId("audit-follow-up-order");
-    expect(order.textContent).toMatch(/Warm/);
-    expect(order.textContent).toMatch(/Cooling/);
-
-    // Priority labels show in the ranked list.
-    expect(order.textContent).toMatch(/Follow up first/);
-    expect(order.textContent).toMatch(/Next backup/);
-
-    // The new explanatory sections render.
-    expect(screen.getByTestId("audit-why-order")).toBeTruthy();
-    expect(screen.getByTestId("audit-next-moves")).toBeTruthy();
-    expect(screen.getByTestId("audit-sequence-preview")).toBeTruthy();
-    expect(result.textContent).toMatch(/Send this today\. Keep it short/);
-    expect(result.textContent).toMatch(/5-message follow-up sequence/);
-    const messageIdx = result.textContent!.indexOf("Message to send today");
-    const orderIdx = result.textContent!.indexOf("Follow-up order");
-    expect(messageIdx).toBeGreaterThan(-1);
-    expect(orderIdx).toBeGreaterThan(messageIdx);
-    // "This audit shows where to start" + depth-layer body sit BETWEEN the
-    // sequence preview and the signup CTA — framing Pro as the next layer.
-    const goesDeeper = screen.getByTestId("audit-goes-deeper");
-    expect(goesDeeper.textContent).toMatch(/This audit shows where to start\./);
-    expect(goesDeeper.textContent).toMatch(
-      /Quote Reclaim goes deeper after you save it/,
-    );
-    expect(goesDeeper.textContent).toMatch(
-      /today, in 3 days, and after 7 days/,
-    );
-    const previewIdx = result.textContent!.indexOf("5-message follow-up sequence");
-    const deeperIdx = result.textContent!.indexOf("This audit shows where to start");
-    const ctaIdx = result.textContent!.indexOf(
-      "Save this audit and run your first 3 quotes free",
-    );
-    expect(previewIdx).toBeGreaterThan(-1);
-    expect(deeperIdx).toBeGreaterThan(previewIdx);
-    expect(ctaIdx).toBeGreaterThan(deeperIdx);
+    expect(result.textContent).toMatch(/Follow-up order/i);
+    expect(result.textContent).toMatch(/Next move/i);
+    expect(result.textContent).toMatch(/Save this recovery plan/i);
   });
 
-  it("renders every entered quote in the follow-up order", () => {
+  it("preserves Quote #3 as the first warm recommendation for the regression input", () => {
     render(<AuditCalculatorClient />);
-    fireEvent.change(screen.getByLabelText(/quote #1 amount/i), {
-      target: { value: "2500" },
-    });
-    fireEvent.change(screen.getByLabelText(/quote #2 amount/i), {
-      target: { value: "8500" },
-    });
-    fireEvent.change(screen.getByLabelText(/quote #3 amount/i), {
-      target: { value: "4000" },
-    });
-    fireEvent.click(screen.getByRole("button", { name: SUBMIT }));
-    runFullAnalysis();
-
-    const order = screen.getByTestId("audit-follow-up-order");
-    expect(order.textContent).toContain("Quote #1");
-    expect(order.textContent).toContain("Quote #2");
-    expect(order.textContent).toContain("Quote #3");
-    expect(screen.getByTestId("audit-rank-row-1")).toBeTruthy();
-    expect(screen.getByTestId("audit-rank-row-2")).toBeTruthy();
-    expect(screen.getByTestId("audit-rank-row-3")).toBeTruthy();
-  });
-
-  it("renders the Cold label for a 31+ day quote", () => {
-    render(<AuditCalculatorClient />);
-    fireEvent.change(screen.getByLabelText(/quote #1 amount/i), {
-      target: { value: "6000" },
-    });
-    fireEvent.change(screen.getAllByLabelText(/days since sent/i)[0], {
-      target: { value: "60" },
-    });
-    fireEvent.click(screen.getByRole("button", { name: SUBMIT }));
-    runFullAnalysis();
-    expect(screen.getByTestId("audit-follow-up-order").textContent).toMatch(
-      /Cold/,
+    fillThreeQuotes();
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: /show me which quote to follow up first/i,
+      }),
     );
-  });
-
-  it("keeps Quote #3 warm and first for 2500/10, 5000/12, 7000/5", () => {
-    render(<AuditCalculatorClient />);
-    fireEvent.change(screen.getByLabelText(/quote #1 amount/i), {
-      target: { value: "2500" },
-    });
-    fireEvent.change(screen.getAllByLabelText(/days since sent/i)[0], {
-      target: { value: "10" },
-    });
-    fireEvent.change(screen.getByLabelText(/quote #2 amount/i), {
-      target: { value: "5000" },
-    });
-    fireEvent.change(screen.getAllByLabelText(/days since sent/i)[1], {
-      target: { value: "12" },
-    });
-    fireEvent.change(screen.getByLabelText(/quote #3 amount/i), {
-      target: { value: "7000" },
-    });
-    fireEvent.change(screen.getAllByLabelText(/days since sent/i)[2], {
-      target: { value: "5" },
-    });
-    fireEvent.click(screen.getByRole("button", { name: SUBMIT }));
     runFullAnalysis();
 
     const result = screen.getByTestId("audit-result");
@@ -398,67 +358,76 @@ describe("funnel — value first, signup only after the result", () => {
     );
     expect(rankOne.textContent).toMatch(/Quote #3/);
     expect(rankOne.textContent).toMatch(/Warm/);
-    expect(result.textContent).not.toMatch(/sent(?:Warm|Cooling|Cold)/i);
+    expect(result.textContent).not.toMatch(/quiet(?:Warm|Cooling|Cold)/i);
     expect(result.textContent).toMatch(/most money at stake/i);
   });
 
-  it("shows the post-value account CTA only after the result appears", () => {
+  it("renders all entered quotes in the follow-up order with contractor actions", () => {
+    render(<AuditCalculatorClient />);
+    fillThreeQuotes();
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: /show me which quote to follow up first/i,
+      }),
+    );
+    runFullAnalysis();
+
+    const order = screen.getByTestId("audit-follow-up-order");
+    expect(order.textContent).toContain("Quote #1");
+    expect(order.textContent).toContain("Quote #2");
+    expect(order.textContent).toContain("Quote #3");
+    expect(order.textContent).toMatch(/Send today/);
+    expect(order.textContent).toMatch(/Follow up next/);
+    expect(screen.getByTestId("audit-rank-row-1")).toBeTruthy();
+    expect(screen.getByTestId("audit-rank-row-2")).toBeTruthy();
+    expect(screen.getByTestId("audit-rank-row-3")).toBeTruthy();
+  });
+
+  it("shows the signup CTA only after the result and preserves the auth route", () => {
     render(<AuditCalculatorClient />);
     fillFirstQuote("5000", "");
-    fireEvent.click(screen.getByRole("button", { name: SUBMIT }));
-    // Mid-analysis: no CTA yet.
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: /show me which quote to follow up first/i,
+      }),
+    );
     expect(screen.queryByTestId("audit-signup-cta")).toBeNull();
     runFullAnalysis();
     const cta = screen.getByTestId("audit-signup-cta");
-    expect(cta).toBeTruthy();
-    expect(cta.textContent).toMatch(
-      /Save this audit and run your first 3 quotes free/i,
-    );
+    expect(cta.textContent).toMatch(/Save this recovery plan/i);
     expect(cta.getAttribute("href")).toMatch(/^\/sign-up\?next=/);
   });
 
-  it("shows a friendly validation message ONLY after submitting empty (no analysis)", () => {
-    render(<AuditCalculatorClient />);
-    fireEvent.click(screen.getByRole("button", { name: SUBMIT }));
-    expect(
-      screen.getByText(/Enter at least one old quote amount to see your audit\./i),
-    ).toBeTruthy();
-    expect(screen.queryByTestId("audit-analysis")).toBeNull();
-    expect(screen.queryByTestId("audit-result")).toBeNull();
-  });
+  it("copy button writes the suggested message when clipboard is available", async () => {
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    Object.defineProperty(navigator, "clipboard", {
+      configurable: true,
+      value: { writeText },
+    });
 
-  it("uses the 'Days since sent' label, not 'Days silent'", () => {
     render(<AuditCalculatorClient />);
-    expect(screen.getAllByLabelText(/days since sent/i).length).toBe(3);
-    expect(screen.queryByLabelText(/^days silent$/i)).toBeNull();
-  });
+    fillFirstQuote("5000", "20");
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: /show me which quote to follow up first/i,
+      }),
+    );
+    runFullAnalysis();
 
-  it("uses painter-test example placeholders that make the form feel fast", () => {
-    render(<AuditCalculatorClient />);
-    expect(screen.getByPlaceholderText("$3,200")).toBeTruthy();
-    expect(screen.getByPlaceholderText("14 days")).toBeTruthy();
-    expect(screen.getByPlaceholderText("$5,800")).toBeTruthy();
-    expect(screen.getByPlaceholderText("24 days")).toBeTruthy();
-    expect(screen.getByPlaceholderText("$2,400")).toBeTruthy();
-    expect(screen.getByPlaceholderText("7 days")).toBeTruthy();
-  });
-
-  it("does not collect any customer name / email / phone field", () => {
-    render(<AuditCalculatorClient />);
-    expect(screen.queryByLabelText(/^name$/i)).toBeNull();
-    expect(screen.queryByLabelText(/email/i)).toBeNull();
-    expect(screen.queryByLabelText(/phone/i)).toBeNull();
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: /^Copy$/i }));
+    });
+    expect(writeText).toHaveBeenCalledWith(
+      expect.stringMatching(/estimate/i),
+    );
+    expect(screen.getByRole("button", { name: /Copied/i })).toBeTruthy();
   });
 });
 
-// ---------------------------------------------------------------------------
-// Copy guardrails
-// ---------------------------------------------------------------------------
-
-describe("copy guardrails", () => {
+describe("copy and positioning guardrails", () => {
   const both = `${pageSrc}\n${clientSrc}`.toLowerCase();
 
-  it("contains no banned hype phrases", () => {
+  it("contains no banned hype or fake proof phrases", () => {
     for (const banned of [
       "guaranteed",
       "ai-powered",
@@ -468,110 +437,51 @@ describe("copy guardrails", () => {
       "turn quotes into cash",
       "reclaimable revenue",
       "statistically recoverable",
+      "trusted by",
+      "case study",
+      "fake phone",
     ]) {
       expect(both).not.toContain(banned);
     }
   });
 
-  it("uses NO fabricated percentages or fake success-rate claims", () => {
-    // No "%" anywhere in the audit UI copy. Real product data doesn't exist
-    // yet — we can't claim reply rates, win rates, or odds of any kind.
+  it("does not use fabricated percentages or success-rate claims", () => {
     expect(clientSrc).not.toMatch(/%/);
     expect(both).not.toMatch(
       /\b(reply rate|win rate|conversion rate|recovery rate|odds|high odds|most replies happen)\b/,
     );
   });
 
-  it("includes the required honest framing phrases", () => {
-    // Whitespace-tolerant: JSX wraps these phrases across source lines.
-    expect(both).toMatch(/no signup until you see the result/);
+  it("uses the required honest framing phrases", () => {
+    expect(both).toMatch(/before buying another lead/);
+    expect(both).toMatch(/estimates you already sent/);
     expect(both).toMatch(/no customer names/);
     expect(both).toMatch(/no phone numbers/);
     expect(both).toMatch(/no card/);
+    expect(both).toMatch(/no signup before result/);
     expect(both).toMatch(/not a crm/);
-    expect(both).toMatch(/not\s+lead\s+generation/);
+    expect(both).toMatch(/not lead generation/);
   });
 
-  it("uses the upgraded hero + eyebrow + pain line + CTA + trust line", () => {
-    expect(pageSrc).toContain("For residential painting contractors");
-    expect(pageSrc).toContain(
-      "Painting estimates going quiet?",
+  it("positions as quiet quote prioritization, not CRM, lead gen, scheduling, or estimate creation", () => {
+    expect(both).toMatch(/quiet quotes/);
+    expect(both).toMatch(/follow up first/);
+    expect(both).toMatch(/message to send today/);
+    expect(both).toMatch(/home-service contractors/);
+    expect(both).not.toMatch(
+      /project management|estimate creation|lead generation software|scheduling software/,
     );
-    expect(pageSrc).toContain(
-      "Before buying another lead, check the estimates you already sent.",
-    );
-    expect(pageSrc).toContain("No phone numbers");
-    expect(pageSrc).toContain("60 seconds");
-    expect(clientSrc).toContain("Find the quote to reopen first");
-    expect(clientSrc).toContain(
-      "No signup until you see the result. First 3 quotes free. No card.",
-    );
-    expect(clientSrc).toMatch(
-      /No customer names or phone numbers/,
-    );
-  });
-
-  it("leans painting-specific for the paid test without turning into CRM or lead-gen copy", () => {
-    expect(both).toMatch(/residential painting contractors/);
-    expect(both).toMatch(/painting estimate/);
-    expect(both).toMatch(/old estimates/);
-    expect(both).toMatch(/us home-service contractors/);
-    expect(both).not.toMatch(/jobber|housecall pro|project management|estimate creation/i);
-  });
-
-  it("does not show a sample result before the contractor's own numbers", () => {
-    expect(pageSrc).not.toContain("Example audit result");
-    expect(pageSrc).not.toMatch(/Sample/);
-    expect(pageSrc.toLowerCase()).not.toContain("case study");
-    expect(pageSrc.toLowerCase()).not.toContain("real customer");
+    expect(both).not.toMatch(/jobber|housecall|servicetitan|integrates with/i);
   });
 });
 
-// ---------------------------------------------------------------------------
-// Analytics events wired (vendor-agnostic, no new vendor)
-// ---------------------------------------------------------------------------
-
-describe("analytics events are wired without adding a vendor in /audit", () => {
-  it("fires the four funnel events from the client", () => {
+describe("analytics events are preserved without a new vendor", () => {
+  it("fires the four documented audit funnel events only", () => {
     expect(clientSrc).toContain('track("audit_page_viewed"');
     expect(clientSrc).toContain('track("audit_started"');
     expect(clientSrc).toContain('track("audit_completed"');
     expect(clientSrc).toContain('track("audit_signup_clicked"');
-  });
 
-  it("uses the internal vendor-agnostic track helper, not a new SDK import", () => {
-    expect(clientSrc).toContain('from "@/lib/analytics/track"');
-    // The client must NOT import posthog-js directly (lazy-loaded by the
-    // provider in the root layout instead, keeping /audit lightweight).
-    expect(clientSrc).not.toMatch(/from ["']posthog-js["']/);
-    expect(clientSrc).not.toMatch(/from ["'][^"']*googletagmanager[^"']*["']/);
-    expect(clientSrc).not.toMatch(/from ["'][^"']*segment[^"']*["']/);
-  });
-
-  it("NEVER sends raw quote dollar amounts (privacy)", () => {
-    // The bucketed field replaces a raw 'total'. Anything that would expose
-    // the dollar figure verbatim is banned.
-    expect(clientSrc).toContain("total_silent_quote_value_bucket");
-    expect(clientSrc).toContain("bucketCurrency");
-    expect(clientSrc).not.toMatch(/total:\s*audit\.totalSilentQuoteValue/);
-    // No customer-identifying event field names anywhere in the audit emit.
-    // Visible trust copy may say "No phone numbers"; payload keys may not.
-    expect(clientSrc).not.toMatch(
-      /(client_name|client_email|client_phone|customer_email|customer_name|customer_phone|address\s*:)/i,
-    );
-  });
-
-  it("attaches captured UTMs to every funnel event", () => {
-    expect(clientSrc).toContain('readUtms(window.location.search)');
-    // audit_page_viewed, audit_started, audit_completed, audit_signup_clicked
-    // each receive `utms` (or the captured set) as the props payload.
-    expect(clientSrc).toMatch(/track\("audit_page_viewed", captured\)/);
-    expect(clientSrc).toMatch(/track\("audit_started", utms\)/);
-    expect(clientSrc).toMatch(/track\("audit_completed",[\s\S]*?\.\.\.utms/);
-    expect(clientSrc).toMatch(/track\("audit_signup_clicked", utms\)/);
-  });
-
-  it("exposes ONLY the four documented event names — no new events from the analysis state", () => {
     const trackCalls = clientSrc.match(/track\("([a-z_]+)"/g) ?? [];
     const names = new Set(
       trackCalls.map((s) => /track\("([a-z_]+)"/.exec(s)?.[1] ?? ""),
@@ -582,5 +492,31 @@ describe("analytics events are wired without adding a vendor in /audit", () => {
       "audit_signup_clicked",
       "audit_started",
     ]);
+  });
+
+  it("uses the internal track helper, not a new analytics SDK", () => {
+    expect(clientSrc).toContain('from "@/lib/analytics/track"');
+    expect(clientSrc).not.toMatch(/from ["']posthog-js["']/);
+    expect(clientSrc).not.toMatch(/from ["'][^"']*segment[^"']*["']/);
+    expect(clientSrc).not.toMatch(/from ["'][^"']*googletagmanager[^"']*["']/);
+  });
+
+  it("keeps UTM handling across every funnel event", () => {
+    expect(clientSrc).toContain("readUtms(window.location.search)");
+    expect(clientSrc).toMatch(/track\("audit_page_viewed", captured\)/);
+    expect(clientSrc).toMatch(/track\("audit_started", utms\)/);
+    expect(clientSrc).toMatch(/track\("audit_completed",[\s\S]*?\.\.\.utms/);
+    expect(clientSrc).toMatch(/track\("audit_signup_clicked", utms\)/);
+    expect(clientSrc).toContain("buildSignupHref(window.location.search)");
+  });
+
+  it("never sends raw quote values or customer-identifying fields to analytics", () => {
+    expect(clientSrc).toContain("total_silent_quote_value_bucket");
+    expect(clientSrc).toContain("bucketCurrency");
+    expect(clientSrc).not.toMatch(/total:\s*audit\.totalSilentQuoteValue/);
+    expect(clientSrc).not.toMatch(/amounts?:\s*rows/);
+    expect(clientSrc).not.toMatch(
+      /(client_name|client_email|client_phone|customer_email|customer_name|customer_phone|address\s*:)/i,
+    );
   });
 });

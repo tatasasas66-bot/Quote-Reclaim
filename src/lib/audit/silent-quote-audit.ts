@@ -34,9 +34,9 @@ export type AuditQuote = {
  * Recovery window — a contractor-native label keyed only to days since the
  * estimate was sent. No probability model, no reply-rate claims.
  *
- *   warm    0-14 days  "Follow up while the job is still fresh."
- *   cooling 15-30 days "Still worth chasing, but do it soon."
- *   cold    31+ days   "Needs a softer close-the-loop angle."
+ *   warm    0-14 days  "Recent enough for a direct, simple follow-up."
+ *   cooling 15-30 days "Worth reopening now before it gets harder to restart."
+ *   cold    31+ days   "Use a lighter check-in."
  *   unknown null       (contractor skipped the days field)
  */
 export type RecoveryWindow = "warm" | "cooling" | "cold" | "unknown";
@@ -65,19 +65,20 @@ export function describeRecoveryWindow(
       return {
         window,
         label: "Warm",
-        explanation: "Follow up while the job is still fresh.",
+        explanation: "Recent enough for a direct, simple follow-up.",
       };
     case "cooling":
       return {
         window,
         label: "Cooling",
-        explanation: "Still worth chasing, but do it soon.",
+        explanation: "Worth reopening now before it gets harder to restart.",
       };
     case "cold":
       return {
         window,
         label: "Cold",
-        explanation: "Needs a softer close-the-loop angle.",
+        explanation:
+          "Use a lighter check-in. Still worth testing, but expect lower response.",
       };
     default:
       return { window, label: "Unknown", explanation: "" };
@@ -168,12 +169,12 @@ function followUpWeight(daysSilent: number | null): number {
  */
 export function suggestedMessage(daysSilent: number | null): string {
   if (daysSilent != null && daysSilent > 45) {
-    return "I'm about to close out the estimate I sent, but wanted to give you first shot before I do — still want to move forward?";
+    return "Hi - I am about to close out the estimate I sent, but wanted to give you first shot before I do. Are you still thinking about moving forward?";
   }
   if (daysSilent != null && daysSilent <= 6) {
-    return "Wanted to make sure the project estimate I sent landed okay — any questions on the scope or the price, or anything you'd want changed?";
+    return "Hi - wanted to make sure the estimate I sent landed okay. Any questions on the scope or price, or anything you would want changed?";
   }
-  return "Are you still thinking about moving forward, or should I close this out for now?";
+  return "Hi - just checking back on the estimate we sent over. Are you still thinking about moving forward, or should I close this out for now?";
 }
 
 /**
@@ -325,7 +326,7 @@ export function runSilentQuoteAudit(inputs: AuditQuoteInput[]): AuditResult {
       suggestedMessage: "",
       whyNotOthers: [],
       nextThreeMoves: [],
-      error: "Enter at least one old quote amount to see your audit.",
+      error: "Enter a quote amount.",
     };
   }
 
