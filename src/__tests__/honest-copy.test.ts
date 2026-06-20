@@ -22,12 +22,15 @@ const SURFACES: Record<string, string> = {
 // ---------------------------------------------------------------------------
 
 describe("honest conversion copy renders on each surface", () => {
-  it("homepage hero uses the contractor-native headline + honest email+copy claim", () => {
-    expect(SURFACES.homepage).toMatch(/You already priced the job\./);
-    expect(SURFACES.homepage).toMatch(/Now find the quotes still worth chasing\./);
-    // Tightened: email + copy, both disclosed in the same sentence.
-    expect(SURFACES.homepage).toMatch(/sent by email when there&apos;s an address/);
-    expect(SURFACES.homepage).toMatch(/ready to copy\s+when there isn&apos;t/);
+  it("homepage hero positions the free audit as doorway into the recovery system", () => {
+    expect(SURFACES.homepage).toMatch(
+      /Turn sent estimates into booked work before buying another lead\./,
+    );
+    expect(SURFACES.homepage).toMatch(/Run the free estimate audit/);
+    expect(SURFACES.homepage).toMatch(
+      /The audit is the doorway\. Quote Reclaim is the recovery system\./,
+    );
+    expect(SURFACES.homepage).toMatch(/Not another CRM\. Not another estimating app\./);
   });
 
   it("sign-in left panel reframes lead-chasing toward sent quotes", () => {
@@ -101,8 +104,8 @@ describe("true automation claim is present (email auto-send via Resend, qualifie
     // Tightened: the only true automation claim is email auto-send when an
     // address exists. The qualifier (ready-to-copy when it doesn't) lives in
     // the same sentence so the broad reading is impossible.
-    expect(SURFACES.homepage).toMatch(/sent by email when there&apos;s an address/);
     expect(SURFACES.paywall).toMatch(/sent by\s+email when there&apos;s an address/);
+    expect(SURFACES.homepage).not.toMatch(/sent by email when there&apos;s an address/);
   });
 
   it("no surface claims SMS auto-send (SMS is not active)", () => {
@@ -154,8 +157,6 @@ describe("banned-content audit: no false claims anywhere in the UI", () => {
     "integrates with",
     "works alongside",
     "ServiceTitan",
-    "Jobber",
-    "Housecall",
     "ProLine",
     "case study",
     "2 days",
@@ -198,6 +199,16 @@ describe("banned-content audit: no false claims anywhere in the UI", () => {
           src,
         ),
         `${name} must not contain a conversion-lift % claim`,
+      ).toBe(false);
+    }
+  });
+
+  it("mentions other tools only as non-replacement context, never as integrations", () => {
+    expect(SURFACES.homepage).toMatch(/Keep Jobber, Housecall Pro, DripJobs/);
+    for (const [name, src] of Object.entries(SURFACES)) {
+      expect(
+        /integrates with|syncs with|imports from|connected to|works alongside/i.test(src),
+        `${name} must not imply unsupported integrations`,
       ).toBe(false);
     }
   });

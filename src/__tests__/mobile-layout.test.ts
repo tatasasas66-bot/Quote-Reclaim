@@ -36,7 +36,7 @@ describe("Homepage mobile-safe layout", () => {
 
   it("CTA group wraps when buttons exceed viewport width", () => {
     // The CTA flex row already had flex-wrap; this guards against regression.
-    expect(homepage).toMatch(/flex flex-wrap items-center gap-3 pt-1/);
+    expect(homepage).toMatch(/mt-6 flex flex-wrap items-center gap-3 pt-1/);
   });
 });
 

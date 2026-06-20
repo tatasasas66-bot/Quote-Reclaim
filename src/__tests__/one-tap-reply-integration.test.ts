@@ -280,11 +280,11 @@ describe("quote detail page mounts the One-Tap Reply card", () => {
 // ---------------------------------------------------------------------------
 
 describe("homepage proof block", () => {
-  it("adds a compact One-Tap Reply section", () => {
-    expect(homepage).toContain("OneTapReplyBlock");
-    expect(homepage).toContain(
-      "Turn silence into a yes, a question, or a clean no.",
-    );
+  it("shows compact product-depth sections behind the free audit", () => {
+    expect(homepage).toContain("5-message sequence");
+    expect(homepage).toContain("Crew Gap Rescue");
+    expect(homepage).toContain("Got the Job");
+    expect(homepage).toContain("Silent Quote Command");
   });
 
   it("uses none of the banned marketing phrases", () => {
@@ -301,7 +301,7 @@ describe("homepage proof block", () => {
 
   it("keeps the existing $49/month / hero / footer chrome", () => {
     expect(homepage).toContain("$49/month");
-    expect(homepage).toContain("Silent Quote Command");
+    expect(homepage).toContain("Run the free estimate audit");
     expect(homepage).toContain("Terms");
     expect(homepage).toContain("Privacy");
   });

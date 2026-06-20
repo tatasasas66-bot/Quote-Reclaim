@@ -49,7 +49,7 @@ describe("Audit CTA no longer routes to /audit (404)", () => {
     expect(authShell).toContain("No credit card. 3 quotes free. Cancel anytime.");
   });
 
-  it("no production UI source file (outside docs/comments in the message engine) links to /audit", () => {
+  it("only the public homepage links to /audit as the free doorway", () => {
     const sources = collect(SRC_ROOT);
     const offenders: string[] = [];
     for (const path of sources) {
@@ -59,7 +59,9 @@ describe("Audit CTA no longer routes to /audit (404)", () => {
       // reference an internal preview surface, not a routable URL.
       if (
         /href=["']\/audit["']|"\/audit"|'\/audit'/.test(text) &&
-        !/\/audit\/token|\/audits\//.test(text)
+        !/\/audit\/token|\/audits\//.test(text) &&
+        !path.endsWith(join("app", "page.tsx")) &&
+        !path.endsWith(join("app", "audit", "page.tsx"))
       ) {
         offenders.push(path);
       }

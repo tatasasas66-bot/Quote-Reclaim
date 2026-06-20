@@ -34,54 +34,59 @@ const aiFallbacks = readSource("../lib/ai/fallback-messages.ts");
 // ---------------------------------------------------------------------------
 
 describe("Homepage hero copy (honest conversion rewrite)", () => {
-  it("eyebrow is Silent Quote Command", () => {
-    expect(homepage).toMatch(/Silent Quote Command/);
+  it("eyebrow frames quiet estimate recovery", () => {
+    expect(homepage).toMatch(/Quiet estimate recovery/);
     expect(homepage).not.toMatch(/QUOTE RECLAIM · SILENT QUOTE COMMAND/);
   });
 
-  it("uses the contractor-native headline (you-already-priced rewrite)", () => {
-    expect(homepage).toMatch(/You already priced the job\./);
-    expect(homepage).toMatch(/Now find the quotes still worth chasing\./);
+  it("uses the lead-before-estimates headline", () => {
+    expect(homepage).toMatch(
+      /Turn sent estimates into booked work before buying another lead\./,
+    );
   });
 
-  it("subhead is honest about email auto-send AND manual-copy fallback", () => {
-    expect(homepage).toMatch(/Paste the estimates that went silent/);
-    expect(homepage).toMatch(/sent by email when there&apos;s an address/);
-    expect(homepage).toMatch(/ready to copy\s+when there isn&apos;t/);
-    expect(homepage).toMatch(/You step in when someone replies\./);
+  it("subhead explains the audit doorway and ongoing recovery system", () => {
+    expect(homepage).toMatch(/which quiet estimate\s+to follow up first/);
+    expect(homepage).toMatch(/what message to send today/);
+    expect(homepage).toMatch(/keep\s+every sent estimate moving/);
+    expect(homepage).toMatch(/save the plan\s+and keep working quiet estimates every week/);
     // The broad "follows up by email automatically" claim — without the
     // no-email qualifier — is gone.
     expect(homepage).not.toMatch(/follows\s+up by email automatically/);
   });
 
-  it("primary CTA runs the free audit and routes into the reveal flow", () => {
-    expect(homepage).toMatch(/Run the Free Quiet Quote Audit/);
-    expect(homepage).toMatch(/href="\/onboarding\/reveal"/);
+  it("primary CTA runs the public free audit", () => {
+    expect(homepage).toMatch(/Run the free estimate audit/);
+    expect(homepage).toMatch(/href="\/audit"/);
     expect(homepage).not.toMatch(/Find Silent Money/);
   });
 
   it("homepage explains Crew Gap Rescue as a core feature", () => {
-    expect(homepage).toMatch(/See Crew Gap Rescue/);
     expect(homepage).toMatch(/Crew Gap Rescue/);
-    expect(homepage).toMatch(/Fill the open day from quotes you already sent\./);
-    expect(homepage).toMatch(/Not lead gen\. Not a CRM\./);
+    expect(homepage).toMatch(/Got an open crew day\? Start with estimates you already sent\./);
+    expect(homepage).toMatch(/quiet estimate most worth reopening/);
   });
 
   it("no decorative secondary CTA — the See How It Works scroll button is gone", () => {
     expect(homepage).not.toMatch(/See How It Works/);
     expect(homepage).not.toMatch(/<Button[^>]*variant=["']secondary["']/);
-    // The preview card keeps its anchor id harmlessly.
-    expect(homepage).toMatch(/id="how-it-works"/);
+    expect(homepage).toMatch(/href="#recovery-system"/);
   });
 
-  it("trust line names the audience, the price, and the no-learning-curve differentiator", () => {
+  it("trust line names the audience, price, and result-first promise", () => {
     expect(homepage).toMatch(/Built for US home-service contractors\./);
     expect(homepage).toContain("$49/month");
-    expect(homepage).toMatch(/No learning curve\./);
+    expect(homepage).toMatch(/No names/);
+    expect(homepage).toMatch(/No phone numbers/);
+    expect(homepage).toMatch(/No card/);
+    expect(homepage).toMatch(/Result first/);
   });
 
-  it("hero section uses py-6 md:py-8 (above-the-fold compression)", () => {
-    expect(homepage).toMatch(/py-6 md:py-8/);
+  it("homepage shows product depth beyond the audit form", () => {
+    expect(homepage).toMatch(/SAMPLE PREVIEW - NOT CUSTOMER DATA/);
+    expect(homepage).toMatch(/5-message sequence/);
+    expect(homepage).toMatch(/Got the Job/);
+    expect(homepage).toMatch(/Not another CRM\. Not another estimating app\./);
   });
 });
 

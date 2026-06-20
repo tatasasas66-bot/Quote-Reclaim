@@ -40,32 +40,43 @@ afterEach(() => cleanup());
 // ───────────────────────────────────────────────────────────────────────
 
 describe("homepage hero restructure + email/copy honesty", () => {
-  it("headline is the contractor-native you-already-priced pair", () => {
-    expect(homepage).toMatch(/You already priced the job\./);
-    expect(homepage).toMatch(/Now find the quotes still worth chasing\./);
-  });
-
-  it("primary CTA routes straight into the reveal flow (auth gate carries next=)", () => {
+  it("headline leads with sent estimates before new leads", () => {
     expect(homepage).toMatch(
-      /href="\/onboarding\/reveal"[\s\S]{0,200}Run the Free Quiet Quote Audit/,
+      /Turn sent estimates into booked work before buying another lead\./,
     );
   });
+
+it("primary CTA routes to the public audit doorway", () => {
+  expect(homepage).toMatch(/href="\/audit"/);
+  expect(homepage).toMatch(/Run the free estimate audit/);
+});
 
   it("the decorative See How It Works scroll button is gone", () => {
     expect(homepage).not.toMatch(/See How It Works/);
     expect(homepage).not.toMatch(/<Button[^>]*variant=["']secondary["']/);
   });
 
-  it("subhead discloses both email auto-send AND copy fallback (no broad claim)", () => {
-    expect(homepage).toMatch(/sent by email when there&apos;s an address/);
-    expect(homepage).toMatch(/ready to copy\s+when there isn&apos;t/);
+  it("subhead explains the ongoing recovery system without a broad auto-send claim", () => {
+    expect(homepage).toMatch(/which quiet estimate\s+to follow up first/);
+    expect(homepage).toMatch(/what message to send today/);
+    expect(homepage).toMatch(/keep\s+every sent estimate moving/);
     expect(homepage).not.toMatch(/follows\s+up by email automatically/);
   });
 
-  it("trust line: price + first 3 free + no learning curve differentiator", () => {
+  it("trust line and price stay clear", () => {
     expect(homepage).toContain("$49/month");
-    expect(homepage).toMatch(/first 3\s+quotes free, no card needed/);
-    expect(homepage).toMatch(/No learning curve\./);
+    expect(homepage).toMatch(/No names/);
+    expect(homepage).toMatch(/No phone numbers/);
+    expect(homepage).toMatch(/No card/);
+    expect(homepage).toMatch(/Result first/);
+  });
+
+  it("homepage shows the paid recovery system behind the free audit", () => {
+    expect(homepage).toMatch(/The audit is the doorway\. Quote Reclaim is the recovery system\./);
+    expect(homepage).toMatch(/Silent Quote Command/);
+    expect(homepage).toMatch(/Do not stop after one follow-up\./);
+    expect(homepage).toMatch(/Got an open crew day\?/);
+    expect(homepage).toMatch(/Mark the wins\. See what came back\./);
   });
 });
 

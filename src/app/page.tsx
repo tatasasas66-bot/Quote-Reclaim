@@ -1,313 +1,796 @@
 import Link from "next/link";
+import type { Metadata } from "next";
 import type { ReactNode } from "react";
 import {
-  AlertTriangle,
+  ArrowRight,
   CalendarClock,
   CheckCircle2,
   ClipboardList,
-  ShieldAlert,
+  MessageSquareText,
+  NotepadText,
+  Target,
+  Trophy,
 } from "lucide-react";
-import { Badge, Button, Logo } from "@/components/ui";
+import { Badge, Logo } from "@/components/ui";
+
+export const metadata: Metadata = {
+  title: "Quote Reclaim - Quiet estimate recovery for contractors",
+  description:
+    "Before buying another lead, work the estimates you already sent. Run a free audit, then keep quiet estimates moving until they book or close.",
+};
+
+const trustPills = ["No names", "No phone numbers", "No card", "Result first"] as const;
+
+const auditOutputs = [
+  "total quiet estimate value",
+  "estimate to follow up first",
+  "recovery window",
+  "why this one first",
+  "message to send today",
+  "follow-up order",
+  "next move",
+] as const;
+
+const sequenceSteps = [
+  {
+    day: "Day 1",
+    title: "Simple check-in",
+    body: "A light opener that makes it easy for the customer to answer.",
+  },
+  {
+    day: "Day 3",
+    title: "Scope or price question",
+    body: "Reopens the estimate without sounding desperate or pushy.",
+  },
+  {
+    day: "Day 7",
+    title: "Decision helper",
+    body: "Gives the customer a useful next step if they are still comparing.",
+  },
+  {
+    day: "Day 14",
+    title: "Close-the-loop message",
+    body: "Lets you move on cleanly while leaving the door open.",
+  },
+  {
+    day: "Day 30",
+    title: "Light reactivation",
+    body: "Checks whether timing changed without pretending the job is a sure thing.",
+  },
+] as const;
+
+const commandRows = [
+  {
+    estimate: "$9,000",
+    age: "5 days quiet",
+    window: "Warm",
+    next: "Send today",
+    status: "Follow-up 1 ready",
+  },
+  {
+    estimate: "$3,200",
+    age: "14 days quiet",
+    window: "Warm",
+    next: "Follow up next",
+    status: "Queued after first",
+  },
+  {
+    estimate: "$2,300",
+    age: "31 days quiet",
+    window: "Cold",
+    next: "Light check-in",
+    status: "Close-loop angle",
+  },
+] as const;
+
+const comparison = [
+  {
+    label: "CRM / field-service app",
+    points: [
+      "runs the business",
+      "schedules jobs",
+      "sends invoices",
+      "manages customers",
+    ],
+  },
+  {
+    label: "Estimating app",
+    points: [
+      "creates estimates",
+      "sends proposals",
+      "handles approvals",
+      "keeps estimate files",
+    ],
+  },
+  {
+    label: "Quote Reclaim",
+    points: [
+      "ranks sent estimates",
+      "tells you who to follow up first",
+      "gives you the message to send today",
+      "helps work quiet estimates until they book or close",
+    ],
+  },
+] as const;
+
+const trades = [
+  ["Painting", "many estimates, many no-replies"],
+  ["Remodeling", "high-ticket projects go quiet"],
+  ["Roofing", "big estimates need timely follow-up"],
+  ["HVAC", "replacement quotes need fast timing"],
+  ["Plumbing", "quoted work gets delayed and forgotten"],
+  ["Fencing", "seasonal demand creates follow-up windows"],
+  ["Landscaping", "crew gaps matter"],
+] as const;
+
+const faqs = [
+  {
+    q: "Is Quote Reclaim a CRM?",
+    a: "No. It does not run your business, schedule jobs, send invoices, or replace your customer system. It focuses on sent estimates that went quiet.",
+  },
+  {
+    q: "Is this only for painters?",
+    a: "No. Painting is a strong fit, but Quote Reclaim is built for estimate-heavy home-service contractors across trades.",
+  },
+  {
+    q: "Do I need customer names?",
+    a: "No. The free audit works with estimate amount and days quiet only.",
+  },
+  {
+    q: "Do I need phone numbers?",
+    a: "No. You can see the audit result without customer names, phone numbers, or a card.",
+  },
+  {
+    q: "Do I need to sign up before seeing the audit result?",
+    a: "No. Run the audit first. Create an account only if you want to save the plan and keep working quiet estimates.",
+  },
+  {
+    q: "Will Quote Reclaim message customers for me?",
+    a: "The free audit gives you a message to send. In the app, use the message sequence to copy, send, and mark progress.",
+  },
+  {
+    q: "What if I already use Jobber, Housecall Pro, DripJobs, or a spreadsheet?",
+    a: "Keep it. Quote Reclaim is the quiet-estimate recovery layer, not a replacement for the system you already use.",
+  },
+  {
+    q: "Why would I pay monthly after the audit?",
+    a: "The audit gives you the first move. The paid app is for contractors who want to keep working sent estimates every week, save message sequences, fill crew gaps, and track which follow-ups turn into booked work.",
+  },
+  {
+    q: "Can Quote Reclaim promise I win the job?",
+    a: "No. No software can promise a job back. Quote Reclaim helps you act on sent estimates instead of guessing or forgetting.",
+  },
+] as const;
 
 export default function HomePage() {
   return (
-    <main className="min-h-screen overflow-hidden bg-canvas">
-      <div className="mx-auto flex min-h-screen w-full max-w-6xl flex-col px-4 py-6 sm:px-6 lg:px-8">
+    <main className="min-h-screen overflow-hidden bg-[linear-gradient(180deg,rgb(var(--qr-bg-canvas)),rgb(var(--qr-bg-surface-1)),rgb(var(--qr-bg-canvas)))] text-ink">
+      <div className="mx-auto flex w-full max-w-6xl flex-col px-4 py-5 sm:px-6 lg:px-8">
         <header className="flex flex-wrap items-center justify-between gap-3 border-b border-line-subtle/80 pb-5">
           <Logo showWordmark />
-          <Link
-            href="/sign-in"
-            className="rounded text-sm font-semibold text-ink-muted hover:text-ink-strong focus:outline-none focus-visible:ring-2 focus-visible:ring-focus"
-          >
-            Sign in
-          </Link>
-        </header>
-
-        <section className="grid flex-1 items-center gap-8 py-6 md:py-8">
-          <div className="grid gap-8 lg:grid-cols-[0.9fr_1.1fr] lg:items-end">
-            <div className="min-w-0 space-y-4">
-              <p className="text-xs font-semibold uppercase tracking-widest text-brand">
-                Silent Quote Command
-              </p>
-              <h1 className="max-w-2xl text-[length:clamp(1.5rem,4vw,2.75rem)] font-black leading-[0.98] text-ink-strong">
-                You already priced the job.
-                <br />
-                <span className="text-brand">
-                  Now find the quotes still worth chasing.
-                </span>
-              </h1>
-              <p className="max-w-xl break-words text-lg leading-7 text-ink">
-                Paste the estimates that went silent. Quote Reclaim totals
-                what&apos;s still sitting there, ranks which customers are
-                worth another shot, and writes the 5-message follow-up —
-                sent by email when there&apos;s an address, ready to copy
-                when there isn&apos;t. You step in when someone replies.
-              </p>
-              <div className="flex flex-wrap items-center gap-3 pt-1">
-                <Link href="/onboarding/reveal">
-                  <Button size="lg" className="shadow-[0_0_42px_rgba(217,111,50,0.28)]">
-                    Run the Free Quiet Quote Audit -&gt;
-                  </Button>
-                </Link>
-                <Link
-                  href="#crew-gap-rescue"
-                  className="rounded text-sm font-bold text-ink-muted hover:text-ink-strong focus:outline-none focus-visible:ring-2 focus-visible:ring-focus"
-                >
-                  See Crew Gap Rescue
-                </Link>
-              </div>
-              <p className="max-w-md text-sm font-medium text-ink-muted">
-                Built for US home-service contractors. $49/month — first 3
-                quotes free, no card needed. No learning curve.
-              </p>
-            </div>
-
-            <ProductPreview />
-          </div>
-        </section>
-
-        <CrewGapRescueBlock />
-
-        <OneTapReplyBlock />
-
-        <footer className="flex flex-wrap items-center justify-between gap-y-3 gap-x-4 border-t border-line-subtle/80 py-6 text-sm text-ink-muted">
-          <p>© {new Date().getFullYear()} Quote Reclaim</p>
-          <nav
-            aria-label="Legal"
-            className="flex flex-wrap items-center gap-x-3 gap-y-1"
-          >
-            <Link
-              href="/terms"
-              className="rounded hover:text-ink-strong focus:outline-none focus-visible:ring-2 focus-visible:ring-focus"
+          <nav className="flex flex-wrap items-center gap-3 text-sm font-semibold">
+            <a
+              href="#recovery-system"
+              className="rounded text-ink-muted transition hover:text-ink-strong focus:outline-none focus-visible:ring-2 focus-visible:ring-focus"
             >
-              Terms
-            </Link>
-            <span aria-hidden="true">·</span>
+              Recovery system
+            </a>
             <Link
-              href="/privacy"
-              className="rounded hover:text-ink-strong focus:outline-none focus-visible:ring-2 focus-visible:ring-focus"
+              href="/sign-in"
+              className="rounded text-ink-muted transition hover:text-ink-strong focus:outline-none focus-visible:ring-2 focus-visible:ring-focus"
             >
-              Privacy
-            </Link>
-            <span aria-hidden="true">·</span>
-            <Link
-              href="/refund-policy"
-              className="rounded hover:text-ink-strong focus:outline-none focus-visible:ring-2 focus-visible:ring-focus"
-            >
-              Refund Policy
-            </Link>
-            <span aria-hidden="true">·</span>
-            <Link
-              href="/cancellation-policy"
-              className="rounded hover:text-ink-strong focus:outline-none focus-visible:ring-2 focus-visible:ring-focus"
-            >
-              Cancellation
-            </Link>
-            <span aria-hidden="true">·</span>
-            <Link
-              href="/contact"
-              className="rounded hover:text-ink-strong focus:outline-none focus-visible:ring-2 focus-visible:ring-focus"
-            >
-              Contact
+              Sign in
             </Link>
           </nav>
-        </footer>
+        </header>
+
+        <section className="grid min-w-0 gap-9 py-10 lg:grid-cols-[0.94fr_1.06fr] lg:items-center lg:py-14">
+          <div className="min-w-0">
+            <p className="text-xs font-black uppercase tracking-widest text-brand">
+              Quiet estimate recovery
+            </p>
+            <h1 className="mt-4 max-w-3xl text-balance text-[length:clamp(2.35rem,5vw,4.85rem)] font-black leading-[0.98] text-ink-strong">
+              Turn sent estimates into booked work before buying another lead.
+            </h1>
+            <p className="mt-5 max-w-2xl break-words text-base leading-7 text-ink sm:text-lg">
+              Quote Reclaim shows home-service contractors which quiet estimate
+              to follow up first, what message to send today, and how to keep
+              every sent estimate moving until it books or closes.
+            </p>
+            <p className="mt-3 max-w-xl break-words text-sm leading-6 text-ink-muted">
+              Run a free 60-second estimate audit. If it helps, save the plan
+              and keep working quiet estimates every week.
+            </p>
+            <div className="mt-6 flex flex-wrap items-center gap-3 pt-1">
+              <Link
+                href="/audit"
+                className="inline-flex min-h-12 items-center justify-center gap-2 rounded-lg border border-brand bg-brand px-5 py-3 text-base font-semibold text-canvas shadow-[0_0_42px_rgba(217,111,50,0.28)] transition-colors hover:bg-brand-dark focus:outline-none focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2 focus-visible:ring-offset-canvas"
+              >
+                Run the free estimate audit
+                <ArrowRight className="h-4 w-4" aria-hidden="true" />
+              </Link>
+              <a
+                href="#recovery-system"
+                className="inline-flex min-h-12 items-center justify-center rounded-lg border border-line-strong bg-surface-1 px-5 py-3 text-base font-semibold text-ink-strong transition hover:bg-surface-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2 focus-visible:ring-offset-canvas"
+              >
+                See the recovery system
+              </a>
+            </div>
+            <div
+              aria-label="Free audit trust line"
+              className="mt-5 flex flex-wrap gap-2 text-[11px] font-black uppercase tracking-widest text-ink-muted"
+            >
+              {trustPills.map((pill) => (
+                <span
+                  key={pill}
+                  className="rounded-full border border-line-subtle bg-surface-1 px-3 py-2"
+                >
+                  {pill}
+                </span>
+              ))}
+            </div>
+            <p className="mt-4 max-w-xl text-sm font-semibold text-ink-muted">
+              Built for US home-service contractors. $49/month after the free
+              start.
+            </p>
+          </div>
+
+          <HeroProductPreview />
+        </section>
       </div>
+
+      <SectionShell id="expensive-leak" eyebrow="The expensive leak">
+        <div className="grid gap-6 lg:grid-cols-[0.82fr_1.18fr] lg:items-start">
+          <SectionHeading
+            title="Sent estimates go quiet. That does not mean they are dead."
+            body="Contractors spend time driving out, scoping work, pricing estimates, and sending proposals. Then many prospects go quiet. Most businesses either forget to follow up or guess randomly."
+          />
+          <div className="grid gap-3 sm:grid-cols-3">
+            <SignalCard
+              icon={<NotepadText className="h-5 w-5" aria-hidden="true" />}
+              title="You already did the work"
+              body="The visit, measurements, scope, and price are already done."
+            />
+            <SignalCard
+              icon={<MessageSquareText className="h-5 w-5" aria-hidden="true" />}
+              title="Silence is unclear"
+              body="They may be comparing, busy, waiting, or simply forgot."
+            />
+            <SignalCard
+              icon={<Target className="h-5 w-5" aria-hidden="true" />}
+              title="The next move matters"
+              body="A quiet estimate needs a clear follow-up order, not random chasing."
+            />
+          </div>
+        </div>
+      </SectionShell>
+
+      <SectionShell id="audit-doorway" eyebrow="Free audit">
+        <div className="grid gap-7 lg:grid-cols-[0.9fr_1.1fr] lg:items-center">
+          <SectionHeading
+            title="The free audit shows what to do today."
+            body="Enter 3 sent estimates and days quiet. Quote Reclaim gives you the first recovery move before you create an account."
+          />
+          <div className="rounded-2xl border border-line-subtle bg-surface-1 p-4 sm:p-5">
+            <div className="grid gap-2 sm:grid-cols-2">
+              {auditOutputs.map((item) => (
+                <div
+                  key={item}
+                  className="flex items-center gap-2 rounded-lg border border-line-subtle bg-canvas/55 px-3 py-2 text-sm font-semibold text-ink"
+                >
+                  <CheckCircle2 className="h-4 w-4 shrink-0 text-money" aria-hidden="true" />
+                  {item}
+                </div>
+              ))}
+            </div>
+            <Link
+              href="/audit"
+              className="mt-5 inline-flex min-h-11 items-center justify-center gap-2 rounded-lg border border-brand bg-brand px-4 py-2 text-sm font-bold text-canvas transition hover:bg-brand-dark focus:outline-none focus-visible:ring-2 focus-visible:ring-focus"
+            >
+              Run the free audit
+              <ArrowRight className="h-4 w-4" aria-hidden="true" />
+            </Link>
+          </div>
+        </div>
+      </SectionShell>
+
+      <SectionShell id="recovery-system" eyebrow="Paid product">
+        <div className="grid gap-7 lg:grid-cols-[0.78fr_1.22fr] lg:items-start">
+          <SectionHeading
+            title="The audit is the doorway. Quote Reclaim is the recovery system."
+            body="The audit gives you the first move. The app helps you keep working sent estimates after that - follow-up order, message sequences, crew-gap opportunities, and wins."
+          />
+          <SystemPreview />
+        </div>
+      </SectionShell>
+
+      <SectionShell id="silent-quote-command" eyebrow="Command center">
+        <div className="grid gap-7 lg:grid-cols-[0.82fr_1.18fr] lg:items-start">
+          <SectionHeading
+            title="Silent Quote Command"
+            body="See which estimate deserves attention today. No guessing. No digging through old texts. No 'I'll follow up later.' Quote Reclaim gives every quiet estimate a next move."
+          />
+          <CommandTable />
+        </div>
+      </SectionShell>
+
+      <SectionShell id="sequence" eyebrow="Recovery sequence">
+        <div className="grid gap-7 lg:grid-cols-[0.8fr_1.2fr] lg:items-start">
+          <SectionHeading
+            title="Do not stop after one follow-up."
+            body="Copy, send, and mark progress. The sequence keeps the next message ready so the estimate does not disappear after one try."
+          />
+          <ol className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+            {sequenceSteps.map((step) => (
+              <li
+                key={step.day}
+                className="rounded-2xl border border-line-subtle bg-surface-1 p-4"
+              >
+                <p className="text-xs font-black uppercase tracking-widest text-brand">
+                  {step.day}
+                </p>
+                <h3 className="mt-3 text-base font-black text-ink-strong">
+                  {step.title}
+                </h3>
+                <p className="mt-2 text-sm leading-6 text-ink-muted">
+                  {step.body}
+                </p>
+              </li>
+            ))}
+          </ol>
+        </div>
+      </SectionShell>
+
+      <SectionShell id="crew-gap-rescue" eyebrow="Crew Gap Rescue">
+        <div className="grid gap-7 lg:grid-cols-[0.82fr_1.18fr] lg:items-center">
+          <SectionHeading
+            title="Got an open crew day? Start with estimates you already sent."
+            body="When next week has a gap, Quote Reclaim helps you find the quiet estimate most worth reopening to fill the schedule."
+          />
+          <CrewGapPreview />
+        </div>
+      </SectionShell>
+
+      <SectionShell id="got-the-job" eyebrow="Win loop">
+        <div className="grid gap-7 lg:grid-cols-[0.86fr_1.14fr] lg:items-center">
+          <SectionHeading
+            title="Mark the wins. See what came back."
+            body="When a quiet estimate turns into booked work, mark it as Got the Job. Quote Reclaim helps you see which follow-ups created real revenue."
+          />
+          <GotJobPreview />
+        </div>
+      </SectionShell>
+
+      <SectionShell id="not-crm" eyebrow="Focused by design">
+        <div className="grid gap-7 lg:grid-cols-[0.78fr_1.22fr] lg:items-start">
+          <SectionHeading
+            title="Not another CRM. Not another estimating app."
+            body="Keep Jobber, Housecall Pro, DripJobs, spreadsheets, or whatever you already use. Quote Reclaim only focuses on one expensive leak: sent estimates that go quiet."
+          />
+          <div className="grid gap-3 md:grid-cols-3">
+            {comparison.map((column) => (
+              <article
+                key={column.label}
+                className={`rounded-2xl border p-4 ${
+                  column.label === "Quote Reclaim"
+                    ? "border-brand/45 bg-brand/10"
+                    : "border-line-subtle bg-surface-1"
+                }`}
+              >
+                <h3 className="text-sm font-black uppercase tracking-widest text-ink-strong">
+                  {column.label}
+                </h3>
+                <ul className="mt-4 space-y-2 text-sm leading-6 text-ink-muted">
+                  {column.points.map((point) => (
+                    <li key={point} className="flex gap-2">
+                      <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-brand" />
+                      <span>{point}</span>
+                    </li>
+                  ))}
+                </ul>
+              </article>
+            ))}
+          </div>
+        </div>
+      </SectionShell>
+
+      <SectionShell id="trades" eyebrow="Home services">
+        <div className="grid gap-7 lg:grid-cols-[0.78fr_1.22fr] lg:items-start">
+          <SectionHeading
+            title="Built for estimate-heavy home services."
+            body="Quote Reclaim is strongest when a contractor sends estimates often and quiet follow-up can decide whether work books or disappears."
+          />
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {trades.map(([trade, reason]) => (
+              <article
+                key={trade}
+                className="rounded-2xl border border-line-subtle bg-surface-1 p-4"
+              >
+                <h3 className="font-black text-ink-strong">{trade}</h3>
+                <p className="mt-2 text-sm leading-6 text-ink-muted">{reason}</p>
+              </article>
+            ))}
+          </div>
+        </div>
+      </SectionShell>
+
+      <SectionShell id="price-math" eyebrow="Price math">
+        <div className="grid gap-7 lg:grid-cols-[0.8fr_1.2fr] lg:items-center">
+          <SectionHeading
+            title="One recovered job can make the math obvious."
+            body="Quote Reclaim is $49/month. One recovered $2,500 job can cover more than 4 years of Quote Reclaim."
+          />
+          <div className="rounded-2xl border border-money/35 bg-money/10 p-5 sm:p-6">
+            <div className="grid gap-4 sm:grid-cols-3">
+              <MetricBlock label="Plan" value="$49/mo" />
+              <MetricBlock label="Example job" value="$2,500" />
+              <MetricBlock label="Simple math" value="4+ years" />
+            </div>
+            <p className="mt-5 text-sm leading-6 text-ink-muted">
+              No software can promise a job back. The point is simple: if
+              even one quiet estimate comes back, the math is easy.
+            </p>
+            <Link
+              href="/audit"
+              className="mt-5 inline-flex min-h-11 items-center justify-center gap-2 rounded-lg border border-brand bg-brand px-4 py-2 text-sm font-bold text-canvas transition hover:bg-brand-dark focus:outline-none focus-visible:ring-2 focus-visible:ring-focus"
+            >
+              Run the free audit
+              <ArrowRight className="h-4 w-4" aria-hidden="true" />
+            </Link>
+          </div>
+        </div>
+      </SectionShell>
+
+      <SectionShell id="faq" eyebrow="Straight answers">
+        <div className="grid gap-7 lg:grid-cols-[0.78fr_1.22fr] lg:items-start">
+          <SectionHeading
+            title="What contractors usually need to know first."
+            body="Short answers, no invented proof, no promise that software can make every estimate come back."
+          />
+          <div className="grid gap-3">
+            {faqs.map((item) => (
+              <article
+                key={item.q}
+                className="rounded-2xl border border-line-subtle bg-surface-1 p-4"
+              >
+                <h3 className="font-black text-ink-strong">{item.q}</h3>
+                <p className="mt-2 text-sm leading-6 text-ink-muted">{item.a}</p>
+              </article>
+            ))}
+          </div>
+        </div>
+      </SectionShell>
+
+      <section className="mx-auto w-full max-w-6xl px-4 pb-10 pt-4 sm:px-6 lg:px-8">
+        <div className="rounded-3xl border border-brand/35 bg-surface-1 p-6 sm:p-8">
+          <div className="grid gap-5 lg:grid-cols-[1fr_auto] lg:items-end">
+            <div>
+              <p className="text-xs font-black uppercase tracking-widest text-brand">
+                Start with the estimates already sent
+              </p>
+              <h2 className="mt-3 max-w-3xl text-balance text-3xl font-black leading-tight text-ink-strong sm:text-4xl">
+                Before buying another lead, check the estimates you already sent.
+              </h2>
+              <p className="mt-3 text-sm font-semibold text-ink-muted">
+                No names. No phone numbers. No card. See your result first.
+              </p>
+            </div>
+            <Link
+              href="/audit"
+              className="inline-flex min-h-12 items-center justify-center gap-2 rounded-lg border border-brand bg-brand px-5 py-3 text-base font-semibold text-canvas transition hover:bg-brand-dark focus:outline-none focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2 focus-visible:ring-offset-canvas"
+            >
+              Run the free estimate audit
+              <ArrowRight className="h-4 w-4" aria-hidden="true" />
+            </Link>
+          </div>
+        </div>
+      </section>
+
+      <footer className="mx-auto flex w-full max-w-6xl flex-wrap items-center justify-between gap-x-4 gap-y-3 border-t border-line-subtle/80 px-4 py-6 text-sm text-ink-muted sm:px-6 lg:px-8">
+        <p>
+          Quote Reclaim helps contractors turn sent estimates into booked work.
+          Not lead generation. Not scheduling software.
+        </p>
+        <nav
+          aria-label="Legal"
+          className="flex flex-wrap items-center gap-x-3 gap-y-1"
+        >
+          <Link href="/terms" className="rounded hover:text-ink-strong focus:outline-none focus-visible:ring-2 focus-visible:ring-focus">
+            Terms
+          </Link>
+          <span aria-hidden="true">-</span>
+          <Link href="/privacy" className="rounded hover:text-ink-strong focus:outline-none focus-visible:ring-2 focus-visible:ring-focus">
+            Privacy
+          </Link>
+          <span aria-hidden="true">-</span>
+          <Link href="/refund-policy" className="rounded hover:text-ink-strong focus:outline-none focus-visible:ring-2 focus-visible:ring-focus">
+            Refund Policy
+          </Link>
+          <span aria-hidden="true">-</span>
+          <Link href="/cancellation-policy" className="rounded hover:text-ink-strong focus:outline-none focus-visible:ring-2 focus-visible:ring-focus">
+            Cancellation
+          </Link>
+          <span aria-hidden="true">-</span>
+          <Link href="/contact" className="rounded hover:text-ink-strong focus:outline-none focus-visible:ring-2 focus-visible:ring-focus">
+            Contact
+          </Link>
+        </nav>
+      </footer>
     </main>
   );
 }
 
-function ProductPreview() {
+function HeroProductPreview() {
   return (
     <div
       id="how-it-works"
-      className="min-w-0 scroll-mt-8 rounded-lg border border-line-subtle bg-surface-1 shadow-[0_28px_90px_rgba(0,0,0,0.42)]"
+      className="min-w-0 rounded-3xl border border-line-subtle bg-surface-1 shadow-[0_26px_80px_rgba(0,0,0,0.32)]"
     >
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-line-subtle px-4 py-3 sm:px-5">
-        <Badge variant="money">EXAMPLE PREVIEW · NOT YOUR DATA</Badge>
-        <span className="text-xs font-semibold uppercase tracking-widest text-ink-muted">
-          Money Sitting Quiet
+        <Badge variant="money">SAMPLE PREVIEW - NOT CUSTOMER DATA</Badge>
+        <span className="text-xs font-black uppercase tracking-widest text-ink-muted">
+          Recovery command center
         </span>
       </div>
-
       <div className="grid gap-4 p-4 sm:p-5">
-        <div className="grid gap-4 lg:grid-cols-[1.1fr_0.9fr]">
-          <div className="rounded-lg border border-warning/35 bg-warning/10 p-5">
-            <p className="text-xs font-bold uppercase tracking-widest text-warning">
-              Money on the Table
-            </p>
-            <p className="mt-2 text-5xl font-black tracking-tight text-ink-strong tabular-nums sm:text-6xl">
-              $47,200
-            </p>
-            <p className="mt-2 break-words text-sm text-ink-muted sm:max-w-sm">
-              Twelve quiet estimates still have a dollar value and a next move.
-            </p>
-          </div>
-
-          <div className="rounded-lg border border-danger/40 bg-danger/10 p-5">
-            <div className="flex items-center gap-2">
-              <ShieldAlert className="h-5 w-5 text-danger" aria-hidden="true" />
-              <p className="text-xs font-bold uppercase tracking-widest text-danger">
-                Going Cold Alert
-              </p>
-            </div>
-            <p className="mt-3 break-words text-2xl font-black text-ink-strong">
-              An $8,500 roof quote is going cold fast.
-            </p>
-            <p className="mt-2 break-words text-sm text-ink-muted">
-              9 days without a reply. Open the plan before the job goes cold.
-            </p>
-          </div>
+        <div className="grid gap-3 sm:grid-cols-[1fr_0.85fr]">
+          <PreviewPanel label="Silent Quote Command" value="$14,500" body="total quiet estimate value" />
+          <PreviewPanel label="Follow up first" value="Estimate #3" body="$9,000 - Warm" tone="brand" />
         </div>
-
-        <div className="rounded-lg border border-line-subtle bg-surface-2 p-4">
-          <div className="flex flex-wrap items-start justify-between gap-3">
-            <div className="min-w-0">
-              <p className="text-xs font-bold uppercase tracking-widest text-ink-muted">
-                Sample Quote Card
-              </p>
-              <h2 className="mt-1 break-words text-base font-bold text-ink-strong sm:text-xl">
-                Martin Alvarez · Roofing · Tampa, FL
-              </h2>
-              <p className="mt-1 text-sm text-ink-muted">9 days quiet · $8,500</p>
-            </div>
-            <Badge variant="warning">High Priority</Badge>
-          </div>
-
-          <div className="mt-4 grid gap-3 sm:grid-cols-3">
-            <PreviewStat
-              icon={<AlertTriangle className="h-4 w-4" aria-hidden="true" />}
-              label="Priority"
-              value="87"
-              tone="text-warning"
-            />
-            <PreviewStat
-              icon={<ClipboardList className="h-4 w-4" aria-hidden="true" />}
-              label="Next move"
-              value="Call today"
-              tone="text-brand"
-            />
-            <PreviewStat
-              icon={<CheckCircle2 className="h-4 w-4" aria-hidden="true" />}
-              label="Price check"
-              value="In range"
-              tone="text-money"
-            />
-          </div>
+        <div className="rounded-2xl border border-line-subtle bg-canvas/55 p-4">
+          <p className="text-xs font-black uppercase tracking-widest text-brand">
+            Message to send today
+          </p>
+          <p className="mt-2 break-words text-sm leading-6 text-ink-strong">
+            Quick check - is this project still on your list, or should I close
+            the estimate on my side?
+          </p>
+        </div>
+        <div className="grid gap-3 sm:grid-cols-3">
+          <MiniStatus label="5-message sequence" value="Follow-up 1 ready" />
+          <MiniStatus label="Crew gap match" value="Thu opening" />
+          <MiniStatus label="Got the job?" value="Mark win" />
         </div>
       </div>
     </div>
   );
 }
 
-function PreviewStat({
-  icon,
+function PreviewPanel({
   label,
   value,
-  tone,
+  body,
+  tone = "money",
 }: {
-  icon: ReactNode;
   label: string;
   value: string;
-  tone: string;
+  body: string;
+  tone?: "money" | "brand";
+}) {
+  const toneClass = tone === "money" ? "text-money" : "text-brand";
+  return (
+    <section className="rounded-2xl border border-line-subtle bg-canvas/55 p-4">
+      <p className="text-xs font-black uppercase tracking-widest text-ink-muted">
+        {label}
+      </p>
+      <p className={`mt-2 break-words text-3xl font-black ${toneClass}`}>
+        {value}
+      </p>
+      <p className="mt-1 break-words text-sm text-ink-muted">{body}</p>
+    </section>
+  );
+}
+
+function MiniStatus({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-xl border border-line-subtle bg-surface-2 p-3">
+      <p className="text-[10px] font-black uppercase tracking-widest text-ink-muted">
+        {label}
+      </p>
+      <p className="mt-2 break-words text-sm font-black text-ink-strong">
+        {value}
+      </p>
+    </div>
+  );
+}
+
+function SectionShell({
+  id,
+  eyebrow,
+  children,
+}: {
+  id: string;
+  eyebrow: string;
+  children: ReactNode;
 }) {
   return (
-    <div className="rounded-lg border border-line-subtle bg-canvas/45 p-3">
-      <div className={`flex items-center gap-2 ${tone}`}>
-        {icon}
-        <p className="text-xs font-semibold uppercase tracking-widest">{label}</p>
-      </div>
-      <p className="mt-2 text-xl font-black text-ink-strong">{value}</p>
+    <section
+      id={id}
+      className="mx-auto w-full max-w-6xl scroll-mt-8 border-t border-line-subtle/80 px-4 py-10 sm:px-6 lg:px-8 lg:py-14"
+    >
+      <p className="mb-5 text-xs font-black uppercase tracking-widest text-brand">
+        {eyebrow}
+      </p>
+      {children}
+    </section>
+  );
+}
+
+function SectionHeading({ title, body }: { title: string; body: string }) {
+  return (
+    <div className="min-w-0">
+      <h2 className="text-balance text-2xl font-black leading-tight text-ink-strong sm:text-3xl">
+        {title}
+      </h2>
+      <p className="mt-3 max-w-xl break-words text-sm leading-7 text-ink-muted sm:text-base">
+        {body}
+      </p>
     </div>
   );
 }
 
-function CrewGapRescueBlock() {
+function SignalCard({
+  icon,
+  title,
+  body,
+}: {
+  icon: ReactNode;
+  title: string;
+  body: string;
+}) {
   return (
-    <section
-      id="crew-gap-rescue"
-      aria-label="Crew Gap Rescue"
-      className="mb-8 scroll-mt-8 rounded-lg border border-brand/35 bg-surface-1 p-5 shadow-[0_16px_46px_rgba(0,0,0,0.18)] sm:p-6"
-    >
-      <div className="grid gap-6 lg:grid-cols-[1fr_0.9fr] lg:items-center">
-        <div className="min-w-0">
-          <p className="text-xs font-black uppercase tracking-widest text-brand">
-            Crew Gap Rescue
-          </p>
-          <h2 className="mt-2 text-balance text-2xl font-black leading-tight text-ink-strong sm:text-3xl">
-            Fill the open day from quotes you already sent.
-          </h2>
-          <p className="mt-3 max-w-xl text-sm leading-7 text-ink">
-            Enter the crew slot you need to fill. Quote Reclaim points at the
-            quiet estimate most worth reopening for that day, then gives you
-            the message to send.
-          </p>
-        </div>
-        <div className="rounded-lg border border-brand/30 bg-brand/10 p-4">
-          <div className="flex items-center gap-2 text-brand">
-            <CalendarClock className="h-5 w-5" aria-hidden="true" />
-            <p className="text-[11px] font-black uppercase tracking-widest">
-              Next Thursday is open
-            </p>
+    <article className="rounded-2xl border border-line-subtle bg-surface-1 p-4">
+      <div className="text-brand">{icon}</div>
+      <h3 className="mt-3 font-black text-ink-strong">{title}</h3>
+      <p className="mt-2 text-sm leading-6 text-ink-muted">{body}</p>
+    </article>
+  );
+}
+
+function SystemPreview() {
+  return (
+    <div className="grid gap-3 sm:grid-cols-2">
+      <SystemCard
+        icon={<ClipboardList className="h-5 w-5" aria-hidden="true" />}
+        title="Follow-up order"
+        body="See which quiet estimate deserves attention first, second, and last."
+      />
+      <SystemCard
+        icon={<MessageSquareText className="h-5 w-5" aria-hidden="true" />}
+        title="Message sequences"
+        body="Keep the next message ready without making every follow-up sound the same."
+      />
+      <SystemCard
+        icon={<CalendarClock className="h-5 w-5" aria-hidden="true" />}
+        title="Crew-gap opportunities"
+        body="When the schedule opens up, start with estimates you already sent."
+      />
+      <SystemCard
+        icon={<Trophy className="h-5 w-5" aria-hidden="true" />}
+        title="Wins"
+        body="Mark Got the Job when a quiet estimate turns into booked work."
+      />
+    </div>
+  );
+}
+
+function SystemCard({
+  icon,
+  title,
+  body,
+}: {
+  icon: ReactNode;
+  title: string;
+  body: string;
+}) {
+  return (
+    <article className="rounded-2xl border border-line-subtle bg-surface-1 p-4">
+      <div className="text-brand">{icon}</div>
+      <h3 className="mt-3 font-black text-ink-strong">{title}</h3>
+      <p className="mt-2 text-sm leading-6 text-ink-muted">{body}</p>
+    </article>
+  );
+}
+
+function CommandTable() {
+  return (
+    <div className="overflow-hidden rounded-2xl border border-line-subtle bg-surface-1">
+      <div className="grid grid-cols-2 gap-2 border-b border-line-subtle px-4 py-3 text-xs font-black uppercase tracking-widest text-ink-muted sm:grid-cols-5">
+        <span>Estimate</span>
+        <span>Days quiet</span>
+        <span className="hidden sm:block">Recovery window</span>
+        <span className="hidden sm:block">Next move</span>
+        <span>Status</span>
+      </div>
+      <div className="divide-y divide-line-subtle">
+        {commandRows.map((row) => (
+          <div
+            key={row.estimate}
+            className="grid grid-cols-2 gap-2 px-4 py-4 text-sm sm:grid-cols-5"
+          >
+            <span className="font-black text-ink-strong">{row.estimate}</span>
+            <span className="text-ink-muted">{row.age}</span>
+            <span className="text-money">{row.window}</span>
+            <span className="font-semibold text-brand">{row.next}</span>
+            <span className="text-ink-muted">{row.status}</span>
           </div>
-          <dl className="mt-4 grid gap-3 sm:grid-cols-3 lg:grid-cols-1">
-            <CrewGapStat label="Open crew day" value="Thu - Jun 25" />
-            <CrewGapStat label="Best quiet quote" value="$8,500 roof" />
-            <CrewGapStat label="Next move" value="Reopen today" />
-          </dl>
-          <p className="mt-4 text-xs leading-6 text-ink-muted">
-            Not lead gen. Not a CRM. Just the quiet quote most likely to put a
-            crew back on the calendar.
-          </p>
+        ))}
+      </div>
+      <div className="border-t border-line-subtle bg-canvas/45 p-4">
+        <p className="text-xs font-black uppercase tracking-widest text-brand">
+          Message to send today
+        </p>
+        <p className="mt-2 break-words text-sm leading-6 text-ink-strong">
+          I wanted to check back on the estimate I sent. Is this still active,
+          or should I close it out for now?
+        </p>
+        <div className="mt-4 flex flex-wrap gap-2">
+          <Badge variant="brand">Copy</Badge>
+          <Badge variant="money">Send today</Badge>
+          <Badge variant="success">Got the Job action</Badge>
         </div>
       </div>
-    </section>
-  );
-}
-
-function CrewGapStat({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="rounded-md border border-brand/20 bg-canvas/45 p-3">
-      <dt className="text-[10px] font-bold uppercase tracking-widest text-ink-muted">
-        {label}
-      </dt>
-      <dd className="mt-1 text-sm font-black text-ink-strong">{value}</dd>
     </div>
   );
 }
 
-function OneTapReplyBlock() {
+function CrewGapPreview() {
   return (
-    <section
-      aria-label="One-Tap Reply"
-      className="mb-8 rounded-lg border border-line-subtle bg-surface-1 p-5 shadow-[0_16px_46px_rgba(0,0,0,0.18)] sm:p-6"
-    >
-      <div className="grid gap-6 lg:grid-cols-[1fr_0.9fr] lg:items-center">
-        <div className="min-w-0">
-          <p className="text-xs font-black uppercase tracking-widest text-brand">
-            One-Tap Reply
-          </p>
-          <h2 className="mt-2 text-balance text-2xl font-black leading-tight text-ink-strong sm:text-3xl">
-            Turn silence into a yes, a question, or a clean no.
-          </h2>
-          <p className="mt-3 max-w-md text-sm leading-7 text-ink">
-            Give customers a simple way to reply to the estimate without
-            writing a full email.
-          </p>
-        </div>
-        <div className="rounded-md border border-line-subtle bg-canvas/45 p-4">
-          <p className="text-[11px] font-bold uppercase tracking-widest text-ink-muted">
-            Example
-          </p>
-          <p className="mt-2 text-sm text-ink-strong">
-            <span className="font-bold">John</span> tapped:{" "}
-            <span className="text-brand">&ldquo;I have one question&rdquo;</span>
-          </p>
-          <p className="mt-1 text-xs text-ink-muted">
-            Reply Radar: Price concern · Next move: Send answer
-          </p>
-        </div>
+    <div className="rounded-2xl border border-brand/35 bg-brand/10 p-5">
+      <div className="flex items-center gap-2 text-brand">
+        <CalendarClock className="h-5 w-5" aria-hidden="true" />
+        <p className="text-xs font-black uppercase tracking-widest">
+          Open crew day
+        </p>
       </div>
-    </section>
+      <div className="mt-5 grid gap-3 sm:grid-cols-2">
+        <MetricBlock label="Open day" value="Thu, Jun 25" />
+        <MetricBlock label="Best estimate to reopen" value="$9,000" />
+        <MetricBlock label="Suggested message" value="Can we still help?" />
+        <MetricBlock label="Reason" value="Warm + high value" />
+      </div>
+      <p className="mt-4 text-sm leading-6 text-ink-muted">
+        Start with the quiet estimate most likely to put a crew back on the
+        calendar.
+      </p>
+    </div>
+  );
+}
+
+function GotJobPreview() {
+  return (
+    <div className="rounded-2xl border border-money/35 bg-money/10 p-5">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <p className="text-xs font-black uppercase tracking-widest text-money">
+            Recovery status
+          </p>
+          <h3 className="mt-2 text-2xl font-black text-ink-strong">
+            Quiet estimate booked
+          </h3>
+        </div>
+        <span className="rounded-lg border border-money/40 bg-canvas/50 px-4 py-2 text-sm font-black text-money">
+          Got the Job
+        </span>
+      </div>
+      <div className="mt-5 grid gap-3 sm:grid-cols-3">
+        <MetricBlock label="Started" value="Warm quote" />
+        <MetricBlock label="Sent" value="Follow-up 2" />
+        <MetricBlock label="Recovered value" value="$4,000" />
+      </div>
+    </div>
+  );
+}
+
+function MetricBlock({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-xl border border-line-subtle bg-canvas/50 p-4">
+      <p className="text-[10px] font-black uppercase tracking-widest text-ink-muted">
+        {label}
+      </p>
+      <p className="mt-2 break-words text-lg font-black text-ink-strong">
+        {value}
+      </p>
+    </div>
   );
 }

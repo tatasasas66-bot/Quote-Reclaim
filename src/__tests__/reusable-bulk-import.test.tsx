@@ -78,9 +78,9 @@ describe("first-session routing", () => {
     );
   });
 
-  it("the homepage CTA preserves /onboarding/reveal through the auth gate", () => {
-    expect(homepageSrc).toMatch(/href="\/onboarding\/reveal"/);
-    expect(homepageSrc).toMatch(/Run the Free Quiet Quote Audit/);
+  it("the homepage CTA opens the public /audit doorway", () => {
+    expect(homepageSrc).toMatch(/href="\/audit"/);
+    expect(homepageSrc).toMatch(/Run the free estimate audit/);
   });
 
   it("the /onboarding/reveal page itself uses requireUser + sign-up next= so a homepage clicker lands back here after auth", () => {
@@ -412,13 +412,15 @@ function collectProductionSources(dir: string): string[] {
 const productionFiles = collectProductionSources(PRODUCTION_SRC_ROOT);
 
 describe("regression — homepage, support email, no Lemon, no dead checkout, no banned phrases", () => {
-  it("homepage H1 unchanged", () => {
-    expect(homepageSrc).toContain("You already priced the job.");
-    expect(homepageSrc).toContain("Now find the quotes still worth chasing.");
+  it("homepage H1 uses the sent-estimates-before-leads positioning", () => {
+    expect(homepageSrc).toContain(
+      "Turn sent estimates into booked work before buying another lead.",
+    );
   });
 
-  it("homepage CTA unchanged", () => {
-    expect(homepageSrc).toContain("Run the Free Quiet Quote Audit");
+  it("homepage CTA uses the public audit doorway", () => {
+    expect(homepageSrc).toContain("Run the free estimate audit");
+    expect(homepageSrc).toContain('href="/audit"');
   });
 
   it("support@quotereclaim.com remains the public support email", () => {

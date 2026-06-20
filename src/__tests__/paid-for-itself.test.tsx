@@ -196,9 +196,9 @@ describe("dashboard wires the meter to real queue data only", () => {
 // ───────────────────────────────────────────────────────────────────────
 
 describe("homepage trust line states the free start next to the price", () => {
-  it("price anchor now carries 'first 3 quotes free, no card needed'", () => {
+  it("price anchor carries $49 and the honest recovered-job math", () => {
     expect(homepageSrc).toContain("$49/month");
-    expect(homepageSrc).toMatch(/first 3\s+quotes free, no card needed/);
-    expect(homepageSrc).toMatch(/No learning curve\./);
+    expect(homepageSrc).toMatch(/One recovered \$2,500 job can cover more than 4 years of Quote Reclaim\./);
+    expect(homepageSrc).toMatch(/No software can promise a job back/);
   });
 });
