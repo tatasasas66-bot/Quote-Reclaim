@@ -184,14 +184,14 @@ describe("the specific tone-pass replacements are present in the variant set", (
 
   it("Day 1 v3 reads as a plain contractor ask (no 'in the way' conditional)", () => {
     const msg = SEQUENCE_VARIANTS[1][3](sampleVars);
-    expect(msg).toMatch(/Anything you want me to clarify or break down\?/);
+    expect(msg).toMatch(/Is the blocker scope, timing, total, or something else\?/);
     expect(msg).not.toMatch(/in the way/i);
   });
 
   it("Day 7 v4 is the safer scope-phasing ask, no Voss frame", () => {
     const msg = SEQUENCE_VARIANTS[7][4](sampleVars);
     expect(msg).toMatch(
-      /If the roofing estimate is more than you want to tackle at once, I can phase it cleanly\. Want me to outline it\?/,
+      /If the roofing estimate is more than you want to tackle at once, I can phase it without cutting corners\. Want me to outline it\?/,
     );
     expect(msg).not.toMatch(/Have you given up on/i);
   });

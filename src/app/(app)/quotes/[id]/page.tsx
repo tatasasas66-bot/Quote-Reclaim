@@ -84,23 +84,22 @@ function replyRescuePaths(quote: QuoteRow): ReplyRescuePath[] {
     {
       label: "Interested",
       trigger: "Yes / still interested",
-      response: `Great. Want me to keep ${project} as-is, or should we adjust timing before you decide?`,
+      response: `Great. Want me to keep ${project} as written, or adjust timing before you decide?`,
     },
     {
       label: "Price concern",
       trigger: "It feels high",
-      response:
-        "Totally fair. Want me to walk through what drives the total and what parts are optional without cutting corners?",
+      response: `Totally fair. I can split ${project} into must-do, optional, and later so you can see what drives the total. Want that?`,
     },
     {
       label: "Timing delay",
       trigger: "Need to wait",
-      response: `No problem. Should I pause ${project} and check back later, or close it for now?`,
+      response: `No problem. Should I pause ${project} and check back later, or close it out for now?`,
     },
     {
       label: "Went another way",
       trigger: "Chose someone else",
-      response: `Thanks for letting me know. I'll close ${project} on my end. Appreciate the chance to price it.`,
+      response: `Thanks for letting me know. I'll close ${project} on my end and keep the door open if anything changes.`,
     },
   ];
 }
@@ -153,6 +152,27 @@ function commandStatusLabel(status: RecoveryStatus): string {
     case "running":
     default:
       return "Running";
+  }
+}
+
+function commandPriorityLabel(label: string): string {
+  if (label.toLowerCase() === "critical") return "Move today";
+  if (label.toLowerCase() === "at risk") return "Work next";
+  return label;
+}
+
+function commandMoveInstruction(move: NextMove): string | null {
+  switch (move.kind) {
+    case "none":
+      return null;
+    case "email-queued":
+      return move.canSendEarly
+        ? `Scheduled for ${move.sendAtLabel}. Send it today if you want to move now.`
+        : `Scheduled for ${move.sendAtLabel}. It will send on schedule.`;
+    case "email-due":
+      return "Ready now. Send it today, or let the scheduled email handle it.";
+    case "manual-ready":
+      return `Ready to copy. Send follow-up ${move.followupNumber} from your phone or email today.`;
   }
 }
 
@@ -382,7 +402,7 @@ function CommandActionPanel({
   const metaLine = tradeLocationLine(quote.trade, quote.city, quote.state);
   const daysQuiet = effectiveDaysSilent(quote);
   const score = getRecoveryScore(quote);
-  const instruction = nextMoveInstruction(move);
+  const instruction = commandMoveInstruction(move);
   const messageType: "email" | "sms" =
     activeReminder?.message_type === "email" ? "email" : "sms";
   const hasRecipientForChannel = messageType === "email" ? hasEmail : hasPhone;
@@ -402,6 +422,9 @@ function CommandActionPanel({
     : hasReplyForQuote
       ? "Reply first"
       : commandStatusLabel(status);
+  const commandLine = activeReminder
+    ? "Send this today. If they answer with interest, price, timing, or no, the next reply is already ready."
+    : "Work the quote from one place: money, status, next move, and reply handling.";
   const rescuePaths = replyRescuePaths(quote);
 
   return (
@@ -419,9 +442,17 @@ function CommandActionPanel({
             id="quote-command-heading"
             className="mt-2 text-3xl font-black leading-tight text-ink-strong sm:text-4xl"
           >
-            {activeReminder ? `Send this to ${displayName}` : `Work ${displayName}`}
+            {activeReminder ? "Send this today" : `Work ${displayName}`}
           </h1>
-          <p className="mt-2 break-words text-sm text-ink-muted">{metaLine}</p>
+          <p className="mt-2 break-words text-sm text-ink-muted">
+            {displayName} · {metaLine}
+          </p>
+          <p
+            data-testid="quote-command-promise"
+            className="mt-3 max-w-2xl text-base font-semibold leading-7 text-ink-strong"
+          >
+            {commandLine}
+          </p>
         </div>
 
         <div className="grid grid-cols-2 gap-3 sm:min-w-[280px]">
@@ -444,11 +475,11 @@ function CommandActionPanel({
         </div>
       </div>
 
-      <div className="grid gap-5 p-5 sm:p-6 lg:grid-cols-[minmax(0,1fr)_220px]">
+      <div className="p-5 sm:p-6">
         <div className="min-w-0">
           <div className="flex flex-wrap gap-2">
             <span className="rounded-full border border-line-subtle bg-canvas/35 px-3 py-1 text-xs font-bold text-ink">
-              Priority: {score.label}
+              Priority: {commandPriorityLabel(score.label)}
             </span>
             <span className="rounded-full border border-line-subtle bg-canvas/35 px-3 py-1 text-xs font-bold text-ink">
               Status: {commandStatusLabel(status)}
@@ -461,7 +492,7 @@ function CommandActionPanel({
           {activeReminder ? (
             <div className="mt-4 rounded-lg border border-line-subtle bg-canvas/40 p-4">
               <p className="text-xs font-black uppercase tracking-widest text-brand">
-                Recommended message
+                Message to send
               </p>
               {instruction ? (
                 <p className="mt-2 text-sm leading-6 text-ink-muted">
@@ -474,6 +505,23 @@ function CommandActionPanel({
               >
                 {activeReminder.message_text}
               </p>
+              <div
+                data-testid="quote-command-actions"
+                className="mt-4 flex flex-wrap gap-2"
+              >
+                {showSendToday ? (
+                  <SendEarlyButton
+                    reminderId={activeReminder.id}
+                    followupNumber={activeReminder.followup_number}
+                    disabled={sendDisabled}
+                    messageType={messageType}
+                    variant="primary"
+                    size="lg"
+                    fullWidth
+                  />
+                ) : null}
+                <CopyButton text={activeReminder.message_text} label="Copy" />
+              </div>
               <p
                 data-testid="quote-command-reason"
                 className="mt-3 text-sm leading-6 text-ink-muted"
@@ -487,17 +535,21 @@ function CommandActionPanel({
               >
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <p className="text-xs font-black uppercase tracking-widest text-brand">
-                    If they reply
+                    Reply playbook
                   </p>
                   <p className="text-xs font-semibold text-ink-muted">
-                    4 likely paths
+                    4 next replies ready
                   </p>
                 </div>
+                <p className="mt-2 text-xs leading-5 text-ink-muted">
+                  Use the reply that matches what they say. No guessing, no
+                  starting over.
+                </p>
                 <div className="mt-3 grid gap-2 sm:grid-cols-2">
                   {rescuePaths.map((path) => (
                     <div
                       key={path.label}
-                      className="rounded-md border border-line-subtle bg-canvas/45 p-3"
+                      className="flex min-h-full flex-col rounded-md border border-line-subtle bg-canvas/45 p-3"
                     >
                       <p className="text-[10px] font-black uppercase tracking-widest text-ink-muted">
                         {path.trigger}
@@ -508,6 +560,9 @@ function CommandActionPanel({
                       <p className="mt-1 text-xs leading-5 text-ink-muted">
                         {path.response}
                       </p>
+                      <div className="mt-auto pt-3">
+                        <CopyButton text={path.response} label="Copy reply" />
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -520,26 +575,6 @@ function CommandActionPanel({
                 : "No follow-up is ready to send right now. Review the status below."}
             </p>
           )}
-        </div>
-
-        <div
-          data-testid="quote-command-actions"
-          className="flex flex-col justify-start gap-2 lg:items-stretch"
-        >
-          {showSendToday && activeReminder ? (
-            <SendEarlyButton
-              reminderId={activeReminder.id}
-              followupNumber={activeReminder.followup_number}
-              disabled={sendDisabled}
-              messageType={messageType}
-              variant="primary"
-              size="lg"
-              fullWidth
-            />
-          ) : null}
-          {activeReminder ? (
-            <CopyButton text={activeReminder.message_text} label="Copy" />
-          ) : null}
         </div>
       </div>
     </section>

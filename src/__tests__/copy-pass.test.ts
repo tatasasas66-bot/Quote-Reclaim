@@ -345,9 +345,9 @@ describe("Fallback messages use the uploaded SMS research sequence", () => {
 
   it("Day 7 carries only calm contractor-native Scope Rescue variants", () => {
     // The primary lower-commitment frames remain (v0 is canonical).
-    expect(aiFallbacks).toMatch(/separate the must-do work from the later pieces/);
-    expect(aiFallbacks).toMatch(/break it into now\/later options/);
-    expect(aiFallbacks).toMatch(/phase it cleanly/);
+    expect(aiFallbacks).toMatch(/split it into must-do, optional, and later/);
+    expect(aiFallbacks).toMatch(/separate what matters now from what can wait/);
+    expect(aiFallbacks).toMatch(/phase it without cutting corners/);
     // Tone safety: the verbatim Voss "Have you given up on…?" form was
     // removed — it tested high but read too sharp under a contractor's own
     // name. No variant references it now.

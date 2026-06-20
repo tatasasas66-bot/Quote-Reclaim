@@ -117,7 +117,7 @@ function LatestReplyPanel({
   if (!latestReply) {
     return (
       <p className="rounded-md border border-dashed border-line-subtle bg-canvas/40 p-3 text-sm leading-6 text-ink-muted">
-        Homeowners can reply to this estimate in one tap from the follow-up
+        Customers can reply to this estimate in one tap from the follow-up
         email.
       </p>
     );

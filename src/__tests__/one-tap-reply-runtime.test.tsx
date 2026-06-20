@@ -274,7 +274,7 @@ describe("OneTapReplyCard — contractor states", () => {
     ).toBeTruthy();
     expect(
       screen.getByText(
-        /Homeowners can reply to this estimate in one tap from the follow-up email\./,
+        /Customers can reply to this estimate in one tap from the follow-up email\./,
       ),
     ).toBeTruthy();
     expect(

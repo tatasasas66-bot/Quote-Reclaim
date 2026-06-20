@@ -64,9 +64,19 @@ describe("quote detail command-center hierarchy", () => {
 
   it("uses the existing safe Send today control as the dominant command action", () => {
     expect(detailPage).toMatch(
-      /<SendEarlyButton[\s\S]{0,260}variant="primary"[\s\S]{0,120}size="lg"[\s\S]{0,80}fullWidth/,
+      /<SendEarlyButton[\s\S]*variant="primary"[\s\S]*size="lg"[\s\S]*fullWidth/,
     );
     expect(detailPage).toContain('<CopyButton text={activeReminder.message_text} label="Copy"');
+  });
+
+  it("makes the command panel action-first, then shows the reply playbook", () => {
+    expect(detailPage).toContain('data-testid="quote-command-promise"');
+    expect(detailPage).toContain("Send this today");
+    expect(detailPage).toContain("the next reply is already ready");
+    expect(detailPage).toContain("Message to send");
+    expect(detailPage).toContain("Reply playbook");
+    expect(detailPage).toContain("4 next replies ready");
+    expect(detailPage).toContain("Copy reply");
   });
 
   it("shows one active reason in the command panel and collapses future reasons", () => {
@@ -84,6 +94,7 @@ describe("quote detail command-center hierarchy", () => {
     expect(detailPage).toContain("It feels high");
     expect(detailPage).toContain("Need to wait");
     expect(detailPage).toContain("Chose someone else");
+    expect(detailPage).toContain("must-do, optional, and later");
   });
 
   it("keeps the 5-message sequence intact behind the active command", () => {

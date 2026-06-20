@@ -347,7 +347,7 @@ describe("v0 of every day stays verbatim — AI exact-match gate intact", () => 
 
   it("Day 7 v0 is the new Scope Rescue", () => {
     expect(SEQUENCE_VARIANTS[7][0](vars)).toBe(
-      "If the roofing estimate feels too big as written, I can separate the must-do work from the later pieces. Want me to lay that out?",
+      "If the roofing estimate feels too big as written, I can split it into must-do, optional, and later. Want that version?",
     );
   });
 

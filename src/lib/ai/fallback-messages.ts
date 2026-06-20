@@ -324,9 +324,9 @@ const DAY1_VARIANTS: ReadonlyArray<(v: VariantVars) => string> = [
   ({ firstName, projectDetail }) =>
     `Hey ${firstName} — I went back through ${projectDetail}. Anything in the scope, timing, or total you want me to clarify?`,
   ({ firstName, projectDetail }) =>
-    `Hey ${firstName}, I reviewed ${projectDetail} again on my end. Was anything unclear, or is there a part you want me to walk through?`,
+    `Hey ${firstName}, I reviewed ${projectDetail} again. Was the question scope, timing, total, or something else?`,
   ({ firstName, projectDetail }) =>
-    `Hey ${firstName}, I had another look at ${projectDetail}. Anything you want me to clarify or break down?`,
+    `Hey ${firstName}, I had another look at ${projectDetail}. Is the blocker scope, timing, total, or something else?`,
 ];
 
 // DAY 3 — Schedule Check. "{FirstName}, ..." opener, no greeting word.
@@ -348,15 +348,15 @@ const DAY3_VARIANTS: ReadonlyArray<(v: VariantVars) => string> = [
 // discounting or inventing urgency.
 const DAY7_VARIANTS: ReadonlyArray<(v: VariantVars) => string> = [
   ({ project }) =>
-    `If ${project} feels too big as written, I can separate the must-do work from the later pieces. Want me to lay that out?`,
+    `If ${project} feels too big as written, I can split it into must-do, optional, and later. Want that version?`,
   ({ project }) =>
-    `If ${project} needs a simpler path, I can break it into now/later options. Want me to send that view?`,
+    `If ${project} needs a simpler path, I can separate what matters now from what can wait. Want me to send that breakdown?`,
   ({ project }) =>
-    `If one part of ${project} is holding things up, I can separate that piece from the rest. Want me to map it out?`,
+    `If one part of ${project} is holding things up, I can isolate that piece and leave the rest alone. Want me to map it out?`,
   ({ project }) =>
-    `If ${project} is close but not quite right, I can show what changes and what stays the same. Want me to do that?`,
+    `If ${project} is close but not quite right, I can show the smallest clean adjustment. Want me to do that?`,
   ({ project }) =>
-    `If ${project} is more than you want to tackle at once, I can phase it cleanly. Want me to outline it?`,
+    `If ${project} is more than you want to tackle at once, I can phase it without cutting corners. Want me to outline it?`,
 ];
 
 // DAY 14 — Decision Check. Useful, never discounting. The point is not another

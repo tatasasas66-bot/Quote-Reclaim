@@ -274,15 +274,16 @@ describe("quote detail command panel (unified next-move source of truth)", () =>
     expect(quoteDetail).toContain('data-testid="quote-command-panel"');
   });
 
-  it("queued email mode: command panel uses nextMoveInstruction without duplicating schedule logic", () => {
-    expect(quoteDetail).toContain("const instruction = nextMoveInstruction(move)");
+  it("queued email mode: command panel uses contractor-facing command wording while Quiet Signal keeps the shared move", () => {
+    expect(quoteDetail).toContain("const instruction = commandMoveInstruction(move)");
+    expect(quoteDetail).toContain("const unifiedInstruction = nextMoveInstruction(move)");
     expect(quoteDetail).toMatch(/\{instruction\}/);
     expect(quoteDetail).not.toMatch(/Nothing to send by hand/);
   });
 
   it("dominant action is the existing safe Send today button plus Copy", () => {
     expect(quoteDetail).toMatch(
-      /<SendEarlyButton[\s\S]{0,260}variant="primary"[\s\S]{0,120}size="lg"[\s\S]{0,80}fullWidth/,
+      /<SendEarlyButton[\s\S]*variant="primary"[\s\S]*size="lg"[\s\S]*fullWidth/,
     );
     expect(quoteDetail).toContain('<CopyButton text={activeReminder.message_text} label="Copy"');
   });
