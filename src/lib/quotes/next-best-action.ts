@@ -20,7 +20,7 @@ export interface NextBestAction {
  *   sequence is doing its job; the old let-it-run wording read as passive
  *   permission instead of a working system)
  * - At Risk → "Send next follow-up" (rust — contractor should poke today)
- * - Critical → "Send close-the-loop today" (warning)
+ * - Critical → "Send scope rescue today" (warning)
  */
 export function nextBestAction(
   quote: QuoteRow,
@@ -35,5 +35,5 @@ export function nextBestAction(
   if (band === "at_risk") {
     return { label: "Send next follow-up", severity: "rust" };
   }
-  return { label: "Send close-the-loop today", severity: "warning" };
+  return { label: "Send scope rescue today", severity: "warning" };
 }

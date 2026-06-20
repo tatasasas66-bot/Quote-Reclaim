@@ -169,14 +169,16 @@ describe("research framework fallback sequence", () => {
     );
   });
 
-  it("Day 7 is a Close-the-Loop — no greeting, no name, easy yes/no with no pressure", () => {
+  it("Day 7 is a Scope Rescue — no greeting, no name, offers a lower-commitment path", () => {
     const ctx = SCENARIOS[0].ctx;
     const sequence = researchSequenceMessages(ctx);
     expect(sequence.day7).not.toMatch(/^Jane\b/);
     expect(sequence.day7).not.toMatch(/^(Hi|Hey)\b/);
     expect(sequence.day7).not.toContain("Jane");
-    expect(sequence.day7).toMatch(/keep .* (open|active)|leave .* open|on the board/i);
-    expect(sequence.day7).toMatch(/close it out|mark it closed/i);
+    expect(sequence.day7).toMatch(
+      /separate|break it into|phase|must-do|later pieces|holding things up|simpler path/i,
+    );
+    expect(sequence.day7).not.toMatch(/discount|cheaper|price drop/i);
   });
 
   it("omits the sender identity clause when the contractor name is unknown (no 'Contractor here' placeholder)", () => {
@@ -204,9 +206,9 @@ describe("research framework fallback sequence", () => {
         expect(plan.map((m) => m.framework)).toEqual([
           "Estimate Check",
           "Schedule Check",
-          "Close-the-Loop",
-          "Options Check",
-          "Final Closeout",
+          "Scope Rescue",
+          "Decision Check",
+          "Clean Closeout",
         ]);
       });
 
@@ -228,7 +230,7 @@ describe("research framework fallback sequence", () => {
           plan[0].message.startsWith(`Hey ${ctx.firstName},`);
         expect(day1OpensRight).toBe(true);
         expect(plan[1].message.startsWith(`${ctx.firstName},`)).toBe(true);
-        // Day 7 (Close-the-Loop) — no greeting, no name.
+        // Day 7 (Scope Rescue) — no greeting, no name.
         expect(plan[2].message).not.toMatch(new RegExp(`^(Hi|Hey)\\b`, "i"));
         expect(plan[2].message).not.toContain(ctx.firstName);
         // Day 14 + Day 30 lead with the client name like Day 3.
@@ -252,7 +254,7 @@ describe("research framework fallback sequence", () => {
           expect(item.validation.reasons).toEqual([]);
           expect(item.score).toBeGreaterThanOrEqual(FALLBACK_FLOOR_SCORE);
           expect(item.message.length).toBeLessThanOrEqual(MAX_MESSAGE_CHARS);
-          // Day 30 (followup_number 5) is the Final Closeout — declarative, 0 questions.
+          // Day 30 (followup_number 5) is the Clean Closeout — declarative, 0 questions.
           // Every other day must carry exactly one.
           const expectedQuestions = item.followup_number === 5 ? 0 : 1;
           expect((item.message.match(/\?/g) ?? []).length).toBe(expectedQuestions);
@@ -429,21 +431,21 @@ describe("generateRecoveryPlan", () => {
                     },
                     {
                       followup_number: 3,
-                      framework: "Close-the-Loop",
+                      framework: "Scope Rescue",
                       message: sequence.day7,
                       cta_type: "question",
                       confidence: 1,
                     },
                     {
                       followup_number: 4,
-                      framework: "Options Check",
+                      framework: "Decision Check",
                       message: sequence.day14,
                       cta_type: "question",
                       confidence: 1,
                     },
                     {
                       followup_number: 5,
-                      framework: "Final Closeout",
+                      framework: "Clean Closeout",
                       message: sequence.day30,
                       cta_type: "statement",
                       confidence: 1,

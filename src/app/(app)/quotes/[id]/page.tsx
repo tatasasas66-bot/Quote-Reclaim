@@ -19,6 +19,7 @@ import {
 } from "@/lib/quotes/one-tap-reply-server";
 import { isReplyIntent } from "@/lib/ai/classify-reply";
 import { suggestResponse } from "@/lib/ai/suggest-response";
+import { projectLabel } from "@/lib/ai/fallback-messages";
 import { requireUser } from "@/lib/auth/require-user";
 import { nextBestAction } from "@/lib/quotes/next-best-action";
 import {
@@ -66,10 +67,43 @@ const CADENCE_DAYS: Record<FollowupStep, number> = {
 const WHY_THIS_WORKS: Record<FollowupStep, string> = {
   1: "Asking which part to break down is easier to answer than 'any update?' — it gives them a specific, low-effort way back into the conversation.",
   2: "A schedule question has a real answer. Keep it active or set it aside is a choice they can make in five seconds without committing to the job.",
-  3: "A clear keep-it-open-or-close-it-out question makes a reply easier than more silence — and saying no is allowed, which is what makes saying anything feel safe.",
-  4: "It lowers the effort to reply. Instead of asking them to approve the whole job, it lets them point at the one piece that still needs clarification.",
+  3: "It gives them a smaller way back in than approving the whole estimate. If scope, timing, or total is the blocker, they can answer without starting over.",
+  4: "A simple active / pause / close choice turns silence into a decision without forcing a yes.",
   5: "A respectful close-out takes the pressure off both sides. The door stays open, so replying later is easy — nothing ended badly.",
 };
+
+type ReplyRescuePath = {
+  label: string;
+  trigger: string;
+  response: string;
+};
+
+function replyRescuePaths(quote: QuoteRow): ReplyRescuePath[] {
+  const project = projectLabel(quote.trade);
+  return [
+    {
+      label: "Interested",
+      trigger: "Yes / still interested",
+      response: `Great. Want me to keep ${project} as-is, or should we adjust timing before you decide?`,
+    },
+    {
+      label: "Price concern",
+      trigger: "It feels high",
+      response:
+        "Totally fair. Want me to walk through what drives the total and what parts are optional without cutting corners?",
+    },
+    {
+      label: "Timing delay",
+      trigger: "Need to wait",
+      response: `No problem. Should I pause ${project} and check back later, or close it for now?`,
+    },
+    {
+      label: "Went another way",
+      trigger: "Chose someone else",
+      response: `Thanks for letting me know. I'll close ${project} on my end. Appreciate the chance to price it.`,
+    },
+  ];
+}
 
 function computeStatus(
   quote: QuoteRow,
@@ -368,6 +402,7 @@ function CommandActionPanel({
     : hasReplyForQuote
       ? "Reply first"
       : commandStatusLabel(status);
+  const rescuePaths = replyRescuePaths(quote);
 
   return (
     <section
@@ -446,6 +481,37 @@ function CommandActionPanel({
                 <span className="font-semibold text-ink">Why this works:</span>{" "}
                 {WHY_THIS_WORKS[activeReminder.followup_number as FollowupStep]}
               </p>
+              <div
+                data-testid="reply-rescue-paths"
+                className="mt-4 rounded-lg border border-brand/25 bg-brand/5 p-3"
+              >
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <p className="text-xs font-black uppercase tracking-widest text-brand">
+                    If they reply
+                  </p>
+                  <p className="text-xs font-semibold text-ink-muted">
+                    4 likely paths
+                  </p>
+                </div>
+                <div className="mt-3 grid gap-2 sm:grid-cols-2">
+                  {rescuePaths.map((path) => (
+                    <div
+                      key={path.label}
+                      className="rounded-md border border-line-subtle bg-canvas/45 p-3"
+                    >
+                      <p className="text-[10px] font-black uppercase tracking-widest text-ink-muted">
+                        {path.trigger}
+                      </p>
+                      <p className="mt-1 text-sm font-bold text-ink">
+                        {path.label}
+                      </p>
+                      <p className="mt-1 text-xs leading-5 text-ink-muted">
+                        {path.response}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              </div>
             </div>
           ) : (
             <p className="mt-4 rounded-lg border border-line-subtle bg-canvas/40 p-4 text-sm leading-6 text-ink">

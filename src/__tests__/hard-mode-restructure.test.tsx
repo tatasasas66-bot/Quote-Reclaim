@@ -314,9 +314,9 @@ describe("follow-up message upgrades", () => {
     expect(SEQUENCE_VARIANTS[30][0](VARS)).toContain("All good either way.");
   });
 
-  it("Day 14 v3 is tightened to one concrete offer with an easy yes", () => {
+  it("Day 14 v3 is tightened to one concrete decision-bridge offer", () => {
     expect(SEQUENCE_VARIANTS[14][3](VARS)).toBe(
-      "Jane, if one part of the roofing estimate is holding things up, I can walk through just that piece. Want me to?",
+      "Jane, if the roofing estimate is still worth discussing, I can walk through just the part holding it up. Want me to?",
     );
   });
 

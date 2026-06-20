@@ -160,7 +160,7 @@ describe("researchSequenceMessages variant selection", () => {
     );
     expect(seq.day1).not.toContain("Contractor here");
     expect(seq.day3.startsWith("there,")).toBe(true);
-    expect(seq.day7).toMatch(/^Should I keep /);
+    expect(seq.day7).toMatch(/^If /);
   });
 
   it("is stable for a given quoteId across repeated calls", () => {
@@ -285,21 +285,21 @@ describe("schedule is the 5-touch cadence", () => {
 });
 
 // ---------------------------------------------------------------------------
-// Day 14 — Options Check: phasing/options frame, never discounting
-// Day 30 — Final Closeout: respectful, declarative closeout signal
+// Day 14 — Decision Check: active / paused / closed, never discounting
+// Day 30 — Clean Closeout: respectful, declarative closeout signal
 // ---------------------------------------------------------------------------
 
-describe("Day 14 stays on options/phasing (NO price drop) and Day 30 closes out cleanly", () => {
+describe("Day 14 stays on active/pause/close decisions (NO price drop) and Day 30 closes out cleanly", () => {
   const day14 = SEQUENCE_VARIANTS[14];
   const day30 = SEQUENCE_VARIANTS[30];
   const sampleVars = makeVars("Jane", "Mike", "Roofing");
 
-  it("Day 14 offers options/walk-through without any discount language", () => {
+  it("Day 14 offers a clear decision without any discount language", () => {
     for (let i = 0; i < day14.length; i++) {
       const msg = day14[i](sampleVars).toLowerCase();
-      // Every variant must explicitly offer a walk-through / options framing.
+      // Every variant must explicitly give a decision path.
       expect(
-        /walk through|options|lay out|handle it|holding (this|things) up|stuck on/.test(
+        /active|pause|paused|close|closed|board|worth discussing|walk through/.test(
           msg,
         ),
       ).toBe(true);
@@ -345,19 +345,19 @@ describe("v0 of every day stays verbatim — AI exact-match gate intact", () => 
     );
   });
 
-  it("Day 7 v0 is the new Close-the-Loop", () => {
+  it("Day 7 v0 is the new Scope Rescue", () => {
     expect(SEQUENCE_VARIANTS[7][0](vars)).toBe(
-      "Should I keep the roofing estimate open, or close it out for now? Either way is fine.",
+      "If the roofing estimate feels too big as written, I can separate the must-do work from the later pieces. Want me to lay that out?",
     );
   });
 
-  it("Day 14 v0 is the new Options Check (no discounting)", () => {
+  it("Day 14 v0 is the new Decision Check (no discounting)", () => {
     expect(SEQUENCE_VARIANTS[14][0](vars)).toBe(
-      "Jane, if the total, timing, or scope on the roofing estimate is what's holding this up, I can walk through options without cutting corners. Worth a look?",
+      "Jane, should I keep the roofing estimate active, pause it for later, or close it out for now?",
     );
   });
 
-  it("Day 30 v0 is the new Final Closeout (reply-here reopen — lowest-effort door back in)", () => {
+  it("Day 30 v0 is the new Clean Closeout (reply-here reopen — lowest-effort door back in)", () => {
     expect(SEQUENCE_VARIANTS[30][0](vars)).toBe(
       "Jane, I'll close out the roofing estimate after this. All good either way. If you want to revisit it later, just reply here and I'll pick it back up.",
     );
@@ -379,9 +379,9 @@ describe("generate-recovery-plan system prompt enforces the contractor-native re
     for (const label of [
       "Estimate Check",
       "Schedule Check",
-      "Close-the-Loop",
-      "Options Check",
-      "Final Closeout",
+      "Scope Rescue",
+      "Decision Check",
+      "Clean Closeout",
     ]) {
       expect(generatePlan).toContain(label);
     }

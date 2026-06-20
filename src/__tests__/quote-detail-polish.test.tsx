@@ -78,6 +78,14 @@ describe("quote detail command-center hierarchy", () => {
     expect(detailPage).toContain("<details");
   });
 
+  it("shows reply rescue paths in the command panel for the likely customer replies", () => {
+    expect(detailPage).toContain('data-testid="reply-rescue-paths"');
+    expect(detailPage).toContain("Yes / still interested");
+    expect(detailPage).toContain("It feels high");
+    expect(detailPage).toContain("Need to wait");
+    expect(detailPage).toContain("Chose someone else");
+  });
+
   it("keeps the 5-message sequence intact behind the active command", () => {
     expect(detailPage).toContain("5-message plan");
     expect(detailPage).toMatch(/reminders\.map/);
@@ -359,12 +367,12 @@ function fakeQuote(over: Partial<QuoteRow> = {}): QuoteRow {
 const MAX_NBA_LABEL_LEN = 30; // safe ceiling for the IntelligenceField cell
 
 describe("Next Best Action labels fit the card", () => {
-  it("Critical band uses a short close-the-loop label (no truncation)", () => {
+  it("Critical band uses a short scope-rescue label (no truncation)", () => {
     const nba = nextBestAction(fakeQuote({ days_silent: 30 }), false);
-    expect(nba?.label).toBe("Send close-the-loop today");
+    expect(nba?.label).toBe("Send scope rescue today");
     expect((nba?.label ?? "").length).toBeLessThanOrEqual(MAX_NBA_LABEL_LEN);
     // The pre-polish 41-char string is gone.
-    expect(nba?.label).not.toMatch(/Send the close-the-loop message today/);
+    expect(nba?.label).not.toMatch(/Send the scope rescue message today/);
   });
 
   it("At Risk band uses a clear 'next follow-up' label, not the old 'Send early'", () => {
@@ -483,9 +491,9 @@ describe("polished message wordings", () => {
     expect(msg).toContain("take it off my list");
   });
 
-  it("Day 14 v3 — tightened single-piece offer (was the wordy 'what you're looking at')", () => {
+  it("Day 14 v3 — tightened decision-bridge offer (was the wordy 'what you're looking at')", () => {
     const msg = SEQUENCE_VARIANTS[14][3](sample);
-    expect(msg).toContain("I can walk through just that piece. Want me to?");
+    expect(msg).toContain("I can walk through just the part holding it up. Want me to?");
     expect(msg).not.toContain("what you're looking at");
     expect(msg).not.toContain("where it stands");
   });

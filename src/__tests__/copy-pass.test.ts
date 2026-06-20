@@ -296,9 +296,9 @@ describe("AI system prompt — contractor-native voice and labels", () => {
   it("locks the five contractor-native framework labels (plain English, no psychology jargon)", () => {
     expect(aiPrompt).toMatch(/Estimate Check/);
     expect(aiPrompt).toMatch(/Schedule Check/);
-    expect(aiPrompt).toMatch(/Close-the-Loop/);
-    expect(aiPrompt).toMatch(/Options Check/);
-    expect(aiPrompt).toMatch(/Final Closeout/);
+    expect(aiPrompt).toMatch(/Scope Rescue/);
+    expect(aiPrompt).toMatch(/Decision Check/);
+    expect(aiPrompt).toMatch(/Clean Closeout/);
   });
 
   it("no longer exposes the old psychology framework names to the AI", () => {
@@ -313,9 +313,9 @@ describe("AI system prompt — contractor-native voice and labels", () => {
     expect(aiPrompt).toMatch(/No exclamation marks/);
   });
 
-  it("Day 7 still anchors on close-the-loop with a calm, no-pressure ask", () => {
-    expect(aiPrompt).toMatch(/Close-the-Loop/);
-    expect(aiPrompt).toMatch(/keep the estimate open or close it out/);
+  it("Day 7 anchors on scope rescue with a calm lower-commitment ask", () => {
+    expect(aiPrompt).toMatch(/Scope Rescue/);
+    expect(aiPrompt).toMatch(/separate must-do work from later pieces/);
   });
 });
 
@@ -343,11 +343,11 @@ describe("Fallback messages use the uploaded SMS research sequence", () => {
     expect(aiFallbacks).not.toMatch(/releasing it/);
   });
 
-  it("Day 7 carries only calm contractor-native Close-the-Loop variants", () => {
-    // The primary calm close-the-loop frames remain (v0 is canonical).
-    expect(aiFallbacks).toMatch(/Should I keep \$\{project\} open/);
-    expect(aiFallbacks).toMatch(/close it out for now/);
-    expect(aiFallbacks).toMatch(/Either way is fine/);
+  it("Day 7 carries only calm contractor-native Scope Rescue variants", () => {
+    // The primary lower-commitment frames remain (v0 is canonical).
+    expect(aiFallbacks).toMatch(/separate the must-do work from the later pieces/);
+    expect(aiFallbacks).toMatch(/break it into now\/later options/);
+    expect(aiFallbacks).toMatch(/phase it cleanly/);
     // Tone safety: the verbatim Voss "Have you given up on…?" form was
     // removed — it tested high but read too sharp under a contractor's own
     // name. No variant references it now.

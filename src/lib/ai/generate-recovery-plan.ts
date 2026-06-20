@@ -17,9 +17,9 @@ import { titleCase } from "@/lib/utils/normalize";
 export type RecoveryFramework =
   | "Estimate Check"
   | "Schedule Check"
-  | "Close-the-Loop"
-  | "Options Check"
-  | "Final Closeout";
+  | "Scope Rescue"
+  | "Decision Check"
+  | "Clean Closeout";
 
 export type RecoveryMessage = {
   followup_number: 1 | 2 | 3 | 4 | 5;
@@ -50,9 +50,9 @@ export type RecoveryContext = {
 const FRAMEWORK_BY_NUMBER: Record<1 | 2 | 3 | 4 | 5, RecoveryFramework> = {
   1: "Estimate Check",
   2: "Schedule Check",
-  3: "Close-the-Loop",
-  4: "Options Check",
-  5: "Final Closeout",
+  3: "Scope Rescue",
+  4: "Decision Check",
+  5: "Clean Closeout",
 };
 
 const aiResponseSchema = z.object({
@@ -118,13 +118,13 @@ Open with "Hey {firstName} —". Mention the trade/project once. Offer to break 
 DAY 3 — Schedule Check (active list):
 Open with "{firstName},". Operational tone. Ask whether to keep the job on the active list / on the schedule / on your list, or move it off / pause it / set it aside. Reference the trade once. Do NOT claim you are holding a slot, releasing a slot, locking the schedule, or running out of openings — the app does not know that and it reads as fake scarcity.
 
-DAY 7 — Close-the-Loop (no pressure):
-No greeting word. Name optional. Ask whether to keep the estimate open or close it out for now. Make a yes or no equally easy. One question. Calm.
+DAY 7 — Scope Rescue (lower-commitment path):
+No greeting word. Omit the customer's name. Reference the trade/project. If the full estimate may be too much as written, offer to separate must-do work from later pieces, phase the scope, or map the part holding it up. One question. Never imply discounting, cheap work, or cutting corners.
 
-DAY 14 — Options Check (no discounting):
-Open with "{firstName},". Acknowledge that timing, scope, or total sometimes stalls an estimate. Offer to walk through options without changing quality. One question. Never imply a price drop, discount, sale, or coupon. Never use the word "cheaper".
+DAY 14 — Decision Check (active / paused / closed):
+Open with "{firstName},". Give a fast choice: keep the estimate active, pause it for later, or close it out for now. One question. Calm. Never imply a price drop, discount, sale, or coupon. Never use the word "cheaper".
 
-DAY 30 — Final Closeout (respectful):
+DAY 30 — Clean Closeout (respectful):
 Open with "{firstName},". Declarative — no question mark. Close it out for now, no hard feelings, leave the door open if anything changes. No begging, no guilt language, no "last chance" or "final notice".
 
 BANNED PHRASES (do not produce these — they read as either spammy or as a sales coach talking):
@@ -135,9 +135,9 @@ Return JSON only — no markdown, no commentary. Use these exact framework label
   "messages": [
     { "followup_number": 1, "framework": "Estimate Check", "message": "...", "cta_type": "question", "confidence": 1 },
     { "followup_number": 2, "framework": "Schedule Check", "message": "...", "cta_type": "question", "confidence": 1 },
-    { "followup_number": 3, "framework": "Close-the-Loop", "message": "...", "cta_type": "question", "confidence": 1 },
-    { "followup_number": 4, "framework": "Options Check", "message": "...", "cta_type": "question", "confidence": 1 },
-    { "followup_number": 5, "framework": "Final Closeout", "message": "...", "cta_type": "statement", "confidence": 1 }
+    { "followup_number": 3, "framework": "Scope Rescue", "message": "...", "cta_type": "question", "confidence": 1 },
+    { "followup_number": 4, "framework": "Decision Check", "message": "...", "cta_type": "question", "confidence": 1 },
+    { "followup_number": 5, "framework": "Clean Closeout", "message": "...", "cta_type": "statement", "confidence": 1 }
   ]
 }
 

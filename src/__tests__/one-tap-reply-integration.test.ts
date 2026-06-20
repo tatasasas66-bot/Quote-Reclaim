@@ -256,8 +256,8 @@ describe("quote detail page mounts the One-Tap Reply card", () => {
       `const WHY_THIS_WORKS: Record<FollowupStep, string> = {
   1: "Asking which part to break down is easier to answer than 'any update?' — it gives them a specific, low-effort way back into the conversation.",
   2: "A schedule question has a real answer. Keep it active or set it aside is a choice they can make in five seconds without committing to the job.",
-  3: "A clear keep-it-open-or-close-it-out question makes a reply easier than more silence — and saying no is allowed, which is what makes saying anything feel safe.",
-  4: "It lowers the effort to reply. Instead of asking them to approve the whole job, it lets them point at the one piece that still needs clarification.",
+  3: "It gives them a smaller way back in than approving the whole estimate. If scope, timing, or total is the blocker, they can answer without starting over.",
+  4: "A simple active / pause / close choice turns silence into a decision without forcing a yes.",
   5: "A respectful close-out takes the pressure off both sides. The door stays open, so replying later is easy — nothing ended badly.",
 };`,
     );

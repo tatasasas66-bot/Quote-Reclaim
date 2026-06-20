@@ -175,11 +175,12 @@ describe("Sequence detail 'Why this works' rationale", () => {
     expect(detailPage).toMatch(/easier to answer than 'any update\?'/);
     // Day 3 — schedule question with a real answer
     expect(detailPage).toMatch(/A schedule question has a real answer/);
-    // Day 7 — close-the-loop clarity (saying no is allowed)
-    expect(detailPage).toMatch(/saying no is allowed/);
-    // Day 14 — effort reduction, NO claim that price is the stall reason
-    expect(detailPage).toMatch(/It lowers the effort to reply/);
-    expect(detailPage).toMatch(/point at the one piece that still needs clarification/);
+    // Day 7 — scope rescue, NO claim that price is the stall reason
+    expect(detailPage).toMatch(/smaller way back in than approving the whole estimate/);
+    expect(detailPage).toMatch(/If scope, timing, or total is the blocker/);
+    // Day 14 — decision bridge, not a forced yes
+    expect(detailPage).toMatch(/active \/ pause \/ close choice/);
+    expect(detailPage).toMatch(/without forcing a yes/);
     expect(detailPage).not.toMatch(/stall on price/i);
     // Day 30 — respectful close-out, door stays open
     expect(detailPage).toMatch(/A respectful close-out takes the pressure off both sides/);

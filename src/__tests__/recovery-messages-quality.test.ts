@@ -207,19 +207,23 @@ describe("21-25. each day fulfils its strategic role", () => {
     }
   });
 
-  it("23. Day 7 is a close-the-loop ask (keep open or close out)", () => {
+  it("23. Day 7 is a scope rescue ask (smaller path, no discounting)", () => {
     for (const builder of SEQUENCE_VARIANTS[7]) {
       const msg = builder(sampleVars).toLowerCase();
-      expect(/keep .* (open|active)|leave .* open|on the board/.test(msg)).toBe(true);
-      expect(/close it out|close it out for now|mark it closed/.test(msg)).toBe(true);
+      expect(
+        /separate|break it into|phase|must-do|later pieces|holding things up|simpler path|not quite right/.test(
+          msg,
+        ),
+      ).toBe(true);
+      expect(msg).not.toMatch(/\b(discount|sale|deal|cheaper|coupon|promo)\b/);
     }
   });
 
-  it("24. Day 14 offers options without ANY discount language", () => {
+  it("24. Day 14 asks for a clean active / pause / close decision", () => {
     for (const builder of SEQUENCE_VARIANTS[14]) {
       const msg = builder(sampleVars).toLowerCase();
       expect(
-        /walk through|options|lay out|handle it|holding (this|things) up|stuck on/.test(
+        /active|pause|paused|close|closed|board|worth discussing|walk through/.test(
           msg,
         ),
       ).toBe(true);
@@ -244,12 +248,12 @@ describe("21-25. each day fulfils its strategic role", () => {
 
 // ---------------------------------------------------------------------------
 // Day 7 tone safety — every variant is a calm contractor-native
-// close-the-loop ask. The earlier verbatim Chris Voss "Have you given up
+// scope-rescue ask. The earlier verbatim Chris Voss "Have you given up
 // on…?" frame was research-backed but read too sharp under a contractor's
 // own name and is removed.
 // ---------------------------------------------------------------------------
 
-describe("Day 7 — every variant is calm contractor-native, no 'Have you given up'", () => {
+describe("Day 7 — every variant is calm contractor-native scope rescue, no 'Have you given up'", () => {
   const sampleVars = vars("Jane", "Mike", "Roofing");
 
   it("NO Day 7 variant opens with the sharp 'Have you given up on…' frame", () => {
@@ -268,12 +272,10 @@ describe("Day 7 — every variant is calm contractor-native, no 'Have you given 
       expect((msg.match(/\?/g) ?? []).length).toBe(1);
       expect(msg.toLowerCase()).toContain("roofing");
       expect(msg.length).toBeLessThanOrEqual(220);
-      // Each must still satisfy the close-the-loop guarantees.
       expect(
-        /keep .* (open|active)|leave .* open|on the board/.test(msg.toLowerCase()),
-      ).toBe(true);
-      expect(
-        /close it out|close it out for now|mark it closed/.test(msg.toLowerCase()),
+        /separate|break it into|phase|must-do|later pieces|holding things up|simpler path|not quite right/.test(
+          msg.toLowerCase(),
+        ),
       ).toBe(true);
     }
   });
@@ -362,7 +364,7 @@ describe("27-29. asymmetric structure across the sequence", () => {
 // ---------------------------------------------------------------------------
 
 describe("30. visible framework labels", () => {
-  it("uses Estimate Check / Schedule Check / Close-the-Loop / Options Check / Final Closeout", async () => {
+  it("uses Estimate Check / Schedule Check / Scope Rescue / Decision Check / Clean Closeout", async () => {
     const plan = await generateRecoveryPlan({
       firstName: "Jane",
       contractorFirstName: "Mike",
@@ -373,9 +375,9 @@ describe("30. visible framework labels", () => {
     expect(plan.map((m) => m.framework)).toEqual([
       "Estimate Check",
       "Schedule Check",
-      "Close-the-Loop",
-      "Options Check",
-      "Final Closeout",
+      "Scope Rescue",
+      "Decision Check",
+      "Clean Closeout",
     ]);
   });
 });
@@ -394,8 +396,8 @@ describe("31-32. WHY_THIS_WORKS rationale is contractor-native (no psychology ja
   const EXPECTED_WHY_THIS_WORKS = `const WHY_THIS_WORKS: Record<FollowupStep, string> = {
   1: "Asking which part to break down is easier to answer than 'any update?' — it gives them a specific, low-effort way back into the conversation.",
   2: "A schedule question has a real answer. Keep it active or set it aside is a choice they can make in five seconds without committing to the job.",
-  3: "A clear keep-it-open-or-close-it-out question makes a reply easier than more silence — and saying no is allowed, which is what makes saying anything feel safe.",
-  4: "It lowers the effort to reply. Instead of asking them to approve the whole job, it lets them point at the one piece that still needs clarification.",
+  3: "It gives them a smaller way back in than approving the whole estimate. If scope, timing, or total is the blocker, they can answer without starting over.",
+  4: "A simple active / pause / close choice turns silence into a decision without forcing a yes.",
   5: "A respectful close-out takes the pressure off both sides. The door stays open, so replying later is easy — nothing ended badly.",
 };`;
 
@@ -411,10 +413,10 @@ describe("31-32. WHY_THIS_WORKS rationale is contractor-native (no psychology ja
       "A schedule question has a real answer. Keep it active or set it aside is a choice they can make in five seconds without committing to the job.",
     );
     expect(detailPage).toContain(
-      "A clear keep-it-open-or-close-it-out question makes a reply easier than more silence — and saying no is allowed, which is what makes saying anything feel safe.",
+      "It gives them a smaller way back in than approving the whole estimate. If scope, timing, or total is the blocker, they can answer without starting over.",
     );
     expect(detailPage).toContain(
-      "It lowers the effort to reply. Instead of asking them to approve the whole job, it lets them point at the one piece that still needs clarification.",
+      "A simple active / pause / close choice turns silence into a decision without forcing a yes.",
     );
     expect(detailPage).toContain(
       "A respectful close-out takes the pressure off both sides. The door stays open, so replying later is easy — nothing ended badly.",

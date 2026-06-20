@@ -188,12 +188,11 @@ describe("the specific tone-pass replacements are present in the variant set", (
     expect(msg).not.toMatch(/in the way/i);
   });
 
-  it("Day 7 v4 is the safer 'Either works.' close-the-loop ask, no Voss frame", () => {
+  it("Day 7 v4 is the safer scope-phasing ask, no Voss frame", () => {
     const msg = SEQUENCE_VARIANTS[7][4](sampleVars);
     expect(msg).toMatch(
-      /Want me to keep the roofing estimate on the board, or close it out on my end\?/,
+      /If the roofing estimate is more than you want to tackle at once, I can phase it cleanly\. Want me to outline it\?/,
     );
-    expect(msg).toMatch(/Either works/);
     expect(msg).not.toMatch(/Have you given up on/i);
   });
 });

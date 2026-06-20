@@ -52,28 +52,28 @@ const auditOutputs = [
 const sequenceSteps = [
   {
     day: "Day 1",
-    title: "Simple check-in",
-    body: "A light opener that makes it easy for the customer to answer.",
+    title: "Estimate check",
+    body: "Reopens the estimate with one specific question to answer.",
   },
   {
     day: "Day 3",
-    title: "Scope or price question",
-    body: "Reopens the estimate without sounding desperate or pushy.",
+    title: "Schedule check",
+    body: "Asks whether the estimate should stay active or move off the list.",
   },
   {
     day: "Day 7",
-    title: "Decision helper",
-    body: "Gives the customer a useful next step if they are still comparing.",
+    title: "Scope rescue",
+    body: "Offers a smaller path if scope, timing, or total is holding it up.",
   },
   {
     day: "Day 14",
-    title: "Close-the-loop message",
-    body: "Lets you move on cleanly while leaving the door open.",
+    title: "Decision check",
+    body: "Turns silence into a simple active, paused, or closed choice.",
   },
   {
     day: "Day 30",
-    title: "Light reactivation",
-    body: "Checks whether timing changed without pretending the job is a sure thing.",
+    title: "Clean closeout",
+    body: "Lets you move on cleanly while leaving the door open.",
   },
 ] as const;
 

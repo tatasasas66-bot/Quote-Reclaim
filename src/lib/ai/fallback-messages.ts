@@ -5,8 +5,8 @@ import type { RecoveryMessage, RecoveryContext } from "./generate-recovery-plan"
  * Deterministic fallback templates. Voice target: a real, experienced
  * contractor — calm, direct, specific, no sales psychology language in the
  * message itself. The labels surfaced to the user are plain English
- * (Estimate Check / Schedule Check / Close-the-Loop / Options Check /
- * Final Closeout). Variation is seeded from the quote so the same quote
+ * (Estimate Check / Schedule Check / Scope Rescue / Decision Check /
+ * Clean Closeout). Variation is seeded from the quote so the same quote
  * always renders the same phrasing while different quotes spread across
  * the variants per day (4–5 per day).
  *
@@ -30,14 +30,11 @@ import type { RecoveryMessage, RecoveryContext } from "./generate-recovery-plan"
  * disguising the intent — never naming the psychology):
  *   1 Estimate Check  — surface a confusion the homeowner hid (clarity).
  *   2 Schedule Check  — operational seriousness without fake scarcity.
- *   3 Close-the-Loop  — give a safe "no" so the awkward silence can break.
- *                       All five variants are calm contractor-native asks —
- *                       no sharp no-oriented frame (removed in the
- *                       message-tone safety pass).
- *   4 Options Check   — normalize that price/timing/scope can stall; offer
- *                       to walk through options without cutting corners
- *                       (never imply discount).
- *   5 Final Closeout  — respectful withdrawal; declarative; door open.
+ *   3 Scope Rescue    — give a lower-commitment path when full scope, timing,
+ *                       or total may be too much to approve as-is.
+ *   4 Decision Check  — turn silence into a simple active / paused / closed
+ *                       choice without demanding a yes.
+ *   5 Clean Closeout  — respectful withdrawal; declarative; door open.
  */
 
 const ALIASES: Record<string, string> = {
@@ -112,9 +109,9 @@ const TRADE_WORDS: Record<string, string> = {
 const FRAMEWORKS: Record<1 | 2 | 3 | 4 | 5, RecoveryMessage["framework"]> = {
   1: "Estimate Check",
   2: "Schedule Check",
-  3: "Close-the-Loop",
-  4: "Options Check",
-  5: "Final Closeout",
+  3: "Scope Rescue",
+  4: "Decision Check",
+  5: "Clean Closeout",
 };
 
 function cleanName(value: string | null | undefined, fallback: string): string {
@@ -345,39 +342,38 @@ const DAY3_VARIANTS: ReadonlyArray<(v: VariantVars) => string> = [
     `${firstName}, I'm organizing upcoming ${tradeWord} work. Should I keep your estimate active, or take it off my list?`,
 ];
 
-// DAY 7 — Close-the-Loop. No greeting word. Name optional (variants omit it).
-// Easy yes/no, no pressure. All five variants are contractor-native calm
-// close-the-loop forms. An earlier verbatim no-oriented variant tested
-// high but read too sharp for a homeowner under a contractor name, so it
-// was removed in the message-tone safety pass.
+// DAY 7 — Scope Rescue. No greeting word. Name omitted. This is the moment
+// that makes the system feel useful instead of repetitive: if the full
+// estimate is too much to approve as-is, offer a smaller decision path without
+// discounting or inventing urgency.
 const DAY7_VARIANTS: ReadonlyArray<(v: VariantVars) => string> = [
   ({ project }) =>
-    `Should I keep ${project} open, or close it out for now? Either way is fine.`,
+    `If ${project} feels too big as written, I can separate the must-do work from the later pieces. Want me to lay that out?`,
   ({ project }) =>
-    `Do you want me to keep ${project} active, or should I close it out on my end?`,
+    `If ${project} needs a simpler path, I can break it into now/later options. Want me to send that view?`,
   ({ project }) =>
-    `Should I leave ${project} open, or mark it closed? Your call either way.`,
+    `If one part of ${project} is holding things up, I can separate that piece from the rest. Want me to map it out?`,
   ({ project }) =>
-    `Do you still want me to keep ${project} on the board, or should I close it out?`,
+    `If ${project} is close but not quite right, I can show what changes and what stays the same. Want me to do that?`,
   ({ project }) =>
-    `Want me to keep ${project} on the board, or close it out on my end? Either works.`,
+    `If ${project} is more than you want to tackle at once, I can phase it cleanly. Want me to outline it?`,
 ];
 
-// DAY 14 — Options Check. Useful, never discounting. Options/scope frame.
-// Job-aware via projectDetail. v1 deliberately drops the list-of-three for a
-// single concrete offer so the four variants do not share one shape.
+// DAY 14 — Decision Check. Useful, never discounting. The point is not another
+// "any update?" — it gives the customer a fast active / paused / closed choice.
+// Job-aware via projectDetail so the estimate still feels remembered.
 const DAY14_VARIANTS: ReadonlyArray<(v: VariantVars) => string> = [
   ({ firstName, projectDetail }) =>
-    `${firstName}, if the total, timing, or scope on ${projectDetail} is what's holding this up, I can walk through options without cutting corners. Worth a look?`,
+    `${firstName}, should I keep ${projectDetail} active, pause it for later, or close it out for now?`,
   ({ firstName, projectDetail }) =>
-    `${firstName}, if it's the number on ${projectDetail} giving you pause, I can lay out a couple of ways to handle it without cutting corners. Worth a look?`,
+    `${firstName}, where should I put ${projectDetail}: active, paused for later, or closed out?`,
   ({ firstName, projectDetail }) =>
-    `${firstName}, sometimes these stall over timing or one detail. If that's the case with ${projectDetail}, want me to walk through the options with you?`,
+    `${firstName}, I can keep ${projectDetail} active or take it off my board for now. Which is better?`,
   ({ firstName, projectDetail }) =>
-    `${firstName}, if one part of ${projectDetail} is holding things up, I can walk through just that piece. Want me to?`,
+    `${firstName}, if ${projectDetail} is still worth discussing, I can walk through just the part holding it up. Want me to?`,
 ];
 
-// DAY 30 — Final Closeout. Respectful, detached. Declarative. No question.
+// DAY 30 — Clean Closeout. Respectful, detached. Declarative. No question.
 // Job-aware via projectDetail so the final touch still names the exact job.
 const DAY30_VARIANTS: ReadonlyArray<(v: VariantVars) => string> = [
   ({ firstName, projectDetail }) =>

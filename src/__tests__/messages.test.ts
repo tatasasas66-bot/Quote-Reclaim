@@ -86,13 +86,11 @@ describe("contractor-native sequence structural rules", () => {
         expect(seq.day7).not.toMatch(/^(Hi|Hey)\b/i);
       });
 
-      it("Day 7 is a Close-the-Loop ask: keep open or close it out, no pressure", () => {
-        // Matches "keep ... open|active" and "close it out|on my end" or
-        // "mark it closed" — the calm, easy yes/no shape from the rewrite.
+      it("Day 7 is a Scope Rescue ask: smaller path, no pressure", () => {
         expect(seq.day7).toMatch(
-          /keep .* (open|active)|leave .* open|on the board/i,
+          /separate|break it into|phase|must-do|later pieces|holding things up|simpler path|not quite right/i,
         );
-        expect(seq.day7).toMatch(/close it out|mark it closed/i);
+        expect(seq.day7).not.toMatch(/\b(discount|sale|deal|cheaper|coupon|promo)\b/i);
       });
 
       it("Day 14 leads with the client name and offers options without any discount language", () => {
