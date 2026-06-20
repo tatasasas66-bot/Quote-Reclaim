@@ -33,7 +33,7 @@ describe("Bug 1: text wraps on mobile, no clipping at 360-390px", () => {
       /mt-1 truncate text-xl font-bold text-ink-strong/,
     );
     expect(homepage).toMatch(/Estimate #3/);
-    expect(homepage).toMatch(/break-words text-3xl font-black/);
+    expect(homepage).toMatch(/break-words text-2xl font-black sm:text-3xl/);
   });
 
   it("landing preview bodies wrap inside cards on mobile", () => {

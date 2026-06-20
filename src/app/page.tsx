@@ -21,6 +21,24 @@ export const metadata: Metadata = {
 
 const trustPills = ["No names", "No phone numbers", "No card", "Result first"] as const;
 
+const bridgeSteps = [
+  {
+    step: "01",
+    title: "Run free audit",
+    body: "See which sent estimate to chase first.",
+  },
+  {
+    step: "02",
+    title: "Save the recovery plan",
+    body: "Keep the message and order ready.",
+  },
+  {
+    step: "03",
+    title: "Work quiet estimates every week",
+    body: "Move quotes until they book or close.",
+  },
+] as const;
+
 const auditOutputs = [
   "total quiet estimate value",
   "estimate to follow up first",
@@ -164,9 +182,9 @@ const faqs = [
 
 export default function HomePage() {
   return (
-    <main className="min-h-screen overflow-hidden bg-[linear-gradient(180deg,rgb(var(--qr-bg-canvas)),rgb(var(--qr-bg-surface-1)),rgb(var(--qr-bg-canvas)))] text-ink">
-      <div className="mx-auto flex w-full max-w-6xl flex-col px-4 py-5 sm:px-6 lg:px-8">
-        <header className="flex flex-wrap items-center justify-between gap-3 border-b border-line-subtle/80 pb-5">
+    <main className="min-h-screen overflow-hidden bg-canvas text-ink">
+      <div className="mx-auto flex w-full max-w-6xl flex-col px-4 py-4 sm:px-6 lg:px-8">
+        <header className="flex flex-wrap items-center justify-between gap-3 border-b border-line-subtle/70 pb-4">
           <Logo showWordmark />
           <nav className="flex flex-wrap items-center gap-3 text-sm font-semibold">
             <a
@@ -184,15 +202,15 @@ export default function HomePage() {
           </nav>
         </header>
 
-        <section className="grid min-w-0 gap-9 py-10 lg:grid-cols-[0.94fr_1.06fr] lg:items-center lg:py-14">
+        <section className="grid min-w-0 gap-7 py-8 lg:grid-cols-[0.9fr_1.1fr] lg:items-center lg:py-10">
           <div className="min-w-0">
             <p className="text-xs font-black uppercase tracking-widest text-brand">
               Quiet estimate recovery
             </p>
-            <h1 className="mt-4 max-w-3xl text-balance text-[length:clamp(2.35rem,5vw,4.85rem)] font-black leading-[0.98] text-ink-strong">
+            <h1 className="mt-4 max-w-3xl text-balance text-[length:clamp(2.1rem,4.4vw,3.95rem)] font-black leading-[1.02] text-ink-strong">
               Turn sent estimates into booked work before buying another lead.
             </h1>
-            <p className="mt-5 max-w-2xl break-words text-base leading-7 text-ink sm:text-lg">
+            <p className="mt-4 max-w-2xl break-words text-base leading-7 text-ink sm:text-lg">
               Quote Reclaim shows home-service contractors which quiet estimate
               to follow up first, what message to send today, and how to keep
               every sent estimate moving until it books or closes.
@@ -201,7 +219,7 @@ export default function HomePage() {
               Run a free 60-second estimate audit. If it helps, save the plan
               and keep working quiet estimates every week.
             </p>
-            <div className="mt-6 flex flex-wrap items-center gap-3 pt-1">
+            <div className="mt-5 flex flex-wrap items-center gap-3 pt-1">
               <Link
                 href="/audit"
                 className="inline-flex min-h-12 items-center justify-center gap-2 rounded-lg border border-brand bg-brand px-5 py-3 text-base font-semibold text-canvas shadow-[0_0_42px_rgba(217,111,50,0.28)] transition-colors hover:bg-brand-dark focus:outline-none focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2 focus-visible:ring-offset-canvas"
@@ -216,9 +234,27 @@ export default function HomePage() {
                 See the recovery system
               </a>
             </div>
+            <div className="mt-5 grid gap-2 sm:grid-cols-3">
+              {bridgeSteps.map((item) => (
+                <div
+                  key={item.step}
+                  className="rounded-lg border border-line-subtle/80 bg-surface-1/70 px-3 py-3"
+                >
+                  <p className="text-[10px] font-black uppercase tracking-widest text-brand">
+                    {item.step}
+                  </p>
+                  <p className="mt-1 text-sm font-black text-ink-strong">
+                    {item.title}
+                  </p>
+                  <p className="mt-1 break-words text-xs leading-5 text-ink-muted">
+                    {item.body}
+                  </p>
+                </div>
+              ))}
+            </div>
             <div
               aria-label="Free audit trust line"
-              className="mt-5 flex flex-wrap gap-2 text-[11px] font-black uppercase tracking-widest text-ink-muted"
+              className="mt-4 flex flex-wrap gap-2 text-[11px] font-black uppercase tracking-widest text-ink-muted"
             >
               {trustPills.map((pill) => (
                 <span
@@ -229,7 +265,7 @@ export default function HomePage() {
                 </span>
               ))}
             </div>
-            <p className="mt-4 max-w-xl text-sm font-semibold text-ink-muted">
+            <p className="mt-3 max-w-xl text-sm font-semibold text-ink-muted">
               Built for US home-service contractors. $49/month after the free
               start.
             </p>
@@ -305,10 +341,10 @@ export default function HomePage() {
       </SectionShell>
 
       <SectionShell id="silent-quote-command" eyebrow="Command center">
-        <div className="grid gap-7 lg:grid-cols-[0.82fr_1.18fr] lg:items-start">
+        <div className="grid gap-7 lg:grid-cols-[0.72fr_1.28fr] lg:items-start">
           <SectionHeading
             title="Silent Quote Command"
-            body="See which estimate deserves attention today. No guessing. No digging through old texts. No 'I'll follow up later.' Quote Reclaim gives every quiet estimate a next move."
+            body="This is the core screen: the quiet quote, the money, the next move, and the message to send today. No guessing. No digging through old texts."
           />
           <CommandTable />
         </div>
@@ -371,19 +407,34 @@ export default function HomePage() {
             {comparison.map((column) => (
               <article
                 key={column.label}
-                className={`rounded-2xl border p-4 ${
+                className={`rounded-xl border p-4 ${
                   column.label === "Quote Reclaim"
-                    ? "border-brand/45 bg-brand/10"
-                    : "border-line-subtle bg-surface-1"
+                    ? "border-brand/45 bg-brand/10 shadow-[0_0_32px_rgba(217,111,50,0.12)]"
+                    : "border-line-subtle bg-surface-1/70"
                 }`}
               >
-                <h3 className="text-sm font-black uppercase tracking-widest text-ink-strong">
+                <h3
+                  className={`text-sm font-black uppercase tracking-widest ${
+                    column.label === "Quote Reclaim"
+                      ? "text-brand"
+                      : "text-ink-strong"
+                  }`}
+                >
                   {column.label}
                 </h3>
-                <ul className="mt-4 space-y-2 text-sm leading-6 text-ink-muted">
+                <ul className="mt-4 grid gap-2 text-sm leading-6 text-ink-muted">
                   {column.points.map((point) => (
-                    <li key={point} className="flex gap-2">
-                      <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-brand" />
+                    <li
+                      key={point}
+                      className="flex gap-2 rounded-lg border border-line-subtle/70 bg-canvas/35 px-3 py-2"
+                    >
+                      <span
+                        className={`mt-2 h-1.5 w-1.5 shrink-0 rounded-full ${
+                          column.label === "Quote Reclaim"
+                            ? "bg-brand"
+                            : "bg-ink-muted"
+                        }`}
+                      />
                       <span>{point}</span>
                     </li>
                   ))}
@@ -404,7 +455,7 @@ export default function HomePage() {
             {trades.map(([trade, reason]) => (
               <article
                 key={trade}
-                className="rounded-2xl border border-line-subtle bg-surface-1 p-4"
+                className="rounded-xl border border-line-subtle bg-surface-1/75 p-4"
               >
                 <h3 className="font-black text-ink-strong">{trade}</h3>
                 <p className="mt-2 text-sm leading-6 text-ink-muted">{reason}</p>
@@ -420,24 +471,7 @@ export default function HomePage() {
             title="One recovered job can make the math obvious."
             body="Quote Reclaim is $49/month. One recovered $2,500 job can cover more than 4 years of Quote Reclaim."
           />
-          <div className="rounded-2xl border border-money/35 bg-money/10 p-5 sm:p-6">
-            <div className="grid gap-4 sm:grid-cols-3">
-              <MetricBlock label="Plan" value="$49/mo" />
-              <MetricBlock label="Example job" value="$2,500" />
-              <MetricBlock label="Simple math" value="4+ years" />
-            </div>
-            <p className="mt-5 text-sm leading-6 text-ink-muted">
-              No software can promise a job back. The point is simple: if
-              even one quiet estimate comes back, the math is easy.
-            </p>
-            <Link
-              href="/audit"
-              className="mt-5 inline-flex min-h-11 items-center justify-center gap-2 rounded-lg border border-brand bg-brand px-4 py-2 text-sm font-bold text-canvas transition hover:bg-brand-dark focus:outline-none focus-visible:ring-2 focus-visible:ring-focus"
-            >
-              Run the free audit
-              <ArrowRight className="h-4 w-4" aria-hidden="true" />
-            </Link>
-          </div>
+          <PriceMathCard />
         </div>
       </SectionShell>
 
@@ -524,20 +558,20 @@ function HeroProductPreview() {
   return (
     <div
       id="how-it-works"
-      className="min-w-0 rounded-3xl border border-line-subtle bg-surface-1 shadow-[0_26px_80px_rgba(0,0,0,0.32)]"
+      className="min-w-0 rounded-2xl border border-line-subtle bg-surface-1/85 shadow-[0_18px_54px_rgba(0,0,0,0.22)]"
     >
-      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-line-subtle px-4 py-3 sm:px-5">
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-line-subtle/80 px-4 py-3 sm:px-5">
         <Badge variant="money">SAMPLE PREVIEW - NOT CUSTOMER DATA</Badge>
         <span className="text-xs font-black uppercase tracking-widest text-ink-muted">
-          Recovery command center
+          Silent Quote Command
         </span>
       </div>
-      <div className="grid gap-4 p-4 sm:p-5">
+      <div className="grid gap-3 p-4 sm:p-5">
         <div className="grid gap-3 sm:grid-cols-[1fr_0.85fr]">
-          <PreviewPanel label="Silent Quote Command" value="$14,500" body="total quiet estimate value" />
-          <PreviewPanel label="Follow up first" value="Estimate #3" body="$9,000 - Warm" tone="brand" />
+          <PreviewPanel label="Money still quiet" value="$14,500" body="across sent estimates" />
+          <PreviewPanel label="Work first" value="Estimate #3" body="$9,000 - Warm" tone="brand" />
         </div>
-        <div className="rounded-2xl border border-line-subtle bg-canvas/55 p-4">
+        <div className="rounded-xl border border-brand/30 bg-brand/10 p-4">
           <p className="text-xs font-black uppercase tracking-widest text-brand">
             Message to send today
           </p>
@@ -546,7 +580,7 @@ function HeroProductPreview() {
             the estimate on my side?
           </p>
         </div>
-        <div className="grid gap-3 sm:grid-cols-3">
+        <div className="grid gap-2 sm:grid-cols-3">
           <MiniStatus label="5-message sequence" value="Follow-up 1 ready" />
           <MiniStatus label="Crew gap match" value="Thu opening" />
           <MiniStatus label="Got the job?" value="Mark win" />
@@ -569,11 +603,11 @@ function PreviewPanel({
 }) {
   const toneClass = tone === "money" ? "text-money" : "text-brand";
   return (
-    <section className="rounded-2xl border border-line-subtle bg-canvas/55 p-4">
+    <section className="rounded-xl border border-line-subtle bg-canvas/45 p-4">
       <p className="text-xs font-black uppercase tracking-widest text-ink-muted">
         {label}
       </p>
-      <p className={`mt-2 break-words text-3xl font-black ${toneClass}`}>
+      <p className={`mt-2 break-words text-2xl font-black sm:text-3xl ${toneClass}`}>
         {value}
       </p>
       <p className="mt-1 break-words text-sm text-ink-muted">{body}</p>
@@ -583,7 +617,7 @@ function PreviewPanel({
 
 function MiniStatus({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-xl border border-line-subtle bg-surface-2 p-3">
+    <div className="rounded-lg border border-line-subtle bg-surface-2/80 p-3">
       <p className="text-[10px] font-black uppercase tracking-widest text-ink-muted">
         {label}
       </p>
@@ -606,7 +640,7 @@ function SectionShell({
   return (
     <section
       id={id}
-      className="mx-auto w-full max-w-6xl scroll-mt-8 border-t border-line-subtle/80 px-4 py-10 sm:px-6 lg:px-8 lg:py-14"
+      className="mx-auto w-full max-w-6xl scroll-mt-8 border-t border-line-subtle/70 px-4 py-9 sm:px-6 lg:px-8 lg:py-12"
     >
       <p className="mb-5 text-xs font-black uppercase tracking-widest text-brand">
         {eyebrow}
@@ -639,7 +673,7 @@ function SignalCard({
   body: string;
 }) {
   return (
-    <article className="rounded-2xl border border-line-subtle bg-surface-1 p-4">
+    <article className="rounded-xl border border-line-subtle bg-surface-1/75 p-4">
       <div className="text-brand">{icon}</div>
       <h3 className="mt-3 font-black text-ink-strong">{title}</h3>
       <p className="mt-2 text-sm leading-6 text-ink-muted">{body}</p>
@@ -684,7 +718,7 @@ function SystemCard({
   body: string;
 }) {
   return (
-    <article className="rounded-2xl border border-line-subtle bg-surface-1 p-4">
+    <article className="rounded-xl border border-line-subtle bg-surface-1/75 p-4">
       <div className="text-brand">{icon}</div>
       <h3 className="mt-3 font-black text-ink-strong">{title}</h3>
       <p className="mt-2 text-sm leading-6 text-ink-muted">{body}</p>
@@ -694,7 +728,20 @@ function SystemCard({
 
 function CommandTable() {
   return (
-    <div className="overflow-hidden rounded-2xl border border-line-subtle bg-surface-1">
+    <div className="overflow-hidden rounded-2xl border border-brand/35 bg-surface-1 shadow-[0_0_34px_rgba(217,111,50,0.10)]">
+      <div className="flex flex-wrap items-end justify-between gap-3 border-b border-line-subtle bg-brand/10 px-4 py-4">
+        <div>
+          <p className="text-xs font-black uppercase tracking-widest text-brand">
+            Next move
+          </p>
+          <h3 className="mt-1 text-xl font-black text-ink-strong">
+            Work the warm, high-value estimate first.
+          </h3>
+        </div>
+        <span className="rounded-lg border border-brand/35 bg-canvas/45 px-3 py-2 text-xs font-black uppercase tracking-widest text-brand">
+          Send today
+        </span>
+      </div>
       <div className="grid grid-cols-2 gap-2 border-b border-line-subtle px-4 py-3 text-xs font-black uppercase tracking-widest text-ink-muted sm:grid-cols-5">
         <span>Estimate</span>
         <span>Days quiet</span>
@@ -736,7 +783,7 @@ function CommandTable() {
 
 function CrewGapPreview() {
   return (
-    <div className="rounded-2xl border border-brand/35 bg-brand/10 p-5">
+    <div className="rounded-xl border border-brand/35 bg-brand/10 p-5">
       <div className="flex items-center gap-2 text-brand">
         <CalendarClock className="h-5 w-5" aria-hidden="true" />
         <p className="text-xs font-black uppercase tracking-widest">
@@ -759,7 +806,7 @@ function CrewGapPreview() {
 
 function GotJobPreview() {
   return (
-    <div className="rounded-2xl border border-money/35 bg-money/10 p-5">
+    <div className="rounded-xl border border-money/35 bg-money/10 p-5">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <p className="text-xs font-black uppercase tracking-widest text-money">
@@ -784,13 +831,42 @@ function GotJobPreview() {
 
 function MetricBlock({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-xl border border-line-subtle bg-canvas/50 p-4">
+    <div className="rounded-lg border border-line-subtle bg-canvas/50 p-4">
       <p className="text-[10px] font-black uppercase tracking-widest text-ink-muted">
         {label}
       </p>
       <p className="mt-2 break-words text-lg font-black text-ink-strong">
         {value}
       </p>
+    </div>
+  );
+}
+
+function PriceMathCard() {
+  return (
+    <div className="rounded-2xl border border-money/35 bg-money/10 p-5 sm:p-6">
+      <p className="text-xs font-black uppercase tracking-widest text-money">
+        $49/month
+      </p>
+      <h3 className="mt-3 max-w-2xl text-balance text-2xl font-black leading-tight text-ink-strong sm:text-3xl">
+        One $2,500 recovered job can cover more than 4 years.
+      </h3>
+      <div className="mt-5 grid gap-3 sm:grid-cols-3">
+        <MetricBlock label="Plan" value="$49/month" />
+        <MetricBlock label="Recovered job" value="$2,500" />
+        <MetricBlock label="Coverage" value="4+ years" />
+      </div>
+      <p className="mt-5 text-sm leading-6 text-ink-muted">
+        No software can promise a job back. The point is simple: if even one
+        quiet estimate comes back, the math is easy.
+      </p>
+      <Link
+        href="/audit"
+        className="mt-5 inline-flex min-h-11 items-center justify-center gap-2 rounded-lg border border-brand bg-brand px-4 py-2 text-sm font-bold text-canvas transition hover:bg-brand-dark focus:outline-none focus-visible:ring-2 focus-visible:ring-focus"
+      >
+        Run the free audit
+        <ArrowRight className="h-4 w-4" aria-hidden="true" />
+      </Link>
     </div>
   );
 }

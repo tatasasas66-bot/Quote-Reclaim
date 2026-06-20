@@ -50,6 +50,9 @@ describe("Homepage hero copy (honest conversion rewrite)", () => {
     expect(homepage).toMatch(/what message to send today/);
     expect(homepage).toMatch(/keep\s+every sent estimate moving/);
     expect(homepage).toMatch(/save the plan\s+and keep working quiet estimates every week/);
+    expect(homepage).toMatch(/Run free audit/);
+    expect(homepage).toMatch(/Save the recovery plan/);
+    expect(homepage).toMatch(/Work quiet estimates every week/);
     // The broad "follows up by email automatically" claim — without the
     // no-email qualifier — is gone.
     expect(homepage).not.toMatch(/follows\s+up by email automatically/);
