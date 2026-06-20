@@ -5,7 +5,7 @@ import { getProfileStats, listPendingQuotes } from "@/lib/quotes/repo";
 import { RevealClient } from "./RevealClient";
 
 export const metadata: Metadata = {
-  title: "Find the money sitting quiet — Quote Reclaim",
+  title: "Find quiet money in old estimates — Quote Reclaim",
 };
 
 export const dynamic = "force-dynamic";

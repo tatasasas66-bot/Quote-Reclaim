@@ -154,6 +154,7 @@ describe("/quotes/import — reusable bulk import, one parser, one action", () =
     // No second copy of the parser, the action, or the placeholder example.
     expect(importPageSrc).not.toContain("parseSilentQuotesInput");
     expect(importPageSrc).not.toContain("importSilentQuotesAction");
+    expect(importPageSrc).toContain('surface="import"');
   });
 
   it("hands surface='import' so the header reads 'Back to dashboard' instead of an onboarding skip", () => {
@@ -215,7 +216,7 @@ describe("/quotes/import — reusable bulk import, one parser, one action", () =
   it("returning-user import copy does not imply first-time onboarding", () => {
     // Eyebrow and headline flip honestly when surface === "import".
     expect(revealClientSrc).toContain('"Paste More Quotes"');
-    expect(revealClientSrc).toContain("Audit another batch of estimates.");
+    expect(revealClientSrc).toContain("Add another batch to the recovery queue.");
   });
 });
 
@@ -245,7 +246,7 @@ describe("onboarding reveal input — copy, skip clarity, large-import handling"
   });
 
   it("the in-flow skip path is clear, secondary, and never reads as abandonment", () => {
-    expect(revealClientSrc).toContain("No spreadsheet handy?");
+    expect(revealClientSrc).toContain("No list handy?");
     expect(revealClientSrc).toContain("Start with one quote");
     expect(revealClientSrc).toContain(
       "you can paste a batch any time from the dashboard.",
@@ -262,11 +263,22 @@ describe("onboarding reveal input — copy, skip clarity, large-import handling"
   it("primary CTA on the input step is the 'Scan' button, not the skip", () => {
     // Scan is the Button component (visually dominant); skip is a small link.
     expect(revealClientSrc).toMatch(
-      /<Button type="button" size="lg" onClick=\{onScan\}>\s*Scan my quotes/,
+      /<Button[\s\S]{0,180}onClick=\{onScan\}[\s\S]{0,180}Scan my quiet estimates/,
     );
     expect(revealClientSrc).not.toMatch(
       /<Button[^>]*size="lg"[^>]*>\s*Skip/,
     );
+  });
+
+  it("first-run input explains the value before asking for rows", () => {
+    expect(revealClientSrc).toContain(
+      "Find the money still sitting in old estimates.",
+    );
+    expect(revealClientSrc).toContain("Paste anything structured");
+    expect(revealClientSrc).toContain("What happens next");
+    expect(revealClientSrc).toContain("Review before saving");
+    expect(revealClientSrc).toContain("See the quiet total");
+    expect(revealClientSrc).toContain("Start the recovery system");
   });
 
   it("the preview collapses past 8 rows so a 30/40/100-row paste cannot bury the Reveal CTA", () => {

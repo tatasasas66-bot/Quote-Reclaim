@@ -314,9 +314,12 @@ describe("RevealClient — copy, CTAs, and brand guardrails", () => {
     expect(revealClientSrc).toMatch(
       /Skip — start with one quote instead/,
     );
+    expect(revealClientSrc).toMatch(
+      /skipOnboardingAction\(\)[\s\S]{0,80}router\.push\("\/quotes\/new"\)/,
+    );
     // In-flow secondary path beside the textarea reinforces the same idea,
     // so a contractor who only sees CTAs next to inputs still finds it.
-    expect(revealClientSrc).toMatch(/No spreadsheet handy\?/);
+    expect(revealClientSrc).toMatch(/No list handy\?/);
     expect(revealClientSrc).toContain("Start with one quote");
   });
 
@@ -911,10 +914,11 @@ describe("parser error message and input-step copy compliance", () => {
     );
   });
 
-  it("input helper leads with 'One quote per line' and mentions date+email purpose", () => {
-    expect(revealClientSrc).toMatch(
-      /One quote per line\. Name \+ amount is enough; date and email help/,
-    );
+  it("input helper says paste-anything but keeps the minimum required fields clear", () => {
+    expect(revealClientSrc).toContain("Paste anything structured");
+    expect(revealClientSrc).toMatch(/One quote per line\./);
+    expect(revealClientSrc).toMatch(/Name \+ amount is enough\./);
+    expect(revealClientSrc).toMatch(/Date and email help time the follow-up\./);
     expect(revealClientSrc).not.toMatch(/A name and an amount per line is enough\./);
   });
 

@@ -64,6 +64,7 @@ export default async function QuotesImportPage() {
       isPaid={isPaid}
       usageCount={usage}
       pendingCount={pendingCount}
+      surface="import"
     />
   );
 }

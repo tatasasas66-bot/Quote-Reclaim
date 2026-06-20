@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Badge, Button, Logo } from "@/components/ui";
 import {
@@ -58,6 +59,13 @@ const PASTE_PLACEHOLDER = [
   "",
   "or paste from a spreadsheet — name, amount, [date], [email]",
 ].join("\n");
+
+const INPUT_PROOF_POINTS = [
+  "Spreadsheet rows",
+  "CSV or tabs",
+  "Copied estimate lists",
+  "Name + amount is enough",
+];
 
 export function RevealClient({
   isPaid,
@@ -158,7 +166,7 @@ export function RevealClient({
       return;
     }
     await skipOnboardingAction();
-    router.push("/dashboard");
+    router.push("/quotes/new");
   }
 
   const headerSecondaryLabel =
@@ -250,45 +258,121 @@ function InputStep({
 }) {
   const isImport = surface === "import";
   return (
-    <section className="mx-auto mt-8 grid w-full max-w-3xl gap-6">
-      <div>
+    <section className="mx-auto mt-7 grid w-full max-w-5xl gap-6 lg:grid-cols-[0.82fr_1.18fr] lg:items-start">
+      <div className="min-w-0 space-y-5">
         <p className="text-xs font-black uppercase tracking-widest text-brand">
           {isImport ? "Paste More Quotes" : "Silent Quote Audit"}
         </p>
-        <h1 className="mt-3 text-balance text-4xl font-black leading-tight text-ink-strong sm:text-5xl">
+        <h1 className="mt-3 text-balance text-4xl font-black leading-[1.04] text-ink-strong sm:text-5xl">
           {isImport
-            ? "Audit another batch of estimates."
-            : "Paste your last 30 estimates."}
+            ? "Add another batch to the recovery queue."
+            : "Find the money still sitting in old estimates."}
         </h1>
-        <p className="mt-3 max-w-2xl text-base leading-7 text-ink">
-          One quote per line. Name + amount is enough; date and email help
-          us time the follow-up. Quote Reclaim totals what&apos;s sitting
-          silent, ranks the customers still worth a follow-up, and builds
-          the 5-message recovery plan for each one.
-          Nothing is saved until you confirm. No email on file? You still
-          get all 5 messages, ready to copy.
+        <p className="mt-4 max-w-2xl text-base leading-7 text-ink">
+          Paste from a spreadsheet, notes, email, or a copied estimate list.
+          Quote Reclaim cleans the rows, shows the quiet total, ranks the best customers to reopen first, and builds the 5-message recovery plan for each one.
+          Nothing is saved until you confirm.
         </p>
+        <p className="mt-3 max-w-xl text-sm leading-6 text-ink-muted">
+          Name + amount is enough. Date and email help time the follow-up. No email on file? You still get all 5 messages, ready to copy.
+        </p>
+
+        <div className="mt-4 grid gap-2 sm:grid-cols-2">
+          {INPUT_PROOF_POINTS.map((point) => (
+            <div
+              key={point}
+              className="rounded-lg border border-line-subtle bg-surface-1/75 px-3 py-2 text-sm font-semibold text-ink"
+            >
+              {point}
+            </div>
+          ))}
+        </div>
+
+        <div className="mt-5 rounded-xl border border-brand/35 bg-brand/10 p-4">
+          <p className="text-xs font-black uppercase tracking-widest text-brand">
+            What happens next
+          </p>
+          <ol className="mt-3 grid gap-3">
+            <li className="flex gap-3">
+              <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-brand text-xs font-black text-canvas">
+                1
+              </span>
+              <div>
+                <p className="text-sm font-black text-ink-strong">
+                  Review before saving
+                </p>
+                <p className="mt-1 text-xs leading-5 text-ink-muted">
+                  Drop any row that looks wrong. Nothing is saved until you
+                  confirm.
+                </p>
+              </div>
+            </li>
+            <li className="flex gap-3">
+              <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-brand text-xs font-black text-canvas">
+                2
+              </span>
+              <div>
+                <p className="text-sm font-black text-ink-strong">
+                  See the quiet total
+                </p>
+                <p className="mt-1 text-xs leading-5 text-ink-muted">
+                  The reveal shows the money sitting quiet and the first
+                  recovery targets.
+                </p>
+              </div>
+            </li>
+            <li className="flex gap-3">
+              <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-brand text-xs font-black text-canvas">
+                3
+              </span>
+              <div>
+                <p className="text-sm font-black text-ink-strong">
+                  Start the recovery system
+                </p>
+                <p className="mt-1 text-xs leading-5 text-ink-muted">
+                  Your dashboard opens with the quote, the money, and the next
+                  message to send.
+                </p>
+              </div>
+            </li>
+          </ol>
+        </div>
         {pendingCount > 0 ? (
-          <p className="mt-3 text-xs text-ink-muted">
+          <p className="mt-3 rounded-lg border border-line-subtle bg-surface-1/70 p-3 text-xs leading-5 text-ink-muted">
             You already have {pendingCount} quote{pendingCount === 1 ? "" : "s"}{" "}
-            in your queue. Importing more adds to that list (subject to your
-            free-plan allowance).
+            in your queue. Importing more adds to that list under your current
+            plan allowance.
           </p>
         ) : null}
       </div>
 
-      <div className="rounded-lg border border-line-subtle bg-surface-1 p-5 sm:p-6">
+      <div className="rounded-xl border border-line-subtle bg-surface-1 p-5 shadow-[0_24px_70px_rgba(0,0,0,0.24)] sm:p-6">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <p className="text-xs font-black uppercase tracking-widest text-brand">
+              Paste anything structured
+            </p>
+            <p className="mt-1 text-sm leading-6 text-ink-muted">
+              One quote per line. Name + amount is enough. We clean it up
+              before it touches your queue.
+            </p>
+          </div>
+          <span className="rounded-full border border-money/30 bg-money/10 px-3 py-1 text-[10px] font-black uppercase tracking-widest text-money">
+            Result first
+          </span>
+        </div>
+
         <label
           htmlFor="trade-select"
-          className="block text-xs font-black uppercase tracking-widest text-ink-muted"
+          className="mt-5 block text-xs font-black uppercase tracking-widest text-ink-muted"
         >
-          What trade are these for?
+          Trade
         </label>
         <select
           id="trade-select"
           value={trade}
           onChange={(e) => setTrade(e.target.value)}
-          className="mt-2 w-full rounded-md border border-line-strong bg-surface-2 px-3 py-2 text-sm text-ink-strong focus:outline-none focus-visible:ring-2 focus-visible:ring-focus"
+          className="mt-2 h-12 w-full rounded-md border border-line-strong bg-surface-2 px-3 text-base font-semibold text-ink-strong focus:outline-none focus-visible:ring-2 focus-visible:ring-focus"
         >
           {TRADES.map((t) => (
             <option key={t} value={t}>
@@ -301,14 +385,14 @@ function InputStep({
           htmlFor="paste-box"
           className="mt-5 block text-xs font-black uppercase tracking-widest text-ink-muted"
         >
-          Paste your estimates — one per line
+          Quiet estimates
         </label>
         <textarea
           id="paste-box"
           value={pasted}
           onChange={(e) => setPasted(e.target.value)}
           placeholder={PASTE_PLACEHOLDER}
-          rows={12}
+          rows={11}
           className="mt-2 w-full rounded-md border border-line-strong bg-surface-2 p-3 font-mono text-sm leading-6 text-ink-strong placeholder:text-ink-muted/50 focus:outline-none focus-visible:ring-2 focus-visible:ring-focus"
         />
         <p className="mt-2 text-xs text-ink-muted">
@@ -323,11 +407,24 @@ function InputStep({
           </p>
         ) : null}
 
-        <div className="mt-5 flex flex-wrap items-center gap-3">
-          <Button type="button" size="lg" onClick={onScan}>
-            Scan my quotes →
+        <div className="mt-5 flex flex-col gap-3 sm:flex-row sm:items-center">
+          <Button
+            type="button"
+            size="lg"
+            onClick={onScan}
+            className="w-full sm:flex-1"
+          >
+            Scan my quiet estimates
           </Button>
-          <span className="text-xs text-ink-muted">
+          {!isImport ? (
+            <Link
+              href="/quotes/new"
+              className="inline-flex min-h-12 items-center justify-center rounded-lg border border-line-strong bg-surface-2 px-4 py-3 text-base font-semibold text-ink-strong hover:bg-surface-3 focus:outline-none focus-visible:ring-2 focus-visible:ring-focus sm:min-w-44"
+            >
+              Start with one
+            </Link>
+          ) : null}
+          <span className="text-center text-xs leading-5 text-ink-muted sm:basis-full sm:text-left">
             Nothing is saved yet. You&apos;ll see the total first.
           </span>
         </div>
@@ -340,14 +437,14 @@ function InputStep({
           not "I am giving up". Hidden in the reusable-import surface where
           there is no onboarding gate to cross. */}
       {!isImport ? (
-        <p className="text-center text-xs text-ink-muted">
-          No spreadsheet handy?{" "}
-          <a
+        <p className="text-center text-xs text-ink-muted lg:col-span-2">
+          No list handy?{" "}
+          <Link
             href="/quotes/new"
             className="font-semibold text-brand hover:text-ink-strong"
           >
             Start with one quote
-          </a>{" "}
+          </Link>{" "}
           — you can paste a batch any time from the dashboard.
         </p>
       ) : null}
