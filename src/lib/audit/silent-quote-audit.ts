@@ -326,7 +326,7 @@ export function runSilentQuoteAudit(inputs: AuditQuoteInput[]): AuditResult {
       suggestedMessage: "",
       whyNotOthers: [],
       nextThreeMoves: [],
-      error: "Enter a quote amount.",
+      error: "Enter an estimate amount.",
     };
   }
 

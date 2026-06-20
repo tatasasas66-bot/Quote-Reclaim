@@ -27,9 +27,9 @@ const SAMPLE_ROWS = [
  * a thing the audit actually computed. No fake server work, no fake AI magic.
  */
 export const ANALYSIS_STEPS: readonly string[] = [
-  "Totaling your quiet quotes...",
+  "Totaling your quiet estimates...",
   "Scoring by value and days quiet...",
-  "Finding the quote to follow up first...",
+  "Finding the estimate to follow up first...",
   "Building your follow-up order...",
   "Preparing the message to send today...",
 ];
@@ -131,7 +131,7 @@ export function AuditCalculatorClient() {
   function validateRows(): string | null {
     const hasAmountInput = rows.some((row) => row.amount.trim() !== "");
     const hasValidAmount = rows.some((row) => parseQuoteAmount(row.amount) != null);
-    if (!hasAmountInput || !hasValidAmount) return "Enter a quote amount.";
+    if (!hasAmountInput || !hasValidAmount) return "Enter an estimate amount.";
 
     const invalidDays = rows.some(
       (row) => row.days.trim() !== "" && parseDaysSilent(row.days) == null,
@@ -225,30 +225,30 @@ export function AuditCalculatorClient() {
         onSubmit={handleSubmit}
         noValidate
         data-testid="audit-form-card"
-        className="rounded-2xl border border-line-subtle bg-surface-1 p-4 shadow-[0_24px_80px_rgba(0,0,0,0.26)] sm:p-5"
+        className="rounded-2xl border border-line-strong/50 bg-surface-1/95 p-4 shadow-[0_24px_70px_rgba(0,0,0,0.22)] sm:p-5"
       >
         <div className="mb-4">
           <p className="text-xs font-black uppercase tracking-widest text-brand">
-            Run a 60-second quote audit
+            Run a 60-second estimate audit
           </p>
           <h2 className="mt-2 text-2xl font-black text-ink-strong">
-            Find the quote worth following up first.
+            Find the estimate worth following up first.
           </h2>
           <p id="audit-form-helper" className="mt-2 text-sm leading-6 text-ink-muted">
             Use estimates you already sent and have not heard back on. Rough
-            numbers are fine - this is a priority check, not accounting.
+            numbers are fine — this is a priority check, not accounting.
           </p>
         </div>
 
         <fieldset aria-describedby="audit-form-helper" className="space-y-3">
-          <legend className="sr-only">Enter three quiet quotes</legend>
+          <legend className="sr-only">Enter three quiet estimates</legend>
           {rows.map((row, i) => (
             <div
               key={i}
-              className="rounded-xl border border-line-subtle bg-surface-2 p-3"
+              className="rounded-xl border border-line-subtle bg-surface-2/90 p-3"
             >
               <p className="mb-3 text-xs font-black uppercase tracking-widest text-ink-muted">
-                Quote {i + 1}
+                Estimate {i + 1}
               </p>
               <div className="grid grid-cols-[1.25fr_0.9fr] gap-3">
                 <div className="flex flex-col gap-1.5">
@@ -256,11 +256,11 @@ export function AuditCalculatorClient() {
                     htmlFor={`amount-${i}`}
                     className="text-sm font-semibold text-ink"
                   >
-                    Quote amount
+                    Estimate amount
                   </label>
                   <input
                     id={`amount-${i}`}
-                    aria-label={`Quote #${i + 1} amount`}
+                    aria-label={`Estimate #${i + 1} amount`}
                     type="text"
                     inputMode="decimal"
                     autoComplete="off"
@@ -279,7 +279,7 @@ export function AuditCalculatorClient() {
                   </label>
                   <input
                     id={`days-${i}`}
-                    aria-label={`Quote #${i + 1} days quiet`}
+                    aria-label={`Estimate #${i + 1} days quiet`}
                     type="text"
                     inputMode="numeric"
                     autoComplete="off"
@@ -306,8 +306,8 @@ export function AuditCalculatorClient() {
 
         <div className="mt-4 rounded-xl border border-line-subtle bg-canvas p-3 text-sm leading-6 text-ink-muted">
           <p>
-            Example: $3,200 quiet for 14, $5,800 quiet for 24, $2,400 quiet for
-            7.
+            Example: $3,200 quiet for 14 days, $5,800 quiet for 24 days,
+            $2,400 quiet for 7 days.
           </p>
           <button
             type="button"
@@ -331,7 +331,7 @@ export function AuditCalculatorClient() {
             "Auditing..."
           ) : (
             <>
-              Show me which quote to follow up first
+              Show me which estimate to follow up first
               <ArrowRight className="h-4 w-4" aria-hidden="true" />
             </>
           )}
@@ -415,12 +415,12 @@ function AuditResultView({
     <div
       data-testid="audit-result"
       role="region"
-      aria-label="Your quote audit result"
-      className="space-y-4 rounded-2xl border border-brand/35 bg-surface-2 p-4 shadow-[0_24px_80px_rgba(0,0,0,0.3)] sm:p-5"
+      aria-label="Your estimate audit result"
+      className="space-y-4 rounded-2xl border border-brand/45 bg-[linear-gradient(180deg,rgba(217,111,50,0.08),rgba(24,28,34,0.98))] p-4 shadow-[0_28px_90px_rgba(0,0,0,0.34)] sm:p-6"
     >
       <div>
         <p className="text-xs font-black uppercase tracking-widest text-success">
-          Your 60-second quote audit
+          Your 60-second estimate audit
         </p>
         <h2 className="mt-2 text-2xl font-black text-ink-strong">
           Here is what to do today.
@@ -430,7 +430,7 @@ function AuditResultView({
       <div className="grid gap-3 sm:grid-cols-2">
         <section className="rounded-xl border border-line-subtle bg-surface-1 p-4">
           <p className="text-xs font-black uppercase tracking-widest text-ink-muted">
-            Total quiet quote value
+            Total quiet estimate value
           </p>
           <p className="mt-2 text-4xl font-black leading-none text-money sm:text-5xl">
             {formatCurrency(result.totalSilentQuoteValue)}
@@ -446,10 +446,10 @@ function AuditResultView({
             className="rounded-xl border border-brand/30 bg-brand/10 p-4"
           >
             <p className="text-xs font-black uppercase tracking-widest text-brand">
-              Follow up this quote first
+              Follow up this estimate first
             </p>
             <p className="mt-2 text-xl font-black text-ink-strong">
-              Start with Quote #{priority.index}
+              Start with Estimate #{priority.index}
             </p>
             <p className="mt-1 text-3xl font-black text-ink-strong">
               {formatCurrency(priority.amount)}
@@ -498,7 +498,7 @@ function AuditResultView({
               Why this one first
             </p>
             <p className="mt-2 text-sm leading-6 text-ink">
-              We ranked this quote using amount and days quiet.{" "}
+              We ranked this estimate using amount and days quiet.{" "}
               {result.priorityReason}
             </p>
           </div>
@@ -548,8 +548,8 @@ function AuditResultView({
           Next move
         </p>
         <p className="mt-2 text-sm leading-6 text-ink">
-          Send the message to the first quote today. Then check the next quote
-          in the order above.
+          Send the message to the first estimate today. Then check the next
+          estimate in the order above.
         </p>
       </section>
 
@@ -562,7 +562,7 @@ function AuditResultView({
         </p>
         <p className="mt-2 text-sm leading-6 text-ink">
           Quote Reclaim keeps the follow-up order in one place and turns quiet
-          quotes into a 5-message recovery sequence you can work through.
+          estimates into a 5-message recovery sequence you can work through.
         </p>
       </section>
 
@@ -575,11 +575,11 @@ function AuditResultView({
             Save this recovery plan
           </p>
           <p className="mt-2 text-sm leading-6 text-ink">
-            Create an account to track more quotes, save messages, and keep your
-            follow-up order in one place.
+            Create an account to track more estimates, save messages, and keep
+            your follow-up order in one place.
           </p>
           <p className="mt-2 text-sm font-bold text-ink-strong">
-            First 3 quotes are free.
+            First 3 estimates are free.
           </p>
         </div>
         <a
@@ -629,7 +629,7 @@ function FollowUpOrder({ ranked }: { ranked: RankedAuditQuote[] }) {
                 </span>
                 <div>
                   <p className="text-sm font-black text-ink-strong">
-                    Quote #{q.index} - {formatCurrency(q.amount)}
+                    Estimate #{q.index} - {formatCurrency(q.amount)}
                   </p>
                   <p className="text-xs text-ink-muted">
                     {q.daysSilent != null

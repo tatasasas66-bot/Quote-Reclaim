@@ -4,16 +4,16 @@ import { LogoFull } from "@/components/brand/Logo";
 import { AuditCalculatorClient } from "./AuditCalculatorClient";
 
 export const metadata: Metadata = {
-  title: "Free quote audit for contractors - Quote Reclaim",
+  title: "Free estimate audit for contractors - Quote Reclaim",
   description:
-    "Before buying another lead, check the estimates you already sent. Enter 3 quote amounts and days quiet. No customer names, no phone numbers, no card.",
+    "Before buying another lead, check the estimates you already sent. Enter 3 sent estimates and days quiet. No customer names, no phone numbers, no card.",
   robots: { index: true, follow: true },
 };
 
 const TRUST_CARDS = [
   {
     title: "No customer data needed",
-    body: "The audit works with quote amount and days quiet only.",
+    body: "The audit works with estimate amount and days quiet only.",
   },
   {
     title: "No signup wall",
@@ -25,13 +25,13 @@ const TRUST_CARDS = [
   },
   {
     title: "Simple logic",
-    body: "The page shows why one quote is worth following up first.",
+    body: "The page shows why one estimate is worth following up first.",
   },
 ] as const;
 
 const STEPS = [
-  "Enter quote amount and days quiet.",
-  "See which quote deserves attention first.",
+  "Enter estimate amount and days quiet.",
+  "See which estimate deserves attention first.",
   "Copy the message and follow up today.",
 ] as const;
 
@@ -42,15 +42,15 @@ const ANSWERS = [
   },
   {
     q: "Do I need customer names?",
-    a: "No. Use only quote amount and days quiet.",
+    a: "No. Use only estimate amount and days quiet.",
   },
   {
     q: "Do I need to sign up?",
-    a: "Not to see the audit result. You only create an account if you want to save the plan and track more quotes.",
+    a: "Not to see the audit result. You only create an account if you want to save the plan and track more estimates.",
   },
   {
     q: "Does this replace my estimating app?",
-    a: "No. Quote Reclaim is focused on quote follow-up and recovery. Keep using your current tools.",
+    a: "No. Quote Reclaim is focused on estimate follow-up and recovery. Keep using your current tools.",
   },
   {
     q: "Will Quote Reclaim message customers for me?",
@@ -70,7 +70,7 @@ const ANSWERS = [
  */
 export default function AuditPage() {
   return (
-    <main className="min-h-screen w-full bg-canvas text-ink">
+    <main className="min-h-screen w-full bg-[radial-gradient(ellipse_at_top,rgba(217,111,50,0.08),transparent_42%),rgb(var(--qr-bg-canvas))] text-ink">
       <div className="mx-auto flex w-full max-w-6xl flex-col px-4 py-5 sm:px-6 lg:px-8">
         <header className="flex items-center justify-between gap-4 border-b border-line-subtle pb-5">
           <LogoFull />
@@ -82,29 +82,29 @@ export default function AuditPage() {
           </Link>
         </header>
 
-        <section className="grid gap-8 py-10 lg:grid-cols-[1fr_0.92fr] lg:items-start lg:py-16">
+        <section className="grid gap-8 py-9 lg:grid-cols-[1fr_0.92fr] lg:items-start lg:py-14">
           <div className="max-w-2xl">
             <p className="text-xs font-black uppercase tracking-widest text-brand">
-              Free 60-second quote audit
+              Free 60-second estimate audit
             </p>
-            <h1 className="mt-4 text-balance text-4xl font-black leading-[0.98] text-ink-strong sm:text-5xl lg:text-6xl">
+            <h1 className="mt-4 text-balance text-4xl font-black leading-[1.04] text-ink-strong sm:text-5xl lg:text-[3.35rem]">
               Before buying another lead, check the estimates you already sent.
             </h1>
-            <p className="mt-5 max-w-xl text-pretty text-base leading-7 text-ink sm:text-lg">
-              Enter 3 quote amounts and how long each has been quiet. Quote
-              Reclaim shows your total quiet quote value, which one to follow up
-              first, and the message to send today.
+            <p className="mt-6 max-w-xl text-pretty text-base leading-7 text-ink sm:text-lg">
+              Enter 3 estimates you already sent and how long each has been
+              quiet. Quote Reclaim shows your total quiet estimate value, which
+              one to follow up first, and the message to send today.
             </p>
 
             <div
               aria-label="Audit privacy promises"
-              className="mt-6 grid grid-cols-2 gap-2 text-xs font-black uppercase tracking-widest text-ink-muted sm:max-w-xl sm:grid-cols-4"
+              className="mt-6 grid grid-cols-2 gap-2 text-[11px] font-black uppercase tracking-widest text-ink-muted sm:max-w-xl sm:grid-cols-4"
             >
               <span className="rounded-full border border-line-subtle bg-surface-1 px-3 py-2 text-center">
                 No names
               </span>
               <span className="rounded-full border border-line-subtle bg-surface-1 px-3 py-2 text-center">
-                No phone numbers
+                No phone
               </span>
               <span className="rounded-full border border-line-subtle bg-surface-1 px-3 py-2 text-center">
                 No card
@@ -114,7 +114,7 @@ export default function AuditPage() {
               </span>
             </div>
 
-            <p className="mt-6 max-w-xl rounded-xl border border-brand/30 bg-brand/10 p-4 text-sm leading-6 text-ink">
+            <p className="mt-6 max-w-xl rounded-xl border border-brand/25 bg-surface-1/75 p-4 text-sm leading-6 text-ink">
               Built for home-service contractors. Especially useful for
               estimate-heavy trades like painting, remodeling, roofing, HVAC,
               plumbing, fencing, and landscaping.
@@ -122,8 +122,8 @@ export default function AuditPage() {
 
             <div className="mt-7 grid max-w-xl gap-3 sm:grid-cols-3">
               {[
-                "Total quiet quote value",
-                "Quote to follow up first",
+                "Total quiet estimate value",
+                "Estimate to follow up first",
                 "Message to send today",
               ].map((item) => (
                 <div
@@ -261,9 +261,8 @@ export default function AuditPage() {
         </section>
 
         <footer className="border-t border-line-subtle py-6 text-center text-xs leading-6 text-ink-muted">
-          Quote Reclaim helps contractors prioritize quiet quotes and follow up
-          on estimates already sent. Not lead generation. Not scheduling
-          software.
+          Quote Reclaim helps contractors turn sent estimates into booked work.
+          Not lead generation. Not scheduling software.
         </footer>
       </div>
     </main>

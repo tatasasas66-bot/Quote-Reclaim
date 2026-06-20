@@ -70,7 +70,7 @@ describe("runSilentQuoteAudit", () => {
       { amountRaw: "abc" },
       { amountRaw: "0" },
     ]);
-    expect(r.error).toBe("Enter a quote amount.");
+    expect(r.error).toBe("Enter an estimate amount.");
     expect(r.totalSilentQuoteValue).toBe(0);
     expect(r.priority).toBeNull();
   });

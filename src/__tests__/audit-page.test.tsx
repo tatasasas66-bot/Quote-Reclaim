@@ -43,33 +43,33 @@ function setMatchMedia(reduced: boolean) {
 }
 
 function fillFirstQuote(amount = "5000", days = "20") {
-  fireEvent.change(screen.getByLabelText(/quote #1 amount/i), {
+  fireEvent.change(screen.getByLabelText(/estimate #1 amount/i), {
     target: { value: amount },
   });
   if (days) {
-    fireEvent.change(screen.getByLabelText(/quote #1 days quiet/i), {
+    fireEvent.change(screen.getByLabelText(/estimate #1 days quiet/i), {
       target: { value: days },
     });
   }
 }
 
 function fillThreeQuotes() {
-  fireEvent.change(screen.getByLabelText(/quote #1 amount/i), {
+  fireEvent.change(screen.getByLabelText(/estimate #1 amount/i), {
     target: { value: "2500" },
   });
-  fireEvent.change(screen.getByLabelText(/quote #1 days quiet/i), {
+  fireEvent.change(screen.getByLabelText(/estimate #1 days quiet/i), {
     target: { value: "10" },
   });
-  fireEvent.change(screen.getByLabelText(/quote #2 amount/i), {
+  fireEvent.change(screen.getByLabelText(/estimate #2 amount/i), {
     target: { value: "5000" },
   });
-  fireEvent.change(screen.getByLabelText(/quote #2 days quiet/i), {
+  fireEvent.change(screen.getByLabelText(/estimate #2 days quiet/i), {
     target: { value: "12" },
   });
-  fireEvent.change(screen.getByLabelText(/quote #3 amount/i), {
+  fireEvent.change(screen.getByLabelText(/estimate #3 amount/i), {
     target: { value: "7000" },
   });
-  fireEvent.change(screen.getByLabelText(/quote #3 days quiet/i), {
+  fireEvent.change(screen.getByLabelText(/estimate #3 days quiet/i), {
     target: { value: "5" },
   });
 }
@@ -89,14 +89,15 @@ describe("/audit static landing page shell", () => {
         name: /Before buying another lead, check the estimates you already sent\./i,
       }),
     ).toBeTruthy();
-    expect(screen.getByText(/Free 60-second quote audit/i)).toBeTruthy();
-    expect(screen.getAllByText(/total quiet quote value/i).length).toBeGreaterThan(0);
+    expect(screen.getByText(/Free 60-second estimate audit/i)).toBeTruthy();
+    expect(screen.getAllByText(/total quiet estimate value/i).length).toBeGreaterThan(0);
     expect(screen.getByTestId("audit-form-card")).toBeTruthy();
     expect(
       screen.getByRole("button", {
-        name: /Show me which quote to follow up first/i,
+        name: /Show me which estimate to follow up first/i,
       }),
     ).toBeTruthy();
+    expect(screen.getByText(/^No phone$/i)).toBeTruthy();
   });
 
   it("explains who it is for without making the product painters-only", () => {
@@ -140,10 +141,10 @@ describe("/audit static landing page shell", () => {
 });
 
 describe("audit form - safe to try", () => {
-  it("renders exactly quote amount + days quiet fields for three rows", () => {
+  it("renders exactly estimate amount + days quiet fields for three rows", () => {
     render(<AuditCalculatorClient />);
-    expect(screen.getAllByLabelText(/quote #\d amount/i)).toHaveLength(3);
-    expect(screen.getAllByLabelText(/quote #\d days quiet/i)).toHaveLength(3);
+    expect(screen.getAllByLabelText(/estimate #\d amount/i)).toHaveLength(3);
+    expect(screen.getAllByLabelText(/estimate #\d days quiet/i)).toHaveLength(3);
     expect(screen.getByPlaceholderText("3200")).toBeTruthy();
     expect(screen.getByPlaceholderText("14")).toBeTruthy();
     expect(screen.getByPlaceholderText("5800")).toBeTruthy();
@@ -166,12 +167,12 @@ describe("audit form - safe to try", () => {
   it("loads sample numbers without showing a signup wall", () => {
     render(<AuditCalculatorClient />);
     fireEvent.click(screen.getByRole("button", { name: /try sample numbers/i }));
-    expect((screen.getByLabelText(/quote #1 amount/i) as HTMLInputElement).value).toBe(
-      "3200",
-    );
-    expect((screen.getByLabelText(/quote #2 days quiet/i) as HTMLInputElement).value).toBe(
-      "24",
-    );
+    expect(
+      (screen.getByLabelText(/estimate #1 amount/i) as HTMLInputElement).value,
+    ).toBe("3200");
+    expect(
+      (screen.getByLabelText(/estimate #2 days quiet/i) as HTMLInputElement).value,
+    ).toBe("24");
     expect(screen.queryByTestId("audit-signup-cta")).toBeNull();
   });
 
@@ -180,19 +181,21 @@ describe("audit form - safe to try", () => {
     expect(screen.queryByRole("alert")).toBeNull();
     fireEvent.click(
       screen.getByRole("button", {
-        name: /show me which quote to follow up first/i,
+        name: /show me which estimate to follow up first/i,
       }),
     );
-    expect(screen.getByRole("alert").textContent).toMatch(/Enter a quote amount/i);
+    expect(screen.getByRole("alert").textContent).toMatch(
+      /Enter an estimate amount/i,
+    );
     expect(screen.queryByTestId("audit-result")).toBeNull();
   });
 
-  it("flags invalid days copy without blocking on one valid quote amount", () => {
+  it("flags invalid days copy without blocking on one valid estimate amount", () => {
     render(<AuditCalculatorClient />);
     fillFirstQuote("5000", "two weeks");
     fireEvent.click(
       screen.getByRole("button", {
-        name: /show me which quote to follow up first/i,
+        name: /show me which estimate to follow up first/i,
       }),
     );
     expect(screen.getByRole("alert").textContent).toMatch(
@@ -232,7 +235,7 @@ describe("funnel - value before signup", () => {
     render(<AuditCalculatorClient />);
     expect(
       screen.getByRole("button", {
-        name: /show me which quote to follow up first/i,
+        name: /show me which estimate to follow up first/i,
       }),
     ).toBeTruthy();
     expect(screen.queryByTestId("audit-signup-cta")).toBeNull();
@@ -243,13 +246,13 @@ describe("funnel - value before signup", () => {
     fillFirstQuote();
     fireEvent.click(
       screen.getByRole("button", {
-        name: /show me which quote to follow up first/i,
+        name: /show me which estimate to follow up first/i,
       }),
     );
     expect(screen.getByTestId("audit-analysis")).toBeTruthy();
     expect(screen.queryByTestId("audit-result")).toBeNull();
     expect(screen.getByTestId("audit-analysis-step").textContent).toMatch(
-      /Totaling your quiet quotes/i,
+      /Totaling your quiet estimates/i,
     );
     expect(scrollSpy).toHaveBeenCalledWith(
       expect.objectContaining({ behavior: "smooth", block: "start" }),
@@ -266,7 +269,7 @@ describe("funnel - value before signup", () => {
     fillFirstQuote();
     fireEvent.click(
       screen.getByRole("button", {
-        name: /show me which quote to follow up first/i,
+        name: /show me which estimate to follow up first/i,
       }),
     );
     expect(scrollSpy).toHaveBeenCalledWith(
@@ -288,7 +291,7 @@ describe("funnel - value before signup", () => {
     fillFirstQuote();
     fireEvent.click(
       screen.getByRole("button", {
-        name: /show me which quote to follow up first/i,
+        name: /show me which estimate to follow up first/i,
       }),
     );
     act(() => {
@@ -306,30 +309,30 @@ describe("funnel - value before signup", () => {
 
   it("shows the full diagnostic result after valid input", () => {
     render(<AuditCalculatorClient />);
-    fireEvent.change(screen.getByLabelText(/quote #1 amount/i), {
+    fireEvent.change(screen.getByLabelText(/estimate #1 amount/i), {
       target: { value: "$8,500" },
     });
-    fireEvent.change(screen.getByLabelText(/quote #1 days quiet/i), {
+    fireEvent.change(screen.getByLabelText(/estimate #1 days quiet/i), {
       target: { value: "10" },
     });
-    fireEvent.change(screen.getByLabelText(/quote #2 amount/i), {
+    fireEvent.change(screen.getByLabelText(/estimate #2 amount/i), {
       target: { value: "4000" },
     });
-    fireEvent.change(screen.getByLabelText(/quote #2 days quiet/i), {
+    fireEvent.change(screen.getByLabelText(/estimate #2 days quiet/i), {
       target: { value: "20" },
     });
     fireEvent.click(
       screen.getByRole("button", {
-        name: /show me which quote to follow up first/i,
+        name: /show me which estimate to follow up first/i,
       }),
     );
     runFullAnalysis();
 
     const result = screen.getByTestId("audit-result");
-    expect(result.textContent).toMatch(/Your 60-second quote audit/i);
-    expect(result.textContent).toMatch(/Total quiet quote value/i);
+    expect(result.textContent).toMatch(/Your 60-second estimate audit/i);
+    expect(result.textContent).toMatch(/Total quiet estimate value/i);
     expect(result.textContent).toContain("$12,500");
-    expect(result.textContent).toMatch(/Follow up this quote first/i);
+    expect(result.textContent).toMatch(/Follow up this estimate first/i);
     expect(result.textContent).toMatch(/Recovery window/i);
     expect(result.textContent).toMatch(/Why this one first/i);
     expect(result.textContent).toMatch(/Message to send today/i);
@@ -338,12 +341,12 @@ describe("funnel - value before signup", () => {
     expect(result.textContent).toMatch(/Save this recovery plan/i);
   });
 
-  it("preserves Quote #3 as the first warm recommendation for the regression input", () => {
+  it("preserves Estimate #3 as the first warm recommendation for the regression input", () => {
     render(<AuditCalculatorClient />);
     fillThreeQuotes();
     fireEvent.click(
       screen.getByRole("button", {
-        name: /show me which quote to follow up first/i,
+        name: /show me which estimate to follow up first/i,
       }),
     );
     runFullAnalysis();
@@ -352,11 +355,11 @@ describe("funnel - value before signup", () => {
     const startHere = screen.getByTestId("audit-start-here");
     const rankOne = screen.getByTestId("audit-rank-row-1");
 
-    expect(startHere.textContent).toMatch(/Start with Quote #3/i);
+    expect(startHere.textContent).toMatch(/Start with Estimate #3/i);
     expect(screen.getByTestId("audit-start-window-badge").textContent).toMatch(
       /^Warm$/i,
     );
-    expect(rankOne.textContent).toMatch(/Quote #3/);
+    expect(rankOne.textContent).toMatch(/Estimate #3/);
     expect(rankOne.textContent).toMatch(/Warm/);
     expect(result.textContent).not.toMatch(/quiet(?:Warm|Cooling|Cold)/i);
     expect(result.textContent).toMatch(/most money at stake/i);
@@ -367,15 +370,15 @@ describe("funnel - value before signup", () => {
     fillThreeQuotes();
     fireEvent.click(
       screen.getByRole("button", {
-        name: /show me which quote to follow up first/i,
+        name: /show me which estimate to follow up first/i,
       }),
     );
     runFullAnalysis();
 
     const order = screen.getByTestId("audit-follow-up-order");
-    expect(order.textContent).toContain("Quote #1");
-    expect(order.textContent).toContain("Quote #2");
-    expect(order.textContent).toContain("Quote #3");
+    expect(order.textContent).toContain("Estimate #1");
+    expect(order.textContent).toContain("Estimate #2");
+    expect(order.textContent).toContain("Estimate #3");
     expect(order.textContent).toMatch(/Send today/);
     expect(order.textContent).toMatch(/Follow up next/);
     expect(screen.getByTestId("audit-rank-row-1")).toBeTruthy();
@@ -388,7 +391,7 @@ describe("funnel - value before signup", () => {
     fillFirstQuote("5000", "");
     fireEvent.click(
       screen.getByRole("button", {
-        name: /show me which quote to follow up first/i,
+        name: /show me which estimate to follow up first/i,
       }),
     );
     expect(screen.queryByTestId("audit-signup-cta")).toBeNull();
@@ -409,7 +412,7 @@ describe("funnel - value before signup", () => {
     fillFirstQuote("5000", "20");
     fireEvent.click(
       screen.getByRole("button", {
-        name: /show me which quote to follow up first/i,
+        name: /show me which estimate to follow up first/i,
       }),
     );
     runFullAnalysis();
@@ -463,13 +466,13 @@ describe("copy and positioning guardrails", () => {
     expect(both).toMatch(/not lead generation/);
   });
 
-  it("positions as quiet quote prioritization, not CRM, lead gen, scheduling, or estimate creation", () => {
-    expect(both).toMatch(/quiet quotes/);
+  it("positions as quiet estimate prioritization, not CRM, lead gen, scheduling, or estimate creation", () => {
+    expect(both).toMatch(/quiet estimates/);
     expect(both).toMatch(/follow up first/);
     expect(both).toMatch(/message to send today/);
     expect(both).toMatch(/home-service contractors/);
     expect(both).not.toMatch(
-      /project management|estimate creation|lead generation software|scheduling software/,
+      /project management|estimate creation|lead generation software|all-in-one scheduling|dispatch software/,
     );
     expect(both).not.toMatch(/jobber|housecall|servicetitan|integrates with/i);
   });
