@@ -378,6 +378,40 @@ export default function HomePage() {
         </div>
       </SectionShell>
 
+      <SectionShell id="one-tap-reply" eyebrow="One-Tap Reply">
+        <div className="grid gap-7 lg:grid-cols-[0.82fr_1.18fr] lg:items-center">
+          <SectionHeading
+            title="Make it easy for the homeowner to answer."
+            body="Homeowners often go quiet because writing the real answer feels awkward. Quote Reclaim gives them a simple reply link, then shows you the next move."
+          />
+          <div className="rounded-2xl border border-brand/30 bg-surface-1/85 p-5 shadow-[0_18px_54px_rgba(0,0,0,0.18)]">
+            <p className="text-xs font-black uppercase tracking-widest text-brand">
+              Follow-up email reply link
+            </p>
+            <p className="mt-3 break-words text-lg font-black leading-7 text-ink-strong">
+              Tap one option. No email to write.
+            </p>
+            <div className="mt-4 grid gap-2">
+              {[
+                "Let's do it — what's next?",
+                "I have one question",
+                "Not right now",
+              ].map((choice) => (
+                <div
+                  key={choice}
+                  className="rounded-lg border border-line-subtle bg-canvas/45 px-3 py-2 text-sm font-semibold text-ink-strong"
+                >
+                  {choice}
+                </div>
+              ))}
+            </div>
+            <p className="mt-4 text-sm leading-6 text-ink-muted">
+              Less guessing. Cleaner follow-up. Faster yes, question, or no.
+            </p>
+          </div>
+        </div>
+      </SectionShell>
+
       <SectionShell id="crew-gap-rescue" eyebrow="Crew Gap Rescue">
         <div className="grid gap-7 lg:grid-cols-[0.82fr_1.18fr] lg:items-center">
           <SectionHeading

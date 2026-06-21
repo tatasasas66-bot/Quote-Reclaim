@@ -57,15 +57,25 @@ export function OneTapReplyCard({
   return (
     <section
       aria-label="One-Tap Reply"
-      className="space-y-4 rounded-lg border border-line-subtle bg-surface-1 p-5 sm:p-6"
+      className="space-y-4 rounded-lg border border-brand/40 bg-surface-1 p-5 shadow-[0_0_28px_rgba(217,111,50,0.10)] sm:p-6"
     >
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
           <p className="text-xs font-black uppercase tracking-widest text-brand">
             One-Tap Reply
           </p>
-          <p className="mt-1 text-sm leading-6 text-ink-muted">
+          <h3 className="mt-2 text-balance text-xl font-black leading-tight text-ink-strong sm:text-2xl">
+            Make it easy for the homeowner to answer.
+          </h3>
+          <p className="mt-3 max-w-prose text-sm leading-6 text-ink">
+            Your follow-up email can include a simple reply link, so the
+            homeowner does not have to write an awkward message from scratch.
+          </p>
+          <p className="mt-3 text-sm font-semibold leading-6 text-ink-strong">
             Turn silence into a yes, a question, or a clean no.
+          </p>
+          <p className="mt-1 text-xs leading-5 text-ink-muted">
+            Five-second reply for the homeowner. Clear next move for you.
           </p>
         </div>
         <div className="flex flex-wrap gap-2">

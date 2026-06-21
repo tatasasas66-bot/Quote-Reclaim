@@ -71,11 +71,10 @@ export default async function PublicReplyPage({ params }: PageParams) {
             Quote Reclaim
           </p>
           <h1 className="mt-4 text-balance text-3xl font-black leading-tight text-ink-strong">
-            Quick reply for your {projectLabel(quote.trade)}
+            Quick update on your estimate
           </h1>
           <p className="mt-3 text-sm leading-6 text-ink-muted">
-            {contractorFirstName} sent this so you can reply without writing a
-            full email.
+            Choose what fits best. This helps us know the right next step.
           </p>
         </header>
 

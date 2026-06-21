@@ -147,8 +147,8 @@ describe("public reply page", () => {
     expect(replyPage.length).toBeGreaterThan(0);
   });
 
-  it("renders the Quick reply title with the project label", () => {
-    expect(replyPage).toMatch(/Quick reply for your \{projectLabel/);
+  it("renders the Quick update headline", () => {
+    expect(replyPage).toMatch(/Quick update on your estimate/);
   });
 
   it("uses every gate-failure → same unavailable page (no info leakage)", () => {
