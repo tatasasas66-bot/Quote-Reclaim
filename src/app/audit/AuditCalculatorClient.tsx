@@ -220,7 +220,11 @@ export function AuditCalculatorClient() {
   }
 
   return (
-    <div className="w-full max-w-full min-w-0 space-y-5">
+    <div
+      id="quote-audit"
+      data-audit-state={analyzing ? "analyzing" : result ? "result" : "idle"}
+      className="w-full max-w-full min-w-0 space-y-5 scroll-mt-6 data-[audit-state=result]:lg:mx-auto data-[audit-state=result]:lg:max-w-3xl data-[audit-state=analyzing]:lg:mx-auto data-[audit-state=analyzing]:lg:max-w-3xl"
+    >
       <form
         onSubmit={handleSubmit}
         noValidate
@@ -443,7 +447,7 @@ function AuditResultView({
           <p className="text-xs font-black uppercase tracking-widest text-ink-muted">
             Total quiet estimate value
           </p>
-          <p className="mt-2 break-words text-3xl font-black leading-none text-money sm:text-5xl">
+          <p className="mt-2 whitespace-nowrap text-3xl font-black leading-none text-money sm:text-5xl">
             {formatCurrency(result.totalSilentQuoteValue)}
           </p>
           <p className="mt-3 break-words text-sm leading-6 text-ink-muted">
@@ -462,7 +466,7 @@ function AuditResultView({
             <p className="mt-2 break-words text-xl font-black text-ink-strong">
               Start with Estimate #{priority.index}
             </p>
-            <p className="mt-1 break-words text-3xl font-black text-ink-strong">
+            <p className="mt-1 whitespace-nowrap text-3xl font-black text-ink-strong">
               {formatCurrency(priority.amount)}
             </p>
             <p className="mt-2 flex min-w-0 flex-wrap items-center gap-2 text-sm text-ink-muted">
