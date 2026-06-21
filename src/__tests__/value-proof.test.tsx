@@ -69,8 +69,8 @@ describe("WinMomentOverlay", () => {
     const { container } = render(
       <WinMomentOverlay amount={1000} allTimeRecovered={0} onDismiss={vi.fn()} />,
     );
-    // floor(1000 / 49) = 20 → still inside the 24-month natural range.
-    expect(container.textContent).toContain("for 20 months");
+    // floor(1000 / 79) = 12 -> still inside the 24-month natural range.
+    expect(container.textContent).toContain("for 12 months");
     expect(container.textContent).toContain("+$1,000");
   });
 
@@ -78,11 +78,11 @@ describe("WinMomentOverlay", () => {
     const { container } = render(
       <WinMomentOverlay amount={5000} allTimeRecovered={0} onDismiss={vi.fn()} />,
     );
-    // floor(5000 / 588) = 8 → "8x over for a full year"
+    // floor(5000 / 948) = 5 -> "5x over for a full year"
     // The raw 102-month phrasing the old code produced read as silly and
     // argued against monthly renewal; the annual frame stays believable.
-    expect(container.textContent).toContain("8x over for a full year");
-    expect(container.textContent).not.toContain("102 months");
+    expect(container.textContent).toContain("5x over for a full year");
+    expect(container.textContent).not.toContain("63 months");
     expect(container.textContent).toContain("+$5,000");
   });
 
@@ -90,13 +90,13 @@ describe("WinMomentOverlay", () => {
     const { container } = render(
       <WinMomentOverlay amount={12000} allTimeRecovered={0} onDismiss={vi.fn()} />,
     );
-    // floor(12000 / 588) = 20 → "20x over for a full year"
-    expect(container.textContent).toContain("20x over for a full year");
+    // floor(12000 / 948) = 12 -> "12x over for a full year"
+    expect(container.textContent).toContain("12x over for a full year");
     expect(container.textContent).not.toContain("244 months");
     expect(container.textContent).not.toMatch(/\d{3,} months/);
   });
 
-  it("a sub-$49 win renders a humble line, never '0 months'", () => {
+  it("a sub-$79 win renders a humble line, never '0 months'", () => {
     const { container } = render(
       <WinMomentOverlay amount={40} allTimeRecovered={0} onDismiss={vi.fn()} />,
     );

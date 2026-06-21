@@ -90,15 +90,15 @@ describe("A2: session cookie persistence", () => {
 // A3 — Upgrade button
 // ---------------------------------------------------------------------------
 
-describe("A3: Upgrade — $49/month button", () => {
+describe("A3: Upgrade - $79/month button", () => {
   it("dashboard header renders the UpgradeButton", () => {
     expect(dashboard).toContain("UpgradeButton");
     expect(dashboard).toMatch(/<UpgradeButton[\s\S]*?\/>/);
   });
 
-  it("button is labeled Upgrade — $49/month", () => {
-    expect(upgradeButton).toContain("$49/month");
-    expect(upgradeButton).toMatch(/Upgrade — \$\{PRICE_LABEL\}|Upgrade — \$49\/month/);
+  it("button is labeled Upgrade - $79/month", () => {
+    expect(upgradeButton).toContain("PAYWALL_PRICE_LABEL");
+    expect(upgradeButton).toMatch(/Upgrade - \$\{PAYWALL_PRICE_LABEL\}|Upgrade \$79/);
   });
 
   it("does not build a server-side checkout URL — Paddle opens client-side", () => {

@@ -4,6 +4,7 @@ import { notFound, redirect } from "next/navigation";
 import { Badge, Button, Logo } from "@/components/ui";
 import {
   CopyButton,
+  ManualMessageActions,
   OneTapReplyCard,
   QuietSignalCard,
   QuoteActions,
@@ -522,6 +523,11 @@ function CommandActionPanel({
                 ) : null}
                 <CopyButton text={activeReminder.message_text} label="Copy" />
               </div>
+              <ManualMessageActions
+                message={activeReminder.message_text}
+                source="quote_command"
+                className="mt-3"
+              />
               <p
                 data-testid="quote-command-reason"
                 className="mt-3 text-sm leading-6 text-ink-muted"
@@ -928,6 +934,11 @@ function ReminderCard({
           ) : null}
         </div>
       </div>
+      <ManualMessageActions
+        message={r.message_text}
+        source={`recovery_sequence_followup_${r.followup_number}`}
+        className="mx-4 mb-4"
+      />
     </>
   );
 

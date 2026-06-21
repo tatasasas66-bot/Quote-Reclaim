@@ -549,8 +549,8 @@ describe("Silent Money Reveal bulk import — recovery plan is generated for eve
     expect(actionSrc).toContain("RECOVERY_IMPORT_DEBUG");
   });
 
-  it("no billing / auth / schema / pricing change in the import action", () => {
-    expect(actionSrc).not.toMatch(/is_paid|FREE_PLAN_LIMIT|lemonsqueezy|price|\$49/i);
+  it("no billing / auth / schema / legacy-price change in the import action", () => {
+    expect(actionSrc).not.toMatch(/is_paid|FREE_PLAN_LIMIT|lemonsqueezy|\$49/i);
     // Quote insert still goes through the RLS-gated user client.
     expect(actionSrc).toMatch(/userClient[\s\S]{0,40}\.from\("quotes"\)[\s\S]{0,40}\.insert/);
   });

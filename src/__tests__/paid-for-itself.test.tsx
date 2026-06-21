@@ -1,7 +1,7 @@
 /**
  * @vitest-environment happy-dom
  *
- * Paid-For-Itself Meter — the "$49 feels small" proof panel.
+ * Paid-For-Itself Meter — the "$79 feels small" proof panel.
  *
  * Contract:
  *   - Pure math from the contractor's OWN queue (biggest pending quote ÷
@@ -46,15 +46,15 @@ const BIG_QUOTE = {
 // ───────────────────────────────────────────────────────────────────────
 
 describe("PaidForItselfMeter — months math via roiFraming", () => {
-  it("uses MONTHLY_PRICE_USD=49 as the source of truth", () => {
-    expect(MONTHLY_PRICE_USD).toBe(49);
+  it("uses MONTHLY_PRICE_USD=79 as the source of truth", () => {
+    expect(MONTHLY_PRICE_USD).toBe(79);
   });
 
-  it("$22,000 flips to annual-multiple phrasing — never the silly 448-month line", () => {
+  it("$22,000 flips to annual-multiple phrasing — never the silly 278-month line", () => {
     const text = renderText(React.createElement(PaidForItselfMeter, BIG_QUOTE));
-    // floor(22000 / 588) = 37 → "37x a full year of Quote Reclaim"
-    expect(text).toContain("37x a full year of Quote Reclaim");
-    expect(text).not.toContain("448 months");
+    // floor(22000 / 948) = 23 -> "23x a full year of Quote Reclaim"
+    expect(text).toContain("23x a full year of Quote Reclaim");
+    expect(text).not.toContain("278 months");
     // No three-digit month count, no months phrasing at all at this size.
     expect(text).not.toMatch(/\d{3,} months/);
     expect(text).not.toMatch(/\d+ months of Quote Reclaim/);
@@ -71,13 +71,13 @@ describe("PaidForItselfMeter — months math via roiFraming", () => {
   it("shows the math transparently and disclaims any promise (line preserved)", () => {
     const text = renderText(React.createElement(PaidForItselfMeter, BIG_QUOTE));
     expect(text).toMatch(/Straight math from your own queue/);
-    expect(text).toContain("$49/month");
+    expect(text).toContain("$79/month");
     expect(text).toMatch(/No promises/);
   });
 
   it("renders NOTHING when the queue has no quote big enough (months < 2)", () => {
-    // At $49 a quote must be ≥ $98 to cover 2 months; everything below renders nothing.
-    for (const amount of [0, -50, 49, 90, Number.NaN]) {
+    // At $79 a quote must be >= $158 to cover 2 months; everything below renders nothing.
+    for (const amount of [0, -50, 79, 150, Number.NaN]) {
       const { container } = render(
         React.createElement(PaidForItselfMeter, {
           ...BIG_QUOTE,
@@ -90,10 +90,10 @@ describe("PaidForItselfMeter — months math via roiFraming", () => {
   });
 
   it("renders 'N months of Quote Reclaim' when amount is inside the 24-month natural range", () => {
-    // At $49: $98 → 2 months, $1,100 → 22 months. Both under the 24-month flip line.
+    // At $79: $158 -> 2 months, $1,100 -> 13 months. Both under the 24-month flip line.
     for (const [amount, months] of [
-      [98, 2],
-      [1_100, 22],
+      [158, 2],
+      [1_100, 13],
     ] as const) {
       const text = renderText(
         React.createElement(PaidForItselfMeter, {
@@ -196,9 +196,9 @@ describe("dashboard wires the meter to real queue data only", () => {
 // ───────────────────────────────────────────────────────────────────────
 
 describe("homepage trust line states the free start next to the price", () => {
-  it("price anchor carries $49 and the honest recovered-job math", () => {
-    expect(homepageSrc).toContain("$49/month");
-    expect(homepageSrc).toMatch(/One recovered \$2,500 job can cover more than 4 years of Quote Reclaim\./);
+  it("price anchor carries $79 and the honest recovered-job math", () => {
+    expect(homepageSrc).toContain("PAYWALL_PRICE_LABEL");
+    expect(homepageSrc).toMatch(/One recovered estimate can cover it many times over\./);
     expect(homepageSrc).toMatch(/No software can promise a job back/);
   });
 });

@@ -64,7 +64,7 @@ it("primary CTA routes to the public audit doorway", () => {
   });
 
   it("trust line and price stay clear", () => {
-    expect(homepage).toContain("$49/month");
+    expect(homepage).toContain("PAYWALL_PRICE_LABEL");
     expect(homepage).toMatch(/No names/);
     expect(homepage).toMatch(/No phone numbers/);
     expect(homepage).toMatch(/No card/);
@@ -350,11 +350,12 @@ describe("follow-up message upgrades", () => {
 // 11. Paywall body — same email/copy honesty applied
 // ───────────────────────────────────────────────────────────────────────
 
-describe("paywall body email/copy honesty", () => {
-  it("discloses both modes; the broad auto-claim is gone", () => {
-    expect(paywall).toMatch(/sent by\s+email when there&apos;s an address/);
-    expect(paywall).toMatch(/ready to copy when there\s+isn&apos;t/);
+describe("paywall body channel honesty", () => {
+  it("frames the message plan without broad auto-send claims", () => {
+    expect(paywall).toMatch(/message plan for email, phone, SMS, and WhatsApp/);
+    expect(paywall).toMatch(/No guarantee of recovered revenue/);
     expect(paywall).not.toMatch(/follows\s+up by email automatically\./);
+    expect(paywall).not.toMatch(/automatically sends|auto-send|sent by\s+SMS|sent by\s+WhatsApp/i);
   });
 });
 

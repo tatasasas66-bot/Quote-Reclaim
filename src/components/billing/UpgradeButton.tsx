@@ -3,9 +3,8 @@
 import * as React from "react";
 import { Button } from "@/components/ui";
 import { SUPPORT_EMAIL } from "@/lib/payments/disabled-provider";
+import { PAYWALL_PRICE_LABEL } from "@/lib/payments/entitlement";
 import { PaddleCheckoutButton } from "./PaddleCheckoutButton";
-
-const PRICE_LABEL = "$49/month";
 
 type Props = {
   variant?: "primary" | "secondary" | "ghost";
@@ -14,7 +13,7 @@ type Props = {
   userId?: string | null;
   userEmail?: string | null;
   /** Whether the contractor already holds an active Pro subscription. When
-   *  true, the button is replaced by a small "Pro · Active" chip so the
+   *  true, the button is replaced by a small "Pro - Active" chip so the
    *  header never asks them to re-upgrade. */
   isPaid?: boolean;
   /** When true, the button opens Paddle.js checkout. Otherwise it surfaces
@@ -26,13 +25,9 @@ type Props = {
  * Header Upgrade CTA.
  *
  * Three rendered states:
- *   1. Paid → small "Pro · Active" chip, no upsell.
- *   2. Paddle available + user known → PaddleCheckoutButton ($49/month).
- *   3. Otherwise → safe-disabled button revealing the SUPPORT_EMAIL mailto.
- *
- * Mobile/desktop label split is preserved so the header never wraps at
- * 375px. The price label is the single source of truth for the $49/month
- * string — duplicating it here would risk drift.
+ *   1. Paid -> small "Pro - Active" chip, no upsell.
+ *   2. Paddle available + user known -> PaddleCheckoutButton ($79/month).
+ *   3. Otherwise -> safe-disabled button revealing the SUPPORT_EMAIL mailto.
  */
 export function UpgradeButton({
   variant = "primary",
@@ -56,7 +51,7 @@ export function UpgradeButton({
           .filter(Boolean)
           .join(" ")}
       >
-        Pro · Active
+        Pro - Active
       </span>
     );
   }
@@ -71,8 +66,10 @@ export function UpgradeButton({
           userEmail={userEmail ?? null}
           label={
             <>
-              <span className="sm:hidden">Upgrade $49</span>
-              <span className="hidden sm:inline">Upgrade — {PRICE_LABEL}</span>
+              <span className="sm:hidden">Upgrade $79</span>
+              <span className="hidden sm:inline">
+                Upgrade - {PAYWALL_PRICE_LABEL}
+              </span>
             </>
           }
           variant={variant}
@@ -94,11 +91,11 @@ export function UpgradeButton({
         variant={variant}
         size={size}
         onClick={handleClick}
-        title={`Upgrade — ${PRICE_LABEL}`}
+        title={`Upgrade - ${PAYWALL_PRICE_LABEL}`}
         className={["whitespace-nowrap", className].filter(Boolean).join(" ")}
       >
-        <span className="sm:hidden">Upgrade $49</span>
-        <span className="hidden sm:inline">Upgrade — {PRICE_LABEL}</span>
+        <span className="sm:hidden">Upgrade $79</span>
+        <span className="hidden sm:inline">Upgrade - {PAYWALL_PRICE_LABEL}</span>
       </Button>
       {showHint ? (
         <span

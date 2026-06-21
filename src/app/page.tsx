@@ -12,6 +12,7 @@ import {
   Trophy,
 } from "lucide-react";
 import { Badge, Logo } from "@/components/ui";
+import { PAYWALL_PRICE_LABEL } from "@/lib/payments/entitlement";
 
 export const metadata: Metadata = {
   title: "Quote Reclaim - Quiet estimate recovery for contractors",
@@ -266,8 +267,8 @@ export default function HomePage() {
               ))}
             </div>
             <p className="mt-3 max-w-xl text-sm font-semibold text-ink-muted">
-              Built for US home-service contractors. $49/month after the free
-              start.
+              Built for US home-service contractors. {PAYWALL_PRICE_LABEL}{" "}
+              after the free audit - first 3 quotes free, no card needed.
             </p>
           </div>
 
@@ -469,7 +470,7 @@ export default function HomePage() {
         <div className="grid gap-7 lg:grid-cols-[0.8fr_1.2fr] lg:items-center">
           <SectionHeading
             title="One recovered job can make the math obvious."
-            body="Quote Reclaim is $49/month. One recovered $2,500 job can cover more than 4 years of Quote Reclaim."
+            body={`Quote Reclaim is ${PAYWALL_PRICE_LABEL}. One recovered estimate can cover it many times over.`}
           />
           <PriceMathCard />
         </div>
@@ -846,19 +847,20 @@ function PriceMathCard() {
   return (
     <div className="rounded-2xl border border-money/35 bg-money/10 p-5 sm:p-6">
       <p className="text-xs font-black uppercase tracking-widest text-money">
-        $49/month
+        {PAYWALL_PRICE_LABEL}
       </p>
       <h3 className="mt-3 max-w-2xl text-balance text-2xl font-black leading-tight text-ink-strong sm:text-3xl">
-        One $2,500 recovered job can cover more than 4 years.
+        One recovered estimate can cover it many times over.
       </h3>
       <div className="mt-5 grid gap-3 sm:grid-cols-3">
-        <MetricBlock label="Plan" value="$49/month" />
-        <MetricBlock label="Recovered job" value="$2,500" />
-        <MetricBlock label="Coverage" value="4+ years" />
+        <MetricBlock label="Plan" value={PAYWALL_PRICE_LABEL} />
+        <MetricBlock label="Example estimate" value="$2,500" />
+        <MetricBlock label="Coverage" value="2+ years" />
       </div>
       <p className="mt-5 text-sm leading-6 text-ink-muted">
-        No software can promise a job back. The point is simple: if even one
-        quiet estimate comes back, the math is easy.
+        No software can promise a job back. The point is simple: sent estimates
+        often represent thousands in quoted work, so the follow-up system does
+        not need many wins to make sense.
       </p>
       <Link
         href="/audit"

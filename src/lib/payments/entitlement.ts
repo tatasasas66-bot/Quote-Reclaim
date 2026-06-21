@@ -10,8 +10,8 @@
  * `./types`.
  */
 
-export const MONTHLY_PRICE_USD = 49;
-export const PAYWALL_PRICE_LABEL = "$49/month";
+export const MONTHLY_PRICE_USD = 79;
+export const PAYWALL_PRICE_LABEL = "$79/month";
 export const FREE_PLAN_LIMIT = 3;
 
 const PAID_STATUSES: ReadonlySet<string> = new Set(["active", "on_trial"]);

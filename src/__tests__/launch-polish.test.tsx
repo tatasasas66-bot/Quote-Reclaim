@@ -52,38 +52,38 @@ afterEach(() => cleanup());
 describe("FIX 1 — roiFraming helper", () => {
   it("sub-month: returns a humble line, never '0 months'", () => {
     expect(roiFraming(0)).toBe("less than 1 month of Quote Reclaim");
-    // Below the $49 monthly price → still sub-month.
+    // Below the $79 monthly price -> still sub-month.
     expect(roiFraming(40)).toBe("less than 1 month of Quote Reclaim");
     expect(roiFraming(-100)).toBe("less than 1 month of Quote Reclaim");
     expect(roiFraming(Number.NaN)).toBe("less than 1 month of Quote Reclaim");
   });
 
-  it("exact spec examples at $49/month: 948, 1580, 4000, 12000", () => {
-    expect(roiFraming(948)).toBe("19 months of Quote Reclaim"); // floor(948/49)=19
-    expect(roiFraming(1580)).toBe("2x a full year of Quote Reclaim"); // 32mo → floor(1580/588)=2
-    expect(roiFraming(4000)).toBe("6x a full year of Quote Reclaim"); // floor(4000/588)=6
-    expect(roiFraming(12000)).toBe("20x a full year of Quote Reclaim"); // floor(12000/588)=20
+  it("exact spec examples at $79/month: 948, 1580, 4000, 12000", () => {
+    expect(roiFraming(948)).toBe("12 months of Quote Reclaim"); // floor(948/79)=12
+    expect(roiFraming(1580)).toBe("20 months of Quote Reclaim"); // floor(1580/79)=20
+    expect(roiFraming(4000)).toBe("4x a full year of Quote Reclaim"); // floor(4000/948)=4
+    expect(roiFraming(12000)).toBe("12x a full year of Quote Reclaim"); // floor(12000/948)=12
   });
 
   it("boundary: floor at exactly 24 months stays in months phrasing; one cent past flips to years", () => {
-    // 24 * 49 = 1176 → exactly 24 months
-    expect(roiFraming(1176)).toBe("24 months of Quote Reclaim");
-    // 25 * 49 = 1225 → 25 months, but 25 > 24 so we flip
-    expect(roiFraming(1225)).toBe(
-      `${Math.floor(1225 / 588)}x a full year of Quote Reclaim`,
+    // 24 * 79 = 1896 -> exactly 24 months
+    expect(roiFraming(1896)).toBe("24 months of Quote Reclaim");
+    // 25 * 79 = 1975 -> 25 months, but 25 > 24 so we flip
+    expect(roiFraming(1975)).toBe(
+      `${Math.floor(1975 / 948)}x a full year of Quote Reclaim`,
     );
   });
 
   it("always floors — never rounds up (overclaim guard)", () => {
-    // 49*24 + 48 = 1224 → still 24 months
-    expect(roiFraming(1224)).toBe("24 months of Quote Reclaim");
+    // 79*24 + 78 = 1974 -> still 24 months
+    expect(roiFraming(1974)).toBe("24 months of Quote Reclaim");
   });
 
   it("roiPieces returns the structured shape callers can compose around", () => {
     expect(roiPieces(40)).toEqual({ kind: "subMonth" });
-    expect(roiPieces(948)).toEqual({ kind: "months", months: 19 });
-    expect(roiPieces(4000)).toEqual({ kind: "years", yearMultiple: 6 });
-    expect(roiPieces(12000)).toEqual({ kind: "years", yearMultiple: 20 });
+    expect(roiPieces(948)).toEqual({ kind: "months", months: 12 });
+    expect(roiPieces(4000)).toEqual({ kind: "years", yearMultiple: 4 });
+    expect(roiPieces(12000)).toEqual({ kind: "years", yearMultiple: 12 });
   });
 });
 
@@ -113,7 +113,7 @@ describe("FIX 2 — ROI equation lives in exactly two places product-wide", () =
     expect(meterSrc).not.toMatch(/whitespace-nowrap text-money/);
   });
 
-  it("Price Check $12,000: headline says \"that's 20x a full year\", body carries the full phrase once", () => {
+  it("Price Check $12,000: headline says \"that's 12x a full year\", body carries the full phrase once", () => {
     const { container } = render(
       React.createElement(PaidForItselfMeter, {
         biggestQuoteName: "david harris",
@@ -123,12 +123,12 @@ describe("FIX 2 — ROI equation lives in exactly two places product-wide", () =
       }),
     );
     const text = container.textContent ?? "";
-    expect(text).toContain("If this one comes back, that's 20x a full year.");
-    expect(text).toContain("If it comes back, that's 20x a full year of Quote Reclaim.");
-    expect(text).not.toContain("covers 20x a full year");
+    expect(text).toContain("If this one comes back, that's 12x a full year.");
+    expect(text).toContain("If it comes back, that's 12x a full year of Quote Reclaim.");
+    expect(text).not.toContain("covers 12x a full year");
     expect(text).not.toMatch(/151 months|\d{3,} months/);
     // Disclaimer preserved exactly.
-    expect(text).toContain("Straight math from your own queue: $12,000 ÷ $49/month.");
+    expect(text).toContain("Straight math from your own queue: $12,000 ÷ $79/month.");
     expect(text).toContain("No promises — just the size of the opportunity.");
   });
 

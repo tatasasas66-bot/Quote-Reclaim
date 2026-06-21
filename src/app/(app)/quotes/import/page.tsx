@@ -5,7 +5,10 @@ import { Logo } from "@/components/ui";
 import { requireUser } from "@/lib/auth/require-user";
 import { getProfileStats, listPendingQuotes } from "@/lib/quotes/repo";
 import { RevealClient } from "@/app/(app)/onboarding/reveal/RevealClient";
-import { FREE_PLAN_LIMIT } from "@/lib/payments/entitlement";
+import {
+  FREE_PLAN_LIMIT,
+  PAYWALL_PRICE_LABEL,
+} from "@/lib/payments/entitlement";
 import { SUPPORT_EMAIL } from "@/lib/payments/disabled-provider";
 import { paddleClientConfigured } from "@/lib/payments/paddle-provider";
 import { PaddleCheckoutButton } from "@/components/billing/PaddleCheckoutButton";
@@ -109,14 +112,15 @@ function ImportBlocked({
           <>
             <p className="mt-3 max-w-xl text-base leading-7 text-ink">
               Activate Quote Reclaim Pro to import and recover the rest of your
-              silent estimates. $49/month. First 3 quotes are free. Cancel
-              anytime. Your existing recovery sequences keep running either way.
+              silent estimates. {PAYWALL_PRICE_LABEL}. First 3 quotes are free.
+              Cancel anytime. No contract. Your existing recovery sequences keep
+              running either way.
             </p>
             <div className="mt-6">
               <PaddleCheckoutButton
                 userId={userId}
                 userEmail={userEmail}
-                label="Activate Quote Reclaim Pro — $49/month"
+                label={`Activate Quote Reclaim Pro - ${PAYWALL_PRICE_LABEL}`}
                 size="lg"
               />
             </div>

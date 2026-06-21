@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { LegalPage, LegalSection } from "@/components/legal/LegalPage";
 import { SUPPORT_EMAIL } from "@/lib/payments/disabled-provider";
+import { PAYWALL_PRICE_LABEL } from "@/lib/payments/entitlement";
 
 export const metadata: Metadata = {
   title: "Refund Policy",
@@ -23,8 +24,9 @@ export default function RefundPolicyPage() {
         <p>
           A Quote Reclaim subscription is access to a digital software service
           that organizes silent estimates, generates follow-up plans, and
-          tracks recovery activity. The standard price is $49/month unless a
-          different price is shown to you at checkout.
+          tracks recovery activity. The standard price is{" "}
+          {PAYWALL_PRICE_LABEL} unless a different price is shown to you at
+          checkout.
         </p>
       </LegalSection>
 

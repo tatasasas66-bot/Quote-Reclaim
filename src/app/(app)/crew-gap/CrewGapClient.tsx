@@ -14,6 +14,7 @@ import {
 } from "@/lib/crew-gap/match";
 import { bucketCurrency } from "@/lib/analytics/privacy";
 import { track } from "@/lib/analytics/track";
+import { PAYWALL_PRICE_LABEL } from "@/lib/payments/entitlement";
 import { tradeLocationLine } from "@/lib/quotes/quote-display";
 import { formatCurrency } from "@/lib/utils/currency";
 import { cn } from "@/lib/utils/cn";
@@ -200,8 +201,8 @@ export function CrewGapClient({ quotes, isPaid, freeRemaining }: Props) {
           </label>
 
           <div className="rounded-lg border border-line-subtle bg-surface-2 p-3 text-xs leading-5 text-ink-muted">
-            First 3 quotes free. No card. Then $49/month to turn silent quotes
-            into booked crew days.
+            First 3 quotes free. No card. Then {PAYWALL_PRICE_LABEL} to turn
+            silent quotes into booked crew days.
           </div>
 
           <Button type="submit" fullWidth disabled={!canRun}>

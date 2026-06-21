@@ -402,7 +402,7 @@ describe("SendEarlyButton label polish", () => {
 
 describe("Lock rails — nothing under the hood moved", () => {
   it("RecoveryReceipt no longer carries the months-paid ROI equation (pricing math moved to Price Check + Win Moment)", () => {
-    // The receipt used to duplicate the ÷$49 equation here. The launch-polish
+    // The receipt used to duplicate the months-paid equation here. The launch-polish
     // pass removed it so the ROI equation lives in exactly two places product-
     // wide. Pricing untouched everywhere it actually drives billing; what
     // changed is one display surface stopped repeating it.

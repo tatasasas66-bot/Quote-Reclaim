@@ -379,7 +379,7 @@ describe("import-blocked screen — Paddle checkout when live, support-email fal
     expect(importPageSrc).toMatch(/const canCheckout = paddleAvailable && Boolean\(userId\)/);
     expect(importPageSrc).toContain("<PaddleCheckoutButton");
     // Locked checkout copy.
-    expect(importPageSrc).toContain("Activate Quote Reclaim Pro — $49/month");
+    expect(importPageSrc).toContain("Activate Quote Reclaim Pro - ${PAYWALL_PRICE_LABEL}");
     expect(importPageSrc).toMatch(/First 3 quotes are free\./);
     expect(importPageSrc).toMatch(/Cancel\s+anytime\./);
   });

@@ -66,29 +66,29 @@ describe("honest conversion copy renders on each surface", () => {
     expect(SURFACES.quoteDetail).toMatch(/the next move that makes the most sense/);
   });
 
-  it("paywall uses founding framing + real price math + honest email+copy disclosure", () => {
-    expect(SURFACES.paywall).toMatch(/FOUNDING CONTRACTOR/);
+  it("paywall uses Pro framing + honest value copy", () => {
+    expect(SURFACES.paywall).toMatch(/QUOTE RECLAIM PRO/);
     expect(SURFACES.paywall).toMatch(/Don&apos;t let good quotes die quiet\./);
-    expect(SURFACES.paywall).toMatch(/sent by\s+email when there&apos;s an address/);
-    expect(SURFACES.paywall).toMatch(/ready to copy when there\s+isn&apos;t/);
-    expect(SURFACES.paywall).toMatch(/1% of a single \$5,000 job/);
+    expect(SURFACES.paywall).toMatch(/message plan for email, phone, SMS, and WhatsApp/);
+    expect(SURFACES.paywall).toMatch(/one recovered estimate can cover it many\s+times over/i);
+    expect(SURFACES.paywall).toMatch(/No guarantee of recovered revenue/);
   });
 });
 
 // ---------------------------------------------------------------------------
-// $49 price intact on the surfaces that quote it
+// $79 price intact on the surfaces that quote it
 // ---------------------------------------------------------------------------
 
-describe("$49 price stays intact", () => {
-  it("homepage trust line and paywall both state $49/month", () => {
-    expect(SURFACES.homepage).toContain("$49/month");
-    expect(SURFACES.paywall).toContain("$49/month");
+describe("$79 price stays intact", () => {
+  it("homepage trust line and paywall both state the shared $79 price", () => {
+    expect(SURFACES.homepage).toContain("PAYWALL_PRICE_LABEL");
+    expect(SURFACES.paywall).toContain("PAYWALL_PRICE_LABEL");
   });
 
   it("no surface introduces a different price point", () => {
     for (const src of Object.values(SURFACES)) {
       expect(src).not.toMatch(/\$39\b/);
-      expect(src).not.toMatch(/\$79\b/); // old price must not linger anywhere
+      expect(src).not.toMatch(/\$49\b/); // old price must not linger anywhere
       expect(src).not.toMatch(/\$99\b/);
       expect(src).not.toMatch(/\$29\b/);
     }
@@ -96,16 +96,17 @@ describe("$49 price stays intact", () => {
 });
 
 // ---------------------------------------------------------------------------
-// "follows up by email" — the only true automation claim — is present
+// Manual channels stay honest: prepared, never auto-sent.
 // ---------------------------------------------------------------------------
 
-describe("true automation claim is present (email auto-send via Resend, qualified with copy fallback)", () => {
-  it("homepage and paywall both claim email follow-up — explicitly qualified", () => {
-    // Tightened: the only true automation claim is email auto-send when an
-    // address exists. The qualifier (ready-to-copy when it doesn't) lives in
-    // the same sentence so the broad reading is impossible.
-    expect(SURFACES.paywall).toMatch(/sent by\s+email when there&apos;s an address/);
-    expect(SURFACES.homepage).not.toMatch(/sent by email when there&apos;s an address/);
+describe("manual-channel claims stay honest", () => {
+  it("homepage and paywall do not imply automatic SMS or WhatsApp sending", () => {
+    expect(SURFACES.paywall).not.toMatch(
+      /automatically sends|auto-send|sent by\s+SMS|sent by\s+WhatsApp/i,
+    );
+    expect(SURFACES.homepage).not.toMatch(
+      /automatically sends|auto-send|sent by\s+SMS|sent by\s+WhatsApp/i,
+    );
   });
 
   it("no surface claims SMS auto-send (SMS is not active)", () => {

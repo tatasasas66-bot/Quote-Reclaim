@@ -78,7 +78,7 @@ describe("Homepage hero copy (honest conversion rewrite)", () => {
 
   it("trust line names the audience, price, and result-first promise", () => {
     expect(homepage).toMatch(/Built for US home-service contractors\./);
-    expect(homepage).toContain("$49/month");
+    expect(homepage).toContain("PAYWALL_PRICE_LABEL");
     expect(homepage).toMatch(/No names/);
     expect(homepage).toMatch(/No phone numbers/);
     expect(homepage).toMatch(/No card/);

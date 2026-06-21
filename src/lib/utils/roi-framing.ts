@@ -4,16 +4,16 @@
  * reads as comedic and argues against monthly renewal — so above 24 months we
  * flip to an annual-multiple frame ("20x a full year of Quote Reclaim").
  *
- * Pure display math. Reads nothing from billing logic; the $49/month and
- * $588/year constants are duplicated here on purpose so a future pricing
+ * Pure display math. Reads nothing from billing logic; the $79/month and
+ * $948/year constants are duplicated here on purpose so a future pricing
  * change is intentional and explicit at every call site, not silently rippled.
  *
  * Always floors — never round up. Overclaim is the only failure mode that
  * matters in trust copy.
  */
 
-const MONTHLY_PRICE_USD = 49;
-const ANNUAL_PRICE_USD = MONTHLY_PRICE_USD * 12; // 588
+const MONTHLY_PRICE_USD = 79;
+const ANNUAL_PRICE_USD = MONTHLY_PRICE_USD * 12; // 948
 
 export function roiFraming(amount: number): string {
   if (!Number.isFinite(amount) || amount <= 0) {

@@ -299,8 +299,8 @@ describe("homepage proof block", () => {
     expect(homepage).not.toMatch(/\burgency\b/i);
   });
 
-  it("keeps the existing $49/month / hero / footer chrome", () => {
-    expect(homepage).toContain("$49/month");
+  it("keeps the existing $79/month / hero / footer chrome", () => {
+    expect(homepage).toContain("PAYWALL_PRICE_LABEL");
     expect(homepage).toContain("Run the free estimate audit");
     expect(homepage).toContain("Terms");
     expect(homepage).toContain("Privacy");

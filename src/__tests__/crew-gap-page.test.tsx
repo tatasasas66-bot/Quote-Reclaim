@@ -67,7 +67,7 @@ describe("Crew Gap Rescue page", () => {
     expect(screen.getByLabelText(/minimum job value/i)).toBeTruthy();
     expect(screen.getByLabelText(/drive radius/i)).toBeTruthy();
     expect(screen.getByLabelText(/optional note/i)).toBeTruthy();
-    expect(screen.getByText(/Then \$49\/month/i)).toBeTruthy();
+    expect(screen.getByText(/Then \$79\/month/i)).toBeTruthy();
     expect(screen.getByText(/not scheduling software/i)).toBeTruthy();
     expect(screen.getByText(/quiet quotes/i)).toBeTruthy();
   });
@@ -205,9 +205,9 @@ describe("Crew Gap source guardrails", () => {
     expect(crewGapSrc).toContain("quiet quotes");
   });
 
-  it("keeps the $49 price visible and does not reintroduce $79", () => {
-    expect(crewGapSrc).toContain("$49/month");
-    expect(crewGapSrc).not.toMatch(/\$79\b/);
+  it("uses the shared $79 price label and does not leak $49", () => {
+    expect(clientSrc).toContain("PAYWALL_PRICE_LABEL");
+    expect(crewGapSrc).not.toMatch(/\$49\b|49\/month/);
   });
 
   it("does not touch Paddle webhook or subscription state from Crew Gap", () => {

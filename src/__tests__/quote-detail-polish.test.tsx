@@ -45,6 +45,7 @@ function readSource(rel: string): string {
 const detailPage = readSource("../app/(app)/quotes/[id]/page.tsx");
 const quoteActions = readSource("../components/quotes/QuoteActions.tsx");
 const quietCard = readSource("../components/quotes/QuietSignalCard.tsx");
+const manualActions = readSource("../components/quotes/ManualMessageActions.tsx");
 const stepStatusSrc = readSource("../lib/quotes/step-status.ts");
 
 // ---------------------------------------------------------------------------
@@ -103,6 +104,29 @@ describe("quote detail command-center hierarchy", () => {
     expect(detailPage).toMatch(
       /CADENCE_DAYS[^=]*=\s*\{\s*1:\s*1,\s*2:\s*3,\s*3:\s*7,\s*4:\s*14,\s*5:\s*30/,
     );
+  });
+
+  it("adds manual SMS and WhatsApp actions to the command message and sequence messages", () => {
+    expect(detailPage).toContain("ManualMessageActions");
+    expect(detailPage).toMatch(/source="quote_command"/);
+    expect(detailPage).toMatch(/source=\{`recovery_sequence_followup_\$\{r\.followup_number\}`\}/);
+    expect(manualActions).toContain("Open SMS");
+    expect(manualActions).toContain("Open WhatsApp");
+    expect(manualActions).toContain("Copy SMS message");
+    expect(manualActions).toContain("Copy WhatsApp message");
+    expect(manualActions).toContain("sms:?body=");
+    expect(manualActions).toContain("https://wa.me/?text=");
+    expect(manualActions).toContain("SMS and WhatsApp are manual");
+    expect(manualActions).toContain("grid min-w-0 grid-cols-1 gap-2 sm:grid-cols-2");
+    expect(manualActions).toContain("min-h-10");
+    expect(manualActions).toContain("break-words");
+  });
+
+  it("manual SMS and WhatsApp analytics never include raw message, quote, or customer data", () => {
+    expect(manualActions).toContain('track("sms_opened", { surface: source })');
+    expect(manualActions).toContain('track("whatsapp_opened", { surface: source })');
+    expect(manualActions).toMatch(/track\(channel === "sms" \? "sms_copied" : "whatsapp_copied",[\s\S]*surface: source/);
+    expect(manualActions).not.toMatch(/track\([^)]*\{\s*(message|body|client|customer|amount|phone|quote)\s*:/i);
   });
 
   it("does not hardcode painting copy for non-painting quote messages", () => {

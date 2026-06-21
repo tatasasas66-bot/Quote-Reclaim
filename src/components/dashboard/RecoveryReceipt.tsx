@@ -31,10 +31,11 @@ export type RecoveryReceiptProps = {
  * makes the card read as empty. Every value is passed in honestly; nothing
  * is projected or fabricated.
  *
- * Months-paid math used to live here (and twice — once at the top, once in
+ * ROI math used to live here (and twice — once at the top, once in
  * the footer). It has been removed entirely: the ROI equation now lives in
  * exactly two places product-wide (Price Check + Win Moment), so the
- * contractor never sees the same ÷$49 punch line three times in one screen.
+ * contractor never sees the same ROI punch line three times in
+ * one screen.
  * The dollars on this card speak for themselves.
  */
 export function RecoveryReceipt({
@@ -87,7 +88,7 @@ export function RecoveryReceipt({
         </ReceiptRow>
       </dl>
 
-      {/* Footer = honest no-win or honest win line. No months-paid math. */}
+      {/* Footer = honest no-win or honest win line. No ROI math. */}
       <div className="mt-auto border-t border-dashed border-line-subtle pt-3">
         {recoveredPositive ? (
           <p className="text-sm leading-6 text-ink-muted">

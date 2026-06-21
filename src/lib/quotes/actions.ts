@@ -11,6 +11,7 @@ import { recoveryEmailSubject } from "@/lib/messaging/select-channel";
 import { normalizePhone } from "@/lib/messaging/phone";
 import { getMessagingService } from "@/lib/messaging/service";
 import type { SmsResult } from "@/lib/messaging/types";
+import { PAYWALL_PRICE_LABEL } from "@/lib/payments/entitlement";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { createServiceSupabaseClient } from "@/lib/supabase/service";
 import { titleCaseName } from "@/lib/utils/title-case";
@@ -241,7 +242,7 @@ export async function createQuoteAction(
     });
     return {
       ok: false,
-      error: `Free plan limit reached. You have ${silentLabel} of silent quotes in your queue. Subscribe to unlock unlimited recovery — $49/month.`,
+      error: `Free plan limit reached. You have ${silentLabel} of silent quotes in your queue. Subscribe to unlock unlimited recovery - ${PAYWALL_PRICE_LABEL}.`,
     };
   }
 

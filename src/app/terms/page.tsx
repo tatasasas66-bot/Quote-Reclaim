@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { LegalPage, LegalSection } from "@/components/legal/LegalPage";
 import { SUPPORT_EMAIL } from "@/lib/payments/disabled-provider";
+import { PAYWALL_PRICE_LABEL } from "@/lib/payments/entitlement";
 
 export const metadata: Metadata = {
   title: "Terms of Service",
@@ -45,8 +46,8 @@ export default function TermsPage() {
       <LegalSection heading="3. Subscription and billing">
         <p>
           Quote Reclaim includes 3 free quotes so you can try the service before
-          paying. After that, continued use requires a paid subscription of
-          $49/month.
+          paying. After that, continued use requires a paid subscription of{" "}
+          {PAYWALL_PRICE_LABEL}.
         </p>
         <p>
           Subscription billing is handled by a third-party payment provider

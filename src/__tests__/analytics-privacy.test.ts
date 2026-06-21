@@ -146,6 +146,27 @@ describe("track() is safe when PostHog is unavailable AND still records locally"
   it("the track helper source bans direct posthog-js imports (lazy-loaded by the provider)", () => {
     expect(trackSrc).not.toMatch(/from ["']posthog-js["']/);
   });
+
+  it("adds only lightweight manual SMS and WhatsApp message events", () => {
+    for (const event of [
+      "sms_opened",
+      "sms_copied",
+      "whatsapp_opened",
+      "whatsapp_copied",
+    ]) {
+      expect(trackSrc).toContain(`"${event}"`);
+    }
+    for (const removed of [
+      "flagship_feature_viewed",
+      "playbook_viewed",
+      "quote_rescue_score_viewed",
+      "followup_schedule_viewed",
+      "checkout_started",
+      "signup_completed",
+    ]) {
+      expect(trackSrc).not.toContain(`"${removed}"`);
+    }
+  });
 });
 
 // ---------------------------------------------------------------------------
