@@ -70,27 +70,27 @@ const ANSWERS = [
  */
 export default function AuditPage() {
   return (
-    <main className="min-h-screen w-full bg-[radial-gradient(ellipse_at_top,rgba(217,111,50,0.08),transparent_42%),rgb(var(--qr-bg-canvas))] text-ink">
-      <div className="mx-auto flex w-full max-w-6xl flex-col px-4 py-5 sm:px-6 lg:px-8">
-        <header className="flex items-center justify-between gap-4 border-b border-line-subtle pb-5">
+    <main className="min-h-screen w-full max-w-[100dvw] bg-[radial-gradient(ellipse_at_top,rgba(217,111,50,0.08),transparent_42%),rgb(var(--qr-bg-canvas))] text-ink">
+      <div className="mx-auto flex w-full max-w-6xl min-w-0 flex-col px-4 py-5 sm:px-6 lg:px-8">
+        <header className="flex min-w-0 flex-wrap items-center justify-between gap-4 border-b border-line-subtle pb-5">
           <LogoFull />
           <Link
             href="/sign-in"
-            className="rounded-lg px-3 py-2 text-sm font-semibold text-ink-muted transition hover:bg-surface-1 hover:text-ink-strong focus:outline-none focus-visible:ring-2 focus-visible:ring-focus"
+            className="shrink-0 rounded-lg px-3 py-2 text-sm font-semibold text-ink-muted transition hover:bg-surface-1 hover:text-ink-strong focus:outline-none focus-visible:ring-2 focus-visible:ring-focus"
           >
             Sign in
           </Link>
         </header>
 
-        <section className="grid gap-8 py-9 lg:grid-cols-[1fr_0.92fr] lg:items-start lg:py-14">
-          <div className="max-w-2xl">
+        <section className="grid min-w-0 max-w-full gap-8 py-9 lg:grid-cols-[minmax(0,1fr)_minmax(0,0.92fr)] lg:items-start lg:py-14">
+          <div className="min-w-0 max-w-2xl">
             <p className="text-xs font-black uppercase tracking-widest text-brand">
               Free 60-second estimate audit
             </p>
-            <h1 className="mt-4 text-balance text-4xl font-black leading-[1.04] text-ink-strong sm:text-5xl lg:text-[3.35rem]">
+            <h1 className="mt-4 max-w-full break-words text-balance text-[2.35rem] font-black leading-[0.98] text-ink-strong sm:text-5xl lg:text-[3.35rem]">
               Before buying another lead, check the estimates you already sent.
             </h1>
-            <p className="mt-6 max-w-xl text-pretty text-base leading-7 text-ink sm:text-lg">
+            <p className="mt-6 max-w-xl break-words text-pretty text-base leading-7 text-ink sm:text-lg">
               Enter 3 estimates you already sent and how long each has been
               quiet. Quote Reclaim shows your total quiet estimate value, which
               one to follow up first, and the message to send today.
@@ -98,29 +98,29 @@ export default function AuditPage() {
 
             <div
               aria-label="Audit privacy promises"
-              className="mt-6 grid grid-cols-2 gap-2 text-[11px] font-black uppercase tracking-widest text-ink-muted sm:max-w-xl sm:grid-cols-4"
+              className="mt-6 grid max-w-full grid-cols-2 gap-2 text-[11px] font-black uppercase tracking-widest text-ink-muted sm:max-w-xl sm:grid-cols-4"
             >
-              <span className="rounded-full border border-line-subtle bg-surface-1 px-3 py-2 text-center">
+              <span className="w-full min-w-0 rounded-full border border-line-subtle bg-surface-1 px-2 py-2 text-center">
                 No names
               </span>
-              <span className="rounded-full border border-line-subtle bg-surface-1 px-3 py-2 text-center">
+              <span className="w-full min-w-0 rounded-full border border-line-subtle bg-surface-1 px-2 py-2 text-center">
                 No phone
               </span>
-              <span className="rounded-full border border-line-subtle bg-surface-1 px-3 py-2 text-center">
+              <span className="w-full min-w-0 rounded-full border border-line-subtle bg-surface-1 px-2 py-2 text-center">
                 No card
               </span>
-              <span className="rounded-full border border-line-subtle bg-surface-1 px-3 py-2 text-center">
+              <span className="w-full min-w-0 rounded-full border border-line-subtle bg-surface-1 px-2 py-2 text-center">
                 Result first
               </span>
             </div>
 
-            <p className="mt-6 max-w-xl rounded-xl border border-brand/25 bg-surface-1/75 p-4 text-sm leading-6 text-ink">
+            <p className="mt-6 max-w-xl break-words rounded-xl border border-brand/25 bg-surface-1/75 p-4 text-sm leading-6 text-ink">
               Built for home-service contractors. Especially useful for
               estimate-heavy trades like painting, remodeling, roofing, HVAC,
               plumbing, fencing, and landscaping.
             </p>
 
-            <div className="mt-7 grid max-w-xl gap-3 sm:grid-cols-3">
+            <div className="mt-7 grid max-w-xl min-w-0 gap-3 sm:grid-cols-3">
               {[
                 "Total quiet estimate value",
                 "Estimate to follow up first",
@@ -128,9 +128,9 @@ export default function AuditPage() {
               ].map((item) => (
                 <div
                   key={item}
-                  className="rounded-xl border border-line-subtle bg-surface-1 p-4"
+                  className="min-w-0 rounded-xl border border-line-subtle bg-surface-1 p-4"
                 >
-                  <p className="text-sm font-bold leading-6 text-ink-strong">
+                  <p className="break-words text-sm font-bold leading-6 text-ink-strong">
                     {item}
                   </p>
                 </div>
@@ -138,7 +138,7 @@ export default function AuditPage() {
             </div>
           </div>
 
-          <div id="quote-audit" className="scroll-mt-6">
+          <div id="quote-audit" className="min-w-0 max-w-full scroll-mt-6">
             <AuditCalculatorClient />
           </div>
         </section>
@@ -147,8 +147,8 @@ export default function AuditPage() {
           aria-labelledby="audit-trust-title"
           className="border-t border-line-subtle py-10"
         >
-          <div className="grid gap-6 lg:grid-cols-[0.75fr_1fr]">
-            <div>
+          <div className="grid min-w-0 gap-6 lg:grid-cols-[minmax(0,0.75fr)_minmax(0,1fr)]">
+            <div className="min-w-0">
               <p className="text-xs font-black uppercase tracking-widest text-brand">
                 Safe to try
               </p>
@@ -159,14 +159,16 @@ export default function AuditPage() {
                 Clear enough to trust.
               </h2>
             </div>
-            <div className="grid gap-3 sm:grid-cols-2">
+            <div className="grid min-w-0 gap-3 sm:grid-cols-2">
               {TRUST_CARDS.map((card) => (
                 <article
                   key={card.title}
-                  className="rounded-xl border border-line-subtle bg-surface-1 p-5"
+                  className="min-w-0 rounded-xl border border-line-subtle bg-surface-1 p-5"
                 >
-                  <h3 className="font-bold text-ink-strong">{card.title}</h3>
-                  <p className="mt-2 text-sm leading-6 text-ink-muted">
+                  <h3 className="break-words font-bold text-ink-strong">
+                    {card.title}
+                  </h3>
+                  <p className="mt-2 break-words text-sm leading-6 text-ink-muted">
                     {card.body}
                   </p>
                 </article>
@@ -177,9 +179,9 @@ export default function AuditPage() {
 
         <section
           aria-labelledby="audit-steps-title"
-          className="grid gap-6 border-t border-line-subtle py-10 lg:grid-cols-[0.75fr_1fr]"
+          className="grid min-w-0 gap-6 border-t border-line-subtle py-10 lg:grid-cols-[minmax(0,0.75fr)_minmax(0,1fr)]"
         >
-          <div>
+          <div className="min-w-0">
             <p className="text-xs font-black uppercase tracking-widest text-brand">
               How it works
             </p>
@@ -190,16 +192,16 @@ export default function AuditPage() {
               A quick priority check, not another system to manage.
             </h2>
           </div>
-          <ol className="grid gap-3 sm:grid-cols-3">
+          <ol className="grid min-w-0 gap-3 sm:grid-cols-3">
             {STEPS.map((step, index) => (
               <li
                 key={step}
-                className="rounded-xl border border-line-subtle bg-surface-1 p-5"
+                className="min-w-0 rounded-xl border border-line-subtle bg-surface-1 p-5"
               >
                 <span className="text-xs font-black uppercase tracking-widest text-brand">
                   0{index + 1}
                 </span>
-                <p className="mt-3 text-sm font-semibold leading-6 text-ink">
+                <p className="mt-3 break-words text-sm font-semibold leading-6 text-ink">
                   {step}
                 </p>
               </li>
@@ -211,8 +213,8 @@ export default function AuditPage() {
           aria-labelledby="audit-answers-title"
           className="border-t border-line-subtle py-10"
         >
-          <div className="grid gap-6 lg:grid-cols-[0.75fr_1fr]">
-            <div>
+          <div className="grid min-w-0 gap-6 lg:grid-cols-[minmax(0,0.75fr)_minmax(0,1fr)]">
+            <div className="min-w-0">
               <p className="text-xs font-black uppercase tracking-widest text-brand">
                 Straight answers
               </p>
@@ -223,14 +225,16 @@ export default function AuditPage() {
                 What contractors usually need to know first.
               </h2>
             </div>
-            <div className="grid gap-3">
+            <div className="grid min-w-0 gap-3">
               {ANSWERS.map((item) => (
                 <article
                   key={item.q}
-                  className="rounded-xl border border-line-subtle bg-surface-1 p-5"
+                  className="min-w-0 rounded-xl border border-line-subtle bg-surface-1 p-5"
                 >
-                  <h3 className="font-bold text-ink-strong">{item.q}</h3>
-                  <p className="mt-2 text-sm leading-6 text-ink-muted">
+                  <h3 className="break-words font-bold text-ink-strong">
+                    {item.q}
+                  </h3>
+                  <p className="mt-2 break-words text-sm leading-6 text-ink-muted">
                     {item.a}
                   </p>
                 </article>
@@ -240,19 +244,19 @@ export default function AuditPage() {
         </section>
 
         <section className="border-t border-line-subtle py-10">
-          <div className="rounded-2xl border border-brand/30 bg-surface-1 p-6 sm:p-8">
+          <div className="min-w-0 rounded-2xl border border-brand/30 bg-surface-1 p-5 sm:p-8">
             <p className="text-xs font-black uppercase tracking-widest text-brand">
               Check the estimates you already sent.
             </p>
-            <div className="mt-3 flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
-              <div>
-                <h2 className="text-2xl font-black text-ink-strong sm:text-3xl">
+            <div className="mt-3 flex min-w-0 flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
+              <div className="min-w-0">
+                <h2 className="break-words text-2xl font-black text-ink-strong sm:text-3xl">
                   No names. No phone numbers. No card. See your result first.
                 </h2>
               </div>
               <a
                 href="#quote-audit"
-                className="inline-flex min-h-12 items-center justify-center rounded-lg border border-brand bg-brand px-5 py-3 text-base font-semibold text-canvas shadow-[0_0_36px_rgba(217,111,50,0.24)] transition-colors hover:bg-brand-dark focus:outline-none focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2 focus-visible:ring-offset-canvas"
+                className="inline-flex min-h-12 w-full shrink-0 items-center justify-center rounded-lg border border-brand bg-brand px-5 py-3 text-base font-semibold text-canvas shadow-[0_0_36px_rgba(217,111,50,0.24)] transition-colors hover:bg-brand-dark focus:outline-none focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2 focus-visible:ring-offset-canvas sm:w-auto"
               >
                 Run the audit
               </a>

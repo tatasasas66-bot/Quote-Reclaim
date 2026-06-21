@@ -140,6 +140,33 @@ describe("/audit static landing page shell", () => {
   });
 });
 
+describe("/audit mobile responsiveness guardrails", () => {
+  it("keeps the public shell from using desktop-only widths on mobile", () => {
+    expect(pageSrc).toMatch(/max-w-full/);
+    expect(pageSrc).toMatch(/min-w-0/);
+    expect(pageSrc).toMatch(/break-words/);
+    expect(pageSrc).toMatch(/grid-cols-2[\s\S]*sm:grid-cols-4/);
+    expect(pageSrc).not.toMatch(/w-\[(?:5|6|7|8|9)\d{2}px\]/);
+    expect(pageSrc).not.toMatch(/min-w-\[(?:5|6|7|8|9)\d{2}px\]/);
+  });
+
+  it("stacks estimate amount and days quiet fields before the small breakpoint", () => {
+    expect(clientSrc).toMatch(
+      /grid min-w-0 grid-cols-1 gap-3 sm:grid-cols-\[minmax\(0,1fr\)_minmax\(9rem,0\.55fr\)\]/,
+    );
+    expect(clientSrc).toMatch(/h-12 w-full max-w-full min-w-0 rounded-lg/);
+  });
+
+  it("allows long audit CTAs, examples, and result cards to wrap instead of clipping", () => {
+    expect(clientSrc).toMatch(
+      /data-testid="audit-submit"[\s\S]{0,160}h-auto min-h-12 whitespace-normal/,
+    );
+    expect(clientSrc).toMatch(/max-w-full whitespace-normal break-words/);
+    expect(clientSrc).toMatch(/data-testid="audit-result"[\s\S]{0,220}max-w-full min-w-0/);
+    expect(clientSrc).toMatch(/whitespace-pre-wrap break-words/);
+  });
+});
+
 describe("audit form - safe to try", () => {
   it("renders exactly estimate amount + days quiet fields for three rows", () => {
     render(<AuditCalculatorClient />);

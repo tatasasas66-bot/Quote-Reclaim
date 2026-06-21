@@ -220,38 +220,44 @@ export function AuditCalculatorClient() {
   }
 
   return (
-    <div className="space-y-5">
+    <div className="w-full max-w-full min-w-0 space-y-5">
       <form
         onSubmit={handleSubmit}
         noValidate
         data-testid="audit-form-card"
-        className="rounded-2xl border border-line-strong/50 bg-surface-1/95 p-4 shadow-[0_24px_70px_rgba(0,0,0,0.22)] sm:p-5"
+        className="w-full max-w-full min-w-0 rounded-2xl border border-line-strong/50 bg-surface-1/95 p-4 shadow-[0_24px_70px_rgba(0,0,0,0.22)] sm:p-5"
       >
-        <div className="mb-4">
+        <div className="mb-4 min-w-0">
           <p className="text-xs font-black uppercase tracking-widest text-brand">
             Run a 60-second estimate audit
           </p>
-          <h2 className="mt-2 text-2xl font-black text-ink-strong">
+          <h2 className="mt-2 break-words text-2xl font-black leading-tight text-ink-strong">
             Find the estimate worth following up first.
           </h2>
-          <p id="audit-form-helper" className="mt-2 text-sm leading-6 text-ink-muted">
+          <p
+            id="audit-form-helper"
+            className="mt-2 max-w-full break-words text-sm leading-6 text-ink-muted"
+          >
             Use estimates you already sent and have not heard back on. Rough
             numbers are fine — this is a priority check, not accounting.
           </p>
         </div>
 
-        <fieldset aria-describedby="audit-form-helper" className="space-y-3">
+        <fieldset
+          aria-describedby="audit-form-helper"
+          className="min-w-0 space-y-3"
+        >
           <legend className="sr-only">Enter three quiet estimates</legend>
           {rows.map((row, i) => (
             <div
               key={i}
-              className="rounded-xl border border-line-subtle bg-surface-2/90 p-3"
+              className="w-full max-w-full min-w-0 rounded-xl border border-line-subtle bg-surface-2/90 p-3"
             >
               <p className="mb-3 text-xs font-black uppercase tracking-widest text-ink-muted">
                 Estimate {i + 1}
               </p>
-              <div className="grid grid-cols-[1.25fr_0.9fr] gap-3">
-                <div className="flex flex-col gap-1.5">
+              <div className="grid min-w-0 grid-cols-1 gap-3 sm:grid-cols-[minmax(0,1fr)_minmax(9rem,0.55fr)]">
+                <div className="flex min-w-0 flex-col gap-1.5">
                   <label
                     htmlFor={`amount-${i}`}
                     className="text-sm font-semibold text-ink"
@@ -267,10 +273,10 @@ export function AuditCalculatorClient() {
                     placeholder={SAMPLE_ROWS[i]?.amount ?? "3200"}
                     value={row.amount}
                     onChange={(e) => updateRow(i, "amount", e.target.value)}
-                    className="h-12 rounded-lg border border-line-subtle bg-canvas px-3 text-base text-ink-strong placeholder:font-normal placeholder:text-ink-muted/70 focus:border-brand focus:outline-none focus:ring-2 focus:ring-focus/40"
+                    className="h-12 w-full max-w-full min-w-0 rounded-lg border border-line-subtle bg-canvas px-3 text-base text-ink-strong placeholder:font-normal placeholder:text-ink-muted/70 focus:border-brand focus:outline-none focus:ring-2 focus:ring-focus/40"
                   />
                 </div>
-                <div className="flex flex-col gap-1.5">
+                <div className="flex min-w-0 flex-col gap-1.5">
                   <label
                     htmlFor={`days-${i}`}
                     className="text-sm font-semibold text-ink"
@@ -286,7 +292,7 @@ export function AuditCalculatorClient() {
                     placeholder={SAMPLE_ROWS[i]?.days ?? "14"}
                     value={row.days}
                     onChange={(e) => updateRow(i, "days", e.target.value)}
-                    className="h-12 rounded-lg border border-line-subtle bg-canvas px-3 text-base text-ink-strong placeholder:font-normal placeholder:text-ink-muted/70 focus:border-brand focus:outline-none focus:ring-2 focus:ring-focus/40"
+                    className="h-12 w-full max-w-full min-w-0 rounded-lg border border-line-subtle bg-canvas px-3 text-base text-ink-strong placeholder:font-normal placeholder:text-ink-muted/70 focus:border-brand focus:outline-none focus:ring-2 focus:ring-focus/40"
                   />
                 </div>
               </div>
@@ -304,8 +310,8 @@ export function AuditCalculatorClient() {
           </p>
         ) : null}
 
-        <div className="mt-4 rounded-xl border border-line-subtle bg-canvas p-3 text-sm leading-6 text-ink-muted">
-          <p>
+        <div className="mt-4 w-full max-w-full rounded-xl border border-line-subtle bg-canvas p-3 text-sm leading-6 text-ink-muted">
+          <p className="max-w-full whitespace-normal break-words">
             Example: $3,200 quiet for 14 days, $5,800 quiet for 24 days,
             $2,400 quiet for 7 days.
           </p>
@@ -325,39 +331,44 @@ export function AuditCalculatorClient() {
           loading={analyzing}
           disabled={analyzing}
           data-testid="audit-submit"
-          className="mt-4"
+          className="mt-4 h-auto min-h-12 whitespace-normal px-4 py-3 text-center text-base leading-tight sm:text-lg"
         >
           {analyzing ? (
             "Auditing..."
           ) : (
             <>
-              Show me which estimate to follow up first
+              <span className="min-w-0">
+                Show me which estimate to follow up first
+              </span>
               <ArrowRight className="h-4 w-4" aria-hidden="true" />
             </>
           )}
         </Button>
 
-        <p className="mt-3 text-center text-xs leading-5 text-ink-muted">
+        <p className="mt-3 max-w-full break-words text-center text-xs leading-5 text-ink-muted">
           No customer names. No phone numbers. No card. No signup before result.
         </p>
       </form>
 
-      <div ref={outputRef} className="scroll-mt-4 empty:hidden">
+      <div
+        ref={outputRef}
+        className="min-w-0 max-w-full scroll-mt-4 empty:hidden"
+      >
         {analyzing ? (
           <div
             data-testid="audit-analysis"
             role="status"
             aria-live="polite"
-            className="rounded-2xl border border-line-subtle bg-surface-1 p-5"
+            className="w-full max-w-full min-w-0 rounded-2xl border border-line-subtle bg-surface-1 p-4 sm:p-5"
           >
-            <div className="flex items-center gap-3">
+            <div className="flex min-w-0 items-center gap-3">
               <Loader2
                 className="h-5 w-5 shrink-0 animate-spin text-brand motion-reduce:animate-none"
                 aria-hidden="true"
               />
               <p
                 data-testid="audit-analysis-step"
-                className="text-sm font-semibold text-ink-strong"
+                className="min-w-0 break-words text-sm font-semibold text-ink-strong"
               >
                 {ANALYSIS_STEPS[analysisStep ?? 0]}
               </p>
@@ -416,26 +427,26 @@ function AuditResultView({
       data-testid="audit-result"
       role="region"
       aria-label="Your estimate audit result"
-      className="space-y-4 rounded-2xl border border-brand/45 bg-[linear-gradient(180deg,rgba(217,111,50,0.08),rgba(24,28,34,0.98))] p-4 shadow-[0_28px_90px_rgba(0,0,0,0.34)] sm:p-6"
+      className="w-full max-w-full min-w-0 space-y-4 rounded-2xl border border-brand/45 bg-[linear-gradient(180deg,rgba(217,111,50,0.08),rgba(24,28,34,0.98))] p-4 shadow-[0_28px_90px_rgba(0,0,0,0.34)] sm:p-6"
     >
-      <div>
+      <div className="min-w-0">
         <p className="text-xs font-black uppercase tracking-widest text-success">
           Your 60-second estimate audit
         </p>
-        <h2 className="mt-2 text-2xl font-black text-ink-strong">
+        <h2 className="mt-2 break-words text-2xl font-black leading-tight text-ink-strong">
           Here is what to do today.
         </h2>
       </div>
 
-      <div className="grid gap-3 sm:grid-cols-2">
-        <section className="rounded-xl border border-line-subtle bg-surface-1 p-4">
+      <div className="grid min-w-0 gap-3 sm:grid-cols-2">
+        <section className="min-w-0 rounded-xl border border-line-subtle bg-surface-1 p-4">
           <p className="text-xs font-black uppercase tracking-widest text-ink-muted">
             Total quiet estimate value
           </p>
-          <p className="mt-2 text-4xl font-black leading-none text-money sm:text-5xl">
+          <p className="mt-2 break-words text-3xl font-black leading-none text-money sm:text-5xl">
             {formatCurrency(result.totalSilentQuoteValue)}
           </p>
-          <p className="mt-3 text-sm leading-6 text-ink-muted">
+          <p className="mt-3 break-words text-sm leading-6 text-ink-muted">
             This is the value sitting in the estimates you entered.
           </p>
         </section>
@@ -443,18 +454,18 @@ function AuditResultView({
         {priority ? (
           <section
             data-testid="audit-start-here"
-            className="rounded-xl border border-brand/30 bg-brand/10 p-4"
+            className="min-w-0 rounded-xl border border-brand/30 bg-brand/10 p-4"
           >
             <p className="text-xs font-black uppercase tracking-widest text-brand">
               Follow up this estimate first
             </p>
-            <p className="mt-2 text-xl font-black text-ink-strong">
+            <p className="mt-2 break-words text-xl font-black text-ink-strong">
               Start with Estimate #{priority.index}
             </p>
-            <p className="mt-1 text-3xl font-black text-ink-strong">
+            <p className="mt-1 break-words text-3xl font-black text-ink-strong">
               {formatCurrency(priority.amount)}
             </p>
-            <p className="mt-2 flex flex-wrap items-center gap-2 text-sm text-ink-muted">
+            <p className="mt-2 flex min-w-0 flex-wrap items-center gap-2 text-sm text-ink-muted">
               {priority.daysSilent != null ? (
                 <span>{priority.daysSilent} days quiet</span>
               ) : (
@@ -477,27 +488,27 @@ function AuditResultView({
       </div>
 
       {priority ? (
-        <section className="grid gap-3 sm:grid-cols-2">
-          <div className="rounded-xl border border-line-subtle bg-surface-1 p-4">
+        <section className="grid min-w-0 gap-3 sm:grid-cols-2">
+          <div className="min-w-0 rounded-xl border border-line-subtle bg-surface-1 p-4">
             <p className="text-xs font-black uppercase tracking-widest text-ink-muted">
               Recovery window
             </p>
             <p className="mt-2 text-lg font-black text-ink-strong">
               {windowLabel}
             </p>
-            <p className="mt-2 text-sm leading-6 text-ink-muted">
+            <p className="mt-2 break-words text-sm leading-6 text-ink-muted">
               {WINDOW_DEFINITIONS[windowLabel] ?? WINDOW_DEFINITIONS.Unknown}
             </p>
           </div>
 
           <div
             data-testid="audit-why-order"
-            className="rounded-xl border border-line-subtle bg-surface-1 p-4"
+            className="min-w-0 rounded-xl border border-line-subtle bg-surface-1 p-4"
           >
             <p className="text-xs font-black uppercase tracking-widest text-ink-muted">
               Why this one first
             </p>
-            <p className="mt-2 text-sm leading-6 text-ink">
+            <p className="mt-2 break-words text-sm leading-6 text-ink">
               We ranked this estimate using amount and days quiet.{" "}
               {result.priorityReason}
             </p>
@@ -505,20 +516,20 @@ function AuditResultView({
         </section>
       ) : null}
 
-      <section className="rounded-xl border border-line-subtle bg-surface-1 p-4">
-        <div className="flex items-start justify-between gap-3">
-          <div>
+      <section className="min-w-0 rounded-xl border border-line-subtle bg-surface-1 p-4">
+        <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+          <div className="min-w-0">
             <p className="text-xs font-black uppercase tracking-widest text-brand">
               Message to send today
             </p>
-            <p className="mt-1 text-sm text-ink-muted">
+            <p className="mt-1 break-words text-sm text-ink-muted">
               Short, professional, and easy for the customer to answer.
             </p>
           </div>
           <button
             type="button"
             onClick={onCopy}
-            className="inline-flex shrink-0 items-center gap-1 rounded-lg border border-line-subtle bg-surface-2 px-3 py-2 text-sm font-bold text-ink-strong transition hover:border-brand focus:outline-none focus-visible:ring-2 focus-visible:ring-focus"
+            className="inline-flex w-full shrink-0 items-center justify-center gap-1 rounded-lg border border-line-subtle bg-surface-2 px-3 py-2 text-sm font-bold text-ink-strong transition hover:border-brand focus:outline-none focus-visible:ring-2 focus-visible:ring-focus sm:w-auto"
           >
             {copied ? (
               <>
@@ -533,7 +544,7 @@ function AuditResultView({
             )}
           </button>
         </div>
-        <p className="mt-4 whitespace-pre-wrap rounded-xl border border-line-subtle bg-canvas p-4 text-base font-semibold leading-7 text-ink-strong">
+        <p className="mt-4 max-w-full whitespace-pre-wrap break-words rounded-xl border border-line-subtle bg-canvas p-4 text-base font-semibold leading-7 text-ink-strong">
           {result.suggestedMessage}
         </p>
       </section>
@@ -542,12 +553,12 @@ function AuditResultView({
 
       <section
         data-testid="audit-next-moves"
-        className="rounded-xl border border-line-subtle bg-surface-1 p-4"
+        className="min-w-0 rounded-xl border border-line-subtle bg-surface-1 p-4"
       >
         <p className="text-xs font-black uppercase tracking-widest text-brand">
           Next move
         </p>
-        <p className="mt-2 text-sm leading-6 text-ink">
+        <p className="mt-2 break-words text-sm leading-6 text-ink">
           Send the message to the first estimate today. Then check the next
           estimate in the order above.
         </p>
@@ -555,12 +566,12 @@ function AuditResultView({
 
       <section
         data-testid="audit-sequence-preview"
-        className="rounded-xl border border-line-subtle bg-surface-1 p-4"
+        className="min-w-0 rounded-xl border border-line-subtle bg-surface-1 p-4"
       >
         <p className="text-xs font-black uppercase tracking-widest text-ink-muted">
           If you save the plan
         </p>
-        <p className="mt-2 text-sm leading-6 text-ink">
+        <p className="mt-2 break-words text-sm leading-6 text-ink">
           Quote Reclaim keeps the follow-up order in one place and turns quiet
           estimates into a 5-message recovery sequence you can work through.
         </p>
@@ -568,13 +579,13 @@ function AuditResultView({
 
       <section
         data-testid="audit-goes-deeper"
-        className="space-y-3 rounded-xl border border-brand/35 bg-brand/10 p-4"
+        className="min-w-0 space-y-3 rounded-xl border border-brand/35 bg-brand/10 p-4"
       >
-        <div>
+        <div className="min-w-0">
           <p className="text-xs font-black uppercase tracking-widest text-brand">
             Save this recovery plan
           </p>
-          <p className="mt-2 text-sm leading-6 text-ink">
+          <p className="mt-2 break-words text-sm leading-6 text-ink">
             Create an account to track more estimates, save messages, and keep
             your follow-up order in one place.
           </p>
@@ -586,7 +597,7 @@ function AuditResultView({
           href={signupHref}
           data-testid="audit-signup-cta"
           onClick={() => track("audit_signup_clicked", utms)}
-          className="inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-lg border border-brand bg-brand px-4 py-3 text-base font-semibold text-canvas shadow-[0_0_36px_rgba(217,111,50,0.28)] transition-colors hover:bg-brand-dark focus:outline-none focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2 focus-visible:ring-offset-canvas"
+          className="inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-lg border border-brand bg-brand px-4 py-3 text-center text-base font-semibold leading-tight text-canvas shadow-[0_0_36px_rgba(217,111,50,0.28)] transition-colors hover:bg-brand-dark focus:outline-none focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2 focus-visible:ring-offset-canvas"
         >
           Save this recovery plan
           <ArrowRight className="h-4 w-4" aria-hidden="true" />
@@ -601,22 +612,22 @@ function FollowUpOrder({ ranked }: { ranked: RankedAuditQuote[] }) {
   return (
     <section
       data-testid="audit-follow-up-order"
-      className="rounded-xl border border-line-subtle bg-surface-1 p-4"
+      className="min-w-0 rounded-xl border border-line-subtle bg-surface-1 p-4"
     >
       <p className="text-xs font-black uppercase tracking-widest text-brand">
         Follow-up order
       </p>
-      <ol className="mt-3 space-y-2">
+      <ol className="mt-3 min-w-0 space-y-2">
         {ranked.map((q) => (
           <li
             key={q.index}
             data-testid={`audit-rank-row-${q.rank}`}
-            className={`rounded-lg border bg-surface-2 p-3 ${
+            className={`min-w-0 rounded-lg border bg-surface-2 p-3 ${
               q.rank === 1 ? "border-brand/45" : "border-line-subtle"
             }`}
           >
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <div className="flex items-center gap-3">
+            <div className="flex min-w-0 flex-wrap items-center justify-between gap-3">
+              <div className="flex min-w-0 items-center gap-3">
                 <span
                   aria-hidden="true"
                   className={`inline-flex h-7 w-7 items-center justify-center rounded-full text-xs font-black ${
@@ -627,11 +638,11 @@ function FollowUpOrder({ ranked }: { ranked: RankedAuditQuote[] }) {
                 >
                   {q.rank}
                 </span>
-                <div>
-                  <p className="text-sm font-black text-ink-strong">
+                <div className="min-w-0">
+                  <p className="break-words text-sm font-black text-ink-strong">
                     Estimate #{q.index} - {formatCurrency(q.amount)}
                   </p>
-                  <p className="text-xs text-ink-muted">
+                  <p className="break-words text-xs text-ink-muted">
                     {q.daysSilent != null
                       ? `${q.daysSilent} days quiet`
                       : "Days quiet not entered"}
@@ -639,7 +650,7 @@ function FollowUpOrder({ ranked }: { ranked: RankedAuditQuote[] }) {
                   </p>
                 </div>
               </div>
-              <div className="flex flex-wrap items-center gap-2">
+              <div className="flex min-w-0 flex-wrap items-center gap-2">
                 <span
                   className={`rounded-full border px-2 py-0.5 text-[10px] font-black uppercase tracking-widest ${
                     WINDOW_TONES[q.windowLabel] ?? WINDOW_TONES.Unknown
@@ -647,7 +658,7 @@ function FollowUpOrder({ ranked }: { ranked: RankedAuditQuote[] }) {
                 >
                   {q.windowLabel}
                 </span>
-                <span className="text-xs font-black uppercase tracking-widest text-brand">
+                <span className="break-words text-xs font-black uppercase tracking-widest text-brand">
                   {actionForRank(q)}
                 </span>
               </div>

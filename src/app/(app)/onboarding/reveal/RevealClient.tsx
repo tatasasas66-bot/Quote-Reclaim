@@ -407,12 +407,12 @@ function InputStep({
           </p>
         ) : null}
 
-        <div className="mt-5 flex flex-col gap-3 sm:flex-row sm:items-center">
+        <div className="mt-5 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
           <Button
             type="button"
             size="lg"
             onClick={onScan}
-            className="w-full sm:flex-1"
+            className="h-auto min-h-12 w-full whitespace-normal px-4 py-3 text-center leading-tight sm:flex-1 sm:whitespace-nowrap"
           >
             Scan my quiet estimates
           </Button>

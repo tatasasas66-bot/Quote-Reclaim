@@ -270,6 +270,13 @@ describe("onboarding reveal input — copy, skip clarity, large-import handling"
     );
   });
 
+  it("keeps the scan CTA readable when the desktop CTA row gets tight", () => {
+    expect(revealClientSrc).toMatch(/sm:flex-wrap/);
+    expect(revealClientSrc).toMatch(
+      /className="h-auto min-h-12 w-full whitespace-normal px-4 py-3 text-center leading-tight sm:flex-1 sm:whitespace-nowrap"/,
+    );
+  });
+
   it("first-run input explains the value before asking for rows", () => {
     expect(revealClientSrc).toContain(
       "Find the money still sitting in old estimates.",
