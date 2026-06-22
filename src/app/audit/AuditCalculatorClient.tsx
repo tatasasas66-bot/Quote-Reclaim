@@ -14,9 +14,10 @@ import {
   type AuditResult,
   type RankedAuditQuote,
 } from "@/lib/audit/silent-quote-audit";
+import { resolveTradeConfig, type TradeConfig } from "@/lib/audit/trade-config";
 
 const ROW_COUNT = 3;
-const SAMPLE_ROWS = [
+const DEFAULT_SAMPLE_ROWS = [
   { amount: "3200", days: "14" },
   { amount: "5800", days: "24" },
   { amount: "2400", days: "7" },
@@ -85,6 +86,7 @@ export function AuditCalculatorClient() {
     "/sign-up?next=/onboarding/reveal",
   );
   const [utms, setUtms] = React.useState<Record<string, string>>({});
+  const [tradeConfig, setTradeConfig] = React.useState<TradeConfig>(resolveTradeConfig(null));
   const startedRef = React.useRef(false);
   const outputRef = React.useRef<HTMLDivElement | null>(null);
   const [analysisStep, setAnalysisStep] = React.useState<number | null>(null);
@@ -102,6 +104,12 @@ export function AuditCalculatorClient() {
     const captured = readUtms(window.location.search);
     setUtms(captured);
     setSignupHref(buildSignupHref(window.location.search));
+    // Trade personalization: read utm_trade and resolve the trade config.
+    // This is the cold-email → landing-page bridge. A concrete email lands
+    // on a concrete page, a fence email on a fence page, etc.
+    const params = new URLSearchParams(window.location.search);
+    const utmTrade = params.get("utm_trade");
+    setTradeConfig(resolveTradeConfig(utmTrade));
     track("audit_page_viewed", captured);
   }, []);
 
@@ -121,7 +129,11 @@ export function AuditCalculatorClient() {
   function loadSampleRows() {
     markStarted();
     clearAnalysisTimers();
-    setRows(SAMPLE_ROWS.map((row) => ({ ...row })));
+    // Use trade-specific sample rows if available, else default.
+    const samples = tradeConfig.sampleRows.length === ROW_COUNT
+      ? tradeConfig.sampleRows.map((row) => ({ amount: row.amount, days: row.days }))
+      : DEFAULT_SAMPLE_ROWS.map((row) => ({ ...row }));
+    setRows(samples);
     setResult(null);
     setError(null);
     setCopied(false);
@@ -270,6 +282,9 @@ export function AuditCalculatorClient() {
           <h2 className="mt-2 break-words text-2xl font-black leading-tight text-ink-strong">
             Find the estimate worth following up first.
           </h2>
+          <p className="mt-2 break-words text-sm font-semibold leading-6 text-ink">
+            {tradeConfig.bridgeLine}
+          </p>
           <p
             id="audit-form-helper"
             className="mt-2 max-w-full break-words text-sm leading-6 text-ink-muted"
@@ -306,7 +321,7 @@ export function AuditCalculatorClient() {
                     type="text"
                     inputMode="decimal"
                     autoComplete="off"
-                    placeholder={SAMPLE_ROWS[i]?.amount ?? "3200"}
+                    placeholder={DEFAULT_SAMPLE_ROWS[i]?.amount ?? "3200"}
                     value={row.amount}
                     onChange={(e) => updateRow(i, "amount", e.target.value)}
                     className="h-12 w-full max-w-full min-w-0 rounded-lg border border-line-subtle bg-canvas px-3 text-base text-ink-strong placeholder:font-normal placeholder:text-ink-muted/70 focus:border-brand focus:outline-none focus:ring-2 focus:ring-focus/40"
@@ -325,7 +340,7 @@ export function AuditCalculatorClient() {
                     type="text"
                     inputMode="numeric"
                     autoComplete="off"
-                    placeholder={SAMPLE_ROWS[i]?.days ?? "14"}
+                    placeholder={DEFAULT_SAMPLE_ROWS[i]?.days ?? "14"}
                     value={row.days}
                     onChange={(e) => updateRow(i, "days", e.target.value)}
                     className="h-12 w-full max-w-full min-w-0 rounded-lg border border-line-subtle bg-canvas px-3 text-base text-ink-strong placeholder:font-normal placeholder:text-ink-muted/70 focus:border-brand focus:outline-none focus:ring-2 focus:ring-focus/40"
@@ -348,8 +363,7 @@ export function AuditCalculatorClient() {
 
         <div className="mt-4 w-full max-w-full rounded-xl border border-line-subtle bg-canvas p-3 text-sm leading-6 text-ink-muted">
           <p className="max-w-full whitespace-normal break-words">
-            Example: $3,200 quiet for 14 days, $5,800 quiet for 24 days,
-            $2,400 quiet for 7 days.
+            {tradeConfig.exampleLine}
           </p>
           <button
             type="button"
@@ -434,6 +448,7 @@ export function AuditCalculatorClient() {
             copied={copied}
             signupHref={signupHref}
             utms={utms}
+            tradeConfig={tradeConfig}
             onCopy={copyMessage}
           />
         ) : null}
@@ -447,12 +462,14 @@ function AuditResultView({
   copied,
   signupHref,
   utms,
+  tradeConfig,
   onCopy,
 }: {
   result: AuditResult;
   copied: boolean;
   signupHref: string;
   utms: Record<string, string>;
+  tradeConfig: TradeConfig;
   onCopy: () => void;
 }) {
   const priority = result.priority;
@@ -467,7 +484,7 @@ function AuditResultView({
     >
       <div className="min-w-0">
         <p className="text-xs font-black uppercase tracking-widest text-success">
-          Your 60-second estimate audit
+          {tradeConfig.resultEyebrow}
         </p>
         <h2 className="mt-2 break-words text-2xl font-black leading-tight text-ink-strong">
           Here is what to do today.
