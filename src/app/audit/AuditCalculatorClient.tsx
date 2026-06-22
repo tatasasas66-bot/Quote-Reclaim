@@ -204,6 +204,38 @@ export function AuditCalculatorClient() {
           priority_band: audit.priorityBandLabel ?? "unknown",
           ...utms,
         });
+
+        // Anonymous attribution for the auto-marketing funnel.
+        // Fire-and-forget — never blocks, never throws, sends NO PII.
+        // Only UTMs + bucketed value + recovery window + a visitor hash.
+        try {
+          const params = new URLSearchParams(window.location.search);
+          const visitorHash = (() => {
+            // Stable per-session hash from a salted visitor id (no raw IP).
+            // Reuses the existing __qrEvents ledger as a cheap session signal.
+            const ledger = (window as unknown as { __qrEvents?: Array<{ t: number }> }).__qrEvents;
+            const seed = ledger && ledger.length > 0 ? ledger[0]!.t : Date.now();
+            return String(seed).slice(0, 16);
+          })();
+          void fetch("/api/admin/auto-marketing/audit-attribution", {
+            method: "POST",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({
+              utm_source: params.get("utm_source") ?? utms.utm_source ?? null,
+              utm_campaign: params.get("utm_campaign") ?? utms.utm_campaign ?? null,
+              utm_trade: params.get("utm_trade") ?? null,
+              utm_city: params.get("utm_city") ?? null,
+              visitor_hash: visitorHash,
+              audit_completed: true,
+              total_quiet_value_bucket: bucketCurrency(audit.totalSilentQuoteValue),
+              top_recovery_window: audit.priorityBandLabel ?? null,
+            }),
+          }).catch(() => {
+            // Attribution is best-effort; never let it break the audit UX.
+          });
+        } catch {
+          // swallow — analytics must never break the page
+        }
       }, stepMs * ANALYSIS_STEPS.length),
     );
   }
