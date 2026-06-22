@@ -203,8 +203,8 @@ export default function HomePage() {
           </nav>
         </header>
 
-        <section className="grid min-w-0 gap-7 py-8 lg:grid-cols-[0.9fr_1.1fr] lg:items-center lg:py-10">
-          <div className="min-w-0">
+        <section className="grid min-w-0 gap-7 py-8 lg:grid-cols-[0.9fr_1.1fr] lg:items-start lg:py-10">
+          <div className="min-w-0 lg:pt-6">
             <p className="text-xs font-black uppercase tracking-widest text-brand">
               Quiet estimate recovery for US contractors
             </p>
@@ -274,7 +274,9 @@ export default function HomePage() {
             </p>
           </div>
 
-          <HeroProductPreview />
+          <div className="lg:-mt-2">
+            <HeroProductPreview />
+          </div>
         </section>
       </div>
 
@@ -597,16 +599,19 @@ function HeroProductPreview() {
       id="how-it-works"
       className="min-w-0 rounded-2xl border border-line-subtle bg-surface-1/85 shadow-[0_18px_54px_rgba(0,0,0,0.22)]"
     >
-      {/* Trust badge + feature label */}
-      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-line-subtle/80 px-4 py-3 sm:px-5">
+      {/* Trust badge + feature label + subline */}
+      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-line-subtle/80 px-4 py-2.5 sm:px-5">
         <Badge variant="money">SAMPLE PREVIEW - NOT CUSTOMER DATA</Badge>
         <span className="text-[10px] font-black uppercase tracking-widest text-brand">
           One-Tap Reply
         </span>
       </div>
+      <p className="px-4 pt-2 text-xs font-semibold text-ink-muted sm:px-5">
+        Make it easy for the homeowner to answer.
+      </p>
 
       {/* Homeowner side: what they see in the follow-up email */}
-      <div className="border-b border-line-subtle/60 p-4 sm:p-5">
+      <div className="border-b border-line-subtle/60 p-3 sm:p-4">
         <p className="text-[10px] font-black uppercase tracking-widest text-ink-muted">
           What the homeowner sees
         </p>
@@ -615,8 +620,8 @@ function HeroProductPreview() {
             Hi Jane — wanted to make sure the estimate landed okay.
             Tap one:
           </p>
-          <div className="mt-3 space-y-2">
-            <div className="flex items-center gap-2 rounded-lg border border-success/30 bg-success/10 px-3 py-2.5">
+          <div className="mt-2 space-y-1.5">
+            <div className="flex items-center gap-2 rounded-lg border border-success/30 bg-success/10 px-3 py-2">
               <span
                 className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-success/20 text-[11px] font-black text-success"
                 aria-hidden="true"
@@ -627,7 +632,7 @@ function HeroProductPreview() {
                 Let&apos;s do it — what&apos;s next?
               </span>
             </div>
-            <div className="flex items-center gap-2 rounded-lg border border-brand/30 bg-brand/5 px-3 py-2.5">
+            <div className="flex items-center gap-2 rounded-lg border border-brand/30 bg-brand/5 px-3 py-2">
               <span
                 className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-brand/15 text-[11px] font-black text-brand"
                 aria-hidden="true"
@@ -638,7 +643,7 @@ function HeroProductPreview() {
                 I have one question
               </span>
             </div>
-            <div className="flex items-center gap-2 rounded-lg border border-line-subtle bg-surface-2 px-3 py-2.5">
+            <div className="flex items-center gap-2 rounded-lg border border-line-subtle bg-surface-2 px-3 py-2">
               <span
                 className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-surface-1 text-[11px] font-black text-ink-muted"
                 aria-hidden="true"
@@ -654,14 +659,14 @@ function HeroProductPreview() {
       </div>
 
       {/* The one-tap bridge */}
-      <div className="flex items-center justify-center py-2">
+      <div className="flex items-center justify-center py-1.5">
         <span className="text-[10px] font-black uppercase tracking-widest text-brand">
           ↓ one tap ↓
         </span>
       </div>
 
       {/* Contractor side: what you see instantly */}
-      <div className="border-t border-line-subtle/60 p-4 sm:p-5">
+      <div className="border-t border-line-subtle/60 p-3 sm:p-4">
         <p className="text-[10px] font-black uppercase tracking-widest text-ink-muted">
           What you see instantly
         </p>
@@ -672,7 +677,7 @@ function HeroProductPreview() {
           <p className="mt-1 break-words text-sm font-bold leading-6 text-ink-strong">
             “Let&apos;s do it — what&apos;s next?”
           </p>
-          <p className="mt-2 break-words text-xs leading-5 text-ink-muted">
+          <p className="mt-1.5 break-words text-xs leading-5 text-ink-muted">
             <span className="font-bold text-ink">Next move:</span> Call or
             reply with scheduling options.
           </p>
@@ -680,7 +685,7 @@ function HeroProductPreview() {
       </div>
 
       {/* Product depth footer */}
-      <div className="border-t border-line-subtle/60 px-4 py-3 sm:px-5">
+      <div className="border-t border-line-subtle/60 px-4 py-2.5 sm:px-5">
         <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[10px] font-black uppercase tracking-widest text-ink-muted">
           <span>5-message sequence</span>
           <span aria-hidden="true">·</span>
