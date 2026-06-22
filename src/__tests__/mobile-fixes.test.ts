@@ -32,18 +32,18 @@ describe("Bug 1: text wraps on mobile, no clipping at 360-390px", () => {
     expect(homepage).not.toMatch(
       /mt-1 truncate text-xl font-bold text-ink-strong/,
     );
-    expect(homepage).toMatch(/Estimate #3/);
-    expect(homepage).toMatch(/break-words text-2xl font-black sm:text-3xl/);
+    // One-Tap Reply hero preview: button labels wrap cleanly on mobile.
+    expect(homepage).toMatch(/break-words text-sm font-bold text-ink-strong/);
   });
 
   it("landing preview bodies wrap inside cards on mobile", () => {
-    expect(homepage).toMatch(/break-words text-sm text-ink-muted/);
+    expect(homepage).toMatch(/break-words text-xs leading-5 text-ink-muted/);
     expect(homepage).not.toMatch(/mt-2 max-w-sm text-sm text-ink-muted/);
   });
 
-  it("landing message-to-send body wraps cleanly on mobile", () => {
-    expect(homepage).toMatch(/Quick check - is this project still on your list/);
-    expect(homepage).toMatch(/break-words text-sm leading-6 text-ink-strong/);
+  it("landing one-tap reply button labels wrap cleanly on mobile", () => {
+    expect(homepage).toMatch(/Let&apos;s do it — what&apos;s next\?/);
+    expect(homepage).toMatch(/break-words text-sm font-bold text-ink-strong/);
   });
 
   it("AuthShell preview card wraps the Still Bleeding + alert bodies on mobile", () => {

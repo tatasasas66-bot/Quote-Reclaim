@@ -208,7 +208,7 @@ export default function HomePage() {
             <p className="text-xs font-black uppercase tracking-widest text-brand">
               Quiet estimate recovery for US contractors
             </p>
-            <h1 className="mt-4 max-w-3xl text-balance text-[length:clamp(2.1rem,4.4vw,3.95rem)] font-black leading-[1.02] text-ink-strong">
+            <h1 className="mt-4 max-w-3xl text-balance text-[length:clamp(1.75rem,3vw,2.75rem)] font-black leading-[1.1] text-ink-strong">
               You did the drive. Don&apos;t let the quote die in silence — see
               which one to follow up first.
             </h1>
@@ -597,70 +597,98 @@ function HeroProductPreview() {
       id="how-it-works"
       className="min-w-0 rounded-2xl border border-line-subtle bg-surface-1/85 shadow-[0_18px_54px_rgba(0,0,0,0.22)]"
     >
+      {/* Trust badge + feature label */}
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-line-subtle/80 px-4 py-3 sm:px-5">
         <Badge variant="money">SAMPLE PREVIEW - NOT CUSTOMER DATA</Badge>
-        <span className="text-xs font-black uppercase tracking-widest text-ink-muted">
-          Silent Quote Command
+        <span className="text-[10px] font-black uppercase tracking-widest text-brand">
+          One-Tap Reply
         </span>
       </div>
-      <div className="grid gap-3 p-4 sm:p-5">
-        <div className="grid gap-3 sm:grid-cols-[1fr_0.85fr]">
-          <PreviewPanel label="Money still quiet" value="$14,500" body="across sent estimates" />
-          <PreviewPanel label="Work first" value="Estimate #3" body="$9,000 - Warm" tone="brand" />
-        </div>
-        <div className="rounded-xl border border-brand/30 bg-brand/10 p-4">
-          <p className="text-xs font-black uppercase tracking-widest text-brand">
-            Message to send today
+
+      {/* Homeowner side: what they see in the follow-up email */}
+      <div className="border-b border-line-subtle/60 p-4 sm:p-5">
+        <p className="text-[10px] font-black uppercase tracking-widest text-ink-muted">
+          What the homeowner sees
+        </p>
+        <div className="mt-2 rounded-xl border border-line-subtle bg-canvas/50 p-3">
+          <p className="break-words text-xs leading-5 text-ink-muted">
+            Hi Jane — wanted to make sure the estimate landed okay.
+            Tap one:
           </p>
-          <p className="mt-2 break-words text-sm leading-6 text-ink-strong">
-            Quick check - is this project still on your list, or should I close
-            the estimate on my side?
-          </p>
-        </div>
-        <div className="grid gap-2 sm:grid-cols-3">
-          <MiniStatus label="5-message sequence" value="Follow-up 1 ready" />
-          <MiniStatus label="Crew gap match" value="Thu opening" />
-          <MiniStatus label="Got the job?" value="Mark win" />
+          <div className="mt-3 space-y-2">
+            <div className="flex items-center gap-2 rounded-lg border border-success/30 bg-success/10 px-3 py-2.5">
+              <span
+                className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-success/20 text-[11px] font-black text-success"
+                aria-hidden="true"
+              >
+                ✓
+              </span>
+              <span className="break-words text-sm font-bold text-ink-strong">
+                Let&apos;s do it — what&apos;s next?
+              </span>
+            </div>
+            <div className="flex items-center gap-2 rounded-lg border border-brand/30 bg-brand/5 px-3 py-2.5">
+              <span
+                className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-brand/15 text-[11px] font-black text-brand"
+                aria-hidden="true"
+              >
+                ?
+              </span>
+              <span className="break-words text-sm font-bold text-ink-strong">
+                I have one question
+              </span>
+            </div>
+            <div className="flex items-center gap-2 rounded-lg border border-line-subtle bg-surface-2 px-3 py-2.5">
+              <span
+                className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-surface-1 text-[11px] font-black text-ink-muted"
+                aria-hidden="true"
+              >
+                −
+              </span>
+              <span className="break-words text-sm font-bold text-ink-strong">
+                Not right now
+              </span>
+            </div>
+          </div>
         </div>
       </div>
-    </div>
-  );
-}
 
-function PreviewPanel({
-  label,
-  value,
-  body,
-  tone = "money",
-}: {
-  label: string;
-  value: string;
-  body: string;
-  tone?: "money" | "brand";
-}) {
-  const toneClass = tone === "money" ? "text-money" : "text-brand";
-  return (
-    <section className="rounded-xl border border-line-subtle bg-canvas/45 p-4">
-      <p className="text-xs font-black uppercase tracking-widest text-ink-muted">
-        {label}
-      </p>
-      <p className={`mt-2 break-words text-2xl font-black sm:text-3xl ${toneClass}`}>
-        {value}
-      </p>
-      <p className="mt-1 break-words text-sm text-ink-muted">{body}</p>
-    </section>
-  );
-}
+      {/* The one-tap bridge */}
+      <div className="flex items-center justify-center py-2">
+        <span className="text-[10px] font-black uppercase tracking-widest text-brand">
+          ↓ one tap ↓
+        </span>
+      </div>
 
-function MiniStatus({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="rounded-lg border border-line-subtle bg-surface-2/80 p-3">
-      <p className="text-[10px] font-black uppercase tracking-widest text-ink-muted">
-        {label}
-      </p>
-      <p className="mt-2 break-words text-sm font-black text-ink-strong">
-        {value}
-      </p>
+      {/* Contractor side: what you see instantly */}
+      <div className="border-t border-line-subtle/60 p-4 sm:p-5">
+        <p className="text-[10px] font-black uppercase tracking-widest text-ink-muted">
+          What you see instantly
+        </p>
+        <div className="mt-2 rounded-xl border-2 border-success/40 bg-success/5 p-3">
+          <p className="text-[10px] font-black uppercase tracking-widest text-success">
+            Jane tapped
+          </p>
+          <p className="mt-1 break-words text-sm font-bold leading-6 text-ink-strong">
+            “Let&apos;s do it — what&apos;s next?”
+          </p>
+          <p className="mt-2 break-words text-xs leading-5 text-ink-muted">
+            <span className="font-bold text-ink">Next move:</span> Call or
+            reply with scheduling options.
+          </p>
+        </div>
+      </div>
+
+      {/* Product depth footer */}
+      <div className="border-t border-line-subtle/60 px-4 py-3 sm:px-5">
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[10px] font-black uppercase tracking-widest text-ink-muted">
+          <span>5-message sequence</span>
+          <span aria-hidden="true">·</span>
+          <span>Crew gap rescue</span>
+          <span aria-hidden="true">·</span>
+          <span>Got the Job</span>
+        </div>
+      </div>
     </div>
   );
 }
