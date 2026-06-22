@@ -41,9 +41,9 @@ afterEach(() => cleanup());
 
 describe("homepage hero restructure + email/copy honesty", () => {
   it("headline leads with sent estimates before new leads", () => {
-    expect(homepage).toMatch(
-      /Turn sent estimates into booked work before buying another lead\./,
-    );
+    expect(homepage).toMatch(/You did the drive\./);
+    expect(homepage).toMatch(/Don&apos;t let the quote die in silence/);
+    expect(homepage).toMatch(/Before buying another lead\./);
   });
 
 it("primary CTA routes to the public audit doorway", () => {
@@ -52,8 +52,13 @@ it("primary CTA routes to the public audit doorway", () => {
 });
 
   it("the decorative See How It Works scroll button is gone", () => {
+    // The intentional secondary CTA "See how it works" anchors to a real
+    // on-page section (#recovery-system) — it is not a decorative scroll
+    // button. The old Title-Case "See How It Works" phrasing is still banned.
     expect(homepage).not.toMatch(/See How It Works/);
     expect(homepage).not.toMatch(/<Button[^>]*variant=["']secondary["']/);
+    expect(homepage).toMatch(/See how it works/);
+    expect(homepage).toMatch(/href="#recovery-system"/);
   });
 
   it("subhead explains the ongoing recovery system without a broad auto-send claim", () => {

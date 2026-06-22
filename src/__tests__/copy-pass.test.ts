@@ -40,9 +40,9 @@ describe("Homepage hero copy (honest conversion rewrite)", () => {
   });
 
   it("uses the lead-before-estimates headline", () => {
-    expect(homepage).toMatch(
-      /Turn sent estimates into booked work before buying another lead\./,
-    );
+    expect(homepage).toMatch(/You did the drive\./);
+    expect(homepage).toMatch(/Don&apos;t let the quote die in silence/);
+    expect(homepage).toMatch(/Before buying another lead\./);
   });
 
   it("subhead explains the audit doorway and ongoing recovery system", () => {
@@ -71,8 +71,12 @@ describe("Homepage hero copy (honest conversion rewrite)", () => {
   });
 
   it("no decorative secondary CTA — the See How It Works scroll button is gone", () => {
+    // The intentional secondary CTA "See how it works" anchors to a real
+    // on-page section (#recovery-system) — it is not a decorative scroll
+    // button. The old Title-Case "See How It Works" phrasing is still banned.
     expect(homepage).not.toMatch(/See How It Works/);
     expect(homepage).not.toMatch(/<Button[^>]*variant=["']secondary["']/);
+    expect(homepage).toMatch(/See how it works/);
     expect(homepage).toMatch(/href="#recovery-system"/);
   });
 

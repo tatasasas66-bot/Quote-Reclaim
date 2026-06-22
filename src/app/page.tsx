@@ -20,7 +20,7 @@ export const metadata: Metadata = {
     "Before buying another lead, work the estimates you already sent. Run a free audit, then keep quiet estimates moving until they book or close.",
 };
 
-const trustPills = ["No names", "No phone numbers", "No card", "Result first"] as const;
+const trustPills = ["No customer names", "No phone numbers", "No card", "Result first"] as const;
 
 const bridgeSteps = [
   {
@@ -206,15 +206,17 @@ export default function HomePage() {
         <section className="grid min-w-0 gap-7 py-8 lg:grid-cols-[0.9fr_1.1fr] lg:items-center lg:py-10">
           <div className="min-w-0">
             <p className="text-xs font-black uppercase tracking-widest text-brand">
-              Quiet estimate recovery
+              Quiet estimate recovery for US contractors
             </p>
             <h1 className="mt-4 max-w-3xl text-balance text-[length:clamp(2.1rem,4.4vw,3.95rem)] font-black leading-[1.02] text-ink-strong">
-              Turn sent estimates into booked work before buying another lead.
+              You did the drive. Don&apos;t let the quote die in silence — see
+              which one to follow up first.
             </h1>
             <p className="mt-4 max-w-2xl break-words text-base leading-7 text-ink sm:text-lg">
-              Quote Reclaim shows home-service contractors which quiet estimate
-              to follow up first, what message to send today, and how to keep
-              every sent estimate moving until it books or closes.
+              You did the drive, the measure, and the price. Quote Reclaim shows
+              which quiet estimate to follow up first, what message to send today,
+              and gives the homeowner an easy way to answer — so you can keep
+              every sent estimate moving. Before buying another lead.
             </p>
             <p className="mt-3 max-w-xl break-words text-sm leading-6 text-ink-muted">
               Run a free 60-second estimate audit. If it helps, save the plan
@@ -232,7 +234,7 @@ export default function HomePage() {
                 href="#recovery-system"
                 className="inline-flex min-h-12 items-center justify-center rounded-lg border border-line-strong bg-surface-1 px-5 py-3 text-base font-semibold text-ink-strong transition hover:bg-surface-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2 focus-visible:ring-offset-canvas"
               >
-                See the recovery system
+                See how it works
               </a>
             </div>
             <div className="mt-5 grid gap-2 sm:grid-cols-3">
