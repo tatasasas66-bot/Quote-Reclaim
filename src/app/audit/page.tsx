@@ -82,8 +82,8 @@ export default function AuditPage() {
           </Link>
         </header>
 
-        <section className="group grid min-w-0 max-w-full gap-8 py-9 lg:grid-cols-[minmax(0,1fr)_minmax(0,0.92fr)] lg:items-start lg:py-14 lg:group-has-[[data-audit-state=result]]:grid-cols-1 lg:group-has-[[data-audit-state=analyzing]]:grid-cols-1">
-          <div className="min-w-0 max-w-2xl lg:group-has-[[data-audit-state=result]]:hidden lg:group-has-[[data-audit-state=analyzing]]:hidden">
+        <section className="grid min-w-0 max-w-full gap-8 py-9 lg:grid-cols-[minmax(0,1fr)_minmax(0,0.92fr)] lg:items-start lg:py-14">
+          <div className="min-w-0 max-w-2xl lg:sticky lg:top-20">
             <p className="text-xs font-black uppercase tracking-widest text-brand">
               Free 60-second estimate audit
             </p>

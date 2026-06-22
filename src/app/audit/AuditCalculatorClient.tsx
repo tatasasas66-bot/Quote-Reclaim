@@ -223,7 +223,7 @@ export function AuditCalculatorClient() {
     <div
       id="quote-audit"
       data-audit-state={analyzing ? "analyzing" : result ? "result" : "idle"}
-      className="w-full max-w-full min-w-0 space-y-5 scroll-mt-6 data-[audit-state=result]:lg:mx-auto data-[audit-state=result]:lg:max-w-4xl data-[audit-state=analyzing]:lg:mx-auto data-[audit-state=analyzing]:lg:max-w-3xl"
+      className="w-full max-w-full min-w-0 space-y-5 scroll-mt-6"
     >
       <form
         onSubmit={handleSubmit}
