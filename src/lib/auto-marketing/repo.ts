@@ -417,6 +417,19 @@ async function getCompanyName(leadId: string | null): Promise<string | null> {
   return (data?.company as string) ?? null;
 }
 
+/** Mark a reply's draft as sent (used by auto-send when AUTO_SEND_SAFE_REPLIES=true). */
+export async function markReplySent(replyId: string): Promise<void> {
+  const supabase = svc();
+  await supabase
+    .from("auto_marketing_replies")
+    .update({
+      draft_sent: true,
+      draft_approved: true,
+      action_taken: "auto_sent",
+    })
+    .eq("id", replyId);
+}
+
 export async function listReplies(opts?: {
   classification?: ReplyClassification;
   limit?: number;

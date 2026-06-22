@@ -41,6 +41,10 @@ export function AutoMarketingClient({
   const [importResult, setImportResult] = React.useState<string | null>(null);
   const [pushing, setPushing] = React.useState(false);
   const [pushResult, setPushResult] = React.useState<string | null>(null);
+  const [sourcing, setSourcing] = React.useState(false);
+  const [sourceResult, setSourceResult] = React.useState<string | null>(null);
+  const [running, setRunning] = React.useState(false);
+  const [autoResult, setAutoResult] = React.useState<string | null>(null);
   const fileRef = React.useRef<HTMLInputElement | null>(null);
 
   const filteredLeads = React.useMemo(() => {
@@ -93,6 +97,54 @@ export function AutoMarketingClient({
       setPushResult(`Error: ${err instanceof Error ? err.message : "fetch failed"}`);
     } finally {
       setPushing(false);
+    }
+  }
+
+  async function handleSourceFromApify() {
+    setSourcing(true);
+    setSourceResult(null);
+    try {
+      const res = await fetch("/api/admin/auto-marketing/apify/source", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ trade: "concrete", city: "Phoenix", maxResults: 50 }),
+      });
+      const data = await res.json();
+      if (data.reason === "not_configured") {
+        setSourceResult("Apify not configured. Set APIFY_API_TOKEN in .env.");
+      } else if (data.ok) {
+        setSourceResult(`Sourced ${data.sourced}. Imported ${data.imported}, skipped ${data.skipped}.`);
+      } else {
+        setSourceResult(`Error: ${data.error ?? "unknown"}`);
+      }
+    } catch (err) {
+      setSourceResult(`Error: ${err instanceof Error ? err.message : "fetch failed"}`);
+    } finally {
+      setSourcing(false);
+    }
+  }
+
+  async function handleRunPipeline() {
+    setRunning(true);
+    setAutoResult(null);
+    try {
+      const res = await fetch("/api/admin/auto-marketing/run-auto", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ campaign: "concrete_driveway_v1" }),
+      });
+      const data = await res.json();
+      if (data.smartlead === "not_configured") {
+        setAutoResult(`Ready: ${data.approved_leads} approved leads. Smartlead not configured — export CSV: ${data.export_url}`);
+      } else if (data.ok) {
+        setAutoResult(`Complete: ${data.approved_leads} approved, pushed ${data.pushed} to Smartlead, failed ${data.failed}.`);
+      } else {
+        setAutoResult(`Error: ${data.error ?? "unknown"}`);
+      }
+    } catch (err) {
+      setAutoResult(`Error: ${err instanceof Error ? err.message : "fetch failed"}`);
+    } finally {
+      setRunning(false);
     }
   }
 
@@ -155,10 +207,28 @@ export function AutoMarketingClient({
             type="button"
             onClick={handlePushToSmartlead}
             disabled={pushing}
-            className="inline-flex items-center gap-2 rounded-lg border border-brand bg-brand px-4 py-2 text-sm font-semibold text-canvas transition hover:bg-brand-dark disabled:opacity-50"
+            className="inline-flex items-center gap-2 rounded-lg border border-line-strong bg-surface-1 px-4 py-2 text-sm font-semibold text-ink-strong transition hover:bg-surface-2 disabled:opacity-50"
           >
             <Send className="h-4 w-4" aria-hidden="true" />
             {pushing ? "Pushing..." : "Push to Smartlead"}
+          </button>
+          <button
+            type="button"
+            onClick={handleSourceFromApify}
+            disabled={sourcing}
+            className="inline-flex items-center gap-2 rounded-lg border border-line-strong bg-surface-1 px-4 py-2 text-sm font-semibold text-ink-strong transition hover:bg-surface-2 disabled:opacity-50"
+          >
+            <Shield className="h-4 w-4" aria-hidden="true" />
+            {sourcing ? "Sourcing..." : "Source from Apify"}
+          </button>
+          <button
+            type="button"
+            onClick={handleRunPipeline}
+            disabled={running}
+            className="inline-flex items-center gap-2 rounded-lg border border-brand bg-brand px-4 py-2 text-sm font-semibold text-canvas transition hover:bg-brand-dark disabled:opacity-50"
+          >
+            <BarChart3 className="h-4 w-4" aria-hidden="true" />
+            {running ? "Running..." : "Run Full Auto"}
           </button>
         </div>
 
@@ -167,6 +237,12 @@ export function AutoMarketingClient({
         ) : null}
         {pushResult ? (
           <p className="mb-4 text-sm text-ink-muted">{pushResult}</p>
+        ) : null}
+        {sourceResult ? (
+          <p className="mb-4 text-sm text-ink-muted">{sourceResult}</p>
+        ) : null}
+        {autoResult ? (
+          <p className="mb-4 text-sm text-ink-muted">{autoResult}</p>
         ) : null}
 
         {/* Tabs */}
