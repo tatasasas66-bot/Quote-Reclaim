@@ -4,6 +4,7 @@ import {
   listApprovedSendableLeads,
   listSuppressedEmails,
   ensureDefaultCampaign,
+  rescoreAllLeads,
 } from "@/lib/auto-marketing/repo";
 
 export const runtime = "nodejs";
@@ -48,7 +49,11 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     );
   }
 
-  // 2. Collect approved, sendable, non-suppressed leads.
+  // 2. Re-score all non-suppressed leads (import already scores, but this
+  //    picks up any leads whose fields were edited after import).
+  const { rescored } = await rescoreAllLeads();
+
+  // 3. Collect approved, sendable, non-suppressed leads.
   const [approved, suppressedEmails] = await Promise.all([
     listApprovedSendableLeads(),
     listSuppressedEmails(),
@@ -64,6 +69,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     return NextResponse.json({
       ok: true,
       campaign: campaignName,
+      rescored,
       approved_leads: safe.length,
       suppressed_excluded: approved.length - safe.length,
       smartlead: "not_configured",
@@ -114,6 +120,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
   return NextResponse.json({
     ok: true,
     campaign: campaignName,
+    rescored,
     approved_leads: safe.length,
     suppressed_excluded: approved.length - safe.length,
     smartlead: "configured",
