@@ -223,7 +223,7 @@ export function AuditCalculatorClient() {
     <div
       id="quote-audit"
       data-audit-state={analyzing ? "analyzing" : result ? "result" : "idle"}
-      className="w-full max-w-full min-w-0 space-y-5 scroll-mt-6 data-[audit-state=result]:lg:mx-auto data-[audit-state=result]:lg:max-w-3xl data-[audit-state=analyzing]:lg:mx-auto data-[audit-state=analyzing]:lg:max-w-3xl"
+      className="w-full max-w-full min-w-0 space-y-5 scroll-mt-6 data-[audit-state=result]:lg:mx-auto data-[audit-state=result]:lg:max-w-4xl data-[audit-state=analyzing]:lg:mx-auto data-[audit-state=analyzing]:lg:max-w-3xl"
     >
       <form
         onSubmit={handleSubmit}
@@ -440,6 +440,28 @@ function AuditResultView({
         <h2 className="mt-2 break-words text-2xl font-black leading-tight text-ink-strong">
           Here is what to do today.
         </h2>
+        <div
+          data-testid="audit-input-recap"
+          className="mt-3 flex min-w-0 flex-wrap items-center gap-2 text-xs text-ink-muted"
+        >
+          <span className="font-semibold text-ink">
+            Based on {result.rankedQuotes.length} estimate
+            {result.rankedQuotes.length === 1 ? "" : "s"}:
+          </span>
+          {result.rankedQuotes.map((q) => (
+            <span
+              key={q.index}
+              className="inline-flex min-w-0 items-center gap-1 rounded-full border border-line-subtle bg-surface-2 px-2.5 py-1"
+            >
+              <span className="whitespace-nowrap font-semibold text-ink-strong">
+                #{q.index} {formatCurrency(q.amount)}
+              </span>
+              {q.daysSilent != null ? (
+                <span className="text-ink-muted">· {q.daysSilent}d</span>
+              ) : null}
+            </span>
+          ))}
+        </div>
       </div>
 
       <div className="grid min-w-0 gap-3 sm:grid-cols-2">
