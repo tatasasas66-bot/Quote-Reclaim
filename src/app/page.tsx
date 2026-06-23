@@ -599,88 +599,121 @@ function HeroProductPreview() {
       id="how-it-works"
       className="min-w-0 rounded-2xl border border-line-subtle bg-surface-1/85 shadow-[0_18px_54px_rgba(0,0,0,0.22)]"
     >
-      {/* Trust badge + feature label + subline */}
+      {/* Header: trust badge + command-center label */}
       <div className="flex flex-wrap items-center justify-between gap-2 border-b border-line-subtle/80 px-4 py-2.5 sm:px-5">
         <Badge variant="money">SAMPLE PREVIEW - NOT CUSTOMER DATA</Badge>
-        <span className="text-[10px] font-black uppercase tracking-widest text-brand">
-          One-Tap Reply
+        <span className="text-[10px] font-black uppercase tracking-widest text-ink-muted">
+          Silent Quote Command
         </span>
       </div>
-      <p className="px-4 pt-2 text-xs font-semibold text-ink-muted sm:px-5">
-        Make it easy for the homeowner to answer.
-      </p>
 
-      {/* Homeowner side: what they see in the follow-up email */}
-      <div className="border-b border-line-subtle/60 p-3 sm:p-4">
-        <p className="text-[10px] font-black uppercase tracking-widest text-ink-muted">
-          What the homeowner sees
-        </p>
-        <div className="mt-2 rounded-xl border border-line-subtle bg-canvas/50 p-3">
-          <p className="break-words text-xs leading-5 text-ink-muted">
-            Hi Jane — wanted to make sure the estimate landed okay.
-            Tap one:
-          </p>
-          <div className="mt-2 space-y-1.5">
-            <div className="flex items-center gap-2 rounded-lg border border-success/30 bg-success/10 px-3 py-2">
-              <span
-                className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-success/20 text-[11px] font-black text-success"
-                aria-hidden="true"
-              >
-                ✓
-              </span>
-              <span className="break-words text-sm font-bold text-ink-strong">
-                Let&apos;s do it — what&apos;s next?
-              </span>
-            </div>
-            <div className="flex items-center gap-2 rounded-lg border border-brand/30 bg-brand/5 px-3 py-2">
-              <span
-                className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-brand/15 text-[11px] font-black text-brand"
-                aria-hidden="true"
-              >
-                ?
-              </span>
-              <span className="break-words text-sm font-bold text-ink-strong">
-                I have one question
-              </span>
-            </div>
-            <div className="flex items-center gap-2 rounded-lg border border-line-subtle bg-surface-2 px-3 py-2">
-              <span
-                className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-surface-1 text-[11px] font-black text-ink-muted"
-                aria-hidden="true"
-              >
-                −
-              </span>
-              <span className="break-words text-sm font-bold text-ink-strong">
-                Not right now
-              </span>
-            </div>
+      <div className="grid gap-3 p-3 sm:p-4">
+        {/* Row 1: Total quiet value + Priority quote */}
+        <div className="grid gap-3 sm:grid-cols-[1fr_0.85fr]">
+          <div className="rounded-xl border border-line-subtle bg-canvas/45 p-3">
+            <p className="text-[10px] font-black uppercase tracking-widest text-ink-muted">
+              Money still quiet
+            </p>
+            <p className="mt-2 whitespace-nowrap text-2xl font-black text-money sm:text-3xl">
+              $14,500
+            </p>
+            <p className="mt-1 break-words text-xs text-ink-muted">
+              across sent estimates
+            </p>
+          </div>
+          <div className="rounded-xl border border-brand/30 bg-brand/10 p-3">
+            <p className="text-[10px] font-black uppercase tracking-widest text-brand">
+              Follow up first
+            </p>
+            <p className="mt-2 break-words text-lg font-black leading-6 text-ink-strong">
+              Estimate #3
+            </p>
+            <p className="mt-1 whitespace-nowrap text-sm font-bold text-ink-strong">
+              $9,000 · Warm
+            </p>
           </div>
         </div>
-      </div>
 
-      {/* The one-tap bridge */}
-      <div className="flex items-center justify-center py-1.5">
-        <span className="text-[10px] font-black uppercase tracking-widest text-brand">
-          ↓ one tap ↓
-        </span>
-      </div>
+        {/* Row 2: Recovery window + Days quiet + Next move */}
+        <div className="grid gap-2 sm:grid-cols-3">
+          <div className="rounded-lg border border-line-subtle bg-surface-2/80 p-2.5">
+            <p className="text-[9px] font-black uppercase tracking-widest text-ink-muted">
+              Days quiet
+            </p>
+            <p className="mt-1 break-words text-sm font-black text-ink-strong">
+              18 days
+            </p>
+          </div>
+          <div className="rounded-lg border border-line-subtle bg-surface-2/80 p-2.5">
+            <p className="text-[9px] font-black uppercase tracking-widest text-ink-muted">
+              Recovery window
+            </p>
+            <p className="mt-1 break-words text-sm font-black text-success">
+              Warm
+            </p>
+          </div>
+          <div className="rounded-lg border border-line-subtle bg-surface-2/80 p-2.5">
+            <p className="text-[9px] font-black uppercase tracking-widest text-ink-muted">
+              Next move
+            </p>
+            <p className="mt-1 break-words text-sm font-black text-ink-strong">
+              Send today
+            </p>
+          </div>
+        </div>
 
-      {/* Contractor side: what you see instantly */}
-      <div className="border-t border-line-subtle/60 p-3 sm:p-4">
-        <p className="text-[10px] font-black uppercase tracking-widest text-ink-muted">
-          What you see instantly
-        </p>
-        <div className="mt-2 rounded-xl border-2 border-success/40 bg-success/5 p-3">
-          <p className="text-[10px] font-black uppercase tracking-widest text-success">
-            Jane tapped
+        {/* Row 3: Message to send today */}
+        <div className="rounded-xl border border-brand/30 bg-brand/5 p-3">
+          <p className="text-[10px] font-black uppercase tracking-widest text-brand">
+            Message to send today
           </p>
-          <p className="mt-1 break-words text-sm font-bold leading-6 text-ink-strong">
-            “Let&apos;s do it — what&apos;s next?”
+          <p className="mt-2 break-words text-sm leading-6 text-ink-strong">
+            Quick check — is this project still on your list, or should I
+            close the estimate on my side?
           </p>
-          <p className="mt-1.5 break-words text-xs leading-5 text-ink-muted">
-            <span className="font-bold text-ink">Next move:</span> Call or
-            reply with scheduling options.
+        </div>
+
+        {/* Row 4: Follow-up order */}
+        <div className="rounded-xl border border-line-subtle bg-canvas/40 p-3">
+          <p className="text-[10px] font-black uppercase tracking-widest text-ink-muted">
+            Follow-up order
           </p>
+          <ol className="mt-2 space-y-1">
+            {[
+              { rank: "1", label: "Estimate #3 — $9,000", tone: "brand" },
+              { rank: "2", label: "Estimate #1 — $3,200", tone: "muted" },
+              { rank: "3", label: "Estimate #2 — $2,300", tone: "muted" },
+            ].map((item) => (
+              <li
+                key={item.rank}
+                className="flex items-center gap-2 rounded-lg border border-line-subtle bg-surface-2/60 px-2.5 py-1.5"
+              >
+                <span
+                  className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[10px] font-black ${
+                    item.tone === "brand"
+                      ? "bg-brand text-canvas"
+                      : "bg-surface-1 text-ink-muted"
+                  }`}
+                  aria-hidden="true"
+                >
+                  {item.rank}
+                </span>
+                <span className="break-words text-xs font-bold text-ink-strong">
+                  {item.label}
+                </span>
+              </li>
+            ))}
+          </ol>
+        </div>
+
+        {/* Row 5: One-Tap Reply signal (small, inside dashboard) */}
+        <div className="flex items-center justify-between gap-2 rounded-lg border border-success/30 bg-success/5 px-3 py-2">
+          <span className="break-words text-xs font-bold text-ink-strong">
+            One-Tap Reply: enabled
+          </span>
+          <span className="text-[10px] font-black uppercase tracking-widest text-success">
+            Make it easy to answer
+          </span>
         </div>
       </div>
 
