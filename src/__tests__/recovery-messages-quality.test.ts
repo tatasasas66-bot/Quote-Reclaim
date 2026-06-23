@@ -364,7 +364,7 @@ describe("27-29. asymmetric structure across the sequence", () => {
 // ---------------------------------------------------------------------------
 
 describe("30. visible framework labels", () => {
-  it("uses Estimate Check / Schedule Check / Scope Rescue / Decision Check / Clean Closeout", async () => {
+  it("uses Estimate Check / Decision Friction / Scope Rescue / Open, Revise, or Close / Clean Closeout", async () => {
     const plan = await generateRecoveryPlan({
       firstName: "Jane",
       contractorFirstName: "Mike",
@@ -374,9 +374,9 @@ describe("30. visible framework labels", () => {
     });
     expect(plan.map((m) => m.framework)).toEqual([
       "Estimate Check",
-      "Schedule Check",
+      "Decision Friction",
       "Scope Rescue",
-      "Decision Check",
+      "Open, Revise, or Close",
       "Clean Closeout",
     ]);
   });
@@ -394,11 +394,11 @@ describe("31-32. WHY_THIS_WORKS rationale is contractor-native (no psychology ja
   // renders on the same page). Every rationale now explains the move's
   // mechanics (effort, clarity, choice) without diagnosing the homeowner.
   const EXPECTED_WHY_THIS_WORKS = `const WHY_THIS_WORKS: Record<FollowupStep, string> = {
-  1: "Asking which part to break down is easier to answer than 'any update?' — it gives them a specific, low-effort way back into the conversation.",
-  2: "A schedule question has a real answer. Keep it active or set it aside is a choice they can make in five seconds without committing to the job.",
-  3: "It gives them a smaller way back in than approving the whole estimate. If scope, timing, or total is the blocker, they can answer without starting over.",
-  4: "A simple active / pause / close choice turns silence into a decision without forcing a yes.",
-  5: "A respectful close-out takes the pressure off both sides. The door stays open, so replying later is easy — nothing ended badly.",
+  1: "The estimate is still fresh, so one clear question is easier to answer than forcing a full decision.",
+  2: "It gives the homeowner simple categories to answer with instead of making them explain the whole situation.",
+  3: "If total cost or scope is the blocker, a smaller path gives them a way back without asking for a discount.",
+  4: "It turns silence into a simple status choice: keep open, revise, or close.",
+  5: "It removes the awkwardness of saying no while leaving the door open to reopen later.",
 };`;
 
   it("31. WHY_THIS_WORKS source block matches the no-overclaim rewrite", () => {
@@ -407,19 +407,19 @@ describe("31-32. WHY_THIS_WORKS rationale is contractor-native (no psychology ja
 
   it("32. each rationale line is present verbatim on the quote detail page", () => {
     expect(detailPage).toContain(
-      "Asking which part to break down is easier to answer than 'any update?' — it gives them a specific, low-effort way back into the conversation.",
+      "The estimate is still fresh, so one clear question is easier to answer than forcing a full decision.",
     );
     expect(detailPage).toContain(
-      "A schedule question has a real answer. Keep it active or set it aside is a choice they can make in five seconds without committing to the job.",
+      "It gives the homeowner simple categories to answer with instead of making them explain the whole situation.",
     );
     expect(detailPage).toContain(
-      "It gives them a smaller way back in than approving the whole estimate. If scope, timing, or total is the blocker, they can answer without starting over.",
+      "If total cost or scope is the blocker, a smaller path gives them a way back without asking for a discount.",
     );
     expect(detailPage).toContain(
-      "A simple active / pause / close choice turns silence into a decision without forcing a yes.",
+      "It turns silence into a simple status choice: keep open, revise, or close.",
     );
     expect(detailPage).toContain(
-      "A respectful close-out takes the pressure off both sides. The door stays open, so replying later is easy — nothing ended badly.",
+      "It removes the awkwardness of saying no while leaving the door open to reopen later.",
     );
   });
 

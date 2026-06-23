@@ -171,19 +171,17 @@ describe("Sequence detail 'Why this works' rationale", () => {
   });
 
   it("provides distinct rationale for all five follow-up steps", () => {
-    // Day 1 — specific low-effort reopen
-    expect(detailPage).toMatch(/easier to answer than 'any update\?'/);
-    // Day 3 — schedule question with a real answer
-    expect(detailPage).toMatch(/A schedule question has a real answer/);
+    // Day 1 — fresh estimate, one clear question
+    expect(detailPage).toMatch(/still fresh, so one clear question is easier to answer/);
+    // Day 3 — decision friction categories
+    expect(detailPage).toMatch(/It gives the homeowner simple categories to answer with/);
     // Day 7 — scope rescue, NO claim that price is the stall reason
-    expect(detailPage).toMatch(/smaller way back in than approving the whole estimate/);
-    expect(detailPage).toMatch(/If scope, timing, or total is the blocker/);
-    // Day 14 — decision bridge, not a forced yes
-    expect(detailPage).toMatch(/active \/ pause \/ close choice/);
-    expect(detailPage).toMatch(/without forcing a yes/);
+    expect(detailPage).toMatch(/If total cost or scope is the blocker, a smaller path gives them a way back/);
+    // Day 14 — open, revise, or close
+    expect(detailPage).toMatch(/It turns silence into a simple status choice: keep open, revise, or close/);
     expect(detailPage).not.toMatch(/stall on price/i);
-    // Day 30 — respectful close-out, door stays open
-    expect(detailPage).toMatch(/A respectful close-out takes the pressure off both sides/);
+    // Day 30 — clean closeout, door stays open
+    expect(detailPage).toMatch(/removes the awkwardness of saying no while leaving the door open/);
   });
 
   it("keys the rationale by follow-up number", () => {

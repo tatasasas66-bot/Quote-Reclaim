@@ -398,11 +398,11 @@ describe("detail page integration — Quiet Signal mounted, anchors in place", (
   it("WHY_THIS_WORKS source block matches the no-overclaim rewrite", () => {
     expect(detailPage).toContain(
       `const WHY_THIS_WORKS: Record<FollowupStep, string> = {
-  1: "Asking which part to break down is easier to answer than 'any update?' — it gives them a specific, low-effort way back into the conversation.",
-  2: "A schedule question has a real answer. Keep it active or set it aside is a choice they can make in five seconds without committing to the job.",
-  3: "It gives them a smaller way back in than approving the whole estimate. If scope, timing, or total is the blocker, they can answer without starting over.",
-  4: "A simple active / pause / close choice turns silence into a decision without forcing a yes.",
-  5: "A respectful close-out takes the pressure off both sides. The door stays open, so replying later is easy — nothing ended badly.",
+  1: "The estimate is still fresh, so one clear question is easier to answer than forcing a full decision.",
+  2: "It gives the homeowner simple categories to answer with instead of making them explain the whole situation.",
+  3: "If total cost or scope is the blocker, a smaller path gives them a way back without asking for a discount.",
+  4: "It turns silence into a simple status choice: keep open, revise, or close.",
+  5: "It removes the awkwardness of saying no while leaving the door open to reopen later.",
 };`,
     );
   });

@@ -432,8 +432,8 @@ describe("Next Best Action labels fit the card", () => {
 // ---------------------------------------------------------------------------
 
 describe("Recovery Priority IntelligenceField shows the band label only", () => {
-  it("value is score.label, NOT '${score.score} · ${score.label}'", () => {
-    expect(detailPage).toMatch(/value=\{score\.label\}/);
+  it("value is commandPriorityLabel(score.label), NOT '${score.score} · ${score.label}'", () => {
+    expect(detailPage).toMatch(/value=\{commandPriorityLabel\(score\.label\)\}/);
     expect(detailPage).not.toMatch(/\$\{score\.score\}\s*·\s*\$\{score\.label\}/);
   });
 });
