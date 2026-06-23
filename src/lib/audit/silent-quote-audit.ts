@@ -1,4 +1,5 @@
 import { recoveryScoreForDays } from "@/lib/quotes/recovery-score";
+import { generateFollowupMessage } from "./message-engine";
 
 /**
  * Silent-quote audit — the honest, deterministic math behind the cold /audit
@@ -114,6 +115,10 @@ export type AuditResult = {
   /** Plain-English reason this quote is worth a touch first. */
   priorityReason: string;
   suggestedMessage: string;
+  /** Why this specific message was chosen (varies by recovery window). */
+  whyThisMessage: string;
+  /** One-Tap Reply options matching the message family. */
+  oneTapOptions: string[];
   /** 0-2 short "Quote #X vs #Y" lines, dynamic to the entered numbers. */
   whyNotOthers: string[];
   /** The fixed 3-step practical plan shown under the message. */
@@ -163,18 +168,16 @@ function followUpWeight(daysSilent: number | null): number {
 }
 
 /**
- * One ready-to-send follow-up, keyed to the priority quote's age. Takeaway-
- * close style (gives the homeowner an easy yes/close-it-out choice) — never
- * the weak "just checking in". Honest: it offers a message, not an outcome.
+ * One ready-to-send follow-up, keyed to the priority quote's age. Delegates
+ * to the decision-friction message engine (message-engine.ts) which generates
+ * trade-aware, window-specific messages that reduce homeowner decision friction.
+ *
+ * This overload preserves backwards compatibility — callers that only pass
+ * daysSilent get the generic (no-trade) message. For trade-aware messages,
+ * use generateFollowupMessage() directly or pass options to runSilentQuoteAudit().
  */
 export function suggestedMessage(daysSilent: number | null): string {
-  if (daysSilent != null && daysSilent > 45) {
-    return "Hi - I am about to close out the estimate I sent, but wanted to give you first shot before I do. Are you still thinking about moving forward?";
-  }
-  if (daysSilent != null && daysSilent <= 6) {
-    return "Hi - wanted to make sure the estimate I sent landed okay. Any questions on the scope or price, or anything you would want changed?";
-  }
-  return "Hi - just checking back on the estimate we sent over. Are you still thinking about moving forward, or should I close this out for now?";
+  return generateFollowupMessage({ daysSilent }).message;
 }
 
 /**
@@ -303,7 +306,10 @@ export const NEXT_THREE_MOVES: NextMove[] = [
   "If it is still silent, close the loop after 7 days.",
 ];
 
-export function runSilentQuoteAudit(inputs: AuditQuoteInput[]): AuditResult {
+export function runSilentQuoteAudit(
+  inputs: AuditQuoteInput[],
+  options?: { trade?: string | null; firstName?: string | null },
+): AuditResult {
   const quotes: AuditQuote[] = [];
   inputs.forEach((input, i) => {
     const amount = parseQuoteAmount(input.amountRaw ?? "");
@@ -324,6 +330,8 @@ export function runSilentQuoteAudit(inputs: AuditQuoteInput[]): AuditResult {
       priorityBandLabel: null,
       priorityReason: "",
       suggestedMessage: "",
+      whyThisMessage: "",
+      oneTapOptions: [],
       whyNotOthers: [],
       nextThreeMoves: [],
       error: "Enter an estimate amount.",
@@ -362,6 +370,12 @@ export function runSilentQuoteAudit(inputs: AuditQuoteInput[]): AuditResult {
       ? recoveryScoreForDays(priority.daysSilent).label
       : null;
 
+  const generated = generateFollowupMessage({
+    daysSilent: priority.daysSilent,
+    trade: options?.trade ?? null,
+    firstName: options?.firstName ?? null,
+  });
+
   return {
     quotes,
     rankedQuotes,
@@ -369,7 +383,9 @@ export function runSilentQuoteAudit(inputs: AuditQuoteInput[]): AuditResult {
     priority,
     priorityBandLabel,
     priorityReason: reasonForPriority(priority, quotes),
-    suggestedMessage: suggestedMessage(priority.daysSilent),
+    suggestedMessage: generated.message,
+    whyThisMessage: generated.whyThisMessage,
+    oneTapOptions: generated.oneTapOptions,
     whyNotOthers: buildWhyNotOthers(rankedQuotes),
     nextThreeMoves: NEXT_THREE_MOVES,
     error: null,
