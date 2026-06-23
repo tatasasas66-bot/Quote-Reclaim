@@ -67,7 +67,7 @@ describe("quote detail command-center hierarchy", () => {
     expect(detailPage).toMatch(
       /<SendEarlyButton[\s\S]*variant="primary"[\s\S]*size="lg"[\s\S]*fullWidth/,
     );
-    expect(detailPage).toContain('<CopyButton text={activeReminder.message_text} label="Copy"');
+    expect(detailPage).toContain('<CopyButton text={commandMessage} label="Copy"');
   });
 
   it("makes the command panel action-first, then shows the reply playbook", () => {
@@ -76,14 +76,14 @@ describe("quote detail command-center hierarchy", () => {
     expect(detailPage).toContain("the next reply is already ready");
     expect(detailPage).toContain("Message to send");
     expect(detailPage).toContain("Reply playbook");
-    expect(detailPage).toContain("4 next replies ready");
+    expect(detailPage).toContain("{rescuePaths.length} next replies ready");
     expect(detailPage).toContain("Copy reply");
   });
 
   it("shows one active reason in the command panel and collapses future reasons", () => {
     expect(detailPage).toContain('data-testid="quote-command-reason"');
     expect(detailPage).toMatch(
-      /WHY_THIS_WORKS\(activeReminder\.followup_number as FollowupStep\)/,
+      /commandWhyThisWorks/,
     );
     expect(detailPage).toContain('data-followup-collapsed="true"');
     expect(detailPage).toContain("<details");
@@ -100,7 +100,7 @@ describe("quote detail command-center hierarchy", () => {
 
   it("keeps the 5-message sequence intact behind the active command", () => {
     expect(detailPage).toContain("5-message plan");
-    expect(detailPage).toMatch(/reminders\.map/);
+    expect(detailPage).toMatch(/visibleReminders.map/);
     expect(detailPage).toMatch(
       /CADENCE_DAYS/,
     );

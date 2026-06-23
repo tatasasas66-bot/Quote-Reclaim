@@ -48,7 +48,10 @@ import { formatCurrency } from "@/lib/utils/currency";
 import { titleCaseName } from "@/lib/utils/title-case";
 import {
   getWhyThisWorksForStep,
+  getWhyThisWorks as centralizedGetWhyThisWorks,
   getPriorityLabel as centralizedGetPriorityLabel,
+  getRecommendedMessage as centralizedGetRecommendedMessage,
+  getMessageFamily as centralizedGetMessageFamily,
   CADENCE_DAYS as centralizedCadenceDays,
   type RecoveryWindow,
 } from "@/lib/recovery/recovery-logic";
@@ -388,6 +391,7 @@ export default async function QuoteDetailPage({
         hasPhone={Boolean(quote.client_phone)}
         hasEmail={Boolean(quote.client_email)}
         hasReplyForQuote={hasReplyForQuote}
+        daysQuiet={effectiveDaysSilent(quote)}
       />
 
       <QuietSignalCard signal={quietSignal} />
@@ -417,6 +421,24 @@ function CommandActionPanel({
   const daysQuiet = effectiveDaysSilent(quote);
   const recoveryWindow = recoveryWindowForDays(daysQuiet);
   const windowDescriptor = describeRecoveryWindow(daysQuiet);
+
+  // Age-aware message selection: use the centralized recovery-logic module
+  // to generate the correct message for this quote's recovery window —
+  // NOT the persisted follow-up number (which always starts at 1/Warm).
+  const ageAwareMessage = centralizedGetRecommendedMessage({
+    daysQuiet,
+    firstName: quote.client_name,
+    trade: quote.trade,
+  });
+  const currentMessageFamily = centralizedGetMessageFamily(recoveryWindow);
+  const currentWhyThisWorks = centralizedGetWhyThisWorks(recoveryWindow);
+
+  // Use the age-aware message as the primary message shown to the contractor.
+  // Fall back to the persisted reminder text only if the centralized module
+  // returns empty (shouldn't happen, but defensive).
+  const commandMessage = ageAwareMessage.message || activeReminder?.message_text || "";
+  const commandWhyThisWorks = currentWhyThisWorks;
+
   const instruction = commandMoveInstruction(move);
   const messageType: "email" | "sms" =
     activeReminder?.message_type === "email" ? "email" : "sms";
@@ -432,11 +454,7 @@ function CommandActionPanel({
     move.kind !== "none" &&
     !sendDisabled &&
     (messageType === "email" ? canManualSendToday(move) : true);
-  const nextMoveLabel = activeReminder
-    ? `Follow-up ${activeReminder.followup_number}`
-    : hasReplyForQuote
-      ? "Reply first"
-      : commandStatusLabel(status);
+  const nextMoveLabel = currentMessageFamily;
   const commandLine = activeReminder
     ? "Send this today. If they answer with interest, price, timing, or no, the next reply is already ready."
     : "Work the quote from one place: money, status, next move, and reply handling.";
@@ -507,7 +525,7 @@ function CommandActionPanel({
             </span>
           </div>
 
-          {activeReminder ? (
+          {commandMessage ? (
             <div className="mt-4 rounded-lg border border-line-subtle bg-canvas/40 p-4">
               <p className="text-xs font-black uppercase tracking-widest text-brand">
                 Message to send
@@ -525,7 +543,7 @@ function CommandActionPanel({
                 data-testid="quote-command-message"
                 className="mt-3 whitespace-pre-wrap text-base font-semibold leading-7 text-ink-strong"
               >
-                {activeReminder.message_text}
+                {commandMessage}
               </p>
               <div
                 data-testid="quote-command-actions"
@@ -542,10 +560,10 @@ function CommandActionPanel({
                     fullWidth
                   />
                 ) : null}
-                <CopyButton text={activeReminder.message_text} label="Copy" />
+                <CopyButton text={commandMessage} label="Copy" />
               </div>
               <ManualMessageActions
-                message={activeReminder.message_text}
+                message={commandMessage}
                 source="quote_command"
                 className="mt-3"
               />
@@ -554,7 +572,7 @@ function CommandActionPanel({
                 className="mt-3 text-sm leading-6 text-ink-muted"
               >
                 <span className="font-semibold text-ink">Why this works:</span>{" "}
-                {WHY_THIS_WORKS(activeReminder.followup_number as FollowupStep)}
+                {commandWhyThisWorks}
               </p>
               <div
                 data-testid="reply-rescue-paths"
@@ -565,7 +583,7 @@ function CommandActionPanel({
                     Reply playbook
                   </p>
                   <p className="text-xs font-semibold text-ink-muted">
-                    4 next replies ready
+                    {rescuePaths.length} next replies ready
                   </p>
                 </div>
                 <p className="mt-2 text-xs leading-5 text-ink-muted">
@@ -764,6 +782,7 @@ function RecoveryPlanSection({
   hasPhone,
   hasEmail,
   hasReplyForQuote,
+  daysQuiet,
 }: {
   reminders: ReminderRow[];
   status: RecoveryStatus;
@@ -772,7 +791,22 @@ function RecoveryPlanSection({
   hasPhone: boolean;
   hasEmail: boolean;
   hasReplyForQuote: boolean;
+  daysQuiet: number;
 }) {
+  // Age-aware sequence filtering: only show reminders from the current
+  // recovery window onward. A 30-day Cold quote should not show Warm/Cooling
+  // cards — it starts at Open, Revise, or Close.
+  const currentWindow = recoveryWindowForDays(daysQuiet);
+  const minStepForWindow: Record<string, number> = {
+    warm: 1,      // Start at Estimate Check
+    cooling: 2,   // Start at Decision Friction
+    cold: 4,      // Start at Open, Revise, or Close
+    closeout: 5,  // Start at Clean Closeout
+    unknown: 1,   // Default: show all
+  };
+  const minStep = minStepForWindow[currentWindow] ?? 1;
+  const visibleReminders = reminders.filter((r) => r.followup_number >= minStep);
+
   // Email channel = automated via Resend on the cron schedule, only when
   // there's an address on file. No email = copy mode (contractor sends
   // manually from their phone). The intro picks the truthful sentence.
@@ -817,13 +851,13 @@ function RecoveryPlanSection({
         </p>
       ) : null}
 
-      {reminders.length === 0 ? (
+      {visibleReminders.length === 0 ? (
         <p className="rounded-lg border border-line-subtle bg-surface-1 p-5 text-sm text-ink-muted">
           No recovery plan generated.
         </p>
       ) : (
         <ol className="grid gap-3">
-          {reminders.map((r) => (
+          {visibleReminders.map((r) => (
             <ReminderCard
               key={r.id}
               reminder={r}

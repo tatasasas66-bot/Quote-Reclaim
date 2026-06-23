@@ -19,7 +19,7 @@ const barrel = readSource("../components/quotes/index.ts");
 describe("Recovery Plan UI: /quotes/[id]", () => {
   it("renders the recovery plan list (reads listRemindersForQuote)", () => {
     expect(detailPage).toContain("listRemindersForQuote");
-    expect(detailPage).toMatch(/reminders\.map/);
+    expect(detailPage).toMatch(/visibleReminders.map/);
   });
 
   it("uses plainer status copy after the command panel", () => {

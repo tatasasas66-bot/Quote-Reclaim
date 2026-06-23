@@ -290,14 +290,14 @@ describe("quote detail command panel (unified next-move source of truth)", () =>
     expect(quoteDetail).toMatch(
       /<SendEarlyButton[\s\S]*variant="primary"[\s\S]*size="lg"[\s\S]*fullWidth/,
     );
-    expect(quoteDetail).toContain('<CopyButton text={activeReminder.message_text} label="Copy"');
+    expect(quoteDetail).toContain('<CopyButton text={commandMessage} label="Copy"');
   });
 
   it("future follow-ups are collapsed but still rendered in the 5-message plan", () => {
     expect(quoteDetail).toContain("5-message plan");
     expect(quoteDetail).toContain('data-followup-collapsed="true"');
     expect(quoteDetail).toContain("<details");
-    expect(quoteDetail).toMatch(/reminders\.map/);
+    expect(quoteDetail).toMatch(/visibleReminders.map/);
   });
 });
 
