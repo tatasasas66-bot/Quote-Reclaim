@@ -628,7 +628,7 @@ function AuditResultView({
               Best message to reopen this estimate
             </p>
             <p className="mt-1 break-words text-sm text-ink-muted">
-              Not a canned follow-up — chosen for this estimate&apos;s recovery
+              Not a canned template — chosen for this estimate&apos;s recovery
               window and the likely reason the homeowner went quiet. Designed
               to lower pressure and make the next reply easier.
             </p>
