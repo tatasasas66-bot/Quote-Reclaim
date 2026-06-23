@@ -1,10 +1,18 @@
 -- 014_cron_days_silent.sql
--- Add days_silent to the claim_due_reminders RPC return type so the cron
--- can generate age-aware messages at send time.
+-- Fix: return the REAL effective quiet age in claim_due_reminders, not just
+-- now() - created_at (which is the app record creation time, not the original
+-- estimate sent date).
 --
--- The RPC already joins quotes to reminders; we just need to expose
--- the quote's days_silent (computed from quote.created_at) in the return.
--- This is additive — no existing columns changed, no existing logic altered.
+-- The quotes table has:
+--   quote_sent_at timestamptz  — when the contractor originally sent the estimate
+--   days_silent int            — snapshot at insert/edit time (fallback)
+--   created_at timestamptz     — when the Quote Reclaim record was created
+--
+-- Effective days quiet logic (matches src/lib/recovery/effective-days.ts):
+--   If quote_sent_at exists: days between now() and quote_sent_at
+--   If quote_sent_at is null: days_silent + days between now() and created_at
+--     (the stored snapshot + elapsed time since the record was created)
+--   If both are null/zero: 0
 
 create or replace function public.claim_due_reminders(p_cron_run_id uuid)
 returns table (
@@ -78,7 +86,15 @@ begin
          q.estimate_amount,
          q.sequence_id,
          q.client_name,
-         greatest(0, extract(day from now() - q.created_at)::int) as days_silent
+         -- Effective days quiet: matches src/lib/recovery/effective-days.ts
+         -- If quote_sent_at exists: days between now and quote_sent_at
+         -- If null: stored days_silent + days since app record creation
+         case
+           when q.quote_sent_at is not null then
+             greatest(0, extract(day from now() - q.quote_sent_at)::int)
+           else
+             greatest(0, q.days_silent + extract(day from now() - q.created_at)::int)
+         end as days_silent
   from claimed c
   join public.quotes q on q.id = c.quote_id;
 end;
