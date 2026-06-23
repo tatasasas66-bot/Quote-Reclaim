@@ -89,7 +89,7 @@ const commandRows = [
   {
     estimate: "$3,200",
     age: "14 days quiet",
-    window: "Warm",
+    window: "Cooling",
     next: "Follow up next",
     status: "Queued after first",
   },
@@ -213,9 +213,10 @@ export default function HomePage() {
               which one to follow up first.
             </h1>
             <p className="mt-4 max-w-2xl break-words text-base leading-7 text-ink sm:text-lg">
-              Quote Reclaim shows which quiet estimate to follow up first,
-              what message to send today, and how to keep every sent estimate moving
-              until it books or closes. Before buying another lead.
+              Quote Reclaim shows which quiet estimate to follow up first, the
+              low-pressure message to send today, and the next move to keep every sent estimate moving
+              until it books, pauses, or closes. Before buying another lead, check the estimates you
+              already sent.
             </p>
             <p className="mt-3 max-w-xl break-words text-sm leading-6 text-ink-muted">
               Free 60-second audit. No names, no phone numbers, no card. See
@@ -330,6 +331,65 @@ export default function HomePage() {
               Run the free audit
               <ArrowRight className="h-4 w-4" aria-hidden="true" />
             </Link>
+          </div>
+        </div>
+      </SectionShell>
+
+      <SectionShell id="message-engine" eyebrow="Not canned templates">
+        <div className="grid gap-6 lg:grid-cols-[0.82fr_1.18fr] lg:items-start">
+          <SectionHeading
+            title="Built around how homeowners actually decide after receiving a quote."
+            body="Most contractors send &ldquo;Any update?&rdquo; Quote Reclaim gives the homeowner an easier way to answer — based on the estimate&rsquo;s recovery window, likely decision friction, and the next move that makes the most sense."
+          />
+          <div className="grid gap-3">
+            <div className="rounded-xl border border-brand/30 bg-surface-1 p-4">
+              <p className="text-xs font-black uppercase tracking-widest text-brand">
+                The right message for the right silence
+              </p>
+              <p className="mt-2 break-words text-sm leading-6 text-ink">
+                Quote Reclaim does not just write a follow-up. It helps decide
+                why the estimate went quiet, what message fits that stage, and
+                whether the next move is open, revise, wait, or close.
+              </p>
+            </div>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div className="rounded-xl border border-line-subtle bg-surface-1 p-4">
+                <p className="text-xs font-black uppercase tracking-widest text-success">
+                  Warm · 1–7 days
+                </p>
+                <p className="mt-2 break-words text-sm leading-6 text-ink-strong">
+                  &ldquo;Any question on scope, timing, or price I can clear up
+                  here?&rdquo;
+                </p>
+              </div>
+              <div className="rounded-xl border border-line-subtle bg-surface-1 p-4">
+                <p className="text-xs font-black uppercase tracking-widest text-warning">
+                  Cooling · 8–21 days
+                </p>
+                <p className="mt-2 break-words text-sm leading-6 text-ink-strong">
+                  &ldquo;Usually timing, budget, or scope. Reply with which one
+                  and I&rsquo;ll make it easier.&rdquo;
+                </p>
+              </div>
+              <div className="rounded-xl border border-line-subtle bg-surface-1 p-4">
+                <p className="text-xs font-black uppercase tracking-widest text-danger">
+                  Cold · 22–45 days
+                </p>
+                <p className="mt-2 break-words text-sm leading-6 text-ink-strong">
+                  &ldquo;I can keep this open, revise it, or close it out. Which
+                  helps most?&rdquo;
+                </p>
+              </div>
+              <div className="rounded-xl border border-line-subtle bg-surface-1 p-4">
+                <p className="text-xs font-black uppercase tracking-widest text-ink-muted">
+                  Closeout · 45+ days
+                </p>
+                <p className="mt-2 break-words text-sm leading-6 text-ink-strong">
+                  &ldquo;I&rsquo;ll close this out for now. Reply here if you
+                  want to reopen it later.&rdquo;
+                </p>
+              </div>
+            </div>
           </div>
         </div>
       </SectionShell>
@@ -628,7 +688,7 @@ function HeroProductPreview() {
               Estimate #3
             </p>
             <p className="mt-1 whitespace-nowrap text-sm font-bold text-ink-strong">
-              $9,000 · Warm
+              $9,000 · Cooling
             </p>
           </div>
         </div>
@@ -647,8 +707,8 @@ function HeroProductPreview() {
             <p className="text-[9px] font-black uppercase tracking-widest text-ink-muted">
               Recovery window
             </p>
-            <p className="mt-1 break-words text-sm font-black text-success">
-              Warm
+            <p className="mt-1 break-words text-sm font-black text-warning">
+              Cooling
             </p>
           </div>
           <div className="rounded-lg border border-line-subtle bg-surface-2/80 p-2.5">
@@ -667,8 +727,9 @@ function HeroProductPreview() {
             Message to send today
           </p>
           <p className="mt-2 break-words text-sm leading-6 text-ink-strong">
-            Quick check — is this project still on your list, or should I
-            close the estimate on my side?
+            When a quote goes quiet, it&apos;s usually timing, budget, or one
+            part of the scope. If one of those is the hold-up, reply with which
+            one and I&apos;ll make it easier.
           </p>
         </div>
 
@@ -870,8 +931,8 @@ function CommandTable() {
           Message to send today
         </p>
         <p className="mt-2 break-words text-sm leading-6 text-ink-strong">
-          I wanted to check back on the estimate I sent. Is this still active,
-          or should I close it out for now?
+          I can keep this estimate open, revise it, or close it out for now.
+          Which helps most?
         </p>
         <div className="mt-4 flex flex-wrap gap-2">
           <Badge variant="brand">Copy</Badge>

@@ -25,7 +25,7 @@ describe("honest conversion copy renders on each surface", () => {
   it("homepage hero positions the free audit as doorway into the recovery system", () => {
     expect(SURFACES.homepage).toMatch(/You did the drive\./);
     expect(SURFACES.homepage).toMatch(/Don&apos;t let the quote die in silence/);
-    expect(SURFACES.homepage).toMatch(/Before buying another lead\./);
+    expect(SURFACES.homepage).toMatch(/Before buying another lead/);
     expect(SURFACES.homepage).toMatch(/Run the free estimate audit/);
     expect(SURFACES.homepage).toMatch(
       /The audit is the doorway\. Quote Reclaim is the recovery system\./,

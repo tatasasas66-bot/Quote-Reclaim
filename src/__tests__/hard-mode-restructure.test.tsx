@@ -43,7 +43,7 @@ describe("homepage hero restructure + email/copy honesty", () => {
   it("headline leads with sent estimates before new leads", () => {
     expect(homepage).toMatch(/You did the drive\./);
     expect(homepage).toMatch(/Don&apos;t let the quote die in silence/);
-    expect(homepage).toMatch(/Before buying another lead\./);
+    expect(homepage).toMatch(/Before buying another lead/);
   });
 
 it("primary CTA routes to the public audit doorway", () => {
@@ -63,7 +63,7 @@ it("primary CTA routes to the public audit doorway", () => {
 
   it("subhead explains the ongoing recovery system without a broad auto-send claim", () => {
     expect(homepage).toMatch(/which quiet estimate\s+to follow up first/);
-    expect(homepage).toMatch(/what message to send today/);
+    expect(homepage).toMatch(/low-pressure message to send today/);
     expect(homepage).toMatch(/keep\s+every sent estimate moving/);
     expect(homepage).not.toMatch(/follows\s+up by email automatically/);
   });

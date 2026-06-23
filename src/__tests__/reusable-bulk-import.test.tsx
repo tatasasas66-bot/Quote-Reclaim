@@ -434,7 +434,7 @@ describe("regression — homepage, support email, no Lemon, no dead checkout, no
   it("homepage H1 uses the sent-estimates-before-leads positioning", () => {
     expect(homepageSrc).toContain("You did the drive.");
     expect(homepageSrc).toMatch(/Don&apos;t let the quote die in silence/);
-    expect(homepageSrc).toContain("Before buying another lead.");
+    expect(homepageSrc).toContain("Before buying another lead");
   });
 
   it("homepage CTA uses the public audit doorway", () => {

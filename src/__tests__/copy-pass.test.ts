@@ -42,12 +42,12 @@ describe("Homepage hero copy (honest conversion rewrite)", () => {
   it("uses the lead-before-estimates headline", () => {
     expect(homepage).toMatch(/You did the drive\./);
     expect(homepage).toMatch(/Don&apos;t let the quote die in silence/);
-    expect(homepage).toMatch(/Before buying another lead\./);
+    expect(homepage).toMatch(/Before buying another lead/);
   });
 
   it("subhead explains the audit doorway and ongoing recovery system", () => {
     expect(homepage).toMatch(/which quiet estimate\s+to follow up first/);
-    expect(homepage).toMatch(/what message to send today/);
+    expect(homepage).toMatch(/low-pressure message to send today/);
     expect(homepage).toMatch(/keep\s+every sent estimate moving/);
     expect(homepage).toMatch(/Free 60-second audit/);
     expect(homepage).toMatch(/Run free audit/);
