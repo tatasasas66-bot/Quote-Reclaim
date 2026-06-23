@@ -1,5 +1,6 @@
 import { titleCase } from "@/lib/utils/normalize";
 import type { RecoveryMessage, RecoveryContext } from "./generate-recovery-plan";
+import { getSequenceFamily } from "@/lib/recovery/recovery-logic";
 
 /**
  * Deterministic fallback templates. Voice target: a real, experienced
@@ -106,13 +107,10 @@ const TRADE_WORDS: Record<string, string> = {
   other: "estimate",
 };
 
-const FRAMEWORKS: Record<1 | 2 | 3 | 4 | 5, RecoveryMessage["framework"]> = {
-  1: "Estimate Check",
-  2: "Decision Friction",
-  3: "Scope Rescue",
-  4: "Open, Revise, or Close",
-  5: "Clean Closeout",
-};
+/** Delegates to the centralized recovery-logic module SEQUENCE_FAMILIES. */
+function FRAMEWORKS(n: 1 | 2 | 3 | 4 | 5): RecoveryMessage["framework"] {
+  return getSequenceFamily(n);
+}
 
 function cleanName(value: string | null | undefined, fallback: string): string {
   const first = (value ?? "").trim().split(/\s+/)[0] ?? "";
@@ -493,7 +491,7 @@ export function fallbackMessages(ctx: RecoveryContext): RecoveryMessage[] {
   ];
   return rows.map(([n, message]) => ({
     followup_number: n,
-    framework: FRAMEWORKS[n],
+    framework: FRAMEWORKS(n),
     message,
     cta_type: n === 5 ? "statement" : "question",
     source: "fallback",

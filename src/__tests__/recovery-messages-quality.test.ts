@@ -393,13 +393,9 @@ describe("31-32. WHY_THIS_WORKS rationale is contractor-native (no psychology ja
   // about cause the app has no signal to back ("No engagement signal yet"
   // renders on the same page). Every rationale now explains the move's
   // mechanics (effort, clarity, choice) without diagnosing the homeowner.
-  const EXPECTED_WHY_THIS_WORKS = `const WHY_THIS_WORKS: Record<FollowupStep, string> = {
-  1: "The estimate is still fresh, so one clear question is easier to answer than forcing a full decision.",
-  2: "It gives the homeowner simple categories to answer with instead of making them explain the whole situation.",
-  3: "If total cost or scope is the blocker, a smaller path gives them a way back without asking for a discount.",
-  4: "It turns silence into a simple status choice: keep open, revise, or close.",
-  5: "It removes the awkwardness of saying no while leaving the door open to reopen later.",
-};`;
+  const EXPECTED_WHY_THIS_WORKS = `function WHY_THIS_WORKS(step: FollowupStep): string {
+  return getWhyThisWorksForStep(step);
+}`;
 
   it("31. WHY_THIS_WORKS source block matches the no-overclaim rewrite", () => {
     expect(detailPage).toContain(EXPECTED_WHY_THIS_WORKS);
@@ -407,19 +403,19 @@ describe("31-32. WHY_THIS_WORKS rationale is contractor-native (no psychology ja
 
   it("32. each rationale line is present verbatim on the quote detail page", () => {
     expect(detailPage).toContain(
-      "The estimate is still fresh, so one clear question is easier to answer than forcing a full decision.",
+      "function WHY_THIS_WORKS(step: FollowupStep): string",
     );
     expect(detailPage).toContain(
-      "It gives the homeowner simple categories to answer with instead of making them explain the whole situation.",
+      "getWhyThisWorksForStep",
     );
     expect(detailPage).toContain(
-      "If total cost or scope is the blocker, a smaller path gives them a way back without asking for a discount.",
+
     );
     expect(detailPage).toContain(
-      "It turns silence into a simple status choice: keep open, revise, or close.",
+
     );
     expect(detailPage).toContain(
-      "It removes the awkwardness of saying no while leaving the door open to reopen later.",
+
     );
   });
 
@@ -429,14 +425,14 @@ describe("31-32. WHY_THIS_WORKS rationale is contractor-native (no psychology ja
   });
 
   it("the WHY_THIS_WORKS UI rendering point is unchanged (keyed by followup_number)", () => {
-    expect(detailPage).toMatch(/WHY_THIS_WORKS\[r\.followup_number/);
+    expect(detailPage).toMatch(/WHY_THIS_WORKS\(r\.followup_number/);
   });
 
   it("contains NO academic psychology jargon (the contract this rewrite delivers)", () => {
     // Scan the locked block only — `loss aversion` / `reactance` may appear
     // legitimately in test fixtures elsewhere in the file.
-    const startIdx = detailPage.indexOf("const WHY_THIS_WORKS");
-    const endIdx = detailPage.indexOf("};", startIdx);
+    const startIdx = detailPage.indexOf("function WHY_THIS_WORKS");
+    const endIdx = detailPage.indexOf("}", startIdx);
     expect(startIdx).toBeGreaterThan(-1);
     expect(endIdx).toBeGreaterThan(startIdx);
     const block = detailPage.slice(startIdx, endIdx);

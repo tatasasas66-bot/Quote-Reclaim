@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { AIUnavailableError, callAI, type ChatMessage } from "./call-ai";
+import { getSequenceFamily } from "@/lib/recovery/recovery-logic";
 import {
   fallbackMessages,
   projectLabel,
@@ -47,13 +48,10 @@ export type RecoveryContext = {
   daysSilent?: number | null;
 };
 
-const FRAMEWORK_BY_NUMBER: Record<1 | 2 | 3 | 4 | 5, RecoveryFramework> = {
-  1: "Estimate Check",
-  2: "Decision Friction",
-  3: "Scope Rescue",
-  4: "Open, Revise, or Close",
-  5: "Clean Closeout",
-};
+/** Delegates to the centralized recovery-logic module's SEQUENCE_FAMILIES. */
+function FRAMEWORK_BY_NUMBER(n: 1 | 2 | 3 | 4 | 5): RecoveryFramework {
+  return getSequenceFamily(n);
+}
 
 const aiResponseSchema = z.object({
   messages: z
@@ -215,7 +213,7 @@ async function attemptAI(ctx: RecoveryContext): Promise<RecoveryMessage[] | null
     if (score < MIN_AI_SCORE) return null;
     out.push({
       followup_number: m.followup_number,
-      framework: FRAMEWORK_BY_NUMBER[m.followup_number],
+      framework: FRAMEWORK_BY_NUMBER(m.followup_number),
       message: m.message.trim(),
       cta_type: ctaType,
       source: "ai",

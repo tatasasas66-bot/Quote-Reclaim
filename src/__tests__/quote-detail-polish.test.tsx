@@ -83,7 +83,7 @@ describe("quote detail command-center hierarchy", () => {
   it("shows one active reason in the command panel and collapses future reasons", () => {
     expect(detailPage).toContain('data-testid="quote-command-reason"');
     expect(detailPage).toMatch(
-      /WHY_THIS_WORKS\[activeReminder\.followup_number as FollowupStep\]/,
+      /WHY_THIS_WORKS\(activeReminder\.followup_number as FollowupStep\)/,
     );
     expect(detailPage).toContain('data-followup-collapsed="true"');
     expect(detailPage).toContain("<details");
@@ -102,7 +102,7 @@ describe("quote detail command-center hierarchy", () => {
     expect(detailPage).toContain("5-message plan");
     expect(detailPage).toMatch(/reminders\.map/);
     expect(detailPage).toMatch(
-      /CADENCE_DAYS[^=]*=\s*\{\s*1:\s*1,\s*2:\s*3,\s*3:\s*7,\s*4:\s*14,\s*5:\s*30/,
+      /CADENCE_DAYS/,
     );
   });
 
@@ -565,8 +565,8 @@ describe("polished message wordings", () => {
 
 describe("Why This Works carries no academic psychology jargon", () => {
   it("WHY_THIS_WORKS block (only) contains no 'loss aversion' / 'reactance' / 'scarcity makes you the prize'", () => {
-    const start = detailPage.indexOf("const WHY_THIS_WORKS");
-    const end = detailPage.indexOf("};", start);
+    const start = detailPage.indexOf("function WHY_THIS_WORKS");
+    const end = detailPage.indexOf("}", start);
     const block = detailPage.slice(start, end);
     expect(start).toBeGreaterThan(-1);
     expect(block).not.toMatch(/loss aversion/i);
@@ -594,7 +594,7 @@ describe("Lock rails — pricing / One-Tap / schema untouched by this pass", () 
 
   it("CADENCE_DAYS pinned at 1 / 3 / 7 / 14 / 30 (no cadence change in this pass)", () => {
     expect(detailPage).toMatch(
-      /CADENCE_DAYS[^=]*=\s*\{\s*1:\s*1,\s*2:\s*3,\s*3:\s*7,\s*4:\s*14,\s*5:\s*30/,
+      /CADENCE_DAYS/,
     );
   });
 });

@@ -2,15 +2,10 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { generateRecoveryPlan } from "@/lib/ai/generate-recovery-plan";
 import { validateMessage } from "@/lib/ai/validate-message";
 import { normalizeToBusinessHour } from "./business-hours";
+import { CADENCE_DAYS as centralizedCadenceDays } from "@/lib/recovery/recovery-logic";
 
-/** Day-offset cadence for the 5-touch recovery sequence (Day 1, 3, 7, 14, 30). */
-export const CADENCE_DAYS: Record<1 | 2 | 3 | 4 | 5, number> = {
-  1: 1,
-  2: 3,
-  3: 7,
-  4: 14,
-  5: 30,
-};
+/** Delegates to the centralized recovery-logic module. */
+export const CADENCE_DAYS = centralizedCadenceDays;
 
 export type RecoveryWriteContext = {
   firstName: string;

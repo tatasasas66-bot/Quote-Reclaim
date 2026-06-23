@@ -1,5 +1,9 @@
 import { recoveryScoreForDays } from "@/lib/quotes/recovery-score";
 import { generateFollowupMessage } from "./message-engine";
+import {
+  getRecoveryWindow as centralizedGetRecoveryWindow,
+  getRecoveryMultiplier,
+} from "@/lib/recovery/recovery-logic";
 
 /**
  * Silent-quote audit — the honest, deterministic math behind the cold /audit
@@ -42,14 +46,14 @@ export type AuditQuote = {
  */
 export type RecoveryWindow = "warm" | "cooling" | "cold" | "closeout" | "unknown";
 
+/**
+ * Delegates to the centralized recovery-logic module.
+ * This wrapper preserves the public API for all existing imports.
+ */
 export function recoveryWindowForDays(
   daysSilent: number | null,
 ): RecoveryWindow {
-  if (daysSilent == null) return "unknown";
-  if (daysSilent <= 7) return "warm";
-  if (daysSilent <= 21) return "cooling";
-  if (daysSilent < 45) return "cold";
-  return "closeout";
+  return centralizedGetRecoveryWindow(daysSilent) as RecoveryWindow;
 }
 
 export type RecoveryWindowDescriptor = {
@@ -156,25 +160,11 @@ export function parseDaysSilent(raw: string | undefined | null): number | null {
 }
 
 /**
- * Expected recoverable value multiplier — how much a quote's age dampens its
- * recovery value. Used to rank quotes by expectedRecoverableValue = amount × multiplier.
- *
- *   Warm (1-7 days):     1.0  — still fresh, full recovery value
- *   Cooling (8-21 days): 0.75 — still realistic, but urgency is rising
- *   Cold (22-45 days):   0.4  — harder to reopen, lower expected return
- *   Closeout (45+ days): 0.15 — mostly cold, one respectful touch max
- *   Unknown:             1.0  — rank on dollars alone
- *
- * This prevents a $30k quote that's 50 days quiet from automatically beating
- * an $8k quote that's 9 days quiet — the $8k quote has higher expected
- * recovery value ($6,000 vs $4,500).
+ * Delegates to the centralized recovery-logic module's getRecoveryMultiplier.
+ * Used to rank quotes by expectedRecoverableValue = amount × multiplier.
  */
 function followUpWeight(daysSilent: number | null): number {
-  if (daysSilent == null) return 1;
-  if (daysSilent <= 7) return 1.0; // warm
-  if (daysSilent <= 21) return 0.75; // cooling
-  if (daysSilent < 45) return 0.4; // cold
-  return 0.15; // closeout
+  return getRecoveryMultiplier(recoveryWindowForDays(daysSilent));
 }
 
 /**

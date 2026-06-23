@@ -46,6 +46,12 @@ import { effectiveDaysSilent } from "@/lib/recovery/effective-days";
 import { createServiceSupabaseClient } from "@/lib/supabase/service";
 import { formatCurrency } from "@/lib/utils/currency";
 import { titleCaseName } from "@/lib/utils/title-case";
+import {
+  getWhyThisWorksForStep,
+  getPriorityLabel as centralizedGetPriorityLabel,
+  CADENCE_DAYS as centralizedCadenceDays,
+  type RecoveryWindow,
+} from "@/lib/recovery/recovery-logic";
 
 export const metadata: Metadata = { title: "Quote - Quote Reclaim" };
 export const dynamic = "force-dynamic";
@@ -54,25 +60,17 @@ type Params = { id: string };
 
 type FollowupStep = 1 | 2 | 3 | 4 | 5;
 
-const CADENCE_DAYS: Record<FollowupStep, number> = {
-  1: 1,
-  2: 3,
-  3: 7,
-  4: 14,
-  5: 30,
-};
+/** Delegates to the centralized recovery-logic module. */
+const CADENCE_DAYS = centralizedCadenceDays;
 
 // Rationale shown under each step. Contractor-native, plain English, and
 // careful about what it claims: it explains the move's mechanics (effort,
 // clarity, choice) — it never asserts why THIS homeowner went quiet, because
 // the app usually has no signal to back that up.
-const WHY_THIS_WORKS: Record<FollowupStep, string> = {
-  1: "The estimate is still fresh, so one clear question is easier to answer than forcing a full decision.",
-  2: "It gives the homeowner simple categories to answer with instead of making them explain the whole situation.",
-  3: "If total cost or scope is the blocker, a smaller path gives them a way back without asking for a discount.",
-  4: "It turns silence into a simple status choice: keep open, revise, or close.",
-  5: "It removes the awkwardness of saying no while leaving the door open to reopen later.",
-};
+/** Delegates to the centralized recovery-logic module. */
+function WHY_THIS_WORKS(step: FollowupStep): string {
+  return getWhyThisWorksForStep(step);
+}
 
 type ReplyRescuePath = {
   label: string;
@@ -172,15 +170,9 @@ function commandStatusLabel(status: RecoveryStatus): string {
   }
 }
 
-/** Map recovery window → contractor-friendly priority label. */
+/** Delegates to the centralized recovery-logic module. */
 function windowPriorityLabel(window: string): string {
-  switch (window) {
-    case "warm": return "Send today";
-    case "cooling": return "Follow up next";
-    case "cold": return "High";
-    case "closeout": return "Closeout touch";
-    default: return "Send today";
-  }
+  return centralizedGetPriorityLabel(window as RecoveryWindow);
 }
 
 function commandMoveInstruction(move: NextMove): string | null {
@@ -562,7 +554,7 @@ function CommandActionPanel({
                 className="mt-3 text-sm leading-6 text-ink-muted"
               >
                 <span className="font-semibold text-ink">Why this works:</span>{" "}
-                {WHY_THIS_WORKS[activeReminder.followup_number as FollowupStep]}
+                {WHY_THIS_WORKS(activeReminder.followup_number as FollowupStep)}
               </p>
               <div
                 data-testid="reply-rescue-paths"
@@ -938,7 +930,7 @@ function ReminderCard({
             Why this works
           </summary>
           <p className="mt-2 leading-5">
-            {WHY_THIS_WORKS[r.followup_number as FollowupStep]}
+            {WHY_THIS_WORKS(r.followup_number as FollowupStep)}
           </p>
         </details>
       ) : null}

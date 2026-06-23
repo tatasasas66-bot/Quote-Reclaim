@@ -8,7 +8,11 @@
  * Formula: project anchor + likely blocker + low-pressure alternate path + easy reply
  *
  * Deterministic, no AI calls. Trade-aware via project noun substitution.
+ *
+ * Window classification delegates to the centralized recovery-logic module.
  */
+
+import { getRecoveryWindow, getProjectNoun as centralizedGetProjectNoun } from "@/lib/recovery/recovery-logic";
 
 export type MessageWindow = "warm" | "cooling" | "cold" | "closeout";
 
@@ -74,34 +78,25 @@ export const UNSUPPORTED_CLAIM_PHRASES: readonly string[] = [
 // tighter bands that match the decision-friction model.
 // ---------------------------------------------------------------------------
 
+/**
+ * Delegates to the centralized recovery-logic module.
+ * Unknown age → warm (treat as fresh).
+ */
 export function messageWindowForDays(daysSilent: number | null): MessageWindow {
-  if (daysSilent == null) return "warm"; // unknown age → treat as fresh
-  if (daysSilent <= 7) return "warm";
-  if (daysSilent <= 21) return "cooling";
-  if (daysSilent < 45) return "cold";
-  return "closeout";
+  const window = getRecoveryWindow(daysSilent);
+  if (window === "unknown") return "warm";
+  return window as MessageWindow;
 }
 
 // ---------------------------------------------------------------------------
 // Trade-specific project nouns
 // ---------------------------------------------------------------------------
 
-const PROJECT_NOUNS: ReadonlyMap<string, string> = new Map<string, string>([
-  ["concrete", "driveway"],
-  ["driveway", "driveway"],
-  ["fencing", "fence"],
-  ["fence", "fence"],
-  ["painting", "painting"],
-  ["painter", "painting"],
-  ["hvac", "AC"],
-  ["roofing", "roof"],
-  ["roofer", "roof"],
-]);
-
+/**
+ * Delegates to the centralized recovery-logic module.
+ */
 export function projectNounForTrade(trade: string | null | undefined): string {
-  if (!trade) return "estimate";
-  const key = trade.trim().toLowerCase();
-  return PROJECT_NOUNS.get(key) ?? "estimate";
+  return centralizedGetProjectNoun(trade);
 }
 
 // ---------------------------------------------------------------------------

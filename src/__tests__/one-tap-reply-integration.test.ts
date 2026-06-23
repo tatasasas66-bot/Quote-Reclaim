@@ -253,13 +253,9 @@ describe("quote detail page mounts the One-Tap Reply card", () => {
 
   it("WHY_THIS_WORKS source block matches the no-overclaim rewrite", () => {
     expect(detailPage).toContain(
-      `const WHY_THIS_WORKS: Record<FollowupStep, string> = {
-  1: "The estimate is still fresh, so one clear question is easier to answer than forcing a full decision.",
-  2: "It gives the homeowner simple categories to answer with instead of making them explain the whole situation.",
-  3: "If total cost or scope is the blocker, a smaller path gives them a way back without asking for a discount.",
-  4: "It turns silence into a simple status choice: keep open, revise, or close.",
-  5: "It removes the awkwardness of saying no while leaving the door open to reopen later.",
-};`,
+      `function WHY_THIS_WORKS(step: FollowupStep): string {
+  return getWhyThisWorksForStep(step);
+}`,
     );
   });
 

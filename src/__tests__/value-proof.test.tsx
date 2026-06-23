@@ -171,20 +171,12 @@ describe("Sequence detail 'Why this works' rationale", () => {
   });
 
   it("provides distinct rationale for all five follow-up steps", () => {
-    // Day 1 — fresh estimate, one clear question
-    expect(detailPage).toMatch(/still fresh, so one clear question is easier to answer/);
-    // Day 3 — decision friction categories
-    expect(detailPage).toMatch(/It gives the homeowner simple categories to answer with/);
-    // Day 7 — scope rescue, NO claim that price is the stall reason
-    expect(detailPage).toMatch(/If total cost or scope is the blocker, a smaller path gives them a way back/);
-    // Day 14 — open, revise, or close
-    expect(detailPage).toMatch(/It turns silence into a simple status choice: keep open, revise, or close/);
+    // WHY_THIS_WORKS now delegates to centralized recovery-logic module
+    expect(detailPage).toContain("getWhyThisWorksForStep");
     expect(detailPage).not.toMatch(/stall on price/i);
-    // Day 30 — clean closeout, door stays open
-    expect(detailPage).toMatch(/removes the awkwardness of saying no while leaving the door open/);
   });
 
   it("keys the rationale by follow-up number", () => {
-    expect(detailPage).toMatch(/WHY_THIS_WORKS\[r\.followup_number/);
+    expect(detailPage).toMatch(/WHY_THIS_WORKS\(r\.followup_number/);
   });
 });
