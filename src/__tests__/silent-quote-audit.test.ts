@@ -20,7 +20,6 @@ import {
   suggestedMessage,
   UTM_KEYS,
 } from "../lib/audit/silent-quote-audit";
-import { recoveryScoreForDays } from "../lib/quotes/recovery-score";
 
 describe("parseQuoteAmount", () => {
   it("accepts $, commas, and whitespace", () => {
@@ -96,17 +95,15 @@ describe("runSilentQuoteAudit", () => {
     expect(r.quotes.map((q) => q.index)).toEqual([1, 3]); // 1-based, position-preserving
   });
 
-  it("prioritizes by dollars WEIGHTED toward the still-pickable window, not raw size", () => {
-    // $8,500 is the biggest but 120 days silent (likely cold); $4,000 at 30
-    // days sits in the prime window and should win.
+  it("prioritizes by expected recovery value (amount × window multiplier), not raw size", () => {
+    // $8,500 at 120 days (closeout, 0.15) = 1275; $4,000 at 30 days (cold, 0.4) = 1600 ← priority
     const r = runSilentQuoteAudit([
-      { amountRaw: "2500", daysSilentRaw: "5" }, // 2500 * 0.9  = 2250
-      { amountRaw: "4000", daysSilentRaw: "30" }, // 4000 * 1.0 = 4000  ← priority
-      { amountRaw: "8500", daysSilentRaw: "120" }, // 8500 * 0.35 = 2975
+      { amountRaw: "2500", daysSilentRaw: "5" },   // 2500 * 1.0  = 2500 ← priority (warm)
+      { amountRaw: "4000", daysSilentRaw: "30" },  // 4000 * 0.4  = 1600
+      { amountRaw: "8500", daysSilentRaw: "120" }, // 8500 * 0.15 = 1275
     ]);
-    expect(r.priority?.index).toBe(2);
-    expect(r.priority?.amount).toBe(4000);
-    expect(r.priorityBandLabel).toBe(recoveryScoreForDays(30).label);
+    expect(r.priority?.index).toBe(1);
+    expect(r.priority?.amount).toBe(2500);
   });
 
   // ---------------------------------------------------------------------------
@@ -115,16 +112,19 @@ describe("runSilentQuoteAudit", () => {
   // value". The fix uses a 0.9 fresh weight so size dominates timing past
   // ~11% bigger, and buildWhyNotOthers fact-checks every claim.
   // ---------------------------------------------------------------------------
-  it("BUG: 2500/10, 5000/12, 7000/5 → Quote #3 ranks first (size > tiny fresh penalty)", () => {
+  it("regression: 2500/10, 5000/12, 7000/5 → Quote #3 ranks first (warm full value)", () => {
+    // New multipliers: 5 days = warm (1.0), 10 days = cooling (0.75), 12 days = cooling (0.75)
+    // 7000 * 1.0  = 7000  ← priority
+    // 5000 * 0.75 = 3750
+    // 2500 * 0.75 = 1875
     const r = runSilentQuoteAudit([
-      { amountRaw: "2500", daysSilentRaw: "10" }, // 2500 * 1.0 = 2500
-      { amountRaw: "5000", daysSilentRaw: "12" }, // 5000 * 1.0 = 5000
-      { amountRaw: "7000", daysSilentRaw: "5" }, //  7000 * 0.9 = 6300  ← priority
+      { amountRaw: "2500", daysSilentRaw: "10" },
+      { amountRaw: "5000", daysSilentRaw: "12" },
+      { amountRaw: "7000", daysSilentRaw: "5" },
     ]);
     expect(r.priority?.index).toBe(3);
     expect(r.priority?.amount).toBe(7000);
     expect(r.priority?.windowLabel).toBe("Warm");
-    expect(r.priorityReason).toMatch(/most money at stake/i);
     expect(r.rankedQuotes.map((q) => q.index)).toEqual([3, 2, 1]);
   });
 
@@ -155,6 +155,25 @@ describe("runSilentQuoteAudit", () => {
     expect(r.priorityBandLabel).toBeNull();
   });
 
+  it("required sample: $8k/9d beats $30k/50d and $3k/2d by expected recovery value", () => {
+    // Estimate 1: $8,000 / 9 days  → Cooling (0.75) → 8000 * 0.75 = 6000 ← winner
+    // Estimate 2: $30,000 / 50 days → Closeout (0.15) → 30000 * 0.15 = 4500
+    // Estimate 3: $3,000 / 2 days   → Warm (1.0) → 3000 * 1.0 = 3000
+    const r = runSilentQuoteAudit([
+      { amountRaw: "8000", daysSilentRaw: "9" },
+      { amountRaw: "30000", daysSilentRaw: "50" },
+      { amountRaw: "3000", daysSilentRaw: "2" },
+    ]);
+    expect(r.priority?.index).toBe(1);
+    expect(r.priority?.amount).toBe(8000);
+    expect(r.priority?.daysSilent).toBe(9);
+    expect(r.priority?.windowLabel).toBe("Cooling");
+    expect(r.rankedQuotes[1]?.index).toBe(2);
+    expect(r.rankedQuotes[1]?.windowLabel).toBe("Closeout");
+    expect(r.rankedQuotes[2]?.index).toBe(3);
+    expect(r.rankedQuotes[2]?.windowLabel).toBe("Warm");
+  });
+
   it("attaches the deterministic suggested message for the priority quote's age", () => {
     const prime = runSilentQuoteAudit([{ amountRaw: "4000", daysSilentRaw: "30" }]);
     expect(prime.suggestedMessage).toBe(suggestedMessage(30));
@@ -163,28 +182,28 @@ describe("runSilentQuoteAudit", () => {
   });
 });
 
-describe("reasonForPriority — honest 'why this first' line", () => {
-  it("top-value + prime window → the value+timing reason (matches the example card)", () => {
+describe("reasonForPriority — window-aware 'why this first' line", () => {
+  it("top-value + cooling window → expected recovery value reason", () => {
     const quotes = [
-      { index: 1, amount: 3800, daysSilent: 21 },
-      { index: 2, amount: 1200, daysSilent: 30 },
+      { index: 1, amount: 8000, daysSilent: 9 },
+      { index: 2, amount: 3000, daysSilent: 2 },
     ];
     expect(reasonForPriority(quotes[0], quotes)).toMatch(
-      /High value and still recent enough/i,
+      /expected recovery value/i,
     );
   });
 
-  it("a very fresh quote gets the 'not pushy' reason", () => {
+  it("a warm quote gets the 'still fresh' reason", () => {
     const q = { index: 1, amount: 4000, daysSilent: 3 };
     const biggerCold = { index: 2, amount: 6000, daysSilent: 80 };
     expect(reasonForPriority(q, [q, biggerCold]).toLowerCase()).toContain(
-      "won't feel pushy",
+      "fresh",
     );
   });
 
-  it("a cold quote gets the close-it-out-soon reason", () => {
+  it("a closeout quote gets the 'clean closeout' reason", () => {
     const q = { index: 1, amount: 4000, daysSilent: 80 };
-    expect(reasonForPriority(q, [q]).toLowerCase()).toContain("going cold");
+    expect(reasonForPriority(q, [q]).toLowerCase()).toContain("closeout");
   });
 
   it("runSilentQuoteAudit returns a non-empty priorityReason for valid input, '' on error", () => {
@@ -217,19 +236,23 @@ describe("suggestedMessage — honest, no weak 'just checking in'", () => {
 // ---------------------------------------------------------------------------
 
 describe("recoveryWindowForDays — honest day-band labels", () => {
-  it("0-14 days → warm", () => {
+  it("1-7 days → warm", () => {
     expect(recoveryWindowForDays(0)).toBe("warm");
     expect(recoveryWindowForDays(7)).toBe("warm");
-    expect(recoveryWindowForDays(14)).toBe("warm");
   });
-  it("15-30 days → cooling", () => {
-    expect(recoveryWindowForDays(15)).toBe("cooling");
+  it("8-21 days → cooling", () => {
+    expect(recoveryWindowForDays(8)).toBe("cooling");
+    expect(recoveryWindowForDays(14)).toBe("cooling");
     expect(recoveryWindowForDays(21)).toBe("cooling");
-    expect(recoveryWindowForDays(30)).toBe("cooling");
   });
-  it("31+ days → cold", () => {
-    expect(recoveryWindowForDays(31)).toBe("cold");
-    expect(recoveryWindowForDays(120)).toBe("cold");
+  it("22-45 days → cold", () => {
+    expect(recoveryWindowForDays(22)).toBe("cold");
+    expect(recoveryWindowForDays(30)).toBe("cold");
+    expect(recoveryWindowForDays(45)).toBe("cold");
+  });
+  it("46+ days → closeout", () => {
+    expect(recoveryWindowForDays(46)).toBe("closeout");
+    expect(recoveryWindowForDays(120)).toBe("closeout");
   });
   it("null days → unknown", () => {
     expect(recoveryWindowForDays(null)).toBe("unknown");
@@ -238,29 +261,37 @@ describe("recoveryWindowForDays — honest day-band labels", () => {
 
 describe("describeRecoveryWindow — labels match the spec", () => {
   it("warm shows the direct follow-up definition", () => {
-    expect(describeRecoveryWindow(7)).toEqual({
+    expect(describeRecoveryWindow(5)).toEqual({
       window: "warm",
       label: "Warm",
       explanation: "Recent enough for a direct, simple follow-up.",
     });
   });
   it("cooling shows the reopen-now definition", () => {
-    expect(describeRecoveryWindow(21)).toEqual({
+    expect(describeRecoveryWindow(14)).toEqual({
       window: "cooling",
       label: "Cooling",
       explanation: "Worth reopening now before it gets harder to restart.",
     });
   });
   it("cold shows the lighter-check-in definition", () => {
-    expect(describeRecoveryWindow(60)).toEqual({
+    expect(describeRecoveryWindow(30)).toEqual({
       window: "cold",
       label: "Cold",
       explanation:
         "Use a lighter check-in. Still worth testing, but expect lower response.",
     });
   });
+  it("closeout shows the clean-closeout definition", () => {
+    expect(describeRecoveryWindow(60)).toEqual({
+      window: "closeout",
+      label: "Closeout",
+      explanation:
+        "Old enough that a clean closeout may be the best move — leave the door open to reopen later.",
+    });
+  });
   it("uses NO percentage / reply-rate language", () => {
-    const all = [7, 21, 60, null].map((d) => describeRecoveryWindow(d));
+    const all = [5, 14, 30, 60, null].map((d) => describeRecoveryWindow(d));
     for (const d of all) {
       expect(d.explanation).not.toMatch(/%/);
       expect(d.explanation.toLowerCase()).not.toMatch(/reply rate|odds|chance/);
@@ -349,14 +380,17 @@ describe("buildWhyNotOthers", () => {
     expect(lines[0]).toMatch(/has more money at stake/);
   });
 
-  it("flags 'more recent but lower value' when #2 is fresher but smaller", () => {
+  it("flags 'more money at stake' when winner is bigger even though loser is fresher", () => {
+    // New windows: 10 days = Cooling (0.75), 5 days = Warm (1.0)
+    // 8000 * 0.75 = 6000 (winner, 10 days), 5000 * 1.0 = 5000 (loser, 5 days)
+    // Winner is bigger AND older, so the honest line is "more money at stake".
     const lines = buildWhyNotOthers(
       rank([
-        { amount: 6000, days: 30 },
-        { amount: 5500, days: 5 },
+        { amount: 8000, days: 10 },
+        { amount: 5000, days: 5 },
       ]),
     );
-    expect(lines[0]).toMatch(/more recent, but lower value/);
+    expect(lines[0]).toMatch(/more money at stake/);
   });
 
   it("returns at most 2 insights, never more (keeps the result skimmable)", () => {
@@ -508,20 +542,16 @@ describe("buildWhyNotOthers", () => {
     assertFactual(buildWhyNotOthers(ranked), ranked);
   });
 
-  it("when the loser is BIGGER but very fresh, copy explains via timing, not value", () => {
-    // 5000/12 → 5000 prime;  5400/5 → 4860 fresh — winner is SMALLER + older.
+  it("when the winner is fresher AND bigger, no timing-vs-value conflict", () => {
+    // New multipliers: 5000 * 0.75 = 3750 (12 days cooling), 5400 * 1.0 = 5400 (5 days warm)
+    // The fresh quote wins because it's both bigger AND warmer.
     const ranked = rank([
       { amount: 5000, days: 12 },
       { amount: 5400, days: 5 },
     ]);
-    expect(ranked[0].amount).toBe(5000);
+    expect(ranked[0].amount).toBe(5400);
     const lines = buildWhyNotOthers(ranked);
     assertFactual(lines, ranked);
-    // No "lower value" claim, no "more money at stake" claim — the only
-    // honest framing is the "bigger but fresh" timing tradeoff.
-    expect(lines.join(" ")).not.toMatch(/lower value/);
-    expect(lines.join(" ")).not.toMatch(/more money at stake/);
-    expect(lines[0]).toMatch(/bigger, but it&apos;s still fresh|bigger, but it's still fresh/);
   });
 
   it("ranking list and explanation always agree on which quote is the priority", () => {

@@ -40,15 +40,16 @@ export type AuditQuote = {
  *   cold    31+ days   "Use a lighter check-in."
  *   unknown null       (contractor skipped the days field)
  */
-export type RecoveryWindow = "warm" | "cooling" | "cold" | "unknown";
+export type RecoveryWindow = "warm" | "cooling" | "cold" | "closeout" | "unknown";
 
 export function recoveryWindowForDays(
   daysSilent: number | null,
 ): RecoveryWindow {
   if (daysSilent == null) return "unknown";
-  if (daysSilent <= 14) return "warm";
-  if (daysSilent <= 30) return "cooling";
-  return "cold";
+  if (daysSilent <= 7) return "warm";
+  if (daysSilent <= 21) return "cooling";
+  if (daysSilent <= 45) return "cold";
+  return "closeout";
 }
 
 export type RecoveryWindowDescriptor = {
@@ -80,6 +81,13 @@ export function describeRecoveryWindow(
         label: "Cold",
         explanation:
           "Use a lighter check-in. Still worth testing, but expect lower response.",
+      };
+    case "closeout":
+      return {
+        window,
+        label: "Closeout",
+        explanation:
+          "Old enough that a clean closeout may be the best move — leave the door open to reopen later.",
       };
     default:
       return { window, label: "Unknown", explanation: "" };
@@ -148,23 +156,25 @@ export function parseDaysSilent(raw: string | undefined | null): number | null {
 }
 
 /**
- * How much a quote's age boosts/dampens follow-up priority. Peaks in the
- * "already cooling but still realistic" 7–45 day window — too fresh and the
- * homeowner may still be deciding; too old and the trail is usually cold.
- * Unknown days → neutral (rank on dollars alone).
+ * Expected recoverable value multiplier — how much a quote's age dampens its
+ * recovery value. Used to rank quotes by expectedRecoverableValue = amount × multiplier.
  *
- * Fresh penalty (days < 7): a small, intentional nudge. We don't punish
- * fresh quotes harshly — a meaningfully bigger fresh quote should still
- * outrank a smaller prime-window one. The 0.9 weight makes "size dominates
- * timing once you're past ~11% bigger" the rule, which matches how a
- * contractor would actually triage by hand.
+ *   Warm (1-7 days):     1.0  — still fresh, full recovery value
+ *   Cooling (8-21 days): 0.75 — still realistic, but urgency is rising
+ *   Cold (22-45 days):   0.4  — harder to reopen, lower expected return
+ *   Closeout (45+ days): 0.15 — mostly cold, one respectful touch max
+ *   Unknown:             1.0  — rank on dollars alone
+ *
+ * This prevents a $30k quote that's 50 days quiet from automatically beating
+ * an $8k quote that's 9 days quiet — the $8k quote has higher expected
+ * recovery value ($6,000 vs $4,500).
  */
 function followUpWeight(daysSilent: number | null): number {
   if (daysSilent == null) return 1;
-  if (daysSilent < 7) return 0.9; // give a fresh quote a small beat — but never a 30% one
-  if (daysSilent <= 45) return 1; // prime window
-  if (daysSilent <= 90) return 0.6; // cooling hard
-  return 0.35; // likely cold
+  if (daysSilent <= 7) return 1.0; // warm
+  if (daysSilent <= 21) return 0.75; // cooling
+  if (daysSilent <= 45) return 0.4; // cold
+  return 0.15; // closeout
 }
 
 /**
@@ -182,29 +192,34 @@ export function suggestedMessage(daysSilent: number | null): string {
 
 /**
  * Plain-English reason the priority quote earns the first touch. Honest,
- * contractor-native, and consistent with the on-page Example card — it
- * explains the value + timing tradeoff, never a recovery promise.
+ * contractor-native, and consistent with the recovery window — it explains
+ * the value + timing tradeoff, never a recovery promise. Window-aware so
+ * the reasoning always matches the message the contractor will send.
  */
 export function reasonForPriority(
   priority: AuditQuote,
   quotes: AuditQuote[],
 ): string {
+  const days = priority.daysSilent;
+  const window = recoveryWindowForDays(days);
   const maxAmount = Math.max(...quotes.map((q) => q.amount));
   const isTopValue = priority.amount >= maxAmount;
-  const days = priority.daysSilent;
-  if (isTopValue && days != null && days <= 14) {
-    return "It has the most money at stake and it is still fresh enough to reopen with a light follow-up.";
+
+  switch (window) {
+    case "warm":
+      return "This estimate is still fresh, so a simple low-pressure question can reopen the conversation.";
+    case "cooling":
+      if (isTopValue) {
+        return "We ranked this by expected recovery value — amount adjusted by how recoverable the estimate still is. This estimate is valuable and still in the Cooling window, so it is the strongest first move today.";
+      }
+      return "This estimate still has a realistic recovery window. The best move is a decision-friction message that makes it easy to answer.";
+    case "cold":
+      return "This estimate is older, so pressure works against you. Use a direct low-pressure message that offers open, revise, or close.";
+    case "closeout":
+      return "This estimate is old enough that the best move may be a clean closeout, not a hard chase.";
+    default:
+      return "Recent enough to follow up cleanly, and worth more than the few minutes it takes to send one message.";
   }
-  if (days != null && days < 7) {
-    return "It's recent, so a light follow-up now won't feel pushy.";
-  }
-  if (days != null && days > 45) {
-    return "It's the most valuable of the ones going cold — worth one respectful touch before you close it out.";
-  }
-  if (isTopValue) {
-    return "High value and still recent enough to follow up without sounding desperate.";
-  }
-  return "Recent enough to follow up cleanly, and worth more than the few minutes it takes to send one message.";
 }
 
 /**

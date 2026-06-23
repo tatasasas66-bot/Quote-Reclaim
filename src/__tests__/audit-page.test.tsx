@@ -362,7 +362,7 @@ describe("funnel - value before signup", () => {
     expect(result.textContent).toMatch(/Follow up this estimate first/i);
     expect(result.textContent).toMatch(/Recovery window/i);
     expect(result.textContent).toMatch(/Why this one first/i);
-    expect(result.textContent).toMatch(/Best message to reopen this estimate/i);
+    expect(result.textContent).toMatch(/Best low-pressure message to send today/i);
     expect(result.textContent).toMatch(/Follow-up order/i);
     expect(result.textContent).toMatch(/Next move/i);
     expect(result.textContent).toMatch(/Save this recovery plan/i);
@@ -389,7 +389,7 @@ describe("funnel - value before signup", () => {
     expect(rankOne.textContent).toMatch(/Estimate #3/);
     expect(rankOne.textContent).toMatch(/Warm/);
     expect(result.textContent).not.toMatch(/quiet(?:Warm|Cooling|Cold)/i);
-    expect(result.textContent).toMatch(/most money at stake/i);
+    expect(result.textContent).toMatch(/still fresh/i);
   });
 
   it("renders all entered quotes in the follow-up order with contractor actions", () => {

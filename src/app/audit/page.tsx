@@ -267,8 +267,8 @@ export default function AuditPage() {
         </section>
 
         <footer className="border-t border-line-subtle py-6 text-center text-xs leading-6 text-ink-muted">
-          Quote Reclaim helps contractors turn sent estimates into booked work.
-          Not lead generation. Not scheduling software.
+          Quote Reclaim helps contractors work quiet estimates until they book,
+          pause, or close. Not lead generation. Not scheduling software.
         </footer>
       </div>
     </main>

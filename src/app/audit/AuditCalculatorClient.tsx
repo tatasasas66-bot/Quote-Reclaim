@@ -625,7 +625,7 @@ function AuditResultView({
         <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
           <div className="min-w-0">
             <p className="text-xs font-black uppercase tracking-widest text-brand">
-              Best message to reopen this estimate
+              Best low-pressure message to send today
             </p>
             <p className="mt-1 break-words text-sm text-ink-muted">
               Not a canned template — chosen for this estimate&apos;s recovery
@@ -684,7 +684,7 @@ function AuditResultView({
         ) : null}
       </section>
 
-      {/* Why this works — short, practical explanation */}
+      {/* Why this works — short, practical explanation (window-aware) */}
       <section className="min-w-0 rounded-xl border border-line-subtle bg-surface-1 p-4">
         <p className="text-xs font-black uppercase tracking-widest text-ink-muted">
           Why this works
@@ -696,11 +696,7 @@ function AuditResultView({
           </li>
           <li className="flex items-start gap-2">
             <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-success" aria-hidden="true" />
-            <span><strong className="text-ink-strong">Why the timing matters:</strong> a quiet quote is easier to reopen in the first 14 days. After 30, it gets harder — but not impossible.</span>
-          </li>
-          <li className="flex items-start gap-2">
-            <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-success" aria-hidden="true" />
-            <span><strong className="text-ink-strong">Why the message is low-pressure:</strong> it asks a specific question, not &ldquo;any update?&rdquo;. That makes it easier for the homeowner to answer.</span>
+            <span><strong className="text-ink-strong">Why the message is low-pressure:</strong> {lowPressureReasonForWindow(priority?.window)}</span>
           </li>
           <li className="flex items-start gap-2">
             <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-success" aria-hidden="true" />
@@ -806,6 +802,22 @@ function AuditResultView({
       </section>
     </div>
   );
+}
+
+/** Window-aware "Why the message is low-pressure" explanation. */
+function lowPressureReasonForWindow(window: string | undefined): string {
+  switch (window) {
+    case "warm":
+      return "It asks one easy question instead of forcing a decision.";
+    case "cooling":
+      return "It gives the homeowner simple categories to answer with: timing, budget, scope, or comparison.";
+    case "cold":
+      return "It avoids pressure and gives a simple open, revise, or close path.";
+    case "closeout":
+      return "It removes the awkwardness of saying no while leaving the door open to reopen later.";
+    default:
+      return "It asks a specific question, not \u201Cany update?\u201D. That makes it easier for the homeowner to answer.";
+  }
 }
 
 function FollowUpOrder({ ranked }: { ranked: RankedAuditQuote[] }) {
