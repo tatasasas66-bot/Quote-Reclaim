@@ -152,7 +152,7 @@ describe("research framework fallback sequence", () => {
     expect(sequence.day1).not.toMatch(/just checking in/i);
   });
 
-  it("Day 3 is a Schedule Check — active-list / move-it-off / pause framing, never fake slot scarcity", () => {
+  it("Day 3 is a Decision Friction — active-list / move-it-off / pause framing, never fake slot scarcity", () => {
     const ctx = SCENARIOS[0].ctx;
     const sequence = researchSequenceMessages(ctx);
     expect(sequence.day3.startsWith("Jane,")).toBe(true);
@@ -205,9 +205,9 @@ describe("research framework fallback sequence", () => {
       it("uses the research frameworks in order (5 touches)", () => {
         expect(plan.map((m) => m.framework)).toEqual([
           "Estimate Check",
-          "Schedule Check",
+          "Decision Friction",
           "Scope Rescue",
-          "Decision Check",
+          "Open, Revise, or Close",
           "Clean Closeout",
         ]);
       });
@@ -424,7 +424,7 @@ describe("generateRecoveryPlan", () => {
                     },
                     {
                       followup_number: 2,
-                      framework: "Schedule Check",
+                      framework: "Decision Friction",
                       message: sequence.day3,
                       cta_type: "question",
                       confidence: 1,
@@ -438,7 +438,7 @@ describe("generateRecoveryPlan", () => {
                     },
                     {
                       followup_number: 4,
-                      framework: "Decision Check",
+                      framework: "Open, Revise, or Close",
                       message: sequence.day14,
                       cta_type: "question",
                       confidence: 1,
@@ -479,7 +479,7 @@ describe("generateRecoveryPlan", () => {
         },
         {
           followup_number: 2,
-          framework: "Schedule Check",
+          framework: "Decision Friction",
           message:
             "Jane, touching base on the roofing schedule. Want me to hold your spot?",
           cta_type: "question",

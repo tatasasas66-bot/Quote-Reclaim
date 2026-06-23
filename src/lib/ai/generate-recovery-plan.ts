@@ -16,9 +16,9 @@ import { titleCase } from "@/lib/utils/normalize";
 // copy — it is rationale text for the contractor, not customer copy.
 export type RecoveryFramework =
   | "Estimate Check"
-  | "Schedule Check"
+  | "Decision Friction"
   | "Scope Rescue"
-  | "Decision Check"
+  | "Open, Revise, or Close"
   | "Clean Closeout";
 
 export type RecoveryMessage = {
@@ -49,9 +49,9 @@ export type RecoveryContext = {
 
 const FRAMEWORK_BY_NUMBER: Record<1 | 2 | 3 | 4 | 5, RecoveryFramework> = {
   1: "Estimate Check",
-  2: "Schedule Check",
+  2: "Decision Friction",
   3: "Scope Rescue",
-  4: "Decision Check",
+  4: "Open, Revise, or Close",
   5: "Clean Closeout",
 };
 
@@ -115,13 +115,13 @@ FORMAT (non-negotiable):
 DAY 1 — Estimate Check (clarity):
 Open with "Hey {firstName} —". Mention the trade/project once. Offer to break down a number, timing, or scope detail. One open question.
 
-DAY 3 — Schedule Check (active list):
+DAY 3 — Decision Friction (active list):
 Open with "{firstName},". Operational tone. Ask whether to keep the job on the active list / on the schedule / on your list, or move it off / pause it / set it aside. Reference the trade once. Do NOT claim you are holding a slot, releasing a slot, locking the schedule, or running out of openings — the app does not know that and it reads as fake scarcity.
 
 DAY 7 — Scope Rescue (lower-commitment path):
 No greeting word. Omit the customer's name. Reference the trade/project. If the full estimate may be too much as written, offer to separate must-do work from later pieces, phase the scope, or map the part holding it up. One question. Never imply discounting, cheap work, or cutting corners.
 
-DAY 14 — Decision Check (active / paused / closed):
+DAY 14 — Open, Revise, or Close (active / paused / closed):
 Open with "{firstName},". Give a fast choice: keep the estimate active, pause it for later, or close it out for now. One question. Calm. Never imply a price drop, discount, sale, or coupon. Never use the word "cheaper".
 
 DAY 30 — Clean Closeout (respectful):
@@ -134,9 +134,9 @@ Return JSON only — no markdown, no commentary. Use these exact framework label
 {
   "messages": [
     { "followup_number": 1, "framework": "Estimate Check", "message": "...", "cta_type": "question", "confidence": 1 },
-    { "followup_number": 2, "framework": "Schedule Check", "message": "...", "cta_type": "question", "confidence": 1 },
+    { "followup_number": 2, "framework": "Decision Friction", "message": "...", "cta_type": "question", "confidence": 1 },
     { "followup_number": 3, "framework": "Scope Rescue", "message": "...", "cta_type": "question", "confidence": 1 },
-    { "followup_number": 4, "framework": "Decision Check", "message": "...", "cta_type": "question", "confidence": 1 },
+    { "followup_number": 4, "framework": "Open, Revise, or Close", "message": "...", "cta_type": "question", "confidence": 1 },
     { "followup_number": 5, "framework": "Clean Closeout", "message": "...", "cta_type": "statement", "confidence": 1 }
   ]
 }

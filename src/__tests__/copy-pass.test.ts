@@ -299,9 +299,9 @@ describe("AI system prompt — contractor-native voice and labels", () => {
 
   it("locks the five contractor-native framework labels (plain English, no psychology jargon)", () => {
     expect(aiPrompt).toMatch(/Estimate Check/);
-    expect(aiPrompt).toMatch(/Schedule Check/);
+    expect(aiPrompt).toMatch(/Decision Friction/);
     expect(aiPrompt).toMatch(/Scope Rescue/);
-    expect(aiPrompt).toMatch(/Decision Check/);
+    expect(aiPrompt).toMatch(/Open, Revise, or Close/);
     expect(aiPrompt).toMatch(/Clean Closeout/);
   });
 

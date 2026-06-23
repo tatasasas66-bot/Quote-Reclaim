@@ -285,7 +285,7 @@ describe("schedule is the 5-touch cadence", () => {
 });
 
 // ---------------------------------------------------------------------------
-// Day 14 — Decision Check: active / paused / closed, never discounting
+// Day 14 — Open, Revise, or Close: active / paused / closed, never discounting
 // Day 30 — Clean Closeout: respectful, declarative closeout signal
 // ---------------------------------------------------------------------------
 
@@ -339,7 +339,7 @@ describe("v0 of every day stays verbatim — AI exact-match gate intact", () => 
     );
   });
 
-  it("Day 3 v0 is the new Schedule Check (no fake slot scarcity)", () => {
+  it("Day 3 v0 is the new Decision Friction (no fake slot scarcity)", () => {
     expect(SEQUENCE_VARIANTS[3][0](vars)).toBe(
       "Jane, I'm lining up the roofing schedule. Should I keep your estimate active, or move it off my list?",
     );
@@ -351,7 +351,7 @@ describe("v0 of every day stays verbatim — AI exact-match gate intact", () => 
     );
   });
 
-  it("Day 14 v0 is the new Decision Check (no discounting)", () => {
+  it("Day 14 v0 is the new Open, Revise, or Close (no discounting)", () => {
     expect(SEQUENCE_VARIANTS[14][0](vars)).toBe(
       "Jane, should I keep the roofing estimate active, pause it for later, or close it out for now?",
     );
@@ -378,9 +378,9 @@ describe("generate-recovery-plan system prompt enforces the contractor-native re
   it("uses the new framework labels in the JSON example", () => {
     for (const label of [
       "Estimate Check",
-      "Schedule Check",
+      "Decision Friction",
       "Scope Rescue",
-      "Decision Check",
+      "Open, Revise, or Close",
       "Clean Closeout",
     ]) {
       expect(generatePlan).toContain(label);

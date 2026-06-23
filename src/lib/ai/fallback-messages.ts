@@ -5,7 +5,7 @@ import type { RecoveryMessage, RecoveryContext } from "./generate-recovery-plan"
  * Deterministic fallback templates. Voice target: a real, experienced
  * contractor — calm, direct, specific, no sales psychology language in the
  * message itself. The labels surfaced to the user are plain English
- * (Estimate Check / Schedule Check / Scope Rescue / Decision Check /
+ * (Estimate Check / Decision Friction / Scope Rescue / Open, Revise, or Close /
  * Clean Closeout). Variation is seeded from the quote so the same quote
  * always renders the same phrasing while different quotes spread across
  * the variants per day (4–5 per day).
@@ -29,10 +29,10 @@ import type { RecoveryMessage, RecoveryContext } from "./generate-recovery-plan"
  * Strategic arc per touch (every message is a real-contractor sentence
  * disguising the intent — never naming the psychology):
  *   1 Estimate Check  — surface a confusion the homeowner hid (clarity).
- *   2 Schedule Check  — operational seriousness without fake scarcity.
+ *   2 Decision Friction  — operational seriousness without fake scarcity.
  *   3 Scope Rescue    — give a lower-commitment path when full scope, timing,
  *                       or total may be too much to approve as-is.
- *   4 Decision Check  — turn silence into a simple active / paused / closed
+ *   4 Open, Revise, or Close  — turn silence into a simple active / paused / closed
  *                       choice without demanding a yes.
  *   5 Clean Closeout  — respectful withdrawal; declarative; door open.
  */
@@ -108,9 +108,9 @@ const TRADE_WORDS: Record<string, string> = {
 
 const FRAMEWORKS: Record<1 | 2 | 3 | 4 | 5, RecoveryMessage["framework"]> = {
   1: "Estimate Check",
-  2: "Schedule Check",
+  2: "Decision Friction",
   3: "Scope Rescue",
-  4: "Decision Check",
+  4: "Open, Revise, or Close",
   5: "Clean Closeout",
 };
 
@@ -329,7 +329,7 @@ const DAY1_VARIANTS: ReadonlyArray<(v: VariantVars) => string> = [
     `Hey ${firstName}, I had another look at ${projectDetail}. Is the blocker scope, timing, total, or something else?`,
 ];
 
-// DAY 3 — Schedule Check. "{FirstName}, ..." opener, no greeting word.
+// DAY 3 — Decision Friction. "{FirstName}, ..." opener, no greeting word.
 // Operational, never claims the contractor is releasing or holding a slot.
 const DAY3_VARIANTS: ReadonlyArray<(v: VariantVars) => string> = [
   ({ firstName, tradeWord }) =>
@@ -359,7 +359,7 @@ const DAY7_VARIANTS: ReadonlyArray<(v: VariantVars) => string> = [
     `If ${project} is more than you want to tackle at once, I can phase it without cutting corners. Want me to outline it?`,
 ];
 
-// DAY 14 — Decision Check. Useful, never discounting. The point is not another
+// DAY 14 — Open, Revise, or Close. Useful, never discounting. The point is not another
 // "any update?" — it gives the customer a fast active / paused / closed choice.
 // Job-aware via projectDetail so the estimate still feels remembered.
 const DAY14_VARIANTS: ReadonlyArray<(v: VariantVars) => string> = [
