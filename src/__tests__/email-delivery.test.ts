@@ -281,7 +281,7 @@ describe("/api/cron/send: email-primary delivery", () => {
   it("calls sendRecoveryEmail with recipient + body sourced from the claimed reminder row", () => {
     // recipient is r.recipient_email (joined by claim_due_reminders), body is r.message_text.
     expect(sendRoute).toMatch(
-      /sendRecoveryEmail\(\{[\s\S]*?to,[\s\S]*?body:\s*r\.message_text/,
+      /sendRecoveryEmail\(\{[\s\S]*?to,[\s\S]*?body:\s*messageBodyForSend/,
     );
   });
 

@@ -9,6 +9,7 @@ import { recoveryEmailSubject } from "@/lib/messaging/select-channel";
 import { getMessagingService } from "@/lib/messaging/service";
 import { normalizePhone } from "@/lib/messaging/phone";
 import type { SmsProvider, SmsResult } from "@/lib/messaging/types";
+import { getRecommendedMessage } from "@/lib/recovery/recovery-logic";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -52,6 +53,7 @@ type ClaimedReminder = {
   estimate_amount: number | null;
   sequence_id: string;
   client_name: string | null;
+  days_silent: number | null;
 };
 
 type CronSupabase = ReturnType<typeof createServiceSupabaseClient>;
@@ -249,9 +251,21 @@ async function handleSend(request: NextRequest): Promise<NextResponse> {
       // fails for any reason, fall back to sending the original body — the
       // follow-up still goes out, the homeowner just lacks the quick link.
       const oneTapLink = await issueOneTapLink(supabase, r.quote_id, null);
+
+      // Age-aware message: regenerate the message from centralized recovery
+      // logic using the quote's CURRENT days quiet — NOT the persisted
+      // message_text (which was written at plan-creation time and may be
+      // stale if the quote has aged into a different recovery window).
+      const ageAware = getRecommendedMessage({
+        daysQuiet: r.days_silent,
+        firstName: r.client_name,
+        trade: r.trade,
+      });
+      const baseMessage = ageAware.message || r.message_text;
+
       const messageBodyForSend = oneTapLink
-        ? `${r.message_text}\n\nQuick reply: ${oneTapLink.url}`
-        : r.message_text;
+        ? `${baseMessage}\n\nQuick reply: ${oneTapLink.url}`
+        : baseMessage;
 
       const emailResult = await sendRecoveryEmail({
         to,
@@ -278,6 +292,7 @@ async function handleSend(request: NextRequest): Promise<NextResponse> {
           failure_reason: emailResult.ok ? null : emailResult.error,
           sent_at: emailResult.ok ? now : null,
           idempotency_key: `cron:${r.reminder_id}:${cronRunId}`,
+          framework_used: ageAware.messageFamily,
         })
         .select("id")
         .single();
@@ -314,8 +329,8 @@ async function handleSend(request: NextRequest): Promise<NextResponse> {
         state: r.state,
         estimate_amount: r.estimate_amount,
         channel: "email",
-        message_text: r.message_text,
-        framework_used: r.framework_used,
+        message_text: baseMessage,
+        framework_used: ageAware.messageFamily,
         cta_type: r.cta_type,
         followup_number: r.followup_number,
         message_type: r.message_type,
@@ -369,6 +384,14 @@ async function handleSend(request: NextRequest): Promise<NextResponse> {
       continue;
     }
 
+    // Age-aware message for SMS too — same centralized logic as email.
+    const smsAgeAware = getRecommendedMessage({
+      daysQuiet: r.days_silent,
+      firstName: r.client_name,
+      trade: r.trade,
+    });
+    const smsBaseMessage = smsAgeAware.message || r.message_text;
+
     // Per-user send cap: release excess so the next tick picks them up.
     const attempts = perUserAttempts.get(r.user_id) ?? 0;
     if (attempts >= PER_USER_SEND_CAP_PER_RUN) {
@@ -382,7 +405,7 @@ async function handleSend(request: NextRequest): Promise<NextResponse> {
     try {
       smsResult = await smsProvider.send({
         to: phone,
-        body: r.message_text,
+        body: smsBaseMessage,
       });
     } catch (err) {
       smsResult = {
@@ -399,7 +422,7 @@ async function handleSend(request: NextRequest): Promise<NextResponse> {
       reminder_id: r.reminder_id,
       channel: "sms",
       recipient: phone,
-      message_text: r.message_text,
+      message_text: smsBaseMessage,
       status: smsResult.ok ? "sent" : "failed",
       provider_msg_id: smsResult.ok ? smsResult.providerMessageId : null,
       failure_reason: smsResult.ok ? null : smsResult.error,
@@ -432,7 +455,7 @@ async function handleSend(request: NextRequest): Promise<NextResponse> {
       state: r.state,
       estimate_amount: r.estimate_amount,
       channel: "sms",
-      message_text: r.message_text,
+      message_text: smsBaseMessage,
       framework_used: r.framework_used,
       cta_type: r.cta_type,
       followup_number: r.followup_number,

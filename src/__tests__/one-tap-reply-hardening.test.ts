@@ -75,7 +75,7 @@ describe("[2] outbound email embeds the one-tap link", () => {
   it("email branch issues a link and appends 'Quick reply: <url>' to the body", () => {
     expect(cron).toMatch(/issueOneTapLink\(supabase, r\.quote_id, null\)/);
     expect(cron).toMatch(
-      /`\$\{r\.message_text\}\\n\\nQuick reply: \$\{oneTapLink\.url\}`/,
+      /`\$\{baseMessage\}\\n\\nQuick reply: \$\{oneTapLink\.url\}`/,
     );
   });
 
@@ -86,7 +86,7 @@ describe("[2] outbound email embeds the one-tap link", () => {
 
   it("fallback path: if mint fails, the email still goes out without the link", () => {
     expect(cron).toMatch(
-      /const messageBodyForSend = oneTapLink\s*\?\s*`\$\{r\.message_text\}\\n\\nQuick reply: \$\{oneTapLink\.url\}`\s*:\s*r\.message_text/,
+      /const messageBodyForSend = oneTapLink\s*\?\s*`\$\{baseMessage\}\\n\\nQuick reply: \$\{oneTapLink\.url\}`\s*:\s*baseMessage/,
     );
   });
 

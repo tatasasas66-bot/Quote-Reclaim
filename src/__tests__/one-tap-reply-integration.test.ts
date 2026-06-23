@@ -115,7 +115,7 @@ describe("email integration in cron/send", () => {
   it("appends a single 'Quick reply: ' line in the email branch", () => {
     expect(cron).toMatch(/Quick reply:/);
     // The line is appended to the body, not a wholesale rewrite of message_text.
-    expect(cron).toMatch(/`\$\{r\.message_text\}\\n\\nQuick reply: \$\{[^}]+\}`/);
+    expect(cron).toMatch(/`\$\{baseMessage\}\\n\\nQuick reply: \$\{[^}]+\}`/);
   });
 
   it("the SMS branch does NOT add a One-Tap link", () => {
@@ -128,7 +128,7 @@ describe("email integration in cron/send", () => {
 
   it("falls back to the original body when issuing the link fails", () => {
     // Ternary across multiple lines — match with the /s flag.
-    expect(cron).toMatch(/oneTapLink[\s\S]*?\?[\s\S]*?:\s*r\.message_text/);
+    expect(cron).toMatch(/oneTapLink[\s\S]*?\?[\s\S]*?:\s*baseMessage/);
   });
 
   it("issueOneTapLink is called once per email send (one link per send)", () => {

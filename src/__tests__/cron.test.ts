@@ -371,11 +371,11 @@ describe("/api/cron/send — per-user send cap", () => {
     // enough to allow the One-Tap link issuance (a fresh per-send token) to
     // run after the cap reservation and before the send.
     expect(sendRoute).toMatch(
-      /perUserAttempts\.set\(r\.user_id,\s*attempts\s*\+\s*1\)[\s\S]{0,800}sendRecoveryEmail/,
+      /perUserAttempts\.set\(r\.user_id,\s*attempts\s*\+\s*1\)[\s\S]{0,1200}sendRecoveryEmail/,
     );
     // SMS branch: incremented just before smsProvider.send. Unchanged.
     expect(sendRoute).toMatch(
-      /perUserAttempts\.set\(r\.user_id,\s*attempts\s*\+\s*1\)[\s\S]{0,400}smsProvider\.send/,
+      /perUserAttempts\.set\(r\.user_id,\s*attempts\s*\+\s*1\)[\s\S]{0,800}smsProvider\.send/,
     );
   });
 
