@@ -213,14 +213,13 @@ export default function HomePage() {
               which one to follow up first.
             </h1>
             <p className="mt-4 max-w-2xl break-words text-base leading-7 text-ink sm:text-lg">
-              You did the drive, the measure, and the price. Quote Reclaim shows
-              which quiet estimate to follow up first, what message to send today,
-              and gives the homeowner an easy way to answer — so you can keep
-              every sent estimate moving. Before buying another lead.
+              Quote Reclaim shows which quiet estimate to follow up first,
+              what message to send today, and how to keep every sent estimate moving
+              until it books or closes. Before buying another lead.
             </p>
             <p className="mt-3 max-w-xl break-words text-sm leading-6 text-ink-muted">
-              Run a free 60-second estimate audit. If it helps, save the plan
-              and keep working quiet estimates every week.
+              Free 60-second audit. No names, no phone numbers, no card. See
+              your result first, then decide.
             </p>
             <div className="mt-5 flex flex-wrap items-center gap-3 pt-1">
               <Link
@@ -561,8 +560,8 @@ export default function HomePage() {
 
       <footer className="mx-auto flex w-full max-w-6xl flex-wrap items-center justify-between gap-x-4 gap-y-3 border-t border-line-subtle/80 px-4 py-6 text-sm text-ink-muted sm:px-6 lg:px-8">
         <p>
-          Quote Reclaim helps contractors turn sent estimates into booked work.
-          Not lead generation. Not scheduling software.
+          Quote Reclaim helps contractors work quiet estimates until they book
+          or close. Not lead generation. Not scheduling software.
         </p>
         <nav
           aria-label="Legal"

@@ -49,7 +49,7 @@ describe("Homepage hero copy (honest conversion rewrite)", () => {
     expect(homepage).toMatch(/which quiet estimate\s+to follow up first/);
     expect(homepage).toMatch(/what message to send today/);
     expect(homepage).toMatch(/keep\s+every sent estimate moving/);
-    expect(homepage).toMatch(/save the plan\s+and keep working quiet estimates every week/);
+    expect(homepage).toMatch(/Free 60-second audit/);
     expect(homepage).toMatch(/Run free audit/);
     expect(homepage).toMatch(/Save the recovery plan/);
     expect(homepage).toMatch(/Work quiet estimates every week/);
