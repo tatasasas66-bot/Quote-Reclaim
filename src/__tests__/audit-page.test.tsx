@@ -362,7 +362,7 @@ describe("funnel - value before signup", () => {
     expect(result.textContent).toMatch(/Follow up this estimate first/i);
     expect(result.textContent).toMatch(/Recovery window/i);
     expect(result.textContent).toMatch(/Why this one first/i);
-    expect(result.textContent).toMatch(/Message to send today/i);
+    expect(result.textContent).toMatch(/Best message to reopen this estimate/i);
     expect(result.textContent).toMatch(/Follow-up order/i);
     expect(result.textContent).toMatch(/Next move/i);
     expect(result.textContent).toMatch(/Save this recovery plan/i);

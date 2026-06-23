@@ -625,11 +625,12 @@ function AuditResultView({
         <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
           <div className="min-w-0">
             <p className="text-xs font-black uppercase tracking-widest text-brand">
-              Message to send today
+              Best message to reopen this estimate
             </p>
             <p className="mt-1 break-words text-sm text-ink-muted">
-              Not a canned template — chosen for this estimate&apos;s recovery
-              window to reduce decision friction without pressure.
+              Not a canned follow-up — chosen for this estimate&apos;s recovery
+              window and the likely reason the homeowner went quiet. Designed
+              to lower pressure and make the next reply easier.
             </p>
           </div>
           <button
@@ -654,15 +655,17 @@ function AuditResultView({
           {result.suggestedMessage}
         </p>
         {result.whyThisMessage ? (
-          <p className="mt-3 break-words text-xs leading-5 text-ink-muted">
-            <span className="font-bold text-ink">Why this message:</span>{" "}
-            {result.whyThisMessage}
-          </p>
+          <div className="mt-3 rounded-lg border border-line-subtle bg-canvas/40 p-3">
+            <p className="break-words text-xs leading-5 text-ink-muted">
+              <span className="font-bold text-ink-strong">Why this message:</span>{" "}
+              {result.whyThisMessage}
+            </p>
+          </div>
         ) : null}
         {result.oneTapOptions && result.oneTapOptions.length > 0 ? (
           <div className="mt-3">
             <p className="text-[10px] font-black uppercase tracking-widest text-ink-muted">
-              One-Tap Reply options for the homeowner
+              One-Tap Reply — easy ways to answer without typing a long reply
             </p>
             <div className="mt-2 flex flex-wrap gap-1.5">
               {result.oneTapOptions.map((opt) => (
@@ -674,6 +677,9 @@ function AuditResultView({
                 </span>
               ))}
             </div>
+            <p className="mt-2 break-words text-[11px] leading-5 text-ink-muted">
+              Each reply option tells you what to do next.
+            </p>
           </div>
         ) : null}
       </section>
@@ -737,17 +743,21 @@ function AuditResultView({
           This is only the first move
         </p>
         <h3 className="mt-2 break-words text-lg font-black leading-6 text-ink-strong">
-          The audit gives you the first move. Quote Reclaim helps you keep
-          working quiet estimates every week.
+          This audit shows the first smart move. The full product helps you keep
+          going — without repeating the same weak follow-up.
         </h3>
+        <p className="mt-2 break-words text-sm leading-6 text-ink">
+          Most follow-ups ask for an update. Quote Reclaim gives the homeowner
+          an easier way to answer.
+        </p>
         <ul className="mt-3 grid gap-2 text-sm leading-6 text-ink sm:grid-cols-2">
           {[
-            "Save the recovery plan",
-            "Keep follow-up order ready",
-            "Get the 5-message sequence",
-            "Use One-Tap Reply for homeowners",
-            "Find crew-gap opportunities",
-            "Mark Got the Job",
+            "What to send today",
+            "Why this message fits",
+            "What reply options to offer",
+            "When to follow up next",
+            "When to revise the quote",
+            "When to close it out",
           ].map((item) => (
             <li
               key={item}
