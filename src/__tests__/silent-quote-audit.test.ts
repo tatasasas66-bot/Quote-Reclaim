@@ -245,12 +245,13 @@ describe("recoveryWindowForDays — honest day-band labels", () => {
     expect(recoveryWindowForDays(14)).toBe("cooling");
     expect(recoveryWindowForDays(21)).toBe("cooling");
   });
-  it("22-45 days → cold", () => {
+  it("22-44 days → cold", () => {
     expect(recoveryWindowForDays(22)).toBe("cold");
     expect(recoveryWindowForDays(30)).toBe("cold");
-    expect(recoveryWindowForDays(45)).toBe("cold");
+    expect(recoveryWindowForDays(44)).toBe("cold");
   });
-  it("46+ days → closeout", () => {
+  it("45+ days → closeout", () => {
+    expect(recoveryWindowForDays(45)).toBe("closeout");
     expect(recoveryWindowForDays(46)).toBe("closeout");
     expect(recoveryWindowForDays(120)).toBe("closeout");
   });

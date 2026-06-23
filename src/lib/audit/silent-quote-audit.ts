@@ -48,7 +48,7 @@ export function recoveryWindowForDays(
   if (daysSilent == null) return "unknown";
   if (daysSilent <= 7) return "warm";
   if (daysSilent <= 21) return "cooling";
-  if (daysSilent <= 45) return "cold";
+  if (daysSilent < 45) return "cold";
   return "closeout";
 }
 
@@ -173,7 +173,7 @@ function followUpWeight(daysSilent: number | null): number {
   if (daysSilent == null) return 1;
   if (daysSilent <= 7) return 1.0; // warm
   if (daysSilent <= 21) return 0.75; // cooling
-  if (daysSilent <= 45) return 0.4; // cold
+  if (daysSilent < 45) return 0.4; // cold
   return 0.15; // closeout
 }
 

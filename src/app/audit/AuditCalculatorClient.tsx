@@ -50,9 +50,10 @@ const WINDOW_TONES: Record<string, string> = {
 };
 
 const WINDOW_DEFINITIONS: Record<string, string> = {
-  Warm: "Recent enough for a direct, simple follow-up.",
-  Cooling: "Worth reopening now before it gets harder to restart.",
-  Cold: "Use a lighter check-in. Still worth testing, but expect lower response.",
+  Warm: "Fresh enough for a simple low-pressure question.",
+  Cooling: "Still recoverable, but the message should make the homeowner's reply easier.",
+  Cold: "Older estimate. Use a direct, low-pressure message instead of chasing.",
+  Closeout: "Old enough that a clean closeout may be the best move — leave the door open to reopen later.",
   Unknown: "Add days quiet when you know them for a clearer window.",
 };
 

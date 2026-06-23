@@ -78,7 +78,7 @@ export function messageWindowForDays(daysSilent: number | null): MessageWindow {
   if (daysSilent == null) return "warm"; // unknown age → treat as fresh
   if (daysSilent <= 7) return "warm";
   if (daysSilent <= 21) return "cooling";
-  if (daysSilent <= 45) return "cold";
+  if (daysSilent < 45) return "cold";
   return "closeout";
 }
 

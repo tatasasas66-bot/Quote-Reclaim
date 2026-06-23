@@ -31,12 +31,13 @@ describe("messageWindowForDays", () => {
     expect(messageWindowForDays(14)).toBe("cooling");
     expect(messageWindowForDays(21)).toBe("cooling");
   });
-  it("classifies days 22-45 as cold", () => {
+  it("classifies days 22-44 as cold", () => {
     expect(messageWindowForDays(22)).toBe("cold");
     expect(messageWindowForDays(30)).toBe("cold");
-    expect(messageWindowForDays(45)).toBe("cold");
+    expect(messageWindowForDays(44)).toBe("cold");
   });
-  it("classifies days 46+ as closeout", () => {
+  it("classifies days 45+ as closeout", () => {
+    expect(messageWindowForDays(45)).toBe("closeout");
     expect(messageWindowForDays(46)).toBe("closeout");
     expect(messageWindowForDays(60)).toBe("closeout");
     expect(messageWindowForDays(120)).toBe("closeout");
