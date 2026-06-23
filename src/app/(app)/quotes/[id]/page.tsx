@@ -39,6 +39,7 @@ import {
   type ReminderRow,
 } from "@/lib/quotes/repo";
 import { getRecoveryScore } from "@/lib/quotes/recovery-score";
+import { recoveryWindowForDays, describeRecoveryWindow } from "@/lib/audit/silent-quote-audit";
 import { computeStepDisplay } from "@/lib/quotes/step-status";
 import { formatScheduleDateTime } from "@/lib/quotes/business-hours";
 import { effectiveDaysSilent } from "@/lib/recovery/effective-days";
@@ -171,12 +172,15 @@ function commandStatusLabel(status: RecoveryStatus): string {
   }
 }
 
-function commandPriorityLabel(label: string): string {
-  if (label.toLowerCase() === "critical") return "Move today";
-  if (label.toLowerCase() === "at risk") return "High";
-  if (label.toLowerCase() === "cooling") return "Follow up next";
-  if (label.toLowerCase() === "fresh") return "Early";
-  return label;
+/** Map recovery window → contractor-friendly priority label. */
+function windowPriorityLabel(window: string): string {
+  switch (window) {
+    case "warm": return "Send today";
+    case "cooling": return "Follow up next";
+    case "cold": return "High";
+    case "closeout": return "Closeout touch";
+    default: return "Send today";
+  }
 }
 
 function commandMoveInstruction(move: NextMove): string | null {
@@ -419,7 +423,8 @@ function CommandActionPanel({
   const displayName = titleCaseName(quote.client_name);
   const metaLine = tradeLocationLine(quote.trade, quote.city, quote.state);
   const daysQuiet = effectiveDaysSilent(quote);
-  const score = getRecoveryScore(quote);
+  const recoveryWindow = recoveryWindowForDays(daysQuiet);
+  const windowDescriptor = describeRecoveryWindow(daysQuiet);
   const instruction = commandMoveInstruction(move);
   const messageType: "email" | "sms" =
     activeReminder?.message_type === "email" ? "email" : "sms";
@@ -496,8 +501,11 @@ function CommandActionPanel({
       <div className="p-5 sm:p-6">
         <div className="min-w-0">
           <div className="flex flex-wrap gap-2">
+            <span className="rounded-full border border-brand/35 bg-brand/10 px-3 py-1 text-xs font-bold text-brand">
+              Recovery window: {windowDescriptor.label}
+            </span>
             <span className="rounded-full border border-line-subtle bg-canvas/35 px-3 py-1 text-xs font-bold text-ink">
-              Priority: {commandPriorityLabel(score.label)}
+              Priority: {windowPriorityLabel(recoveryWindow)}
             </span>
             <span className="rounded-full border border-line-subtle bg-canvas/35 px-3 py-1 text-xs font-bold text-ink">
               Status: {commandStatusLabel(status)}
@@ -511,6 +519,10 @@ function CommandActionPanel({
             <div className="mt-4 rounded-lg border border-line-subtle bg-canvas/40 p-4">
               <p className="text-xs font-black uppercase tracking-widest text-brand">
                 Message to send
+              </p>
+              <p className="mt-1 text-xs leading-5 text-ink-muted">
+                Not a canned template — chosen for this estimate&apos;s recovery
+                window and the likely reason the homeowner went quiet.
               </p>
               {instruction ? (
                 <p className="mt-2 text-sm leading-6 text-ink-muted">
@@ -641,6 +653,8 @@ function QuoteSummary({
           ? "danger"
           : "neutral";
   const daysQuiet = effectiveDaysSilent(quote);
+  const recoveryWindow = recoveryWindowForDays(daysQuiet);
+  const windowDescriptor = describeRecoveryWindow(daysQuiet);
   // Plan-aware next action: the same source of truth as the NEXT MOVE banner
   // and Quiet Signal. The band-based label is only the fallback for states
   // with no actionable reminder (reply in hand, plan missing).
@@ -653,7 +667,7 @@ function QuoteSummary({
       <div className="grid gap-5 border-b border-line-subtle p-5 sm:p-6 lg:grid-cols-[1fr_auto] lg:items-start">
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2">
-            <Badge variant={scoreBadgeVariant}>{score.label}</Badge>
+            <Badge variant={scoreBadgeVariant}>{windowDescriptor.label}</Badge>
             <Badge variant={badge.variant}>{badge.label}</Badge>
           </div>
           <h1 className="mt-3 truncate text-4xl font-black text-ink-strong">
@@ -681,7 +695,8 @@ function QuoteSummary({
           numeric
         />
         <IntelligenceField label="Days quiet" value={String(daysQuiet)} numeric />
-        <IntelligenceField label="Priority" value={commandPriorityLabel(score.label)} />
+        <IntelligenceField label="Recovery window" value={windowDescriptor.label} />
+        <IntelligenceField label="Priority" value={windowPriorityLabel(recoveryWindow)} />
         <IntelligenceField label="Next move" value={nextActionLabel} />
         <IntelligenceField label="Status" value={badge.label} />
         {quote.client_email ? (
