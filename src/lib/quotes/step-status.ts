@@ -3,6 +3,7 @@ import {
   formatScheduleDateTime,
   formatScheduleTime,
 } from "@/lib/quotes/business-hours";
+import { getSequenceFamily } from "@/lib/recovery/recovery-logic";
 
 export type StepStatus =
   | "scheduled"
@@ -54,8 +55,10 @@ export function computeStepDisplay(
     .sort((a, b) => +new Date(a.send_at) - +new Date(b.send_at))[0];
   const queuedBehind =
     nextUp && nextUp.id !== reminder.id
-      ? `Queued behind follow-up ${nextUp.followup_number}`
-      : undefined;
+      ? `Queued after ${getSequenceFamily(nextUp.followup_number as 1 | 2 | 3 | 4 | 5)}`
+      : nextUp && nextUp.id === reminder.id
+        ? "Current move"
+        : undefined;
   const scheduledLabel = `Scheduled ${formatScheduleDateTime(reminder.send_at)}`;
   const now = Date.now();
   const due = new Date(reminder.send_at).getTime() <= now;

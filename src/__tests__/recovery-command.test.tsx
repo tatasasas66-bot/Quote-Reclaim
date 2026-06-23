@@ -208,7 +208,7 @@ describe("next-move wording contract", () => {
     expect(move.dueNow).toBe(false);
     expect(move.canSendEarly).toBe(true);
     const line = nextMoveInstruction(move)!;
-    expect(line).toMatch(/^Follow-up 1 is queued for /);
+    expect(line).toMatch(/^Estimate Check is queued for /);
     expect(line).toContain("Want to move now? Send it today.");
   });
 
@@ -222,7 +222,7 @@ describe("next-move wording contract", () => {
     expect(move.dueNow).toBe(false);
     expect(move.canSendEarly).toBe(false);
     const line = nextMoveInstruction(move)!;
-    expect(line).toBe("Follow-up 3 is queued for the next send window — " + move.sendAtLabel + ".");
+    expect(line).toBe("Scope Rescue is queued for the next send window — " + move.sendAtLabel + ".");
     expect(line).not.toContain("Want to move now");
     expect(line).not.toContain("Send it today");
   });
@@ -251,19 +251,19 @@ describe("next-move wording contract", () => {
     const move = computeNextMove({ status: "running", reminders: base, hasEmail: true, hasReply: false, now: NOW });
     const line = nextMoveInstruction(move)!;
     expect(line).toBe(
-      "Follow-up 1 is due now and queued for email. You can let it send, or send it today if you want to move now.",
+      "Estimate Check is due now and queued for email. You can let it send, or send it today if you want to move now.",
     );
-    expect(nextMoveSummaryLabel(move)).toBe("Follow-up 1 due — sends by email today");
+    expect(nextMoveSummaryLabel(move)).toBe("Estimate Check due — sends by email today");
   });
 
   it("manual-ready: copy/manual send named explicitly — never 'nothing to send by hand'", () => {
     const move = computeNextMove({ status: "running", reminders: importedPlan("sms"), hasEmail: false, hasReply: false, now: NOW });
     const line = nextMoveInstruction(move)!;
     expect(line).toBe(
-      "Follow-up 1 is ready to copy. Send it from your phone or email today.",
+      "Estimate Check is ready to copy. Send it from your phone or email today.",
     );
     expect(line).not.toContain("Nothing to send by hand");
-    expect(nextMoveSummaryLabel(move)).toBe("Copy & send follow-up 1");
+    expect(nextMoveSummaryLabel(move)).toBe("Copy & send Estimate Check");
   });
 });
 
@@ -391,7 +391,7 @@ describe("queued-behind state keeps scheduled date primary", () => {
     const display = computeStepDisplay(second, all, false);
     expect(display.status).toBe("scheduled");
     expect(display.label).toMatch(/^Scheduled /);
-    expect(display.helperLabel).toBe("Queued behind follow-up 1");
+    expect(display.helperLabel).toBe("Queued after Estimate Check");
   });
 
   it("the earliest overdue step still reads Due now", () => {
@@ -403,7 +403,7 @@ describe("queued-behind state keeps scheduled date primary", () => {
     const third = all.find((r) => r.followup_number === 3)!;
     const display = computeStepDisplay(third, all, false);
     expect(display.label).toMatch(/^Scheduled /);
-    expect(display.helperLabel).toBe("Queued behind follow-up 1");
+    expect(display.helperLabel).toBe("Queued after Estimate Check");
   });
 });
 

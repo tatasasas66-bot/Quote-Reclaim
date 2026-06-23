@@ -1,5 +1,11 @@
 import type { ReminderRow } from "@/lib/quotes/repo";
 import { formatScheduleDateTime } from "@/lib/quotes/business-hours";
+import { getSequenceFamily } from "@/lib/recovery/recovery-logic";
+
+/** Map follow-up number → family name from centralized recovery-logic. */
+function familyName(n: number): string {
+  return getSequenceFamily(n as 1 | 2 | 3 | 4 | 5);
+}
 
 /**
  * THE single source of truth for "what happens next with this quote".
@@ -119,11 +125,11 @@ export function nextMoveSummaryLabel(move: NextMove): string | null {
     case "none":
       return null;
     case "email-queued":
-      return `Follow-up ${move.followupNumber} queued — sends ${move.sendAtLabel}`;
+      return `${familyName(move.followupNumber)} queued — sends ${move.sendAtLabel}`;
     case "email-due":
-      return `Follow-up ${move.followupNumber} due — sends by email today`;
+      return `${familyName(move.followupNumber)} due — sends by email today`;
     case "manual-ready":
-      return `Copy & send follow-up ${move.followupNumber}`;
+      return `Copy & send ${familyName(move.followupNumber)}`;
   }
 }
 
@@ -141,16 +147,19 @@ export function nextMoveInstruction(move: NextMove): string | null {
   switch (move.kind) {
     case "none":
       return null;
-    case "email-queued":
-      // First-touch override available → invite the manual send. Otherwise
-      // (a follow-up queued after an earlier send) just state the window — no
-      // "Want to move now?" so the contractor isn't nudged into rapid-fire.
+    case "email-queued": {
+      const family = familyName(move.followupNumber);
       return move.canSendEarly
-        ? `Follow-up ${move.followupNumber} is queued for ${move.sendAtLabel}. Want to move now? Send it today.`
-        : `Follow-up ${move.followupNumber} is queued for the next send window — ${move.sendAtLabel}.`;
-    case "email-due":
-      return `Follow-up ${move.followupNumber} is due now and queued for email. You can let it send, or send it today if you want to move now.`;
-    case "manual-ready":
-      return `Follow-up ${move.followupNumber} is ready to copy. Send it from your phone or email today.`;
+        ? `${family} is queued for ${move.sendAtLabel}. Want to move now? Send it today.`
+        : `${family} is queued for the next send window — ${move.sendAtLabel}.`;
+    }
+    case "email-due": {
+      const family = familyName(move.followupNumber);
+      return `${family} is due now and queued for email. You can let it send, or send it today if you want to move now.`;
+    }
+    case "manual-ready": {
+      const family = familyName(move.followupNumber);
+      return `${family} is ready to copy. Send it from your phone or email today.`;
+    }
   }
 }

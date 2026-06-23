@@ -189,7 +189,7 @@ function commandMoveInstruction(move: NextMove): string | null {
     case "email-due":
       return "Ready now. Send it today, or let the scheduled email handle it.";
     case "manual-ready":
-      return `Ready to copy. Send follow-up ${move.followupNumber} from your phone or email today.`;
+      return `Ready to copy. Send from your phone or email today.`;
   }
 }
 
@@ -806,6 +806,7 @@ function RecoveryPlanSection({
   };
   const minStep = minStepForWindow[currentWindow] ?? 1;
   const visibleReminders = reminders.filter((r) => r.followup_number >= minStep);
+  const sectionFamily = centralizedGetMessageFamily(currentWindow);
 
   // Email channel = automated via Resend on the cron schedule, only when
   // there's an address on file. No email = copy mode (contractor sends
@@ -833,7 +834,11 @@ function RecoveryPlanSection({
             Recovery sequence
           </p>
           <h2 className="mt-1 text-2xl font-black text-ink-strong">
-            5-message plan
+            {visibleReminders.length === 5
+              ? "5-message plan"
+              : visibleReminders.length === 1
+                ? `${sectionFamily} plan`
+                : `${visibleReminders.length}-message remaining plan`}
           </h2>
         </div>
         {scheduleChip ? (

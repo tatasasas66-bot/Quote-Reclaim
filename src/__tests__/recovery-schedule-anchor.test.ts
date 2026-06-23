@@ -9,7 +9,7 @@
  * — e.g. 28 days quiet, estimate dated May 15 with "today" = June 12 —
  * produced a recovery schedule entirely in the PAST:
  *   FU1 May 16, FU2 May 18, FU3 May 22, FU4 May 29, FU5 Jun 14.
- * The detail page then read "Follow-up 1 is due now / sends by email today"
+ * The detail page then read "Estimate Check is due now / sends by email today"
  * while displaying May dates, and the cron saw all five reminders as overdue
  * at once.
  *
