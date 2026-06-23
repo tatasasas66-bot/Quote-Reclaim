@@ -171,6 +171,7 @@ export function AuditCalculatorClient() {
         amountRaw: row.amount,
         daysSilentRaw: row.days,
       })),
+      { trade: tradeConfig.trade },
     );
     if (audit.error) {
       clearAnalysisTimers();
@@ -627,7 +628,8 @@ function AuditResultView({
               Message to send today
             </p>
             <p className="mt-1 break-words text-sm text-ink-muted">
-              Short, professional, and easy for the customer to answer.
+              Not a canned template — chosen for this estimate&apos;s recovery
+              window to reduce decision friction without pressure.
             </p>
           </div>
           <button
@@ -651,6 +653,29 @@ function AuditResultView({
         <p className="mt-4 max-w-full whitespace-pre-wrap break-words rounded-xl border border-line-subtle bg-canvas p-4 text-base font-semibold leading-7 text-ink-strong">
           {result.suggestedMessage}
         </p>
+        {result.whyThisMessage ? (
+          <p className="mt-3 break-words text-xs leading-5 text-ink-muted">
+            <span className="font-bold text-ink">Why this message:</span>{" "}
+            {result.whyThisMessage}
+          </p>
+        ) : null}
+        {result.oneTapOptions && result.oneTapOptions.length > 0 ? (
+          <div className="mt-3">
+            <p className="text-[10px] font-black uppercase tracking-widest text-ink-muted">
+              One-Tap Reply options for the homeowner
+            </p>
+            <div className="mt-2 flex flex-wrap gap-1.5">
+              {result.oneTapOptions.map((opt) => (
+                <span
+                  key={opt}
+                  className="rounded-full border border-success/30 bg-success/5 px-2.5 py-1 text-xs font-semibold text-success"
+                >
+                  {opt}
+                </span>
+              ))}
+            </div>
+          </div>
+        ) : null}
       </section>
 
       {/* Why this works — short, practical explanation */}
