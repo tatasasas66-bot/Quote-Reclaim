@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { ArrowRight, Check, Clipboard, Loader2 } from "lucide-react";
+import { ArrowRight, Check, CheckCircle2, Clipboard, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui";
 import { formatCurrency } from "@/lib/utils/currency";
 import { track } from "@/lib/analytics/track";
@@ -269,6 +269,35 @@ export function AuditCalculatorClient() {
       data-audit-state={analyzing ? "analyzing" : result ? "result" : "idle"}
       className="w-full max-w-full min-w-0 space-y-5 scroll-mt-6"
     >
+      {/* What you'll get — preview panel above the form */}
+      {!result && !analyzing ? (
+        <div className="rounded-2xl border border-brand/30 bg-surface-1/90 p-4 shadow-[0_12px_40px_rgba(0,0,0,0.18)] sm:p-5">
+          <p className="text-[10px] font-black uppercase tracking-widest text-brand">
+            What you&apos;ll get in 60 seconds
+          </p>
+          <ul className="mt-3 grid gap-2 sm:grid-cols-2">
+            {[
+              "Total quiet estimate value",
+              "Which quote to follow up first",
+              "Recovery window (Warm / Cooling / Cold)",
+              "Message to send today (ready to copy)",
+              "Follow-up order for all 3 quotes",
+              "Next move — clear and specific",
+            ].map((item) => (
+              <li
+                key={item}
+                className="flex items-start gap-2 rounded-lg border border-line-subtle bg-canvas/40 px-3 py-2"
+              >
+                <CheckCircle2 className="mt-0.5 h-3.5 w-3.5 shrink-0 text-success" aria-hidden="true" />
+                <span className="break-words text-xs font-semibold leading-5 text-ink-strong">
+                  {item}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
+
       <form
         onSubmit={handleSubmit}
         noValidate
@@ -624,6 +653,31 @@ function AuditResultView({
         </p>
       </section>
 
+      {/* Why this works — short, practical explanation */}
+      <section className="min-w-0 rounded-xl border border-line-subtle bg-surface-1 p-4">
+        <p className="text-xs font-black uppercase tracking-widest text-ink-muted">
+          Why this works
+        </p>
+        <ul className="mt-3 space-y-2 text-sm leading-6 text-ink">
+          <li className="flex items-start gap-2">
+            <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-success" aria-hidden="true" />
+            <span><strong className="text-ink-strong">Why this quote first:</strong> {result.priorityReason}</span>
+          </li>
+          <li className="flex items-start gap-2">
+            <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-success" aria-hidden="true" />
+            <span><strong className="text-ink-strong">Why the timing matters:</strong> a quiet quote is easier to reopen in the first 14 days. After 30, it gets harder — but not impossible.</span>
+          </li>
+          <li className="flex items-start gap-2">
+            <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-success" aria-hidden="true" />
+            <span><strong className="text-ink-strong">Why the message is low-pressure:</strong> it asks a specific question, not &ldquo;any update?&rdquo;. That makes it easier for the homeowner to answer.</span>
+          </li>
+          <li className="flex items-start gap-2">
+            <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-success" aria-hidden="true" />
+            <span><strong className="text-ink-strong">Silence isn&apos;t always a no.</strong> Sometimes the homeowner just needs an easier way to answer.</span>
+          </li>
+        </ul>
+      </section>
+
       <FollowUpOrder ranked={result.rankedQuotes} />
 
       <section
@@ -649,6 +703,42 @@ function AuditResultView({
         <p className="mt-2 break-words text-sm leading-6 text-ink">
           Quote Reclaim keeps the follow-up order in one place and turns quiet
           estimates into a 5-message recovery sequence you can work through.
+        </p>
+      </section>
+
+      {/* This is only the first move — bridge to the paid product */}
+      <section className="min-w-0 rounded-xl border border-brand/40 bg-[linear-gradient(180deg,rgba(217,111,50,0.06),rgba(24,28,34,0.4))] p-4 sm:p-5">
+        <p className="text-xs font-black uppercase tracking-widest text-brand">
+          This is only the first move
+        </p>
+        <h3 className="mt-2 break-words text-lg font-black leading-6 text-ink-strong">
+          The audit gives you the first move. Quote Reclaim helps you keep
+          working quiet estimates every week.
+        </h3>
+        <ul className="mt-3 grid gap-2 text-sm leading-6 text-ink sm:grid-cols-2">
+          {[
+            "Save the recovery plan",
+            "Keep follow-up order ready",
+            "Get the 5-message sequence",
+            "Use One-Tap Reply for homeowners",
+            "Find crew-gap opportunities",
+            "Mark Got the Job",
+          ].map((item) => (
+            <li
+              key={item}
+              className="flex items-start gap-2 rounded-lg border border-line-subtle bg-canvas/40 px-3 py-2"
+            >
+              <CheckCircle2 className="mt-0.5 h-3.5 w-3.5 shrink-0 text-success" aria-hidden="true" />
+              <span className="break-words text-xs font-semibold leading-5 text-ink-strong">
+                {item}
+              </span>
+            </li>
+          ))}
+        </ul>
+        <p className="mt-3 text-xs leading-5 text-ink-muted">
+          $79/month after the free audit. First 3 estimates free, no card needed.
+          No software can promise a job back — but one recovered estimate can
+          cover it many times over.
         </p>
       </section>
 

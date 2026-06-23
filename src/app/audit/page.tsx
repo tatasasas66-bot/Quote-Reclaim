@@ -92,24 +92,28 @@ export default function AuditPage() {
             </h1>
             <p className="mt-6 max-w-xl break-words text-pretty text-base leading-7 text-ink sm:text-lg">
               Enter 3 estimates you already sent and how long each has been
-              quiet. Quote Reclaim shows your total quiet estimate value, which
-              one to follow up first, and the message to send today.
+              quiet. Quote Reclaim shows the first quote to reopen, the recovery
+              window, and the message to send today — in 60 seconds.
             </p>
 
             <div
               aria-label="Audit privacy promises"
               className="mt-6 grid max-w-full grid-cols-2 gap-2 text-[11px] font-black uppercase tracking-widest text-ink-muted sm:max-w-xl sm:grid-cols-4"
             >
-              <span className="w-full min-w-0 rounded-full border border-line-subtle bg-surface-1 px-2 py-2 text-center">
-                No names
+              <span className="flex w-full min-w-0 items-center justify-center gap-1.5 rounded-full border border-success/30 bg-success/5 px-2 py-2.5 text-center text-success">
+                <span aria-hidden="true" className="text-[10px]">✓</span>
+                No customer names
               </span>
-              <span className="w-full min-w-0 rounded-full border border-line-subtle bg-surface-1 px-2 py-2 text-center">
-                No phone
+              <span className="flex w-full min-w-0 items-center justify-center gap-1.5 rounded-full border border-success/30 bg-success/5 px-2 py-2.5 text-center text-success">
+                <span aria-hidden="true" className="text-[10px]">✓</span>
+                No phone numbers
               </span>
-              <span className="w-full min-w-0 rounded-full border border-line-subtle bg-surface-1 px-2 py-2 text-center">
+              <span className="flex w-full min-w-0 items-center justify-center gap-1.5 rounded-full border border-success/30 bg-success/5 px-2 py-2.5 text-center text-success">
+                <span aria-hidden="true" className="text-[10px]">✓</span>
                 No card
               </span>
-              <span className="w-full min-w-0 rounded-full border border-line-subtle bg-surface-1 px-2 py-2 text-center">
+              <span className="flex w-full min-w-0 items-center justify-center gap-1.5 rounded-full border border-brand/40 bg-brand/10 px-2 py-2.5 text-center text-brand">
+                <span aria-hidden="true" className="text-[10px]">★</span>
                 Result first
               </span>
             </div>

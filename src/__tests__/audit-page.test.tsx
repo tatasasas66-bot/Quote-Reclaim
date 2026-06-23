@@ -97,7 +97,7 @@ describe("/audit static landing page shell", () => {
         name: /Show me which estimate to follow up first/i,
       }),
     ).toBeTruthy();
-    expect(screen.getByText(/^No phone$/i)).toBeTruthy();
+    expect(screen.getByText(/^No phone numbers$/i)).toBeTruthy();
   });
 
   it("explains who it is for without making the product painters-only", () => {
