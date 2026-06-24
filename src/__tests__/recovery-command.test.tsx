@@ -296,7 +296,7 @@ describe("send-button safety on the quote detail page", () => {
     // AND requires isNextActionable, so a sent or later-sequence card cannot
     // render the button at all (not merely disabled — absent).
     expect(detailPage).toMatch(/!sendEarlyDisabled &&/);
-    expect(detailPage).toMatch(/<CopyButton text=\{ageAwareMessage\} \/>/);
+    expect(detailPage).toMatch(/<CopyButton text=\{cardMessage\} \/>/);
   });
 
   it("the next actionable card is visually highlighted for thumb/scan targeting", () => {

@@ -354,6 +354,17 @@ export default async function QuoteDetailPage({
   const clientFirstName = titleCaseName(quote.client_name).split(/\s+/)[0] || "Customer";
   const activeReminder = activeReminderForMove(reminders, move);
 
+  // Age-aware command message: computed in the page scope so it can be shared
+  // between CommandActionPanel and RecoveryPlanSection (and their ReminderCards).
+  const pageDaysQuiet = effectiveDaysSilent(quote);
+  const pageAgeAwareMessage = centralizedGetRecommendedMessage({
+    daysQuiet: pageDaysQuiet,
+    firstName: quote.client_name,
+    trade: quote.trade,
+  });
+  const commandMessage = pageAgeAwareMessage.message || activeReminder?.message_text || "";
+  const commandSendDate = activeReminder ? new Date(activeReminder.send_at) : null;
+
   return (
     <main className="mx-auto flex min-h-screen w-full max-w-5xl flex-col gap-8 bg-canvas px-4 py-8 sm:px-6">
       <header className="flex items-center justify-between border-b border-line-subtle/80 pb-5">
@@ -417,6 +428,8 @@ export default async function QuoteDetailPage({
         hasEmail={Boolean(quote.client_email)}
         hasReplyForQuote={hasReplyForQuote}
         daysQuiet={effectiveDaysSilent(quote)}
+        commandMessage={commandMessage}
+        commandSendDate={commandSendDate}
       />
 
       <QuietSignalCard signal={quietSignal} signalLabelOverride={quietSignalLabelOverride} />
@@ -818,6 +831,8 @@ function RecoveryPlanSection({
   hasEmail,
   hasReplyForQuote,
   daysQuiet,
+  commandMessage,
+  commandSendDate,
 }: {
   reminders: ReminderRow[];
   status: RecoveryStatus;
@@ -827,6 +842,8 @@ function RecoveryPlanSection({
   hasEmail: boolean;
   hasReplyForQuote: boolean;
   daysQuiet: number;
+  commandMessage: string;
+  commandSendDate: Date | null;
 }) {
   // Age-aware sequence filtering: only show reminders from the current
   // recovery window onward. A 30-day Cold quote should not show Warm/Cooling
@@ -907,7 +924,8 @@ function RecoveryPlanSection({
               allReminders={visibleReminders}
               hasReplyForQuote={hasReplyForQuote}
               move={move}
-              daysQuiet={daysQuiet}
+              commandMessage={commandMessage}
+              commandSendDate={commandSendDate}
             />
           ))}
         </ol>
@@ -924,7 +942,8 @@ function ReminderCard({
   allReminders,
   hasReplyForQuote,
   move,
-  daysQuiet,
+  commandMessage,
+  commandSendDate,
 }: {
   reminder: ReminderRow;
   recoveryStatus: RecoveryStatus;
@@ -933,26 +952,22 @@ function ReminderCard({
   allReminders: ReminderRow[];
   hasReplyForQuote: boolean;
   move: NextMove;
-  daysQuiet: number;
+  commandMessage: string;
+  commandSendDate: Date | null;
 }) {
-  const sendDate = new Date(r.send_at);
+  // For the current/next-actionable card, use the command's send date (the
+  // active reminder's send_at) — NOT the persisted reminder's own send_at
+  // (which may be a future Day 30 date that doesn't match the current move).
+  const isNextActionable = move.kind !== "none" && move.reminderId === r.id;
+  const sendDate = isNextActionable && commandSendDate ? commandSendDate : new Date(r.send_at);
   const display = computeStepDisplay(r, allReminders, hasReplyForQuote);
 
-  // Age-aware family name from centralized recovery-logic — NOT the persisted
-  // "Follow-up {n}" label. Uses the step number to get the right family.
+  // Age-aware family name from centralized recovery-logic.
   const familyName = getSequenceFamily(r.followup_number as 1 | 2 | 3 | 4 | 5);
 
-  // Age-aware message: for the current/next-actionable card, use the centralized
-  // recommended message (based on the quote's current recovery window) instead
-  // of the persisted message_text (which was written at plan creation time).
-  const isNextActionable = move.kind !== "none" && move.reminderId === r.id;
-  const ageAwareMessage = isNextActionable
-    ? centralizedGetRecommendedMessage({
-        daysQuiet,
-        firstName: r.message_text ? undefined : undefined, // name not available here
-        trade: undefined,
-      }).message || r.message_text
-    : r.message_text;
+  // For the current card, use the top command's message (passed from the
+  // command panel). For later cards, use their own persisted message.
+  const cardMessage = isNextActionable ? commandMessage : r.message_text;
   // Only one reminder per quote is "due" - the soonest unsent one - so the
   // contractor sees one clear next action, never two "Due" badges stacked.
   const statusVariant: "success" | "warning" | "neutral" | "danger" | "brand" =
@@ -1013,7 +1028,7 @@ function ReminderCard({
   const messageBody = (
     <>
       <p className="whitespace-pre-wrap px-4 pt-4 text-sm leading-7 text-ink-strong">
-        {ageAwareMessage}
+        {cardMessage}
       </p>
 
       {!isNextActionable ? (
@@ -1039,7 +1054,7 @@ function ReminderCard({
           ) : null}
         </div>
         <div className="flex items-center gap-1">
-          <CopyButton text={ageAwareMessage} />
+          <CopyButton text={cardMessage} />
           {showSendToday ? (
             <SendEarlyButton
               reminderId={r.id}
@@ -1051,7 +1066,7 @@ function ReminderCard({
         </div>
       </div>
       <ManualMessageActions
-        message={ageAwareMessage}
+        message={cardMessage}
         source={`recovery_sequence_followup_${r.followup_number}`}
         className="mx-4 mb-4"
       />

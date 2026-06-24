@@ -57,7 +57,7 @@ describe("Recovery Plan UI: /quotes/[id]", () => {
 
   it("renders a Copy button per reminder", () => {
     expect(detailPage).toContain("CopyButton");
-    expect(detailPage).toContain("text={ageAwareMessage}");
+    expect(detailPage).toContain("text={cardMessage}");
   });
 
   it("uses the word 'Estimate' / 'Quote' and never 'Bid'", () => {
