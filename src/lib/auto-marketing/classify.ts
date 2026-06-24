@@ -31,6 +31,9 @@ const HOW_WORDS = ["how does it work", "what is this", "explain", "how it works"
 const LEAD_GEN_WORDS = ["lead", "leads", "angi", "homeadvisor", "thumbtack", "marketing agency", "ad agency"];
 const CRM_WORDS = ["jobber", "housecall", "servicetitan", "crm", "already use", "already have"];
 const INTERESTED_WORDS = ["interested", "sounds good", "send info", "tell me more", "let's try", "lets try", "yes", "sure", "ok", "okay"];
+const DEMO_WORDS = ["demo", "show me", "see it", "walkthrough", "screen share", "see a demo", "book a call"];
+const OOO_WORDS = ["out of office", "out of the office", "ooo", "away from", "on vacation", "returning on", "back in the office", "auto-reply", "automatic reply"];
+const BOUNCE_WORDS = ["undeliverable", "bounced", "delivery failed", "mailbox full", "no such user", "does not exist", "recipient not found"];
 
 function normalize(text: string): string {
   return text.toLowerCase().trim();
@@ -68,13 +71,28 @@ export function classifyReply(replyBody: string): {
     return { classification: "not_interested", confidence: 1.0 };
   }
 
-  // 2. Interested check (before the softer question/objection checks,
+  // 2. Bounce check (before interested — bounce emails are system-generated).
+  if (matchesAny(text, BOUNCE_WORDS)) {
+    return { classification: "bounced", confidence: 1.0 };
+  }
+
+  // 3. Out-of-office check (before interested — OOO is system-generated).
+  if (matchesAny(text, OOO_WORDS)) {
+    return { classification: "out_of_office", confidence: 1.0 };
+  }
+
+  // 4. Interested check (before the softer question/objection checks,
   //    because "interested, how much?" should classify as interested).
   if (matchesAny(text, INTERESTED_WORDS)) {
     return { classification: "interested", confidence: 1.0 };
   }
 
-  // 3. Question / objection checks.
+  // 5. Demo request check.
+  if (matchesAny(text, DEMO_WORDS)) {
+    return { classification: "wants_demo", confidence: 1.0 };
+  }
+
+  // 6. Question / objection checks.
   if (matchesAny(text, PRICE_WORDS)) {
     return { classification: "asks_price", confidence: 1.0 };
   }
@@ -88,12 +106,12 @@ export function classifyReply(replyBody: string): {
     return { classification: "existing_crm_objection", confidence: 1.0 };
   }
 
-  // 4. Wrong-person signals.
+  // 7. Wrong-person signals.
   if (/\b(wrong person|not me|doesn't handle|don't handle|no longer there|left the company)\b/.test(text)) {
     return { classification: "wrong_person", confidence: 1.0 };
   }
 
-  // 5. Fall through — needs human review (AI may classify later).
+  // 8. Fall through — needs human review (AI may classify later).
   return { classification: "low_confidence", confidence: 0.5 };
 }
 
@@ -123,6 +141,8 @@ export function draftReplyFor(
       return `It is $79/month after the free audit.\n\nBut the audit is free first:\n${AUDIT_URL}\n\nNo signup, no card, no customer names.`;
     case "asks_how_it_works":
       return `You enter a few sent estimates: amount + days quiet.\n\nQuote Reclaim shows which one to follow up first and what message to send today.\n\nFree audit:\n${AUDIT_URL}`;
+    case "wants_demo":
+      return `Happy to show you. The quickest way to see it is the free audit — it takes 60 seconds and shows the whole system:\n${AUDIT_URL}\n\nNo signup, no card, no customer names.`;
     case "lead_gen_confusion":
       return `This is not lead generation.\n\nQuote Reclaim works the estimates you already sent — the ones that went quiet.\n\nFree audit:\n${AUDIT_URL}`;
     case "existing_crm_objection":

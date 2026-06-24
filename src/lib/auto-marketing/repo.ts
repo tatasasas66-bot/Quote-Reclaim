@@ -582,3 +582,144 @@ export async function getOverviewStats(): Promise<OverviewStats> {
     best_email_variant: null,
   };
 }
+
+// ---------------------------------------------------------------------------
+// Campaign status controls
+// ---------------------------------------------------------------------------
+
+export async function getCampaignStatus(campaignId: string): Promise<string> {
+  const supabase = svc();
+  const { data } = await supabase
+    .from("auto_marketing_campaigns")
+    .select("status")
+    .eq("id", campaignId)
+    .maybeSingle();
+  return (data?.status as string) ?? "draft";
+}
+
+export async function setCampaignStatus(
+  campaignId: string,
+  status: "draft" | "active" | "paused" | "completed",
+): Promise<void> {
+  const supabase = svc();
+  await supabase
+    .from("auto_marketing_campaigns")
+    .update({ status })
+    .eq("id", campaignId);
+}
+
+// ---------------------------------------------------------------------------
+// Daily send cap tracking
+// ---------------------------------------------------------------------------
+
+export async function getTodaysSendCount(): Promise<number> {
+  const supabase = svc();
+  const todayStart = new Date();
+  todayStart.setHours(0, 0, 0, 0);
+  const { count } = await supabase
+    .from("auto_marketing_events")
+    .select("*", { count: "exact", head: true })
+    .eq("event_type", "email_sent")
+    .gte("created_at", todayStart.toISOString());
+  return count ?? 0;
+}
+
+export async function recordSendEvent(
+  leadId: string,
+  campaignId: string,
+): Promise<void> {
+  const supabase = svc();
+  await supabase.from("auto_marketing_events").insert({
+    lead_id: leadId,
+    campaign_id: campaignId,
+    event_type: "email_sent",
+    event_data: { timestamp: new Date().toISOString() },
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Domain suppression
+// ---------------------------------------------------------------------------
+
+export async function suppressDomain(
+  domain: string,
+  reason: string,
+): Promise<void> {
+  const supabase = svc();
+  // Suppress all leads with this email domain.
+  const { data: leads } = await supabase
+    .from("auto_marketing_leads")
+    .select("id, email")
+    .ilike("email", `%@${domain}`)
+    .neq("status", "suppressed");
+
+  if (!leads || leads.length === 0) return;
+
+  for (const lead of leads) {
+    await supabase
+      .from("auto_marketing_leads")
+      .update({
+        status: "suppressed",
+        sendable: false,
+        suppressed_at: new Date().toISOString(),
+        suppressed_reason: `domain_suppressed:${reason}`,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", lead.id);
+
+    await supabase.from("auto_marketing_suppression").insert({
+      lead_id: lead.id,
+      email: lead.email,
+      reason: `domain_suppressed:${reason}`,
+    });
+  }
+}
+
+export async function listSuppressedDomains(): Promise<string[]> {
+  const supabase = svc();
+  const { data } = await supabase
+    .from("auto_marketing_suppression")
+    .select("email")
+    .like("reason", "domain_suppressed:%");
+
+  if (!data) return [];
+  const domains = new Set<string>();
+  for (const row of data) {
+    const email = row.email as string;
+    const domain = email.split("@")[1];
+    if (domain) domains.add(domain.toLowerCase());
+  }
+  return Array.from(domains);
+}
+
+// ---------------------------------------------------------------------------
+// Bounce suppression
+// ---------------------------------------------------------------------------
+
+export async function suppressBouncedEmail(email: string): Promise<void> {
+  const supabase = svc();
+  const { data: lead } = await supabase
+    .from("auto_marketing_leads")
+    .select("id")
+    .eq("email", email.toLowerCase().trim())
+    .maybeSingle();
+
+  if (!lead) return;
+
+  await supabase
+    .from("auto_marketing_leads")
+    .update({
+      status: "suppressed",
+      sendable: false,
+      suppressed_at: new Date().toISOString(),
+      suppressed_reason: "email_bounced",
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", lead.id);
+
+  await supabase.from("auto_marketing_suppression").insert({
+    lead_id: lead.id,
+    email: email.toLowerCase().trim(),
+    reason: "email_bounced",
+  });
+}

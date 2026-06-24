@@ -14,12 +14,15 @@ export type ReplyClassification =
   | "interested"
   | "asks_price"
   | "asks_how_it_works"
+  | "wants_demo"
   | "lead_gen_confusion"
   | "existing_crm_objection"
   | "not_interested"
   | "unsubscribe"
   | "angry"
   | "wrong_person"
+  | "out_of_office"
+  | "bounced"
   | "low_confidence";
 
 /** Classifications that MUST trigger immediate, permanent suppression. */
@@ -27,6 +30,7 @@ export const SUPPRESSING_CLASSIFICATIONS: ReadonlySet<ReplyClassification> = new
   "unsubscribe",
   "not_interested",
   "angry",
+  "bounced",
 ]);
 
 /** Classifications that warrant a safe draft reply (human-reviewed). */
@@ -34,6 +38,7 @@ export const DRAFTABLE_CLASSIFICATIONS: ReadonlySet<ReplyClassification> = new S
   "interested",
   "asks_price",
   "asks_how_it_works",
+  "wants_demo",
   "lead_gen_confusion",
   "existing_crm_objection",
   "wrong_person",

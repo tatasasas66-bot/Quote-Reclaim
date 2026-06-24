@@ -124,20 +124,49 @@ export function AutoMarketingClient({
     }
   }
 
-  async function handleRunPipeline() {
+  async function handleRunPipeline(dryRun = false) {
     setRunning(true);
     setAutoResult(null);
     try {
       const res = await fetch("/api/admin/auto-marketing/run-auto", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ campaign: "concrete_driveway_v1" }),
+        body: JSON.stringify({ campaign: "concrete_driveway_v1", dryRun }),
       });
       const data = await res.json();
-      if (data.smartlead === "not_configured") {
+      if (data.dry_run) {
+        setAutoResult(
+          `DRY RUN: ${data.safe_leads} safe leads, ${data.capped_leads} to send (cap: ${data.daily_cap}, sent today: ${data.todays_sends}). ` +
+          `${data.suppressed_excluded} suppressed. Smartlead: ${data.smartlead}.`
+        );
+      } else if (data.smartlead === "not_configured") {
         setAutoResult(`Ready: ${data.approved_leads} approved leads. Smartlead not configured — export CSV: ${data.export_url}`);
       } else if (data.ok) {
-        setAutoResult(`Complete: ${data.approved_leads} approved, pushed ${data.pushed} to Smartlead, failed ${data.failed}.`);
+        setAutoResult(`Complete: ${data.approved_leads} approved, pushed ${data.pushed} to Smartlead, failed ${data.failed}. Daily cap: ${data.daily_cap}, sent today: ${data.todays_sends}.`);
+      } else if (data.reason === "campaign_not_active") {
+        setAutoResult(`Campaign is ${data.status}. Use Start/Resume to activate.`);
+      } else {
+        setAutoResult(`Error: ${data.error ?? "unknown"}`);
+      }
+    } catch (err) {
+      setAutoResult(`Error: ${err instanceof Error ? err.message : "fetch failed"}`);
+    } finally {
+      setRunning(false);
+    }
+  }
+
+  async function handleCampaignAction(action: "start" | "pause" | "resume" | "stop") {
+    setRunning(true);
+    setAutoResult(null);
+    try {
+      const res = await fetch("/api/admin/auto-marketing/run-auto", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ action }),
+      });
+      const data = await res.json();
+      if (data.ok) {
+        setAutoResult(`Campaign ${data.action} → ${data.new_status}`);
       } else {
         setAutoResult(`Error: ${data.error ?? "unknown"}`);
       }
@@ -223,13 +252,27 @@ export function AutoMarketingClient({
           </button>
           <button
             type="button"
-            onClick={handleRunPipeline}
+            onClick={() => handleRunPipeline(true)}
+            disabled={running}
+            className="inline-flex items-center gap-2 rounded-lg border border-line-strong bg-surface-1 px-4 py-2 text-sm font-semibold text-ink-strong transition hover:bg-surface-2 disabled:opacity-50"
+          >
+            <BarChart3 className="h-4 w-4" aria-hidden="true" />
+            {running ? "Running..." : "Dry Run"}
+          </button>
+          <button
+            type="button"
+            onClick={() => handleRunPipeline(false)}
             disabled={running}
             className="inline-flex items-center gap-2 rounded-lg border border-brand bg-brand px-4 py-2 text-sm font-semibold text-canvas transition hover:bg-brand-dark disabled:opacity-50"
           >
-            <BarChart3 className="h-4 w-4" aria-hidden="true" />
+            <Send className="h-4 w-4" aria-hidden="true" />
             {running ? "Running..." : "Run Full Auto"}
           </button>
+          <div className="flex items-center gap-1 border-l border-line-subtle pl-2">
+            <button type="button" onClick={() => handleCampaignAction("start")} disabled={running} className="rounded px-2 py-1 text-xs font-bold text-success hover:bg-success/10">Start</button>
+            <button type="button" onClick={() => handleCampaignAction("pause")} disabled={running} className="rounded px-2 py-1 text-xs font-bold text-warning hover:bg-warning/10">Pause</button>
+            <button type="button" onClick={() => handleCampaignAction("stop")} disabled={running} className="rounded px-2 py-1 text-xs font-bold text-danger hover:bg-danger/10">Stop</button>
+          </div>
         </div>
 
         {importResult ? (
