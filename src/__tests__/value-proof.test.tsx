@@ -177,6 +177,6 @@ describe("Sequence detail 'Why this works' rationale", () => {
   });
 
   it("keys the rationale by follow-up number", () => {
-    expect(detailPage).toMatch(/WHY_THIS_WORKS\(r\.followup_number/);
+    expect(detailPage).toMatch(/getWhyThisWorksForStep\(r\.followup_number/);
   });
 });

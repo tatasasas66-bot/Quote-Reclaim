@@ -52,12 +52,12 @@ describe("Recovery Plan UI: /quotes/[id]", () => {
   });
 
   it("renders the framework name per reminder", () => {
-    expect(detailPage).toContain("framework_used");
+    expect(detailPage).toContain("familyName");
   });
 
   it("renders a Copy button per reminder", () => {
     expect(detailPage).toContain("CopyButton");
-    expect(detailPage).toContain("text={r.message_text}");
+    expect(detailPage).toContain("text={ageAwareMessage}");
   });
 
   it("uses the word 'Estimate' / 'Quote' and never 'Bid'", () => {

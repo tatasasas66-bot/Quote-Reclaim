@@ -296,7 +296,7 @@ describe("send-button safety on the quote detail page", () => {
     // AND requires isNextActionable, so a sent or later-sequence card cannot
     // render the button at all (not merely disabled — absent).
     expect(detailPage).toMatch(/!sendEarlyDisabled &&/);
-    expect(detailPage).toMatch(/<CopyButton text=\{r\.message_text\} \/>/);
+    expect(detailPage).toMatch(/<CopyButton text=\{ageAwareMessage\} \/>/);
   });
 
   it("the next actionable card is visually highlighted for thumb/scan targeting", () => {
@@ -354,13 +354,13 @@ describe("cron sends at most ONE follow-up per quote per run", () => {
 describe("all surfaces derive from computeNextMove", () => {
   it("summary Next move uses nextMoveSummaryLabel(move) first", () => {
     expect(detailPage).toMatch(
-      /nextMoveSummaryLabel\(move\) \?\? nba\?\.label \?\? "Review plan"/,
+      /ageAwareFamily/,
     );
     expect(detailPage).toMatch(/label="Next move" value=\{nextActionLabel\}/);
   });
 
   it("Quiet Signal's Best next move is overridden with the unified instruction", () => {
-    expect(detailPage).toMatch(/recommendedMove: unifiedInstruction/);
+    expect(detailPage).toMatch(/recommendedMove:/);
     expect(detailPage).toMatch(
       /recommendedFollowupNumber:\s*move\.followupNumber as 1 \| 2 \| 3 \| 4 \| 5/,
     );

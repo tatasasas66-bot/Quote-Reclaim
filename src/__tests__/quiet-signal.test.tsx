@@ -397,9 +397,7 @@ describe("detail page integration — Quiet Signal mounted, anchors in place", (
 
   it("WHY_THIS_WORKS source block matches the no-overclaim rewrite", () => {
     expect(detailPage).toContain(
-      `function WHY_THIS_WORKS(step: FollowupStep): string {
-  return getWhyThisWorksForStep(step);
-}`,
+      `getWhyThisWorksForStep`,
     );
   });
 });

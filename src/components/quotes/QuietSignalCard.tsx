@@ -37,13 +37,21 @@ const STRENGTH_BORDER: Record<SignalStrength, string> = {
   strong: "border-brand/40",
 };
 
-export function QuietSignalCard({ signal }: { signal: QuietSignal | null }) {
+export function QuietSignalCard({
+  signal,
+  signalLabelOverride,
+}: {
+  signal: QuietSignal | null;
+  signalLabelOverride?: string;
+}) {
   if (!signal) return null;
 
   const strengthLabel =
-    signal.reason === "no_signal_yet"
-      ? NO_SIGNAL_STRENGTH_LABEL
-      : STRENGTH_LABEL[signal.strength];
+    signalLabelOverride
+      ? signalLabelOverride
+      : signal.reason === "no_signal_yet"
+        ? NO_SIGNAL_STRENGTH_LABEL
+        : STRENGTH_LABEL[signal.strength];
   const strengthTone = STRENGTH_TONE[signal.strength];
   const borderTone = STRENGTH_BORDER[signal.strength];
 

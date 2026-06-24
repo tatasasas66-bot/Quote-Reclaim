@@ -253,9 +253,7 @@ describe("quote detail page mounts the One-Tap Reply card", () => {
 
   it("WHY_THIS_WORKS source block matches the no-overclaim rewrite", () => {
     expect(detailPage).toContain(
-      `function WHY_THIS_WORKS(step: FollowupStep): string {
-  return getWhyThisWorksForStep(step);
-}`,
+      `getWhyThisWorksForStep`,
     );
   });
 

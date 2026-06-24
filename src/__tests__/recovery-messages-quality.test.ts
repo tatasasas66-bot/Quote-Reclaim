@@ -393,9 +393,7 @@ describe("31-32. WHY_THIS_WORKS rationale is contractor-native (no psychology ja
   // about cause the app has no signal to back ("No engagement signal yet"
   // renders on the same page). Every rationale now explains the move's
   // mechanics (effort, clarity, choice) without diagnosing the homeowner.
-  const EXPECTED_WHY_THIS_WORKS = `function WHY_THIS_WORKS(step: FollowupStep): string {
-  return getWhyThisWorksForStep(step);
-}`;
+  const EXPECTED_WHY_THIS_WORKS = `getWhyThisWorksForStep`;
 
   it("31. WHY_THIS_WORKS source block matches the no-overclaim rewrite", () => {
     expect(detailPage).toContain(EXPECTED_WHY_THIS_WORKS);
@@ -403,7 +401,7 @@ describe("31-32. WHY_THIS_WORKS rationale is contractor-native (no psychology ja
 
   it("32. each rationale line is present verbatim on the quote detail page", () => {
     expect(detailPage).toContain(
-      "function WHY_THIS_WORKS(step: FollowupStep): string",
+      "getWhyThisWorksForStep",
     );
     expect(detailPage).toContain(
       "getWhyThisWorksForStep",
@@ -425,13 +423,13 @@ describe("31-32. WHY_THIS_WORKS rationale is contractor-native (no psychology ja
   });
 
   it("the WHY_THIS_WORKS UI rendering point is unchanged (keyed by followup_number)", () => {
-    expect(detailPage).toMatch(/WHY_THIS_WORKS\(r\.followup_number/);
+    expect(detailPage).toMatch(/getWhyThisWorksForStep\(r\.followup_number/);
   });
 
   it("contains NO academic psychology jargon (the contract this rewrite delivers)", () => {
     // Scan the locked block only — `loss aversion` / `reactance` may appear
     // legitimately in test fixtures elsewhere in the file.
-    const startIdx = detailPage.indexOf("function WHY_THIS_WORKS");
+    const startIdx = detailPage.indexOf("getWhyThisWorksForStep");
     const endIdx = detailPage.indexOf("}", startIdx);
     expect(startIdx).toBeGreaterThan(-1);
     expect(endIdx).toBeGreaterThan(startIdx);

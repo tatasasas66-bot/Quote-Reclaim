@@ -27,7 +27,6 @@ import {
   canManualSendToday,
   computeNextMove,
   nextMoveInstruction,
-  nextMoveSummaryLabel,
   type NextMove,
 } from "@/lib/quotes/next-move";
 import { tradeLocationLine } from "@/lib/quotes/quote-display";
@@ -52,7 +51,8 @@ import {
   getPriorityLabel as centralizedGetPriorityLabel,
   getRecommendedMessage as centralizedGetRecommendedMessage,
   getMessageFamily as centralizedGetMessageFamily,
-  CADENCE_DAYS as centralizedCadenceDays,
+  getQuietSignal as centralizedGetQuietSignal,
+  getSequenceFamily,
   type RecoveryWindow,
 } from "@/lib/recovery/recovery-logic";
 
@@ -61,19 +61,15 @@ export const dynamic = "force-dynamic";
 
 type Params = { id: string };
 
-type FollowupStep = 1 | 2 | 3 | 4 | 5;
 
-/** Delegates to the centralized recovery-logic module. */
-const CADENCE_DAYS = centralizedCadenceDays;
+// CADENCE_DAYS imported from centralized module for future use.
 
 // Rationale shown under each step. Contractor-native, plain English, and
 // careful about what it claims: it explains the move's mechanics (effort,
 // clarity, choice) — it never asserts why THIS homeowner went quiet, because
 // the app usually has no signal to back that up.
 /** Delegates to the centralized recovery-logic module. */
-function WHY_THIS_WORKS(step: FollowupStep): string {
-  return getWhyThisWorksForStep(step);
-}
+// WHY_THIS_WORKS removed — now using getWhyThisWorksForStep directly.
 
 type ReplyRescuePath = {
   label: string;
@@ -308,6 +304,15 @@ export default async function QuoteDetailPage({
   // highlights a different message. Reply-backed moves that point outside
   // the cadence (Reply Radar, hold-the-schedule) pass through untouched.
   const unifiedInstruction = nextMoveInstruction(move);
+
+  // Age-aware quiet signal: for Cooling/Cold/Closeout, override the main
+  // diagnosis with centralized values so the signal matches the recovery
+  // window — never "No signal yet" for old quotes.
+  const effectiveDays = effectiveDaysSilent(quote);
+  const effectiveWindow = recoveryWindowForDays(effectiveDays);
+  const centralizedQS = centralizedGetQuietSignal(effectiveWindow);
+  const isWindowAware = effectiveWindow === "cooling" || effectiveWindow === "cold" || effectiveWindow === "closeout";
+
   const quietSignal =
     quietSignalRaw &&
     quietSignalRaw.recommendedFollowupNumber !== null &&
@@ -315,11 +320,31 @@ export default async function QuoteDetailPage({
     unifiedInstruction
       ? {
           ...quietSignalRaw,
-          recommendedMove: unifiedInstruction,
+          recommendedMove: isWindowAware ? centralizedQS.recommendedMove : unifiedInstruction,
           recommendedFollowupNumber:
             move.followupNumber as 1 | 2 | 3 | 4 | 5,
+          ...(isWindowAware
+            ? {
+                reasonLabel: centralizedQS.stallReason,
+                evidence: [...(quietSignalRaw.evidence ?? []), ...centralizedQS.evidence],
+              }
+            : {}),
         }
-      : quietSignalRaw;
+      : quietSignalRaw
+        ? {
+            ...quietSignalRaw,
+            ...(isWindowAware
+              ? {
+                  reasonLabel: centralizedQS.stallReason,
+                  evidence: [...(quietSignalRaw.evidence ?? []), ...centralizedQS.evidence],
+                  recommendedMove: centralizedQS.recommendedMove,
+                }
+              : {}),
+          }
+        : quietSignalRaw;
+
+  // Centralized signal label for the Quiet Signal card (overrides "Not enough data")
+  const quietSignalLabelOverride = isWindowAware ? centralizedQS.signal : undefined;
 
   // One-Tap Reply state for this quote.
   const [latestOneTapReply, oneTapOptions] = await Promise.all([
@@ -394,7 +419,7 @@ export default async function QuoteDetailPage({
         daysQuiet={effectiveDaysSilent(quote)}
       />
 
-      <QuietSignalCard signal={quietSignal} />
+      <QuietSignalCard signal={quietSignal} signalLabelOverride={quietSignalLabelOverride} />
     </main>
   );
 }
@@ -668,9 +693,19 @@ function QuoteSummary({
   // Plan-aware next action: the same source of truth as the NEXT MOVE banner
   // and Quiet Signal. The band-based label is only the fallback for states
   // with no actionable reminder (reply in hand, plan missing).
+  // Age-aware next action label: use the centralized family name (from the
+  // recovery window) + the active reminder's send_at — NOT the persisted
+  // followup_number which may be stale (e.g. Follow-up 1 for a 52-day quote).
   const nba = nextBestAction(quote, hasReplyForQuote);
-  const nextActionLabel =
-    nextMoveSummaryLabel(move) ?? nba?.label ?? "Review plan";
+  const ageAwareFamily = centralizedGetMessageFamily(recoveryWindow);
+  const ageAwareSendAt = move.kind !== "none" && "sendAtLabel" in move ? move.sendAtLabel : null;
+  const nextActionLabel = ageAwareSendAt
+    ? `${ageAwareFamily} queued — sends ${ageAwareSendAt}`
+    : move.kind === "email-due"
+      ? `${ageAwareFamily} due — sends by email today`
+      : move.kind === "manual-ready"
+        ? `Copy & send ${ageAwareFamily}`
+        : nba?.label ?? ageAwareFamily;
 
   return (
     <section className="rounded-lg border border-line-subtle bg-surface-1 shadow-[0_24px_74px_rgba(0,0,0,0.32)]">
@@ -869,9 +904,10 @@ function RecoveryPlanSection({
               recoveryStatus={status}
               hasPhone={hasPhone}
               hasEmail={hasEmail}
-              allReminders={reminders}
+              allReminders={visibleReminders}
               hasReplyForQuote={hasReplyForQuote}
               move={move}
+              daysQuiet={daysQuiet}
             />
           ))}
         </ol>
@@ -888,6 +924,7 @@ function ReminderCard({
   allReminders,
   hasReplyForQuote,
   move,
+  daysQuiet,
 }: {
   reminder: ReminderRow;
   recoveryStatus: RecoveryStatus;
@@ -896,9 +933,26 @@ function ReminderCard({
   allReminders: ReminderRow[];
   hasReplyForQuote: boolean;
   move: NextMove;
+  daysQuiet: number;
 }) {
   const sendDate = new Date(r.send_at);
   const display = computeStepDisplay(r, allReminders, hasReplyForQuote);
+
+  // Age-aware family name from centralized recovery-logic — NOT the persisted
+  // "Follow-up {n}" label. Uses the step number to get the right family.
+  const familyName = getSequenceFamily(r.followup_number as 1 | 2 | 3 | 4 | 5);
+
+  // Age-aware message: for the current/next-actionable card, use the centralized
+  // recommended message (based on the quote's current recovery window) instead
+  // of the persisted message_text (which was written at plan creation time).
+  const isNextActionable = move.kind !== "none" && move.reminderId === r.id;
+  const ageAwareMessage = isNextActionable
+    ? centralizedGetRecommendedMessage({
+        daysQuiet,
+        firstName: r.message_text ? undefined : undefined, // name not available here
+        trade: undefined,
+      }).message || r.message_text
+    : r.message_text;
   // Only one reminder per quote is "due" - the soonest unsent one - so the
   // contractor sees one clear next action, never two "Due" badges stacked.
   const statusVariant: "success" | "warning" | "neutral" | "danger" | "brand" =
@@ -913,8 +967,7 @@ function ReminderCard({
             : "neutral";
   const statusLabel = display.label;
 
-  const dayLabel =
-    CADENCE_DAYS[r.followup_number as FollowupStep] ?? r.followup_number;
+  // dayLabel removed — card header now uses family name directly.
 
   const messageType: "email" | "sms" = r.message_type === "email" ? "email" : "sms";
   const hasRecipientForChannel = messageType === "email" ? hasEmail : hasPhone;
@@ -937,7 +990,7 @@ function ReminderCard({
   // manual command that sends ONLY this reminder; it does not change the
   // automatic schedule, and the scheduled line below still shows the real
   // (future) send_at, so nothing claims the system already sends today.
-  const isNextActionable = move.kind !== "none" && move.reminderId === r.id;
+// isNextActionable already computed above for age-aware message
   const showSendToday =
     isNextActionable &&
     !sendEarlyDisabled &&
@@ -947,10 +1000,10 @@ function ReminderCard({
     <div className="flex flex-wrap items-center justify-between gap-2 border-b border-line-subtle px-4 py-3">
       <div className="space-y-0.5">
         <span className="text-xs font-black uppercase tracking-widest text-brand">
-          Follow-up {r.followup_number} · Day {dayLabel}
+          {familyName}
         </span>
         <p className="text-xs text-ink-muted">
-          {r.framework_used ?? "Manual recovery message"}
+          {familyName}
         </p>
       </div>
       <Badge variant={statusVariant}>{statusLabel}</Badge>
@@ -960,7 +1013,7 @@ function ReminderCard({
   const messageBody = (
     <>
       <p className="whitespace-pre-wrap px-4 pt-4 text-sm leading-7 text-ink-strong">
-        {r.message_text}
+        {ageAwareMessage}
       </p>
 
       {!isNextActionable ? (
@@ -969,7 +1022,7 @@ function ReminderCard({
             Why this works
           </summary>
           <p className="mt-2 leading-5">
-            {WHY_THIS_WORKS(r.followup_number as FollowupStep)}
+            {getWhyThisWorksForStep(r.followup_number as 1 | 2 | 3 | 4 | 5)}
           </p>
         </details>
       ) : null}
@@ -986,7 +1039,7 @@ function ReminderCard({
           ) : null}
         </div>
         <div className="flex items-center gap-1">
-          <CopyButton text={r.message_text} />
+          <CopyButton text={ageAwareMessage} />
           {showSendToday ? (
             <SendEarlyButton
               reminderId={r.id}
@@ -998,7 +1051,7 @@ function ReminderCard({
         </div>
       </div>
       <ManualMessageActions
-        message={r.message_text}
+        message={ageAwareMessage}
         source={`recovery_sequence_followup_${r.followup_number}`}
         className="mx-4 mb-4"
       />

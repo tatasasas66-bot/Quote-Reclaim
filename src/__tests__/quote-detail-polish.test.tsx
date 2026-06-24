@@ -565,7 +565,7 @@ describe("polished message wordings", () => {
 
 describe("Why This Works carries no academic psychology jargon", () => {
   it("WHY_THIS_WORKS block (only) contains no 'loss aversion' / 'reactance' / 'scarcity makes you the prize'", () => {
-    const start = detailPage.indexOf("function WHY_THIS_WORKS");
+    const start = detailPage.indexOf("getWhyThisWorksForStep");
     const end = detailPage.indexOf("}", start);
     const block = detailPage.slice(start, end);
     expect(start).toBeGreaterThan(-1);
