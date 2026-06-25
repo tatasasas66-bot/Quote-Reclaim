@@ -13,6 +13,9 @@ const simProv = readSource("../lib/messaging/simulator-provider.ts");
 const types = readSource("../lib/messaging/types.ts");
 const sendBtn = readSource("../components/quotes/SendEarlyButton.tsx");
 const detailPage = readSource("../app/(app)/quotes/[id]/page.tsx");
+const recoveryViewModel = readSource(
+  "../lib/recovery/recovery-plan-view-model.ts",
+);
 const barrel = readSource("../components/quotes/index.ts");
 
 // ---------------------------------------------------------------------------
@@ -229,23 +232,25 @@ describe("/quotes/[id] page: Send early wiring", () => {
     expect(detailPage).not.toMatch(/sendEarlyDisabled\s*=\s*true/);
   });
 
-  it("computes sendEarlyDisabled from r.sent, r.paused_at, recoveryStatus, hasPhone", () => {
-    expect(detailPage).toContain("sendEarlyDisabled");
-    expect(detailPage).toContain("r.sent");
-    expect(detailPage).toContain("r.paused_at");
-    expect(detailPage).toContain("hasPhone");
-    expect(detailPage).toContain("recoveryStatus");
+  it("computes the action disabled state inside the ViewModel", () => {
+    expect(recoveryViewModel).toContain("const disabled =");
+    expect(recoveryViewModel).toContain("reminder.sent");
+    expect(recoveryViewModel).toContain("reminder.paused_at");
+    expect(recoveryViewModel).toContain("input.hasPhone");
+    expect(recoveryViewModel).toContain('input.status !== "running"');
   });
 
-  it("passes hasPhone from quote.client_phone down to ReminderCard", () => {
-    expect(detailPage).toContain("hasPhone");
-    expect(detailPage).toContain("quote.client_phone");
+  it("derives phone availability once inside the ViewModel", () => {
+    expect(recoveryViewModel).toContain(
+      "const hasPhone = Boolean(quote.client_phone)",
+    );
+    expect(detailPage).toContain("<RecoveryPlanSection viewModel={viewModel} />");
   });
 
   it("uses SendEarlyButton instead of a hardcoded disabled button", () => {
     expect(detailPage).toContain("SendEarlyButton");
-    expect(detailPage).toContain("reminderId={r.id}");
-    expect(detailPage).toContain("disabled={sendEarlyDisabled}");
+    expect(detailPage).toContain("reminderId={card.action.reminderId}");
+    expect(detailPage).toContain("disabled={card.action.disabled}");
   });
 
   it("does not render 'Send Now' anywhere", () => {

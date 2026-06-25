@@ -251,7 +251,7 @@ export function getQuietSignal(window: RecoveryWindow): {
         evidence: [
           "The estimate is older and pressure may reduce replies.",
         ],
-        recommendedMove: "Offer a simple open, revise, or close path.",
+        recommendedMove: "Send an open, revise, or close message today.",
       };
     case "closeout":
       return {
@@ -260,7 +260,8 @@ export function getQuietSignal(window: RecoveryWindow): {
         evidence: [
           "The estimate is old enough that a clean closeout may be the best move.",
         ],
-        recommendedMove: "Close it professionally while leaving the door open.",
+        recommendedMove:
+          "Close it professionally while leaving the door open to reopen later.",
       };
     default:
       return {

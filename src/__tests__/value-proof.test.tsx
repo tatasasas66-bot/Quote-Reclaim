@@ -165,18 +165,24 @@ describe("Sequence detail 'Why this works' rationale", () => {
     join(SRC_ROOT, "app/(app)/quotes/[id]/page.tsx"),
     "utf8",
   );
+  const viewModel = readFileSync(
+    join(SRC_ROOT, "lib/recovery/recovery-plan-view-model.ts"),
+    "utf8",
+  );
 
   it("renders the 'Why this works:' label", () => {
     expect(detailPage).toContain("Why this works:");
   });
 
   it("provides distinct rationale for all five follow-up steps", () => {
-    // WHY_THIS_WORKS now delegates to centralized recovery-logic module
-    expect(detailPage).toContain("getWhyThisWorksForStep");
-    expect(detailPage).not.toMatch(/stall on price/i);
+    expect(viewModel).toContain("getWhyThisWorksForStep");
+    expect(viewModel).not.toMatch(/stall on price/i);
   });
 
-  it("keys the rationale by follow-up number", () => {
-    expect(detailPage).toMatch(/getWhyThisWorksForStep\(r\.followup_number/);
+  it("keys the rationale by the ViewModel sequence definition", () => {
+    expect(viewModel).toMatch(
+      /getWhyThisWorksForStep\(definition\.sourceStep\)/,
+    );
+    expect(detailPage).toContain("card.whyThisWorks");
   });
 });

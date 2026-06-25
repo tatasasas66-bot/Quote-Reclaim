@@ -31,6 +31,9 @@ const receiptSrc = readSource("../components/dashboard/RecoveryReceipt.tsx");
 const meterSrc = readSource("../components/dashboard/PaidForItselfMeter.tsx");
 const nbaSrc = readSource("../lib/quotes/next-best-action.ts");
 const quoteDetail = readSource("../app/(app)/quotes/[id]/page.tsx");
+const recoveryViewModel = readSource(
+  "../lib/recovery/recovery-plan-view-model.ts",
+);
 const paywall = readSource("../components/billing/Paywall.tsx");
 
 afterEach(() => cleanup());
@@ -273,16 +276,17 @@ describe("won-proof placement", () => {
 
 describe("quote detail command panel (unified next-move source of truth)", () => {
   it("derives the command panel from computeNextMove — the shared single source", () => {
-    expect(quoteDetail).toMatch(/const move = computeNextMove\(/);
+    expect(recoveryViewModel).toMatch(/const move = computeNextMove\(/);
+    expect(quoteDetail).toContain("buildRecoveryPlanViewModel");
     expect(quoteDetail).toContain("<CommandActionPanel");
-    expect(quoteDetail).toContain("activeReminderForMove(reminders, move)");
+    expect(quoteDetail).toContain("<CommandActionPanel viewModel={viewModel} />");
     expect(quoteDetail).toContain('data-testid="quote-command-panel"');
   });
 
   it("queued email mode: command panel uses contractor-facing command wording while Quiet Signal keeps the shared move", () => {
-    expect(quoteDetail).toContain("const instruction = commandMoveInstruction(move)");
-    expect(quoteDetail).toContain("const unifiedInstruction = nextMoveInstruction(move)");
-    expect(quoteDetail).toMatch(/\{instruction\}/);
+    expect(recoveryViewModel).toContain("function buildInstruction");
+    expect(recoveryViewModel).toContain("recommendedMove:");
+    expect(quoteDetail).toContain("viewModel.currentInstruction");
     expect(quoteDetail).not.toMatch(/Nothing to send by hand/);
   });
 
@@ -290,14 +294,16 @@ describe("quote detail command panel (unified next-move source of truth)", () =>
     expect(quoteDetail).toMatch(
       /<SendEarlyButton[\s\S]*variant="primary"[\s\S]*size="lg"[\s\S]*fullWidth/,
     );
-    expect(quoteDetail).toContain('<CopyButton text={commandMessage} label="Copy"');
+    expect(quoteDetail).toContain(
+      '<CopyButton text={viewModel.copyMessage} label="Copy"',
+    );
   });
 
   it("future follow-ups are collapsed but still rendered in the 5-message plan", () => {
-    expect(quoteDetail).toContain("5-message plan");
+    expect(recoveryViewModel).toContain("5-message recovery plan");
     expect(quoteDetail).toContain('data-followup-collapsed="true"');
     expect(quoteDetail).toContain("<details");
-    expect(quoteDetail).toMatch(/visibleReminders.map/);
+    expect(quoteDetail).toMatch(/viewModel\.sequenceCards\.map/);
   });
 });
 

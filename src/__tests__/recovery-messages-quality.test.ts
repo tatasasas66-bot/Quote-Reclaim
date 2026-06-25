@@ -24,6 +24,8 @@ function readSource(relative: string): string {
 }
 
 const detailPage = readSource("../app/(app)/quotes/[id]/page.tsx");
+const viewModel = readSource("../lib/recovery/recovery-plan-view-model.ts");
+const recoveryLogic = readSource("../lib/recovery/recovery-logic.ts");
 
 const TRADES = [
   "Roofing",
@@ -396,25 +398,14 @@ describe("31-32. WHY_THIS_WORKS rationale is contractor-native (no psychology ja
   const EXPECTED_WHY_THIS_WORKS = `getWhyThisWorksForStep`;
 
   it("31. WHY_THIS_WORKS source block matches the no-overclaim rewrite", () => {
-    expect(detailPage).toContain(EXPECTED_WHY_THIS_WORKS);
+    expect(viewModel).toContain(EXPECTED_WHY_THIS_WORKS);
   });
 
-  it("32. each rationale line is present verbatim on the quote detail page", () => {
-    expect(detailPage).toContain(
-      "getWhyThisWorksForStep",
-    );
-    expect(detailPage).toContain(
-      "getWhyThisWorksForStep",
-    );
-    expect(detailPage).toContain(
-
-    );
-    expect(detailPage).toContain(
-
-    );
-    expect(detailPage).toContain(
-
-    );
+  it("32. each rationale is supplied through the ViewModel", () => {
+    expect(viewModel).toContain("getWhyThisWorks");
+    expect(viewModel).toContain("getWhyThisWorksForStep");
+    expect(detailPage).toContain("viewModel.currentWhyThisWorks");
+    expect(detailPage).toContain("card.whyThisWorks");
   });
 
   it("32b. the Day 14 rationale never claims price is the stall reason (no signal to back it)", () => {
@@ -422,18 +413,20 @@ describe("31-32. WHY_THIS_WORKS rationale is contractor-native (no psychology ja
     expect(detailPage).not.toMatch(/Most quiet quotes stall/i);
   });
 
-  it("the WHY_THIS_WORKS UI rendering point is unchanged (keyed by followup_number)", () => {
-    expect(detailPage).toMatch(/getWhyThisWorksForStep\(r\.followup_number/);
+  it("the rationale is keyed by the ViewModel sequence definition", () => {
+    expect(viewModel).toMatch(
+      /getWhyThisWorksForStep\(definition\.sourceStep\)/,
+    );
   });
 
   it("contains NO academic psychology jargon (the contract this rewrite delivers)", () => {
     // Scan the locked block only — `loss aversion` / `reactance` may appear
     // legitimately in test fixtures elsewhere in the file.
-    const startIdx = detailPage.indexOf("getWhyThisWorksForStep");
-    const endIdx = detailPage.indexOf("}", startIdx);
+    const startIdx = recoveryLogic.indexOf("getWhyThisWorksForStep");
+    const endIdx = recoveryLogic.indexOf("// One-Tap Reply options", startIdx);
     expect(startIdx).toBeGreaterThan(-1);
     expect(endIdx).toBeGreaterThan(startIdx);
-    const block = detailPage.slice(startIdx, endIdx);
+    const block = recoveryLogic.slice(startIdx, endIdx);
     expect(block).not.toMatch(/loss aversion/i);
     expect(block).not.toMatch(/reactance/i);
     expect(block).not.toMatch(/scarcity makes you the prize/i);

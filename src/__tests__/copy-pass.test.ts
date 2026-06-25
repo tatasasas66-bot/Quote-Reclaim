@@ -10,6 +10,9 @@ function readSource(relative: string): string {
 const homepage = readSource("../app/page.tsx");
 const dashboard = readSource("../app/(app)/dashboard/page.tsx");
 const quoteDetail = readSource("../app/(app)/quotes/[id]/page.tsx");
+const recoveryViewModel = readSource(
+  "../lib/recovery/recovery-plan-view-model.ts",
+);
 const recoveryAlert = readSource(
   "../components/dashboard/RecoveryWindowAlert.tsx",
 );
@@ -236,7 +239,9 @@ describe("Recovery plan product framing", () => {
 
   it("quote detail no longer says 'We'll send these on schedule'", () => {
     expect(quoteDetail).not.toMatch(/We'll send these on schedule/);
-    expect(quoteDetail).toMatch(/The rest of the sequence stays behind this message/);
+    expect(recoveryViewModel).toMatch(
+      /The rest of the sequence stays behind this message/,
+    );
   });
 
   it("visible UI says Priority or Recovery Priority, not Recovery Score", () => {

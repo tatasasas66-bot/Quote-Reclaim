@@ -261,7 +261,7 @@ describe("all message variants pass validation", () => {
 
 describe("schedule is the 5-touch cadence", () => {
   const actionsSrc = readSource("../lib/quotes/actions.ts");
-  const detailSrc = readSource("../app/(app)/quotes/[id]/page.tsx");
+  const recoveryLogicSrc = readSource("../lib/recovery/recovery-logic.ts");
 
   it("actions.ts CADENCE_DAYS uses +1/+3/+7/+14/+30", () => {
     expect(actionsSrc).toMatch(
@@ -269,10 +269,8 @@ describe("schedule is the 5-touch cadence", () => {
     );
   });
 
-  it("quote detail page CADENCE_DAYS matches", () => {
-    expect(detailSrc).toMatch(
-      /CADENCE_DAYS/,
-    );
+  it("the shared recovery logic owns the quote-detail cadence", () => {
+    expect(recoveryLogicSrc).toMatch(/CADENCE_DAYS/);
   });
 
   it("createQuoteAction now inserts 5 reminders (not 3) via the shared writer", () => {

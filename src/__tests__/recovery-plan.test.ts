@@ -7,6 +7,7 @@ function readSource(relative: string): string {
 }
 
 const detailPage = readSource("../app/(app)/quotes/[id]/page.tsx");
+const viewModel = readSource("../lib/recovery/recovery-plan-view-model.ts");
 const actions = readSource("../lib/quotes/actions.ts");
 const quoteActions = readSource("../components/quotes/QuoteActions.tsx");
 const copyBtn = readSource("../components/quotes/CopyButton.tsx");
@@ -19,23 +20,21 @@ const barrel = readSource("../components/quotes/index.ts");
 describe("Recovery Plan UI: /quotes/[id]", () => {
   it("renders the recovery plan list (reads listRemindersForQuote)", () => {
     expect(detailPage).toContain("listRemindersForQuote");
-    expect(detailPage).toMatch(/visibleReminders.map/);
+    expect(detailPage).toMatch(/viewModel\.sequenceCards\.map/);
   });
 
   it("uses plainer status copy after the command panel", () => {
-    expect(detailPage).toContain('label: "Running"');
-    expect(detailPage).toContain('label: "Paused"');
-    expect(detailPage).toContain("Next follow-up sends");
+    expect(viewModel).toContain('return "Running"');
+    expect(viewModel).toContain('return "Paused"');
+    expect(viewModel).toContain("Next follow-up sends");
     expect(detailPage).not.toContain("Recovery running");
   });
 
   it("renders both channel-aware intro variants (automated email + manual copy)", () => {
-    // Email channel: automated via Resend on the cron schedule.
-    expect(detailPage).toContain(
+    expect(viewModel).toContain(
       "The rest of the sequence stays behind this message and sends by email on schedule",
     );
-    // Copy mode (no email): contractor sends manually.
-    expect(detailPage).toContain(
+    expect(viewModel).toContain(
       "The rest of the sequence stays here, ready to copy when each touch comes due",
     );
   });
@@ -44,20 +43,19 @@ describe("Recovery Plan UI: /quotes/[id]", () => {
     expect(detailPage).not.toMatch(/Send Now/);
   });
 
-  it("renders 'Send early' as a conditionally disabled control", () => {
-    // Phase 7+: Send early is rendered via SendEarlyButton, disabled computed from state.
+  it("renders the safe send control from the ViewModel action", () => {
     expect(detailPage).toContain("SendEarlyButton");
-    expect(detailPage).toContain("sendEarlyDisabled");
-    expect(detailPage).toMatch(/disabled=\{sendEarlyDisabled\}/);
+    expect(detailPage).toContain("action?.showSendToday");
+    expect(detailPage).toMatch(/disabled=\{action\.disabled\}/);
   });
 
-  it("renders the framework name per reminder", () => {
-    expect(detailPage).toContain("familyName");
+  it("renders the ViewModel family name per recovery card", () => {
+    expect(detailPage).toContain("card.family");
   });
 
-  it("renders a Copy button per reminder", () => {
+  it("renders a Copy button per ViewModel card", () => {
     expect(detailPage).toContain("CopyButton");
-    expect(detailPage).toContain("text={cardMessage}");
+    expect(detailPage).toContain("text={card.copyMessage}");
   });
 
   it("uses the word 'Estimate' / 'Quote' and never 'Bid'", () => {
@@ -74,7 +72,8 @@ describe("Recovery Plan UI: /quotes/[id]", () => {
 
   it("renders 'Why this works' rationale under every step", () => {
     expect(detailPage).toContain("Why this works:");
-    expect(detailPage).toContain("WHY_THIS_WORKS");
+    expect(detailPage).toContain("card.whyThisWorks");
+    expect(viewModel).toContain("getWhyThisWorksForStep");
   });
 
   it("hides Pause/Resume/Mark Won when outcome is won or closed", () => {

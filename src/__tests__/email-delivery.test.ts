@@ -16,6 +16,9 @@ const sendRoute = readSource("../app/api/cron/send/route.ts");
 const actions = readSource("../lib/quotes/actions.ts");
 const sendBtn = readSource("../components/quotes/SendEarlyButton.tsx");
 const detailPage = readSource("../app/(app)/quotes/[id]/page.tsx");
+const recoveryViewModel = readSource(
+  "../lib/recovery/recovery-plan-view-model.ts",
+);
 const emailProvider = readSource("../lib/messaging/email-provider.ts");
 const envExample = readSource("../../.env.example");
 
@@ -344,35 +347,37 @@ describe("SendEarlyButton: channel-aware dispatch", () => {
 
 describe("/quotes/[id]: channel-aware intro copy", () => {
   it("uses the automated email intro when the quote has an email", () => {
-    expect(detailPage).toContain(
+    expect(recoveryViewModel).toContain(
       "The rest of the sequence stays behind this message and sends by email on schedule",
     );
   });
 
   it("uses the copy-mode intro when the quote has no email", () => {
-    expect(detailPage).toContain(
+    expect(recoveryViewModel).toContain(
       "The rest of the sequence stays here, ready to copy when each touch comes due",
     );
   });
 
-  it("passes hasEmail down to RecoveryPlanSection + ReminderCard", () => {
-    expect(detailPage).toContain("hasEmail={Boolean(quote.client_email)}");
-    expect(detailPage).toMatch(/hasEmail[\s\S]*?ReminderCard/);
+  it("derives channel mode once inside the Recovery Plan ViewModel", () => {
+    expect(recoveryViewModel).toContain(
+      "const hasEmail = Boolean(quote.client_email)",
+    );
+    expect(detailPage).toContain("<RecoveryPlanSection viewModel={viewModel} />");
   });
 
   it("hides the send button in copy-only mode (no recipient on the channel)", () => {
     // The render gate folds !hasRecipientForChannel into sendEarlyDisabled,
     // and showSendToday requires !sendEarlyDisabled — so a quote with neither
     // email nor phone renders Copy as the only action.
-    expect(detailPage).toContain("showSendToday");
-    expect(detailPage).toMatch(
-      /hasRecipientForChannel\s*=\s*messageType === "email" \? hasEmail : hasPhone/,
+    expect(recoveryViewModel).toContain("showSendToday");
+    expect(recoveryViewModel).toMatch(
+      /const hasRecipient = messageType === "email" \? input\.hasEmail : input\.hasPhone/,
     );
-    expect(detailPage).toMatch(/!sendEarlyDisabled &&/);
+    expect(recoveryViewModel).toContain("!hasRecipient");
   });
 
   it("passes messageType to SendEarlyButton so it picks the right action", () => {
-    expect(detailPage).toContain("messageType={messageType}");
+    expect(detailPage).toContain("messageType={card.action.messageType}");
   });
 });
 

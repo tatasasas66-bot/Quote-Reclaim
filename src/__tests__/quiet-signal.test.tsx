@@ -13,6 +13,8 @@ import {
   type SilenceSignals,
 } from "@/lib/quotes/quiet-signal";
 import { QuietSignalCard } from "@/components/quotes/QuietSignalCard";
+import type { QuietSignal } from "@/lib/quotes/quiet-signal";
+import type { RecoveryPlanQuietSignal } from "@/lib/recovery/recovery-plan-view-model";
 
 function readSource(rel: string): string {
   return readFileSync(fileURLToPath(new URL(rel, import.meta.url)), "utf8");
@@ -20,6 +22,7 @@ function readSource(rel: string): string {
 
 const cardSrc = readSource("../components/quotes/QuietSignalCard.tsx");
 const detailPage = readSource("../app/(app)/quotes/[id]/page.tsx");
+const viewModelSrc = readSource("../lib/recovery/recovery-plan-view-model.ts");
 
 afterEach(() => cleanup());
 
@@ -37,6 +40,27 @@ function baseSignals(over: Partial<SilenceSignals> = {}): SilenceSignals {
     openCount: 0,
     clickCount: 0,
     ...over,
+  };
+}
+
+function toDisplaySignal(
+  signal: QuietSignal | null,
+): RecoveryPlanQuietSignal | null {
+  if (!signal) return null;
+  const signalLabel =
+    signal.strength === "strong"
+      ? "Strong"
+      : signal.strength === "medium"
+        ? "Waiting"
+        : "Early";
+  return {
+    stallReason: signal.reasonLabel,
+    signal: signalLabel,
+    evidence: signal.evidence,
+    recommendedMove: signal.recommendedMove,
+    currentMoveAnchorId: signal.recommendedFollowupNumber
+      ? `followup-${signal.recommendedFollowupNumber}`
+      : null,
   };
 }
 
@@ -280,7 +304,11 @@ describe("QuietSignalCard — UI contract", () => {
     const signal = computeQuietSignal(
       baseSignals({ hasReply: true, replyIntent: "price_objection" }),
     );
-    render(React.createElement(QuietSignalCard, { signal }));
+    render(
+      React.createElement(QuietSignalCard, {
+        signal: toDisplaySignal(signal),
+      }),
+    );
     expect(screen.getByText(/Possible stall reason/i)).toBeTruthy();
     expect(screen.getByText(/^Signal$/i)).toBeTruthy();
     expect(screen.getByText(/What we can see/i)).toBeTruthy();
@@ -294,7 +322,11 @@ describe("QuietSignalCard — UI contract", () => {
 
   it("renders the calm fallback correctly", () => {
     const signal = computeQuietSignal(baseSignals({ daysSilent: 2 }));
-    render(React.createElement(QuietSignalCard, { signal }));
+    render(
+      React.createElement(QuietSignalCard, {
+        signal: toDisplaySignal(signal),
+      }),
+    );
     expect(screen.getByText("Normal silence")).toBeTruthy();
     expect(screen.getByText("Early")).toBeTruthy();
     expect(screen.queryByRole("link", { name: /recommended follow-up/i })).toBeNull();
@@ -307,7 +339,9 @@ describe("QuietSignalCard — UI contract", () => {
       computeQuietSignal(baseSignals()),
     ]) {
       const { container } = render(
-        React.createElement(QuietSignalCard, { signal: s }),
+        React.createElement(QuietSignalCard, {
+          signal: toDisplaySignal(s),
+        }),
       );
       const text = container.textContent ?? "";
       expect(text).not.toMatch(/%/);
@@ -323,7 +357,11 @@ describe("QuietSignalCard — UI contract", () => {
     const signal = computeQuietSignal(
       baseSignals({ hasReply: true, replyIntent: "price_objection" }),
     );
-    render(React.createElement(QuietSignalCard, { signal }));
+    render(
+      React.createElement(QuietSignalCard, {
+        signal: toDisplaySignal(signal),
+      }),
+    );
     expect(
       screen
         .getByRole("link", { name: /Open recommended follow-up/i })
@@ -357,10 +395,9 @@ describe("QuietSignalCard source — locked vocabulary", () => {
     expect(cardSrc).not.toMatch(/AI diagnosis/i);
   });
 
-  it("renders Early / Medium / Strong as the ONLY strength tokens", () => {
-    expect(cardSrc).toContain('"Early"');
-    expect(cardSrc).toContain('"Medium"');
-    expect(cardSrc).toContain('"Strong"');
+  it("renders the ViewModel signal label without local remapping", () => {
+    expect(cardSrc).toContain("{signal.signal}");
+    expect(cardSrc).not.toContain("STRENGTH_LABEL");
   });
 
   it("does not render confidence as a number anywhere in the card source", () => {
@@ -371,23 +408,27 @@ describe("QuietSignalCard source — locked vocabulary", () => {
 });
 
 describe("detail page integration — Quiet Signal mounted, anchors in place", () => {
-  it("imports computeQuietSignal and the card", () => {
-    expect(detailPage).toContain("computeQuietSignal");
+  it("builds Quiet Signal in the Recovery Plan ViewModel and mounts the card", () => {
+    expect(viewModelSrc).toContain("getQuietSignal(recoveryWindow)");
     expect(detailPage).toContain("QuietSignalCard");
   });
 
   it("mounts <QuietSignalCard /> on the detail page", () => {
-    expect(detailPage).toMatch(/<QuietSignalCard signal=\{quietSignal\}/);
+    expect(detailPage).toMatch(
+      /<QuietSignalCard signal=\{viewModel\.quietSignal\}/,
+    );
   });
 
-  it("aggregates open_count and click_count from outbound_messages", () => {
-    expect(detailPage).toMatch(/open_count, click_count/);
-    expect(detailPage).toContain("totalOpenCount");
-    expect(detailPage).toContain("totalClickCount");
+  it("does not independently derive Recovery Plan display from engagement counters", () => {
+    expect(detailPage).not.toMatch(/open_count, click_count/);
+    expect(detailPage).not.toContain("totalOpenCount");
+    expect(detailPage).not.toContain("totalClickCount");
   });
 
-  it("adds id=\"followup-{n}\" anchors on each reminder card (so the button can scroll)", () => {
-    expect(detailPage).toMatch(/id=\{`followup-\$\{r\.followup_number\}`\}/);
+  it("uses the ViewModel current-move anchor without exposing follow-up numbers", () => {
+    expect(viewModelSrc).toContain('"current-recovery-move"');
+    expect(detailPage).toContain("id={card.anchorId}");
+    expect(detailPage).not.toContain(".followup_number");
   });
 
   it("does NOT introduce automatic plan swap / message regeneration", () => {
@@ -396,9 +437,7 @@ describe("detail page integration — Quiet Signal mounted, anchors in place", (
   });
 
   it("WHY_THIS_WORKS source block matches the no-overclaim rewrite", () => {
-    expect(detailPage).toContain(
-      `getWhyThisWorksForStep`,
-    );
+    expect(viewModelSrc).toContain("getWhyThisWorksForStep");
   });
 });
 

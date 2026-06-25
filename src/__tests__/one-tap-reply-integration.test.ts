@@ -29,6 +29,9 @@ const activityFeed = readSource(
   "../components/dashboard/ActivityFeedView.tsx",
 );
 const fallbackMsgs = readSource("../lib/ai/fallback-messages.ts");
+const recoveryViewModel = readSource(
+  "../lib/recovery/recovery-plan-view-model.ts",
+);
 
 // ---------------------------------------------------------------------------
 // Migration 010 — additive only, exactly three new tables
@@ -247,14 +250,14 @@ describe("quote detail page mounts the One-Tap Reply card", () => {
   });
 
   it("preserves both QuietSignal + ReplyRadar cards (no replacement)", () => {
-    expect(detailPage).toMatch(/<QuietSignalCard signal=\{quietSignal\}/);
+    expect(detailPage).toMatch(
+      /<QuietSignalCard signal=\{viewModel\.quietSignal\}/,
+    );
     expect(detailPage).toMatch(/<ReplyRadarCard reply=\{replyRadar\}/);
   });
 
   it("WHY_THIS_WORKS source block matches the no-overclaim rewrite", () => {
-    expect(detailPage).toContain(
-      `getWhyThisWorksForStep`,
-    );
+    expect(recoveryViewModel).toContain("getWhyThisWorksForStep");
   });
 
   it("card source uses the locked vocabulary and avoids banned phrasing", () => {

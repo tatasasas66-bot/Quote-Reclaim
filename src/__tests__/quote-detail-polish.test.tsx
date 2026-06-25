@@ -47,6 +47,8 @@ const quoteActions = readSource("../components/quotes/QuoteActions.tsx");
 const quietCard = readSource("../components/quotes/QuietSignalCard.tsx");
 const manualActions = readSource("../components/quotes/ManualMessageActions.tsx");
 const stepStatusSrc = readSource("../lib/quotes/step-status.ts");
+const viewModelSrc = readSource("../lib/recovery/recovery-plan-view-model.ts");
+const recoveryLogicSrc = readSource("../lib/recovery/recovery-logic.ts");
 
 // ---------------------------------------------------------------------------
 // 0. Command-center hierarchy: one quote, one message, one action
@@ -67,49 +69,51 @@ describe("quote detail command-center hierarchy", () => {
     expect(detailPage).toMatch(
       /<SendEarlyButton[\s\S]*variant="primary"[\s\S]*size="lg"[\s\S]*fullWidth/,
     );
-    expect(detailPage).toContain('<CopyButton text={commandMessage} label="Copy"');
+    expect(detailPage).toContain(
+      '<CopyButton text={viewModel.copyMessage} label="Copy"',
+    );
   });
 
   it("makes the command panel action-first, then shows the reply playbook", () => {
     expect(detailPage).toContain('data-testid="quote-command-promise"');
-    expect(detailPage).toContain("Send this today");
-    expect(detailPage).toContain("the next reply is already ready");
+    expect(viewModelSrc).toContain('"Send this today"');
+    expect(viewModelSrc).toContain("the next reply is already ready");
     expect(detailPage).toContain("Message to send");
     expect(detailPage).toContain("Reply playbook");
-    expect(detailPage).toContain("{rescuePaths.length} next replies ready");
+    expect(detailPage).toContain(
+      "{viewModel.replyPlaybook.length} next replies ready",
+    );
     expect(detailPage).toContain("Copy reply");
   });
 
   it("shows one active reason in the command panel and collapses future reasons", () => {
     expect(detailPage).toContain('data-testid="quote-command-reason"');
-    expect(detailPage).toMatch(
-      /commandWhyThisWorks/,
-    );
+    expect(detailPage).toContain("viewModel.currentWhyThisWorks");
     expect(detailPage).toContain('data-followup-collapsed="true"');
     expect(detailPage).toContain("<details");
   });
 
   it("shows reply rescue paths in the command panel for the likely customer replies", () => {
     expect(detailPage).toContain('data-testid="reply-rescue-paths"');
-    expect(detailPage).toContain("Yes / still interested");
-    expect(detailPage).toContain("It feels high");
-    expect(detailPage).toContain("Need to wait");
-    expect(detailPage).toContain("Chose someone else");
-    expect(detailPage).toContain("must-do, optional, and later");
+    expect(viewModelSrc).toContain("Yes / still interested");
+    expect(viewModelSrc).toContain("It feels high");
+    expect(viewModelSrc).toContain("Need to wait");
+    expect(viewModelSrc).toContain("Chose someone else");
+    expect(viewModelSrc).toContain("must-do, optional, and later");
   });
 
   it("keeps the 5-message sequence intact behind the active command", () => {
-    expect(detailPage).toContain("5-message plan");
-    expect(detailPage).toMatch(/visibleReminders.map/);
-    expect(detailPage).toMatch(
-      /CADENCE_DAYS/,
-    );
+    expect(viewModelSrc).toContain("5-message recovery plan");
+    expect(detailPage).toMatch(/viewModel\.sequenceCards\.map/);
+    expect(viewModelSrc).toContain("SEQUENCE_BY_WINDOW");
   });
 
   it("adds manual SMS and WhatsApp actions to the command message and sequence messages", () => {
     expect(detailPage).toContain("ManualMessageActions");
     expect(detailPage).toMatch(/source="quote_command"/);
-    expect(detailPage).toMatch(/source=\{`recovery_sequence_followup_\$\{r\.followup_number\}`\}/);
+    expect(detailPage).toMatch(
+      /source=\{`recovery_sequence_\$\{card\.key\}`\}/,
+    );
     expect(manualActions).toContain("Open SMS");
     expect(manualActions).toContain("Open WhatsApp");
     expect(manualActions).toContain("Copy SMS message");
@@ -212,11 +216,8 @@ describe("send_at is anchored to 09:00 America/Chicago", () => {
 });
 
 describe("detail page formats send dates via the shared Central formatter", () => {
-  it("formatSendDate delegates to formatScheduleDateTime (no local UTC formatter)", () => {
-    expect(detailPage).toMatch(
-      /function formatSendDate[\s\S]*?return formatScheduleDateTime/,
-    );
-    // The old page-local DISPLAY_TIMEZONE/toLocaleString block is gone.
+  it("the ViewModel delegates schedule labels to formatScheduleDateTime", () => {
+    expect(viewModelSrc).toContain("formatScheduleDateTime");
     expect(detailPage).not.toMatch(/DISPLAY_TIMEZONE/);
   });
 });
@@ -307,9 +308,10 @@ describe("Quiet Signal: At Risk / Critical + no engagement uses 'no_signal_yet' 
     expect(s?.reason).not.toBe("no_signal_yet");
   });
 
-  it("QuietSignalCard renders 'Not enough data' as the strength label for no_signal_yet", () => {
-    expect(quietCard).toContain("Not enough data");
-    expect(quietCard).toMatch(/signal\.reason === "no_signal_yet"/);
+  it("QuietSignalCard renders the ViewModel signal without a legacy local override", () => {
+    expect(quietCard).toContain("{signal.signal}");
+    expect(quietCard).not.toContain("Not enough data");
+    expect(quietCard).not.toMatch(/signal\.reason === "no_signal_yet"/);
   });
 });
 
@@ -348,8 +350,9 @@ describe("schedule times use ONE shared formatter (America/Chicago, with minutes
   });
 
   it("detail page header + footer route through the shared formatter", () => {
-    expect(detailPage).toContain("formatScheduleDateTime");
-    expect(detailPage).toMatch(/function formatSendDate[\s\S]*?formatScheduleDateTime/);
+    expect(viewModelSrc).toContain("formatScheduleDateTime");
+    expect(detailPage).toContain("card.scheduledLabel");
+    expect(detailPage).toContain("viewModel.sequenceScheduleLabel");
   });
 
   it("badge and footer produce the IDENTICAL string for the same send_at", () => {
@@ -361,8 +364,11 @@ describe("schedule times use ONE shared formatter (America/Chicago, with minutes
     expect(footer.startsWith(badge)).toBe(true);
   });
 
-  it("detail page passes effectiveDaysSilent into computeQuietSignal (matches the band)", () => {
-    expect(detailPage).toMatch(/daysSilent:\s*effectiveDaysSilent\(quote\)/);
+  it("the ViewModel computes effective age before building Quiet Signal", () => {
+    expect(viewModelSrc).toMatch(
+      /const daysQuiet = effectiveDaysSilent\(quote, nowMs\)/,
+    );
+    expect(viewModelSrc).toContain("getQuietSignal(recoveryWindow)");
   });
 });
 
@@ -433,7 +439,9 @@ describe("Next Best Action labels fit the card", () => {
 
 describe("Recovery Priority IntelligenceField shows the band label only", () => {
   it("value is windowPriorityLabel(recoveryWindow), NOT '${score.score} · ${score.label}'", () => {
-    expect(detailPage).toMatch(/value=\{windowPriorityLabel\(recoveryWindow\)\}/);
+    expect(detailPage).toMatch(
+      /label="Priority" value=\{viewModel\.priorityLabel\}/,
+    );
     expect(detailPage).not.toMatch(/\$\{score\.score\}\s*·\s*\$\{score\.label\}/);
   });
 });
@@ -565,9 +573,9 @@ describe("polished message wordings", () => {
 
 describe("Why This Works carries no academic psychology jargon", () => {
   it("WHY_THIS_WORKS block (only) contains no 'loss aversion' / 'reactance' / 'scarcity makes you the prize'", () => {
-    const start = detailPage.indexOf("getWhyThisWorksForStep");
-    const end = detailPage.indexOf("}", start);
-    const block = detailPage.slice(start, end);
+    const start = recoveryLogicSrc.indexOf("getWhyThisWorksForStep");
+    const end = recoveryLogicSrc.indexOf("// One-Tap Reply options", start);
+    const block = recoveryLogicSrc.slice(start, end);
     expect(start).toBeGreaterThan(-1);
     expect(block).not.toMatch(/loss aversion/i);
     expect(block).not.toMatch(/reactance/i);
@@ -593,8 +601,10 @@ describe("Lock rails — pricing / One-Tap / schema untouched by this pass", () 
   });
 
   it("CADENCE_DAYS pinned at 1 / 3 / 7 / 14 / 30 (no cadence change in this pass)", () => {
-    expect(detailPage).toMatch(
-      /CADENCE_DAYS/,
-    );
+    expect(recoveryLogicSrc).toMatch(/1:\s*1/);
+    expect(recoveryLogicSrc).toMatch(/2:\s*3/);
+    expect(recoveryLogicSrc).toMatch(/3:\s*7/);
+    expect(recoveryLogicSrc).toMatch(/4:\s*14/);
+    expect(recoveryLogicSrc).toMatch(/5:\s*30/);
   });
 });

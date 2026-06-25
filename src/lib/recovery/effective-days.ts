@@ -26,12 +26,12 @@ export function effectiveDaysSilent(quote: {
   days_silent: number;
   quote_sent_at: string | null;
   created_at?: string | null;
-}): number {
+}, now: number = Date.now()): number {
   // Priority 1: quote_sent_at — the real estimate sent date
   if (quote.quote_sent_at) {
     const sent = Date.parse(quote.quote_sent_at);
     if (!Number.isNaN(sent)) {
-      const elapsed = (Date.now() - sent) / (1000 * 60 * 60 * 24);
+      const elapsed = (now - sent) / (1000 * 60 * 60 * 24);
       return Math.max(0, Math.floor(elapsed));
     }
   }
@@ -42,7 +42,7 @@ export function effectiveDaysSilent(quote: {
     const created = Date.parse(quote.created_at);
     if (!Number.isNaN(created)) {
       const elapsedSinceCreated = Math.floor(
-        (Date.now() - created) / (1000 * 60 * 60 * 24),
+        (now - created) / (1000 * 60 * 60 * 24),
       );
       return Math.max(0, quote.days_silent + elapsedSinceCreated);
     }

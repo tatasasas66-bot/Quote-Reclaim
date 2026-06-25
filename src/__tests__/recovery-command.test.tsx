@@ -46,6 +46,7 @@ const actionsSrc = readSource("../lib/quotes/actions.ts");
 const cronSend = readSource("../app/api/cron/send/route.ts");
 const fallbacksSrc = readSource("../lib/ai/fallback-messages.ts");
 const nextMoveSrc = readSource("../lib/quotes/next-move.ts");
+const viewModelSrc = readSource("../lib/recovery/recovery-plan-view-model.ts");
 
 // ───────────────────────────────────────────────────────────────────────
 // Fixtures
@@ -273,11 +274,11 @@ describe("next-move wording contract", () => {
 
 describe("send-button safety on the quote detail page", () => {
   it("only the next actionable card can render the send button", () => {
+    expect(viewModelSrc).toContain("const isActionable");
+    expect(viewModelSrc).toContain("showSendToday");
     expect(detailPage).toMatch(
-      /const isNextActionable = move\.kind !== "none" && move\.reminderId === r\.id/,
+      /\{card\.action\?\.showSendToday \?\s*\(\s*<SendEarlyButton/,
     );
-    expect(detailPage).toMatch(/const showSendToday =\s*isNextActionable &&/);
-    expect(detailPage).toMatch(/\{showSendToday \?\s*\(?\s*<SendEarlyButton/);
   });
 
   it("the next actionable email step shows the manual send button whether due OR future-queued", () => {
@@ -285,23 +286,28 @@ describe("send-button safety on the quote detail page", () => {
     // the gate uses canManualSendToday(move), which is true for both
     // email-due and email-queued — so an old quiet quote can be sent by hand
     // now even though its automatic send_at is a future window.
-    expect(detailPage).toMatch(
-      /messageType === "email" \? canManualSendToday\(move\) : true/,
+    expect(viewModelSrc).toMatch(
+      /messageType === "email" \? canManualSendToday\(input\.move\) : true/,
     );
-    expect(detailPage).not.toMatch(/messageType === "email" \? move\.kind === "email-due" : true/);
+    expect(viewModelSrc).not.toMatch(
+      /messageType === "email" \? move\.kind === "email-due" : true/,
+    );
   });
 
   it("sent and queued-behind cards keep Copy but carry no send button", () => {
     // The render gate folds r.sent / paused / status into sendEarlyDisabled
     // AND requires isNextActionable, so a sent or later-sequence card cannot
     // render the button at all (not merely disabled — absent).
-    expect(detailPage).toMatch(/!sendEarlyDisabled &&/);
-    expect(detailPage).toMatch(/<CopyButton text=\{cardMessage\} \/>/);
+    expect(viewModelSrc).toContain("const disabled =");
+    expect(viewModelSrc).toContain(
+      "const action = isCurrent ? currentAction : null",
+    );
+    expect(detailPage).toMatch(/<CopyButton text=\{card\.copyMessage\} \/>/);
   });
 
   it("the next actionable card is visually highlighted for thumb/scan targeting", () => {
-    expect(detailPage).toMatch(/data-next-actionable=\{isNextActionable \? "true" : undefined\}/);
-    expect(detailPage).toMatch(/isNextActionable \? "border-brand\/50" : "border-line-subtle"/);
+    expect(detailPage).toContain('data-next-actionable="true"');
+    expect(detailPage).toContain("border-brand/50");
   });
 });
 
@@ -351,35 +357,39 @@ describe("cron sends at most ONE follow-up per quote per run", () => {
 // C2. The four surfaces share the one source of truth
 // ───────────────────────────────────────────────────────────────────────
 
-describe("all surfaces derive from computeNextMove", () => {
-  it("summary Next move uses nextMoveSummaryLabel(move) first", () => {
+describe("all recovery surfaces derive from the ViewModel", () => {
+  it("summary Next move renders the ViewModel current move", () => {
     expect(detailPage).toMatch(
-      /ageAwareFamily/,
-    );
-    expect(detailPage).toMatch(/label="Next move" value=\{nextActionLabel\}/);
-  });
-
-  it("Quiet Signal's Best next move is overridden with the unified instruction", () => {
-    expect(detailPage).toMatch(/recommendedMove:/);
-    expect(detailPage).toMatch(
-      /recommendedFollowupNumber:\s*move\.followupNumber as 1 \| 2 \| 3 \| 4 \| 5/,
+      /label="Next move" value=\{viewModel\.currentMove\}/,
     );
   });
 
-  it("the command panel renders from the same move object", () => {
-    expect(detailPage).toContain("activeReminderForMove(reminders, move)");
-    expect(detailPage).toContain("nextMoveInstruction(move)");
+  it("Quiet Signal and command instructions are built beside the same current move", () => {
+    expect(viewModelSrc).toContain("recommendedMove:");
+    expect(viewModelSrc).toContain("currentMoveAnchorId:");
+    expect(viewModelSrc).toContain("currentMove,");
+  });
+
+  it("the command panel renders from the same ViewModel object", () => {
+    expect(detailPage).toContain("buildRecoveryPlanViewModel");
+    expect(detailPage).toContain("<CommandActionPanel viewModel={viewModel} />");
     expect(detailPage).toContain('data-testid="quote-command-panel"');
-    expect(detailPage).toMatch(/move\.kind !== "none" &&/);
+    expect(detailPage).toContain("viewModel.currentInstruction");
   });
 
   it("the schedule chip never claims a send while a reply holds the sequence", () => {
-    expect(detailPage).toMatch(/nextDate && !hasReplyForQuote/);
+    expect(viewModelSrc).toMatch(
+      /status === "running" && currentScheduledLabel && !hasReply/,
+    );
   });
 
   it("the chip says 'sends' only for email mode; copy mode says 'scheduled'", () => {
-    expect(detailPage).toContain("`Next follow-up sends ${formatSendDate(nextDate)}`");
-    expect(detailPage).toContain("`Next follow-up scheduled ${formatSendDate(nextDate)}`");
+    expect(viewModelSrc).toContain(
+      "`Next follow-up sends ${currentScheduledLabel}`",
+    );
+    expect(viewModelSrc).toContain(
+      "`Next follow-up scheduled ${currentScheduledLabel}`",
+    );
   });
 });
 
@@ -538,14 +548,19 @@ describe("tradeLocationLine — no dangling separators", () => {
   });
 
   it("the page renders the helper instead of inline string-glue", () => {
-    expect(detailPage).toMatch(/tradeLocationLine\(quote\.trade, quote\.city, quote\.state\)/);
+    expect(viewModelSrc).toMatch(
+      /tradeLocationLine\(quote\.trade, quote\.city, quote\.state\)/,
+    );
+    expect(detailPage).toContain("viewModel.quote.metaLine");
     expect(detailPage).not.toMatch(/quote\.state\.toUpperCase\(\)/);
   });
 });
 
 describe("email display and button hierarchy", () => {
   it("the email field truncates with a full-value tooltip instead of mid-address wrapping", () => {
-    expect(detailPage).toMatch(/label="Email" value=\{quote\.client_email\} truncate/);
+    expect(detailPage).toMatch(
+      /label="Email"[\s\S]*?value=\{viewModel\.quote\.email\}[\s\S]*?truncate/,
+    );
     expect(detailPage).toMatch(/truncate\s*\?\s*"mt-1 truncate text-sm font-bold text-ink-strong"/);
     expect(detailPage).toMatch(/title=\{truncate \? value : undefined\}/);
   });

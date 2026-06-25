@@ -17,6 +17,7 @@ type OneTapReplyCardProps = {
   clientFirstName: string;
   latestReply: LatestOneTapReply | null;
   options: ReplyOption[];
+  suggestedOptions?: string[];
 };
 
 /**
@@ -33,6 +34,7 @@ export function OneTapReplyCard({
   clientFirstName,
   latestReply,
   options,
+  suggestedOptions = [],
 }: OneTapReplyCardProps) {
   const [linkCopied, setLinkCopied] = React.useState(false);
   const [linkError, setLinkError] = React.useState<string | null>(null);
@@ -77,6 +79,16 @@ export function OneTapReplyCard({
           <p className="mt-1 text-xs leading-5 text-ink-muted">
             Five-second reply for the homeowner. Clear next move for you.
           </p>
+          <div className="mt-3 flex flex-wrap gap-2">
+            {suggestedOptions.map((option) => (
+              <span
+                key={option}
+                className="rounded-full border border-line-subtle bg-canvas/45 px-3 py-1 text-xs font-semibold text-ink"
+              >
+                {option}
+              </span>
+            ))}
+          </div>
         </div>
         <div className="flex flex-wrap gap-2">
           <button
