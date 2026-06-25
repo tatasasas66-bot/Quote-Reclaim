@@ -4,7 +4,12 @@ import {
   isApifyReady,
   startGoogleMapsRun,
 } from "./apify";
-import { getMarketingSetupStatus } from "./config";
+import {
+  getCompliancePostalAddress,
+  getMarketingSetupStatus,
+  LIVE_COMPLIANCE_BLOCK_REASON,
+  marketingModeAllowed,
+} from "./config";
 import { isEmailVerifierReady, verifyMarketingEmail } from "./email-verifier";
 import {
   countCampaignUploadsToday,
@@ -27,6 +32,7 @@ import {
   campaignCanUploadLive,
   leadIsEligibleForSmartlead,
 } from "./safety";
+import { buildComplianceSafeSequence } from "./sequence";
 import {
   getSmartleadCampaignStatus,
   isSmartleadReady,
@@ -207,21 +213,41 @@ export async function uploadCampaignLeads(campaignId: string): Promise<{
 }> {
   const campaign = await requiredCampaign(campaignId);
   const setup = getMarketingSetupStatus();
-  if (!campaignCanUploadLive(campaign, setup.liveReady)) {
+  const compliancePostalAddress = getCompliancePostalAddress();
+  const compliantSequence = buildComplianceSafeSequence(
+    compliancePostalAddress,
+  );
+  const campaignForUpload = compliancePostalAddress
+    ? { ...campaign, sequence_config: compliantSequence }
+    : campaign;
+  if (compliancePostalAddress) {
+    await updateMarketingCampaign(campaign.id, {
+      sequence_config: compliantSequence,
+    });
+  }
+  if (
+    !campaignCanUploadLive(
+      campaignForUpload,
+      setup.liveReady,
+      compliancePostalAddress,
+    )
+  ) {
     return {
       uploaded: 0,
       skipped: 0,
       reason:
         campaign.mode === "dry_run"
           ? "dry_run"
-          : `live_setup_required:${setup.missingForLive.join(",")}`,
+          : !compliancePostalAddress
+            ? LIVE_COMPLIANCE_BLOCK_REASON
+            : `live_setup_required:${setup.missingForLive.join(",")}`,
     };
   }
-  if (!isSmartleadReady() || !campaign.smartlead_campaign_id) {
+  if (!isSmartleadReady() || !campaignForUpload.smartlead_campaign_id) {
     return { uploaded: 0, skipped: 0, reason: "smartlead_setup_required" };
   }
   const smartleadStatus = await getSmartleadCampaignStatus(
-    campaign.smartlead_campaign_id,
+    campaignForUpload.smartlead_campaign_id,
   );
   if (smartleadStatus !== "ACTIVE") {
     return {
@@ -246,7 +272,7 @@ export async function uploadCampaignLeads(campaignId: string): Promise<{
   }
 
   const upload = await uploadLeadsToSmartlead(
-    campaign.smartlead_campaign_id,
+    campaignForUpload.smartlead_campaign_id,
     capped,
   );
   const accepted = capped.slice(0, Math.min(upload.added, capped.length));
@@ -296,6 +322,12 @@ export async function runCampaignCycle(campaignId: string): Promise<CycleResult>
   const setup = getMarketingSetupStatus();
   result.setupRequired = setup.missingForLive;
 
+  const compliance = marketingModeAllowed(campaign.mode);
+  if (!compliance.allowed) {
+    result.search = "live_blocked";
+    result.errors.push(compliance.reason ?? LIVE_COMPLIANCE_BLOCK_REASON);
+    return result;
+  }
   if (campaign.mode === "dry_run") {
     const eligible = await listUploadEligibleLeads(campaign.id);
     result.skipped = eligible.length;

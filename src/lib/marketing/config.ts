@@ -3,6 +3,8 @@ import type { MarketingSetupStatus } from "./types";
 export const MARKETING_SENDER = "hello@quotereclaim.com";
 export const DEFAULT_DAILY_CAP = 10;
 export const MAX_DAILY_CAP = 15;
+export const LIVE_COMPLIANCE_BLOCK_REASON =
+  "Live sending blocked: missing compliance postal address";
 
 type Env = Partial<NodeJS.ProcessEnv>;
 
@@ -10,11 +12,45 @@ function present(value: string | undefined): boolean {
   return Boolean(value?.trim());
 }
 
+export function getCompliancePostalAddress(
+  env: Env = process.env,
+): string | null {
+  const address = env.COMPLIANCE_POSTAL_ADDRESS?.trim();
+  return address || null;
+}
+
+export function hasCompliancePostalAddress(env: Env = process.env): boolean {
+  return getCompliancePostalAddress(env) !== null;
+}
+
+export function marketingModeAllowed(
+  mode: "dry_run" | "live",
+  env: Env = process.env,
+): { allowed: boolean; reason: string | null } {
+  if (mode === "dry_run") return { allowed: true, reason: null };
+  if (!hasCompliancePostalAddress(env)) {
+    return { allowed: false, reason: LIVE_COMPLIANCE_BLOCK_REASON };
+  }
+  return { allowed: true, reason: null };
+}
+
+export function campaignActivationAllowed(
+  status: "draft" | "active" | "paused" | "stopped",
+  env: Env = process.env,
+): { allowed: boolean; reason: string | null } {
+  if (status !== "active") return { allowed: true, reason: null };
+  if (!hasCompliancePostalAddress(env)) {
+    return { allowed: false, reason: LIVE_COMPLIANCE_BLOCK_REASON };
+  }
+  return { allowed: true, reason: null };
+}
+
 export function marketingAutomationEnabled(env: Env = process.env): boolean {
   return env.MARKETING_AUTOMATION_ENABLED === "true";
 }
 
 export function getMarketingSetupStatus(env: Env = process.env): MarketingSetupStatus {
+  const complianceAddressConfigured = hasCompliancePostalAddress(env);
   const items = [
     {
       key: "google_workspace",
@@ -50,10 +86,10 @@ export function getMarketingSetupStatus(env: Env = process.env): MarketingSetupS
     {
       key: "compliance",
       label: "Compliance postal address",
-      configured: present(env.COMPLIANCE_POSTAL_ADDRESS),
-      detail: present(env.COMPLIANCE_POSTAL_ADDRESS)
+      configured: complianceAddressConfigured,
+      detail: complianceAddressConfigured
         ? "Configured"
-        : "COMPLIANCE_POSTAL_ADDRESS missing",
+        : "Missing - dry-run only",
     },
     {
       key: "automation",
@@ -98,6 +134,11 @@ export function getMarketingSetupStatus(env: Env = process.env): MarketingSetupS
     items,
     liveReady: missingForLive.length === 0,
     missingForLive,
+    dryRunAllowed: true,
+    complianceAddressConfigured,
+    liveBlockReason: complianceAddressConfigured
+      ? null
+      : LIVE_COMPLIANCE_BLOCK_REASON,
   };
 }
 

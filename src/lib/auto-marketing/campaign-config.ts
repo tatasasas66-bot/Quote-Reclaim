@@ -10,6 +10,7 @@
  * Smartlead substitutes. The {audit_url} field is pre-built with UTM params
  * so every send is attributable.
  */
+import { getCompliancePostalAddress } from "@/lib/marketing/config";
 
 export type EmailStep = {
   step: number;
@@ -124,11 +125,15 @@ export function renderEmail(
     .replace(/\{first_name\}/g, firstName)
     .replace(/\{city\}/g, city);
 
-  const body = step.body
+  const renderedBody = step.body
     .replace(/\{company\}/g, company)
     .replace(/\{first_name\}/g, firstName)
     .replace(/\{city\}/g, city)
     .replace(/\{audit_url\}/g, auditUrl);
+  const compliancePostalAddress = getCompliancePostalAddress();
+  const body = compliancePostalAddress
+    ? `${renderedBody}\n\n${compliancePostalAddress}`
+    : renderedBody;
 
   return { subject, body };
 }

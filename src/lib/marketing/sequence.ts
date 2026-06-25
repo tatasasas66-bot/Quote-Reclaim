@@ -16,9 +16,7 @@ Quote Reclaim shows which estimate to follow up first and what message to send t
 Free 60-second audit, no signup, no card, no customer names:
 {{audit_url}}
 
-Reply "no" and I'll stop.
-
-{{compliance_postal_address}}`,
+Reply "no" and I'll stop.`,
     },
     {
       delayDays: 3,
@@ -32,9 +30,7 @@ The free audit shows which estimate is most worth reopening first and the low-pr
 
 No signup, no card, no customer names.
 
-Reply "no" and I'll stop.
-
-{{compliance_postal_address}}`,
+Reply "no" and I'll stop.`,
     },
     {
       delayDays: 8,
@@ -46,12 +42,23 @@ Last note from me. If quiet concrete estimates are not a problem for you, reply 
 If you do have a few old quotes sitting silent, this shows which one to reopen first:
 {{audit_url}}
 
-No pressure either way.
-
-{{compliance_postal_address}}`,
+No pressure either way.`,
     },
   ],
 } as const;
+
+export function buildComplianceSafeSequence(
+  compliancePostalAddress?: string | null,
+): Record<string, unknown> {
+  const address = compliancePostalAddress?.trim() || null;
+  return {
+    ...CONCRETE_PHOENIX_SEQUENCE,
+    steps: CONCRETE_PHOENIX_SEQUENCE.steps.map((step) => ({
+      ...step,
+      body: address ? `${step.body}\n\n${address}` : step.body,
+    })),
+  };
+}
 
 export const DEFAULT_CAMPAIGN_INPUT = {
   name: "Concrete Phoenix v1",
@@ -62,5 +69,5 @@ export const DEFAULT_CAMPAIGN_INPUT = {
   dailyCap: 10,
   mode: "dry_run",
   status: "draft",
-  sequenceConfig: CONCRETE_PHOENIX_SEQUENCE,
+  sequenceConfig: buildComplianceSafeSequence(),
 } as const;

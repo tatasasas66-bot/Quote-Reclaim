@@ -133,4 +133,7 @@ export type MarketingSetupStatus = {
   items: SetupItem[];
   liveReady: boolean;
   missingForLive: string[];
+  dryRunAllowed: true;
+  complianceAddressConfigured: boolean;
+  liveBlockReason: string | null;
 };

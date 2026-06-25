@@ -161,6 +161,32 @@ export function FullAutoMarketingClient({
               </div>
             ))}
           </div>
+          <div
+            className={`mt-4 border-l-2 px-4 py-3 ${
+              setup.complianceAddressConfigured
+                ? "border-success bg-success/5"
+                : "border-warning bg-warning/5"
+            }`}
+          >
+            <p className="text-sm font-black text-ink-strong">
+              Dry-run allowed
+            </p>
+            {setup.liveBlockReason ? (
+              <>
+                <p className="mt-1 text-sm font-bold text-warning">
+                  Live sending blocked: missing compliance postal address
+                </p>
+                <p className="mt-1 text-sm text-ink-muted">
+                  Do not use a fake address. Add only a real postal address you
+                  are authorized to use.
+                </p>
+              </>
+            ) : (
+              <p className="mt-1 text-sm text-success">
+                A compliance postal address is configured for live sending.
+              </p>
+            )}
+          </div>
         </section>
 
         <section aria-labelledby="metrics-heading">
@@ -298,7 +324,7 @@ export function FullAutoMarketingClient({
                     icon={CirclePlay}
                     label="Resume"
                     onClick={() => call("set_status", { status: "active" })}
-                    disabled={Boolean(busy)}
+                    disabled={Boolean(busy) || !setup.complianceAddressConfigured}
                   />
                   <SmallButton
                     icon={CirclePause}
@@ -320,7 +346,11 @@ export function FullAutoMarketingClient({
                         mode: selected?.mode === "live" ? "dry_run" : "live",
                       })
                     }
-                    disabled={Boolean(busy)}
+                    disabled={
+                      Boolean(busy) ||
+                      (selected?.mode !== "live" &&
+                        !setup.complianceAddressConfigured)
+                    }
                   />
                 </div>
               </div>
@@ -352,6 +382,7 @@ export function FullAutoMarketingClient({
                   label="Upload valid leads"
                   action="upload"
                   busy={busy}
+                  disabled={!setup.complianceAddressConfigured}
                   onRun={(action) => call(action)}
                 />
                 <ActionButton
@@ -366,6 +397,10 @@ export function FullAutoMarketingClient({
                   label="Run full-auto cycle"
                   action="cycle"
                   busy={busy}
+                  disabled={
+                    selected?.mode === "live" &&
+                    !setup.complianceAddressConfigured
+                  }
                   primary
                   onRun={(action) => call(action)}
                 />
@@ -533,6 +568,7 @@ function ActionButton({
   label,
   action,
   busy,
+  disabled = false,
   primary = false,
   onRun,
 }: {
@@ -540,6 +576,7 @@ function ActionButton({
   label: string;
   action: Action;
   busy: string | null;
+  disabled?: boolean;
   primary?: boolean;
   onRun: (action: Action) => void;
 }) {
@@ -547,7 +584,7 @@ function ActionButton({
     <button
       type="button"
       onClick={() => onRun(action)}
-      disabled={Boolean(busy)}
+      disabled={Boolean(busy) || disabled}
       className={`inline-flex min-h-12 items-center justify-center gap-2 rounded-md border px-4 py-3 text-sm font-bold transition disabled:opacity-50 ${
         primary
           ? "border-brand bg-brand text-canvas hover:bg-brand-dark"

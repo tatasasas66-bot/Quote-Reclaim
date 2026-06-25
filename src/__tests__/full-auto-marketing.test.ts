@@ -1,5 +1,12 @@
 import { describe, expect, it, vi } from "vitest";
-import { getMarketingSetupStatus, normalizeDailyCap } from "@/lib/marketing/config";
+import {
+  campaignActivationAllowed,
+  getCompliancePostalAddress,
+  getMarketingSetupStatus,
+  LIVE_COMPLIANCE_BLOCK_REASON,
+  marketingModeAllowed,
+  normalizeDailyCap,
+} from "@/lib/marketing/config";
 import { verifyMarketingEmail } from "@/lib/marketing/email-verifier";
 import {
   normalizeApifyRecord,
@@ -15,7 +22,10 @@ import {
   leadIsEligibleForSmartlead,
   verificationAllowsLiveUpload,
 } from "@/lib/marketing/safety";
+import { buildComplianceSafeSequence } from "@/lib/marketing/sequence";
 import type { MarketingCampaign, MarketingLead } from "@/lib/marketing/types";
+
+const VALID_TEST_POSTAL_ADDRESS = "Authorized test postal address";
 
 const campaign: MarketingCampaign = {
   id: "campaign-1",
@@ -29,9 +39,7 @@ const campaign: MarketingCampaign = {
   daily_cap: 10,
   status: "active",
   mode: "live",
-  sequence_config: {
-    body: 'Reply "no" and I will stop. 1 Main St, Phoenix, AZ',
-  },
+  sequence_config: buildComplianceSafeSequence(VALID_TEST_POSTAL_ADDRESS),
   last_run_at: null,
   created_at: "2026-06-25T00:00:00.000Z",
   updated_at: "2026-06-25T00:00:00.000Z",
@@ -165,10 +173,27 @@ describe("dedupe, suppression, and live eligibility", () => {
   });
 
   it("requires active live campaign, Smartlead mapping, and complete setup", () => {
-    expect(campaignCanUploadLive(campaign, true)).toBe(true);
-    expect(campaignCanUploadLive({ ...campaign, mode: "dry_run" }, true)).toBe(false);
-    expect(campaignCanUploadLive({ ...campaign, status: "paused" }, true)).toBe(false);
-    expect(campaignCanUploadLive(campaign, false)).toBe(false);
+    expect(
+      campaignCanUploadLive(campaign, true, VALID_TEST_POSTAL_ADDRESS),
+    ).toBe(true);
+    expect(
+      campaignCanUploadLive(
+        { ...campaign, mode: "dry_run" },
+        true,
+        VALID_TEST_POSTAL_ADDRESS,
+      ),
+    ).toBe(false);
+    expect(
+      campaignCanUploadLive(
+        { ...campaign, status: "paused" },
+        true,
+        VALID_TEST_POSTAL_ADDRESS,
+      ),
+    ).toBe(false);
+    expect(
+      campaignCanUploadLive(campaign, false, VALID_TEST_POSTAL_ADDRESS),
+    ).toBe(false);
+    expect(campaignCanUploadLive(campaign, true, null)).toBe(false);
   });
 });
 
@@ -191,8 +216,77 @@ describe("audit URL and setup status", () => {
   it("shows setup-required state without throwing when env vars are absent", () => {
     const setup = getMarketingSetupStatus({});
     expect(setup.liveReady).toBe(false);
+    expect(setup.dryRunAllowed).toBe(true);
+    expect(setup.complianceAddressConfigured).toBe(false);
+    expect(setup.liveBlockReason).toBe(LIVE_COMPLIANCE_BLOCK_REASON);
     expect(setup.missingForLive).toContain("Smartlead API");
     expect(setup.missingForLive).toContain("Compliance postal address");
+  });
+});
+
+describe("compliance postal address gate", () => {
+  it("allows dry-run without a compliance postal address", () => {
+    expect(marketingModeAllowed("dry_run", {})).toEqual({
+      allowed: true,
+      reason: null,
+    });
+  });
+
+  it("blocks live mode and campaign activation without an address", () => {
+    expect(marketingModeAllowed("live", {})).toEqual({
+      allowed: false,
+      reason: LIVE_COMPLIANCE_BLOCK_REASON,
+    });
+    expect(campaignActivationAllowed("active", {})).toEqual({
+      allowed: false,
+      reason: LIVE_COMPLIANCE_BLOCK_REASON,
+    });
+  });
+
+  it("treats a blank or whitespace-only address as missing", () => {
+    expect(getCompliancePostalAddress({ COMPLIANCE_POSTAL_ADDRESS: "" })).toBeNull();
+    expect(
+      getCompliancePostalAddress({ COMPLIANCE_POSTAL_ADDRESS: "   \t " }),
+    ).toBeNull();
+    expect(
+      marketingModeAllowed("live", { COMPLIANCE_POSTAL_ADDRESS: "   " }),
+    ).toEqual({
+      allowed: false,
+      reason: LIVE_COMPLIANCE_BLOCK_REASON,
+    });
+  });
+
+  it("allows live mode only when a non-blank address exists", () => {
+    expect(
+      marketingModeAllowed("live", {
+        COMPLIANCE_POSTAL_ADDRESS: `  ${VALID_TEST_POSTAL_ADDRESS}  `,
+      }),
+    ).toEqual({ allowed: true, reason: null });
+    expect(
+      campaignActivationAllowed("active", {
+        COMPLIANCE_POSTAL_ADDRESS: VALID_TEST_POSTAL_ADDRESS,
+      }),
+    ).toEqual({ allowed: true, reason: null });
+  });
+
+  it("adds no footer or fake placeholder when an address is absent", () => {
+    const sequence = JSON.stringify(buildComplianceSafeSequence());
+    expect(sequence).not.toContain("compliance_postal_address");
+    expect(sequence).not.toContain("1 Main St");
+    expect(sequence).not.toContain("123 Main");
+    expect(sequence).not.toContain("PO Box 123");
+  });
+
+  it("uses only the supplied address in every generated email footer", () => {
+    const sequence = buildComplianceSafeSequence(
+      `  ${VALID_TEST_POSTAL_ADDRESS}  `,
+    );
+    const steps = sequence.steps as Array<{ body: string }>;
+    expect(steps).toHaveLength(3);
+    for (const step of steps) {
+      expect(step.body.endsWith(VALID_TEST_POSTAL_ADDRESS)).toBe(true);
+      expect(step.body).not.toContain("compliance_postal_address");
+    }
   });
 });
 

@@ -93,6 +93,7 @@ export async function updateMarketingCampaign(
     smartlead_campaign_id: string | null;
     daily_cap: number;
     last_run_at: string;
+    sequence_config: Record<string, unknown>;
   }>,
 ): Promise<void> {
   const { error } = await db()

@@ -11,6 +11,9 @@ function source(relativePath: string): string {
 
 const migration = source("../../supabase/migrations/015_full_auto_marketing.sql");
 const adminPage = source("../app/admin/full-auto-marketing/page.tsx");
+const adminClient = source(
+  "../app/admin/full-auto-marketing/FullAutoMarketingClient.tsx",
+);
 const adminRoute = source(
   "../app/api/admin/full-auto-marketing/run/route.ts",
 );
@@ -19,6 +22,19 @@ const orchestrator = source("../lib/marketing/full-auto-orchestrator.ts");
 const smartlead = source("../lib/marketing/smartlead.ts");
 const apify = source("../lib/marketing/apify.ts");
 const verifier = source("../lib/marketing/email-verifier.ts");
+const sequence = source("../lib/marketing/sequence.ts");
+const legacyRunAuto = source(
+  "../app/api/admin/auto-marketing/run-auto/route.ts",
+);
+const legacySmartleadPush = source(
+  "../app/api/admin/auto-marketing/smartlead/push/route.ts",
+);
+const legacyReplyWebhook = source(
+  "../app/api/admin/auto-marketing/reply-webhook/route.ts",
+);
+const legacyCampaignConfig = source(
+  "../lib/auto-marketing/campaign-config.ts",
+);
 const marketingFiles = [
   adminPage,
   adminRoute,
@@ -63,6 +79,8 @@ describe("routes and orchestration safety", () => {
   it("keeps cron disabled unless explicitly enabled and secret-authenticated", () => {
     expect(cronRoute).toContain("marketingAutomationEnabled");
     expect(cronRoute).toContain("requireMarketingAutomationSecret");
+    expect(cronRoute).toContain("hasCompliancePostalAddress");
+    expect(cronRoute).toContain("status: 409");
   });
 
   it("has dry-run and live mode with valid-only Smartlead eligibility", () => {
@@ -92,5 +110,39 @@ describe("routes and orchestration safety", () => {
   it("never imports or uses Resend for cold outreach", () => {
     expect(marketingFiles).not.toMatch(/from ["']resend["']/);
     expect(marketingFiles).not.toMatch(/RESEND_API_KEY/);
+  });
+
+  it("blocks live mode and activation at the admin API boundary", () => {
+    expect(adminRoute).toContain("campaignActivationAllowed");
+    expect(adminRoute).toContain("requireAllowedMode");
+    expect(adminRoute).toContain("LiveComplianceError");
+    expect(adminRoute).toContain("status: error instanceof LiveComplianceError ? 409");
+  });
+
+  it("shows the required compliance warning in the admin UI", () => {
+    expect(adminClient).toContain("Dry-run allowed");
+    expect(adminClient).toContain(
+      "Live sending blocked: missing compliance postal address",
+    );
+    expect(adminClient).toContain("Do not use a fake address");
+  });
+
+  it("contains no compliance-address placeholder in sequence copy", () => {
+    expect(sequence).not.toContain("{{compliance_postal_address}}");
+    expect(sequence).not.toContain("1 Main St");
+    expect(sequence).not.toContain("123 Main");
+  });
+
+  it("closes legacy Smartlead upload and auto-reply bypasses", () => {
+    expect(legacyRunAuto).toContain("hasCompliancePostalAddress");
+    expect(legacyRunAuto).toContain("LIVE_COMPLIANCE_BLOCK_REASON");
+    expect(legacySmartleadPush).toContain("hasCompliancePostalAddress");
+    expect(legacySmartleadPush).toContain("status: 409");
+    expect(legacyReplyWebhook).toContain("getCompliancePostalAddress");
+    expect(legacyReplyWebhook).toContain("compliancePostalAddress &&");
+    expect(legacyCampaignConfig).toContain("getCompliancePostalAddress");
+    expect(legacyCampaignConfig).toMatch(
+      /const body = compliancePostalAddress\s*\?/,
+    );
   });
 });

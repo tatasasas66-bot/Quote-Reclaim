@@ -11,6 +11,10 @@ import {
   getTodaysSendCount,
 } from "@/lib/auto-marketing/repo";
 import { resolveCampaignConfig } from "@/lib/auto-marketing/campaign-config";
+import {
+  hasCompliancePostalAddress,
+  LIVE_COMPLIANCE_BLOCK_REASON,
+} from "@/lib/marketing/config";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -55,6 +59,16 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
   const campaignName = body.campaign ?? "concrete_driveway_v1";
   const dryRun = body.dryRun === true;
   const action = body.action ?? "run";
+  const liveAction =
+    (action === "run" && !dryRun) ||
+    action === "start" ||
+    action === "resume";
+  if (liveAction && !hasCompliancePostalAddress()) {
+    return NextResponse.json(
+      { ok: false, dry_run_allowed: true, error: LIVE_COMPLIANCE_BLOCK_REASON },
+      { status: 409 },
+    );
+  }
 
   // 1. Ensure the campaign exists.
   const campaign = await ensureDefaultCampaign();

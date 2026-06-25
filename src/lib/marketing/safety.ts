@@ -72,17 +72,22 @@ export function applyDailyCap<T>(
 export function campaignCanUploadLive(
   campaign: MarketingCampaign,
   setupLiveReady: boolean,
+  compliancePostalAddress: string | null,
 ): boolean {
   const sequence = JSON.stringify(campaign.sequence_config).toLowerCase();
+  const address = compliancePostalAddress?.trim().toLowerCase() || null;
   const stopHandlingConfigured =
     sequence.includes("reply \\\"no\\\"") &&
-    sequence.includes("stop") &&
-    !sequence.includes("{{compliance_postal_address}}");
+    sequence.includes("stop");
+  const complianceFooterConfigured = Boolean(
+    address && sequence.includes(address),
+  );
   return Boolean(
     setupLiveReady &&
       campaign.mode === "live" &&
       campaign.status === "active" &&
       campaign.smartlead_campaign_id &&
-      stopHandlingConfigured,
+      stopHandlingConfigured &&
+      complianceFooterConfigured,
   );
 }

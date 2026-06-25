@@ -1,6 +1,10 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { forbiddenResponseIfNotAdmin } from "@/lib/auth/require-admin";
 import { listApprovedSendableLeads, listSuppressedEmails } from "@/lib/auto-marketing/repo";
+import {
+  hasCompliancePostalAddress,
+  LIVE_COMPLIANCE_BLOCK_REASON,
+} from "@/lib/marketing/config";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -15,6 +19,13 @@ export const dynamic = "force-dynamic";
 export async function POST(request: NextRequest): Promise<NextResponse> {
   const guard = await forbiddenResponseIfNotAdmin();
   if (guard) return guard;
+
+  if (!hasCompliancePostalAddress()) {
+    return NextResponse.json(
+      { ok: false, dry_run_allowed: true, error: LIVE_COMPLIANCE_BLOCK_REASON },
+      { status: 409 },
+    );
+  }
 
   const apiKey = process.env.SMARTLEAD_API_KEY;
   if (!apiKey || !apiKey.trim()) {

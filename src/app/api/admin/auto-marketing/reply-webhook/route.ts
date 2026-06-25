@@ -2,6 +2,7 @@ import { type NextRequest, NextResponse } from "next/server";
 import { ingestReply, markReplySent } from "@/lib/auto-marketing/repo";
 import { forbiddenResponseIfNotAdmin } from "@/lib/auth/require-admin";
 import { isDraftable } from "@/lib/auto-marketing/classify";
+import { getCompliancePostalAddress } from "@/lib/marketing/config";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -69,11 +70,13 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
   // Auto-send safe replies if explicitly enabled AND Smartlead is configured.
   const autoSend = process.env.AUTO_SEND_SAFE_REPLIES === "true";
   const smartleadKey = process.env.SMARTLEAD_API_KEY?.trim();
+  const compliancePostalAddress = getCompliancePostalAddress();
   let autoSent = false;
 
   if (
     autoSend &&
     smartleadKey &&
+    compliancePostalAddress &&
     result.reply?.draft_reply &&
     isDraftable(result.classification) &&
     !result.suppressed
@@ -84,7 +87,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
         leadId: payload.smartlead_lead_id,
         campaignId: payload.smartlead_campaign_id,
         email: payload.email,
-        message: result.reply.draft_reply,
+        message: `${result.reply.draft_reply}\n\n${compliancePostalAddress}`,
       });
       if (sent && result.reply.id) {
         await markReplySent(result.reply.id);

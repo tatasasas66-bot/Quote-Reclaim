@@ -1,6 +1,12 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { forbiddenIfNotFullAutoAdminOrSecret } from "@/lib/marketing/admin";
-import { normalizeDailyCap } from "@/lib/marketing/config";
+import {
+  campaignActivationAllowed,
+  getCompliancePostalAddress,
+  LIVE_COMPLIANCE_BLOCK_REASON,
+  marketingModeAllowed,
+  normalizeDailyCap,
+} from "@/lib/marketing/config";
 import {
   ingestLatestApifyRun,
   runCampaignCycle,
@@ -15,7 +21,7 @@ import {
   unsuppressMarketingLead,
   updateMarketingCampaign,
 } from "@/lib/marketing/repo";
-import { CONCRETE_PHOENIX_SEQUENCE } from "@/lib/marketing/sequence";
+import { buildComplianceSafeSequence } from "@/lib/marketing/sequence";
 import type {
   MarketingCampaignStatus,
   MarketingMode,
@@ -58,6 +64,8 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
         const trade = requiredText(body.trade, "trade");
         const city = requiredText(body.city, "city");
         const searchQuery = requiredText(body.searchQuery, "searchQuery");
+        const mode = body.mode === "live" ? "live" : "dry_run";
+        requireAllowedMode(mode);
         const campaign = await createMarketingCampaign({
           name,
           slug,
@@ -70,9 +78,11 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
             process.env.SMARTLEAD_CAMPAIGN_ID?.trim() ??
             null,
           dailyCap: normalizeDailyCap(body.dailyCap),
-          mode: body.mode === "live" ? "live" : "dry_run",
+          mode,
           status: "draft",
-          sequenceConfig: sequenceWithComplianceAddress(),
+          sequenceConfig: buildComplianceSafeSequence(
+            getCompliancePostalAddress(),
+          ),
         });
         return NextResponse.json({ ok: true, campaign });
       }
@@ -91,33 +101,65 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
           ok: true,
           result: await verifyCampaignEmails(requiredId(campaignId)),
         });
-      case "upload":
-        return NextResponse.json({
-          ok: true,
-          result: await uploadCampaignLeads(requiredId(campaignId)),
-        });
+      case "upload": {
+        const result = await uploadCampaignLeads(requiredId(campaignId));
+        if (result.reason === LIVE_COMPLIANCE_BLOCK_REASON) {
+          return NextResponse.json(
+            { ok: false, dry_run_allowed: true, error: result.reason },
+            { status: 409 },
+          );
+        }
+        return NextResponse.json({ ok: true, result });
+      }
       case "sync":
         return NextResponse.json({
           ok: true,
           result: { synced: await syncCampaignSmartlead(requiredId(campaignId)) },
         });
-      case "cycle":
-        return NextResponse.json({
-          ok: true,
-          result: await runCampaignCycle(requiredId(campaignId)),
-        });
+      case "cycle": {
+        const result = await runCampaignCycle(requiredId(campaignId));
+        if (result.errors.includes(LIVE_COMPLIANCE_BLOCK_REASON)) {
+          return NextResponse.json(
+            {
+              ok: false,
+              dry_run_allowed: true,
+              error: LIVE_COMPLIANCE_BLOCK_REASON,
+            },
+            { status: 409 },
+          );
+        }
+        return NextResponse.json({ ok: true, result });
+      }
       case "set_status": {
         const status = String(body.status ?? "") as MarketingCampaignStatus;
         if (!["draft", "active", "paused", "stopped"].includes(status)) {
           throw new Error("Invalid campaign status");
         }
-        await updateMarketingCampaign(requiredId(campaignId), { status });
+        if (!campaignActivationAllowed(status).allowed) {
+          throw new LiveComplianceError();
+        }
+        await updateMarketingCampaign(requiredId(campaignId), {
+          status,
+          ...(status === "active"
+            ? {
+                sequence_config: buildComplianceSafeSequence(
+                  getCompliancePostalAddress(),
+                ),
+              }
+            : {}),
+        });
         return NextResponse.json({ ok: true, status });
       }
       case "set_mode": {
         const mode = String(body.mode ?? "") as MarketingMode;
         if (!["dry_run", "live"].includes(mode)) throw new Error("Invalid mode");
-        await updateMarketingCampaign(requiredId(campaignId), { mode });
+        requireAllowedMode(mode);
+        await updateMarketingCampaign(requiredId(campaignId), {
+          mode,
+          sequence_config: buildComplianceSafeSequence(
+            getCompliancePostalAddress(),
+          ),
+        });
         return NextResponse.json({ ok: true, mode });
       }
       case "suppress_lead":
@@ -134,7 +176,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
   } catch (error) {
     return NextResponse.json(
       { error: error instanceof Error ? error.message : "Marketing action failed" },
-      { status: 400 },
+      { status: error instanceof LiveComplianceError ? 409 : 400 },
     );
   }
 }
@@ -167,14 +209,14 @@ function slugify(value: string): string {
   return slug;
 }
 
-function sequenceWithComplianceAddress(): Record<string, unknown> {
-  const address =
-    process.env.COMPLIANCE_POSTAL_ADDRESS?.trim() ??
-    "{{compliance_postal_address}}";
-  return JSON.parse(
-    JSON.stringify(CONCRETE_PHOENIX_SEQUENCE).replaceAll(
-      "{{compliance_postal_address}}",
-      address,
-    ),
-  ) as Record<string, unknown>;
+function requireAllowedMode(mode: MarketingMode): void {
+  const decision = marketingModeAllowed(mode);
+  if (!decision.allowed) throw new LiveComplianceError();
+}
+
+class LiveComplianceError extends Error {
+  constructor() {
+    super(LIVE_COMPLIANCE_BLOCK_REASON);
+    this.name = "LiveComplianceError";
+  }
 }
