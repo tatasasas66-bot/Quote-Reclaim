@@ -19,6 +19,35 @@ export type ApifyRun = {
   usageTotalUsd: number | null;
 };
 
+type SocialMediaProfileOptions = {
+  facebooks: boolean;
+  instagrams: boolean;
+  youtubes: boolean;
+  tiktoks: boolean;
+  twitters: boolean;
+};
+
+export type GoogleMapsActorInput = {
+  searchStringsArray: string[];
+  locationQuery: string;
+  maxCrawledPlacesPerSearch: number;
+  language: "en";
+  countryCode: "US";
+  scrapeContacts: true;
+  maximumLeadsEnrichmentRecords: number;
+  scrapeSocialMediaProfiles: SocialMediaProfileOptions;
+  skipClosedPlaces: true;
+  website: "withWebsite";
+};
+
+const DISABLED_SOCIAL_MEDIA_PROFILES: SocialMediaProfileOptions = {
+  facebooks: false,
+  instagrams: false,
+  youtubes: false,
+  tiktoks: false,
+  twitters: false,
+};
+
 function credentials(env: Env = process.env): {
   token: string;
   actorId: string;
@@ -58,6 +87,44 @@ export function isApifyReady(env: Env = process.env): boolean {
   return Boolean(credentials(env));
 }
 
+/**
+ * Object-typed Actor options must always stay objects. If an old boolean or
+ * malformed value reaches this boundary, fall back to the disabled shape
+ * instead of sending schema-invalid JSON to Apify.
+ */
+export function normalizeActorObjectOption<T extends Record<string, unknown>>(
+  value: unknown,
+  disabledValue: T,
+): T {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return { ...disabledValue };
+  }
+  return { ...disabledValue, ...(value as Partial<T>) };
+}
+
+export function buildGoogleMapsActorInput(input: {
+  searchQuery: string;
+  city: string;
+  maxPlaces: number;
+  scrapeSocialMediaProfiles?: unknown;
+}): GoogleMapsActorInput {
+  return {
+    searchStringsArray: [input.searchQuery],
+    locationQuery: input.city,
+    maxCrawledPlacesPerSearch: input.maxPlaces,
+    language: "en",
+    countryCode: "US",
+    scrapeContacts: true,
+    maximumLeadsEnrichmentRecords: input.maxPlaces,
+    scrapeSocialMediaProfiles: normalizeActorObjectOption(
+      input.scrapeSocialMediaProfiles,
+      DISABLED_SOCIAL_MEDIA_PROFILES,
+    ),
+    skipClosedPlaces: true,
+    website: "withWebsite",
+  };
+}
+
 export async function startGoogleMapsRun(
   input: {
     searchQuery: string;
@@ -73,18 +140,11 @@ export async function startGoogleMapsRun(
   if (!config) throw new Error("Apify setup required");
   const actorId = input.actorId?.trim() || config.actorId;
   const maxPlaces = Math.max(1, Math.min(30, input.maxPlaces ?? 30));
-  const body = {
-    searchStringsArray: [input.searchQuery],
-    locationQuery: input.city,
-    maxCrawledPlacesPerSearch: maxPlaces,
-    language: "en",
-    countryCode: "US",
-    scrapeContacts: true,
-    maximumLeadsEnrichmentRecords: maxPlaces,
-    scrapeSocialMediaProfiles: false,
-    skipClosedPlaces: true,
-    website: "withWebsite",
-  };
+  const body = buildGoogleMapsActorInput({
+    searchQuery: input.searchQuery,
+    city: input.city,
+    maxPlaces,
+  });
 
   const payload = await apifyJson<{ data?: Record<string, unknown> }>(
     `/acts/${actorPath(actorId)}/runs?maxItems=${maxPlaces}&maxTotalChargeUsd=2`,

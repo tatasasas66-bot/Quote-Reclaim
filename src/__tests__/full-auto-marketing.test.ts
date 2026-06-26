@@ -14,6 +14,11 @@ import {
   websiteDomain,
 } from "@/lib/marketing/normalize";
 import {
+  buildGoogleMapsActorInput,
+  normalizeActorObjectOption,
+  startGoogleMapsRun,
+} from "@/lib/marketing/apify";
+import {
   applyDailyCap,
   buildMarketingAuditUrl,
   campaignCanUploadLive,
@@ -75,6 +80,83 @@ const lead: MarketingLead = {
 };
 
 describe("Apify result normalization", () => {
+  it("builds the Compass social-profile option as a disabled object", () => {
+    const input = buildGoogleMapsActorInput({
+      searchQuery: "concrete driveway contractors Phoenix AZ",
+      city: "Phoenix",
+      maxPlaces: 30,
+    });
+
+    expect(input.scrapeSocialMediaProfiles).toEqual({
+      facebooks: false,
+      instagrams: false,
+      youtubes: false,
+      tiktoks: false,
+      twitters: false,
+    });
+    expect(typeof input.scrapeSocialMediaProfiles).toBe("object");
+    expect(input.scrapeContacts).toBe(true);
+    expect(input.website).toBe("withWebsite");
+  });
+
+  it("defensively converts boolean object options to the disabled object", () => {
+    expect(
+      normalizeActorObjectOption(false, {
+        facebooks: false,
+        instagrams: false,
+      }),
+    ).toEqual({
+      facebooks: false,
+      instagrams: false,
+    });
+  });
+
+  it("starts a dry-run lead search with schema-valid Actor input", async () => {
+    const fetchImpl = vi.fn(async (_url: URL | RequestInfo, init?: RequestInit) => {
+      const payload = JSON.parse(String(init?.body)) as Record<string, unknown>;
+      expect(payload.scrapeSocialMediaProfiles).toEqual({
+        facebooks: false,
+        instagrams: false,
+        youtubes: false,
+        tiktoks: false,
+        twitters: false,
+      });
+      expect(payload.scrapeContacts).toBe(true);
+      return new Response(
+        JSON.stringify({
+          data: {
+            id: "apify-run-1",
+            status: "READY",
+            defaultDatasetId: "dataset-1",
+          },
+        }),
+        { status: 201 },
+      );
+    });
+
+    await expect(
+      startGoogleMapsRun(
+        {
+          searchQuery: "concrete driveway contractors Phoenix AZ",
+          city: "Phoenix",
+          maxPlaces: 30,
+        },
+        {
+          env: {
+            APIFY_TOKEN: "test-token",
+            APIFY_GOOGLE_MAPS_ACTOR_ID: "compass/crawler-google-places",
+          },
+          fetchImpl: fetchImpl as typeof fetch,
+        },
+      ),
+    ).resolves.toMatchObject({
+      id: "apify-run-1",
+      status: "READY",
+      defaultDatasetId: "dataset-1",
+    });
+    expect(fetchImpl).toHaveBeenCalledOnce();
+  });
+
   it("normalizes common Google Maps Scraper field shapes", () => {
     const normalized = normalizeApifyRecord(
       {

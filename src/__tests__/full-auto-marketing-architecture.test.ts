@@ -107,6 +107,13 @@ describe("routes and orchestration safety", () => {
     expect(orchestrator).toContain("getSmartleadCampaignStatus");
   });
 
+  it("sends social-media scraping as an object, never a boolean", () => {
+    expect(apify).toContain("DISABLED_SOCIAL_MEDIA_PROFILES");
+    expect(apify).toContain("normalizeActorObjectOption");
+    expect(apify).toContain("scrapeSocialMediaProfiles:");
+    expect(apify).not.toMatch(/scrapeSocialMediaProfiles:\s*false/);
+  });
+
   it("never imports or uses Resend for cold outreach", () => {
     expect(marketingFiles).not.toMatch(/from ["']resend["']/);
     expect(marketingFiles).not.toMatch(/RESEND_API_KEY/);
