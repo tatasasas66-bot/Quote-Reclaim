@@ -43,39 +43,45 @@ function setMatchMedia(reduced: boolean) {
 }
 
 function fillFirstQuote(amount = "5000", days = "20") {
-  fireEvent.change(screen.getByLabelText(/estimate #1 amount/i), {
+  fireEvent.change(screen.getByLabelText(/quote #1 amount/i), {
     target: { value: amount },
   });
   if (days) {
-    fireEvent.change(screen.getByLabelText(/estimate #1 days quiet/i), {
+    fireEvent.change(screen.getByLabelText(/quote #1 days quiet/i), {
       target: { value: days },
     });
   }
 }
 
 function fillThreeQuotes() {
-  fireEvent.change(screen.getByLabelText(/estimate #1 amount/i), {
+  fireEvent.change(screen.getByLabelText(/quote #1 amount/i), {
     target: { value: "2500" },
   });
-  fireEvent.change(screen.getByLabelText(/estimate #1 days quiet/i), {
+  fireEvent.change(screen.getByLabelText(/quote #1 days quiet/i), {
     target: { value: "10" },
   });
-  fireEvent.change(screen.getByLabelText(/estimate #2 amount/i), {
+  fireEvent.change(screen.getByLabelText(/quote #2 amount/i), {
     target: { value: "5000" },
   });
-  fireEvent.change(screen.getByLabelText(/estimate #2 days quiet/i), {
+  fireEvent.change(screen.getByLabelText(/quote #2 days quiet/i), {
     target: { value: "12" },
   });
-  fireEvent.change(screen.getByLabelText(/estimate #3 amount/i), {
+  fireEvent.change(screen.getByLabelText(/quote #3 amount/i), {
     target: { value: "7000" },
   });
-  fireEvent.change(screen.getByLabelText(/estimate #3 days quiet/i), {
+  fireEvent.change(screen.getByLabelText(/quote #3 days quiet/i), {
     target: { value: "5" },
   });
 }
 
 const pageSrc = readSource("../app/audit/page.tsx");
 const clientSrc = readSource("../app/audit/AuditCalculatorClient.tsx");
+const resultSrc = readSource("../app/audit/AuditResultView.tsx");
+const replySrc = readSource("../app/audit/AuditReplyPlaybook.tsx");
+const orderSrc = readSource("../app/audit/AuditFollowUpOrder.tsx");
+const allAuditSrc = [pageSrc, clientSrc, resultSrc, replySrc, orderSrc].join(
+  "\n",
+);
 
 afterEach(cleanup);
 
@@ -86,29 +92,31 @@ describe("/audit static landing page shell", () => {
     expect(
       screen.getByRole("heading", {
         level: 1,
-        name: /Before buying another lead, check the estimates you already sent\./i,
+        name: /Find the old quote worth texting before you buy another lead\./i,
       }),
     ).toBeTruthy();
-    expect(screen.getByText(/Free 60-second estimate audit/i)).toBeTruthy();
-    expect(screen.getAllByText(/total quiet estimate value/i).length).toBeGreaterThan(0);
+    expect(
+      screen.getByText(/Silent Quote Recovery Diagnostic/i),
+    ).toBeTruthy();
+    expect(screen.getAllByText(/money still quiet/i).length).toBeGreaterThan(0);
     expect(screen.getByTestId("audit-form-card")).toBeTruthy();
     expect(
       screen.getByRole("button", {
-        name: /Show me which estimate to follow up first/i,
+        name: /Show me which quote to text first/i,
       }),
     ).toBeTruthy();
-    expect(screen.getByText(/^No phone numbers$/i)).toBeTruthy();
+    expect(screen.getAllByText(/No phone numbers/i).length).toBeGreaterThan(0);
   });
 
-  it("explains who it is for without making the product painters-only", () => {
+  it("uses contractor-native sunk-cost and lead-buying language", () => {
     render(<AuditPage />);
     const pageText = document.body.textContent ?? "";
     expect(pageText).toMatch(/home-service contractors/i);
-    expect(pageText).toMatch(/painting/i);
-    expect(pageText).toMatch(/remodeling/i);
-    expect(pageText).toMatch(/roofing/i);
-    expect(pageText).toMatch(/HVAC/i);
-    expect(pageText).toMatch(/landscaping/i);
+    expect(pageText).toMatch(/drove out/i);
+    expect(pageText).toMatch(/measured it/i);
+    expect(pageText).toMatch(/priced/i);
+    expect(pageText).toMatch(/buying another lead/i);
+    expect(pageText).toMatch(/sent folder/i);
   });
 
   it("keeps the page lightweight: no auth, Supabase, dashboard, billing, or fake support imports", () => {
@@ -120,20 +128,30 @@ describe("/audit static landing page shell", () => {
     expect(pageSrc).not.toMatch(/phone support|call us|fake/i);
   });
 
-  it("includes lower-page trust, how-it-works, straight-answer, and final CTA sections", () => {
+  it("includes the pain reframe, simple process, and straight answers", () => {
     render(<AuditPage />);
-    expect(screen.getByRole("heading", { name: /Clear enough to trust/i })).toBeTruthy();
-    expect(screen.getByRole("heading", { name: /A quick priority check/i })).toBeTruthy();
     expect(
       screen.getByRole("heading", {
-        name: /What contractors usually need to know first/i,
+        name: /Follow-up feels like rejection/i,
       }),
     ).toBeTruthy();
-    expect(screen.getByRole("link", { name: /^Run the audit$/i })).toBeTruthy();
+    expect(
+      screen.getByRole("heading", {
+        name: /One quote\. One message\. One next move\./i,
+      }),
+    ).toBeTruthy();
+    expect(
+      screen.getByRole("heading", { name: /No trick behind the result/i }),
+    ).toBeTruthy();
+    expect(
+      screen.getByRole("link", {
+        name: /3 quiet quotes in\. One first move out\./i,
+      }),
+    ).toBeTruthy();
   });
 
   it("does not show fake proof or unavailable integrations", () => {
-    const both = `${pageSrc}\n${clientSrc}`;
+    const both = allAuditSrc;
     expect(both).not.toMatch(/trusted by|testimonial|case study|5-star|5 star/i);
     expect(both).not.toMatch(/integrates with|ServiceTitan|Jobber|Housecall/i);
     expect(both).not.toMatch(/automatically sends|guaranteed|10x/i);
@@ -142,7 +160,8 @@ describe("/audit static landing page shell", () => {
 
 describe("/audit mobile responsiveness guardrails", () => {
   it("keeps the public shell from using desktop-only widths on mobile", () => {
-    expect(pageSrc).toMatch(/max-w-full/);
+    expect(pageSrc).toMatch(/max-w-\[100dvw\]/);
+    expect(pageSrc).toMatch(/overflow-x-hidden/);
     expect(pageSrc).toMatch(/min-w-0/);
     expect(pageSrc).toMatch(/break-words/);
     expect(pageSrc).toMatch(/grid-cols-2[\s\S]*sm:grid-cols-4/);
@@ -150,28 +169,30 @@ describe("/audit mobile responsiveness guardrails", () => {
     expect(pageSrc).not.toMatch(/min-w-\[(?:5|6|7|8|9)\d{2}px\]/);
   });
 
-  it("stacks estimate amount and days quiet fields before the small breakpoint", () => {
+  it("keeps quote amount and days quiet fields responsive", () => {
     expect(clientSrc).toMatch(
-      /grid min-w-0 grid-cols-1 gap-3 sm:grid-cols-\[minmax\(0,1fr\)_minmax\(9rem,0\.55fr\)\]/,
+      /grid min-w-0 grid-cols-1 gap-3 sm:grid-cols-\[minmax\(0,1fr\)_minmax\(8rem,0\.6fr\)\] lg:grid-cols-1/,
     );
     expect(clientSrc).toMatch(/h-12 w-full max-w-full min-w-0 rounded-lg/);
   });
 
   it("allows long audit CTAs, examples, and result cards to wrap instead of clipping", () => {
     expect(clientSrc).toMatch(
-      /data-testid="audit-submit"[\s\S]{0,160}h-auto min-h-12 whitespace-normal/,
+      /data-testid="audit-submit"[\s\S]{0,180}h-auto min-h-14 whitespace-normal/,
     );
     expect(clientSrc).toMatch(/max-w-full whitespace-normal break-words/);
-    expect(clientSrc).toMatch(/data-testid="audit-result"[\s\S]{0,220}max-w-full min-w-0/);
-    expect(clientSrc).toMatch(/whitespace-pre-wrap break-words/);
+    expect(resultSrc).toMatch(
+      /data-testid="audit-result"[\s\S]{0,240}max-w-full min-w-0/,
+    );
+    expect(resultSrc).toMatch(/whitespace-pre-wrap break-words/);
   });
 });
 
 describe("audit form - safe to try", () => {
-  it("renders exactly estimate amount + days quiet fields for three rows", () => {
+  it("renders exactly quote amount + days quiet fields for three rows", () => {
     render(<AuditCalculatorClient />);
-    expect(screen.getAllByLabelText(/estimate #\d amount/i)).toHaveLength(3);
-    expect(screen.getAllByLabelText(/estimate #\d days quiet/i)).toHaveLength(3);
+    expect(screen.getAllByLabelText(/quote #\d amount/i)).toHaveLength(3);
+    expect(screen.getAllByLabelText(/quote #\d days quiet/i)).toHaveLength(3);
     expect(screen.getByPlaceholderText("3200")).toBeTruthy();
     expect(screen.getByPlaceholderText("14")).toBeTruthy();
     expect(screen.getByPlaceholderText("5800")).toBeTruthy();
@@ -193,14 +214,24 @@ describe("audit form - safe to try", () => {
 
   it("loads sample numbers without showing a signup wall", () => {
     render(<AuditCalculatorClient />);
-    fireEvent.click(screen.getByRole("button", { name: /try sample numbers/i }));
+    fireEvent.click(screen.getByRole("button", { name: /load sample quotes/i }));
     expect(
-      (screen.getByLabelText(/estimate #1 amount/i) as HTMLInputElement).value,
+      (screen.getByLabelText(/quote #1 amount/i) as HTMLInputElement).value,
     ).toBe("3200");
     expect(
-      (screen.getByLabelText(/estimate #2 days quiet/i) as HTMLInputElement).value,
+      (screen.getByLabelText(/quote #2 days quiet/i) as HTMLInputElement).value,
     ).toBe("24");
     expect(screen.queryByTestId("audit-signup-cta")).toBeNull();
+  });
+
+  it("updates the live quiet-money total and recovery windows before submit", () => {
+    render(<AuditCalculatorClient />);
+    fillThreeQuotes();
+    expect(screen.getByTestId("audit-live-total").textContent).toContain(
+      "$14,500",
+    );
+    expect(screen.getAllByText(/^Warm$/i).length).toBeGreaterThan(0);
+    expect(screen.queryByTestId("audit-result")).toBeNull();
   });
 
   it("shows friendly validation only after submit", () => {
@@ -208,11 +239,11 @@ describe("audit form - safe to try", () => {
     expect(screen.queryByRole("alert")).toBeNull();
     fireEvent.click(
       screen.getByRole("button", {
-        name: /show me which estimate to follow up first/i,
+        name: /show me which quote to text first/i,
       }),
     );
     expect(screen.getByRole("alert").textContent).toMatch(
-      /Enter an estimate amount/i,
+      /Enter at least one quote amount/i,
     );
     expect(screen.queryByTestId("audit-result")).toBeNull();
   });
@@ -222,7 +253,7 @@ describe("audit form - safe to try", () => {
     fillFirstQuote("5000", "two weeks");
     fireEvent.click(
       screen.getByRole("button", {
-        name: /show me which estimate to follow up first/i,
+        name: /show me which quote to text first/i,
       }),
     );
     expect(screen.getByRole("alert").textContent).toMatch(
@@ -262,7 +293,7 @@ describe("funnel - value before signup", () => {
     render(<AuditCalculatorClient />);
     expect(
       screen.getByRole("button", {
-        name: /show me which estimate to follow up first/i,
+        name: /show me which quote to text first/i,
       }),
     ).toBeTruthy();
     expect(screen.queryByTestId("audit-signup-cta")).toBeNull();
@@ -273,13 +304,13 @@ describe("funnel - value before signup", () => {
     fillFirstQuote();
     fireEvent.click(
       screen.getByRole("button", {
-        name: /show me which estimate to follow up first/i,
+        name: /show me which quote to text first/i,
       }),
     );
     expect(screen.getByTestId("audit-analysis")).toBeTruthy();
     expect(screen.queryByTestId("audit-result")).toBeNull();
     expect(screen.getByTestId("audit-analysis-step").textContent).toMatch(
-      /Totaling your quiet estimates/i,
+      /Counting the money still quiet/i,
     );
     expect(scrollSpy).toHaveBeenCalledWith(
       expect.objectContaining({ behavior: "smooth", block: "start" }),
@@ -296,7 +327,7 @@ describe("funnel - value before signup", () => {
     fillFirstQuote();
     fireEvent.click(
       screen.getByRole("button", {
-        name: /show me which estimate to follow up first/i,
+        name: /show me which quote to text first/i,
       }),
     );
     expect(scrollSpy).toHaveBeenCalledWith(
@@ -318,7 +349,7 @@ describe("funnel - value before signup", () => {
     fillFirstQuote();
     fireEvent.click(
       screen.getByRole("button", {
-        name: /show me which estimate to follow up first/i,
+        name: /show me which quote to text first/i,
       }),
     );
     act(() => {
@@ -336,44 +367,48 @@ describe("funnel - value before signup", () => {
 
   it("shows the full diagnostic result after valid input", () => {
     render(<AuditCalculatorClient />);
-    fireEvent.change(screen.getByLabelText(/estimate #1 amount/i), {
+    fireEvent.change(screen.getByLabelText(/quote #1 amount/i), {
       target: { value: "$8,500" },
     });
-    fireEvent.change(screen.getByLabelText(/estimate #1 days quiet/i), {
+    fireEvent.change(screen.getByLabelText(/quote #1 days quiet/i), {
       target: { value: "10" },
     });
-    fireEvent.change(screen.getByLabelText(/estimate #2 amount/i), {
+    fireEvent.change(screen.getByLabelText(/quote #2 amount/i), {
       target: { value: "4000" },
     });
-    fireEvent.change(screen.getByLabelText(/estimate #2 days quiet/i), {
+    fireEvent.change(screen.getByLabelText(/quote #2 days quiet/i), {
       target: { value: "20" },
     });
     fireEvent.click(
       screen.getByRole("button", {
-        name: /show me which estimate to follow up first/i,
+        name: /show me which quote to text first/i,
       }),
     );
     runFullAnalysis();
 
     const result = screen.getByTestId("audit-result");
     expect(result.textContent).toMatch(/Your 60-second estimate audit/i);
-    expect(result.textContent).toMatch(/Total quiet estimate value/i);
+    expect(result.textContent).toMatch(/Money still quiet/i);
     expect(result.textContent).toContain("$12,500");
-    expect(result.textContent).toMatch(/Follow up this estimate first/i);
+    expect(result.textContent).toMatch(/The first quote to reopen/i);
     expect(result.textContent).toMatch(/Recovery window/i);
     expect(result.textContent).toMatch(/Why this one first/i);
-    expect(result.textContent).toMatch(/Best low-pressure message to send today/i);
-    expect(result.textContent).toMatch(/Follow-up order/i);
-    expect(result.textContent).toMatch(/Next move/i);
-    expect(result.textContent).toMatch(/Save this recovery plan/i);
+    expect(result.textContent).toMatch(/What the silence probably means/i);
+    expect(result.textContent).toMatch(/Message to send today/i);
+    expect(result.textContent).toMatch(/Next follow-up order/i);
+    expect(result.textContent).toMatch(/If they reply/i);
+    expect(result.textContent).toMatch(/What this looks like inside Quote Reclaim/i);
+    expect(result.textContent).toMatch(/Turn this into a follow-up system/i);
+    expect(screen.getByTestId("audit-reply-playbook")).toBeTruthy();
+    expect(screen.getByTestId("audit-product-preview")).toBeTruthy();
   });
 
-  it("preserves Estimate #3 as the first warm recommendation for the regression input", () => {
+  it("preserves Quote #3 as the first warm recommendation for the regression input", () => {
     render(<AuditCalculatorClient />);
     fillThreeQuotes();
     fireEvent.click(
       screen.getByRole("button", {
-        name: /show me which estimate to follow up first/i,
+        name: /show me which quote to text first/i,
       }),
     );
     runFullAnalysis();
@@ -382,13 +417,14 @@ describe("funnel - value before signup", () => {
     const startHere = screen.getByTestId("audit-start-here");
     const rankOne = screen.getByTestId("audit-rank-row-1");
 
-    expect(startHere.textContent).toMatch(/Start with Estimate #3/i);
+    expect(startHere.textContent).toMatch(/Start with Quote #3/i);
     expect(screen.getByTestId("audit-start-window-badge").textContent).toMatch(
       /^Warm$/i,
     );
-    expect(rankOne.textContent).toMatch(/Estimate #3/);
+    expect(rankOne.textContent).toMatch(/Quote #3/);
     expect(rankOne.textContent).toMatch(/Warm/);
-    expect(result.textContent).not.toMatch(/quiet(?:Warm|Cooling|Cold)/i);
+    expect(startHere.textContent).toMatch(/5 days quiet/i);
+    expect(startHere.textContent).toMatch(/Warm/i);
     expect(result.textContent).toMatch(/still fresh/i);
   });
 
@@ -397,17 +433,17 @@ describe("funnel - value before signup", () => {
     fillThreeQuotes();
     fireEvent.click(
       screen.getByRole("button", {
-        name: /show me which estimate to follow up first/i,
+        name: /show me which quote to text first/i,
       }),
     );
     runFullAnalysis();
 
     const order = screen.getByTestId("audit-follow-up-order");
-    expect(order.textContent).toContain("Estimate #1");
-    expect(order.textContent).toContain("Estimate #2");
-    expect(order.textContent).toContain("Estimate #3");
+    expect(order.textContent).toContain("Quote #1");
+    expect(order.textContent).toContain("Quote #2");
+    expect(order.textContent).toContain("Quote #3");
     expect(order.textContent).toMatch(/Send today/);
-    expect(order.textContent).toMatch(/Follow up next/);
+    expect(order.textContent).toMatch(/Work next/);
     expect(screen.getByTestId("audit-rank-row-1")).toBeTruthy();
     expect(screen.getByTestId("audit-rank-row-2")).toBeTruthy();
     expect(screen.getByTestId("audit-rank-row-3")).toBeTruthy();
@@ -418,13 +454,13 @@ describe("funnel - value before signup", () => {
     fillFirstQuote("5000", "");
     fireEvent.click(
       screen.getByRole("button", {
-        name: /show me which estimate to follow up first/i,
+        name: /show me which quote to text first/i,
       }),
     );
     expect(screen.queryByTestId("audit-signup-cta")).toBeNull();
     runFullAnalysis();
     const cta = screen.getByTestId("audit-signup-cta");
-    expect(cta.textContent).toMatch(/Save this recovery plan/i);
+    expect(cta.textContent).toMatch(/Turn this into a follow-up system/i);
     expect(cta.getAttribute("href")).toMatch(/^\/sign-up\?next=/);
   });
 
@@ -439,13 +475,13 @@ describe("funnel - value before signup", () => {
     fillFirstQuote("5000", "20");
     fireEvent.click(
       screen.getByRole("button", {
-        name: /show me which estimate to follow up first/i,
+        name: /show me which quote to text first/i,
       }),
     );
     runFullAnalysis();
 
     await act(async () => {
-      fireEvent.click(screen.getByRole("button", { name: /^Copy$/i }));
+      fireEvent.click(screen.getByRole("button", { name: /Copy message/i }));
     });
     expect(writeText).toHaveBeenCalledWith(
       expect.stringMatching(/estimate/i),
@@ -455,7 +491,7 @@ describe("funnel - value before signup", () => {
 });
 
 describe("copy and positioning guardrails", () => {
-  const both = `${pageSrc}\n${clientSrc}`.toLowerCase();
+  const both = allAuditSrc.toLowerCase();
 
   it("contains no banned hype or fake proof phrases", () => {
     for (const banned of [

@@ -1,20 +1,29 @@
 "use client";
 
 import * as React from "react";
-import { ArrowRight, Check, CheckCircle2, Clipboard, Loader2 } from "lucide-react";
+import {
+  ArrowRight,
+  Banknote,
+  CheckCircle2,
+  ClipboardList,
+  Loader2,
+  ShieldCheck,
+} from "lucide-react";
 import { Button } from "@/components/ui";
 import { formatCurrency } from "@/lib/utils/currency";
 import { track } from "@/lib/analytics/track";
 import { bucketCurrency, readUtms } from "@/lib/analytics/privacy";
 import {
   buildSignupHref,
+  describeRecoveryWindow,
   parseDaysSilent,
   parseQuoteAmount,
   runSilentQuoteAudit,
   type AuditResult,
-  type RankedAuditQuote,
 } from "@/lib/audit/silent-quote-audit";
 import { resolveTradeConfig, type TradeConfig } from "@/lib/audit/trade-config";
+import { AuditResultView } from "./AuditResultView";
+import { WINDOW_TONES } from "./audit-presentation";
 
 const ROW_COUNT = 3;
 const DEFAULT_SAMPLE_ROWS = [
@@ -23,39 +32,24 @@ const DEFAULT_SAMPLE_ROWS = [
   { amount: "2400", days: "7" },
 ] as const;
 
-/**
- * Honest analysis steps shown between submit and result render. Each line names
- * a thing the audit actually computed. No fake server work, no fake AI magic.
- */
+const QUOTE_PROMPTS = [
+  "the one that went quiet",
+  "the one sitting in limbo",
+  "the one you keep meaning to text",
+] as const;
+
 export const ANALYSIS_STEPS: readonly string[] = [
-  "Totaling your quiet estimates...",
-  "Scoring by value and days quiet...",
-  "Finding the estimate to follow up first...",
-  "Building your follow-up order...",
-  "Preparing the message to send today...",
+  "Counting the money still quiet...",
+  "Comparing value against days quiet...",
+  "Finding the quote closest to alive...",
+  "Putting all three in follow-up order...",
+  "Writing the first clean reopen...",
 ];
 
-/** Default per-step duration: 700ms x 5 steps = 3.5s total. */
 export const ANALYSIS_STEP_MS_DEFAULT = 700;
-/** Reduced-motion per-step duration: 160ms x 5 steps = 800ms total. */
 export const ANALYSIS_STEP_MS_REDUCED = 160;
 
 type Row = { amount: string; days: string };
-
-const WINDOW_TONES: Record<string, string> = {
-  Warm: "border-success/40 bg-success/10 text-success",
-  Cooling: "border-warning/40 bg-warning/10 text-warning",
-  Cold: "border-danger/40 bg-danger/10 text-danger",
-  Unknown: "border-line-subtle bg-surface-2 text-ink-muted",
-};
-
-const WINDOW_DEFINITIONS: Record<string, string> = {
-  Warm: "Fresh enough for a simple low-pressure question.",
-  Cooling: "Still recoverable, but the message should make the homeowner's reply easier.",
-  Cold: "Older estimate. Use a direct, low-pressure message instead of chasing.",
-  Closeout: "Old enough that a clean closeout may be the best move — leave the door open to reopen later.",
-  Unknown: "Add days quiet when you know them for a clearer window.",
-};
 
 function emptyRows(): Row[] {
   return Array.from({ length: ROW_COUNT }, () => ({ amount: "", days: "" }));
@@ -72,12 +66,6 @@ function prefersReducedMotion(): boolean {
   }
 }
 
-function actionForRank(q: RankedAuditQuote): string {
-  if (q.rank === 1) return "Send today";
-  if (q.rank === 2) return "Follow up next";
-  return q.window === "cold" ? "Use lighter check-in" : "Check after the first";
-}
-
 export function AuditCalculatorClient() {
   const [rows, setRows] = React.useState<Row[]>(emptyRows);
   const [result, setResult] = React.useState<AuditResult | null>(null);
@@ -87,12 +75,32 @@ export function AuditCalculatorClient() {
     "/sign-up?next=/onboarding/reveal",
   );
   const [utms, setUtms] = React.useState<Record<string, string>>({});
-  const [tradeConfig, setTradeConfig] = React.useState<TradeConfig>(resolveTradeConfig(null));
+  const [tradeConfig, setTradeConfig] = React.useState<TradeConfig>(
+    resolveTradeConfig(null),
+  );
+  const [analysisStep, setAnalysisStep] = React.useState<number | null>(null);
   const startedRef = React.useRef(false);
   const outputRef = React.useRef<HTMLDivElement | null>(null);
-  const [analysisStep, setAnalysisStep] = React.useState<number | null>(null);
-  const analyzing = analysisStep !== null;
   const timersRef = React.useRef<number[]>([]);
+  const analyzing = analysisStep !== null;
+
+  const liveQuotes = rows.map((row, index) => {
+    const amount = parseQuoteAmount(row.amount);
+    const days = parseDaysSilent(row.days);
+    const descriptor = describeRecoveryWindow(days);
+    return {
+      index: index + 1,
+      amount,
+      days,
+      descriptor,
+      hasDaysInput: row.days.trim() !== "",
+    };
+  });
+  const liveTotal = liveQuotes.reduce(
+    (total, quote) => total + (quote.amount ?? 0),
+    0,
+  );
+  const enteredCount = liveQuotes.filter((quote) => quote.amount != null).length;
 
   function clearAnalysisTimers() {
     for (const id of timersRef.current) window.clearTimeout(id);
@@ -105,12 +113,8 @@ export function AuditCalculatorClient() {
     const captured = readUtms(window.location.search);
     setUtms(captured);
     setSignupHref(buildSignupHref(window.location.search));
-    // Trade personalization: read utm_trade and resolve the trade config.
-    // This is the cold-email → landing-page bridge. A concrete email lands
-    // on a concrete page, a fence email on a fence page, etc.
     const params = new URLSearchParams(window.location.search);
-    const utmTrade = params.get("utm_trade");
-    setTradeConfig(resolveTradeConfig(utmTrade));
+    setTradeConfig(resolveTradeConfig(params.get("utm_trade")));
     track("audit_page_viewed", captured);
   }, []);
 
@@ -120,20 +124,25 @@ export function AuditCalculatorClient() {
     track("audit_started", utms);
   }
 
-  function updateRow(i: number, key: keyof Row, value: string) {
+  function updateRow(index: number, key: keyof Row, value: string) {
     markStarted();
-    setRows((prev) =>
-      prev.map((row, idx) => (idx === i ? { ...row, [key]: value } : row)),
+    setRows((current) =>
+      current.map((row, rowIndex) =>
+        rowIndex === index ? { ...row, [key]: value } : row,
+      ),
     );
   }
 
   function loadSampleRows() {
     markStarted();
     clearAnalysisTimers();
-    // Use trade-specific sample rows if available, else default.
-    const samples = tradeConfig.sampleRows.length === ROW_COUNT
-      ? tradeConfig.sampleRows.map((row) => ({ amount: row.amount, days: row.days }))
-      : DEFAULT_SAMPLE_ROWS.map((row) => ({ ...row }));
+    const samples =
+      tradeConfig.sampleRows.length === ROW_COUNT
+        ? tradeConfig.sampleRows.map((row) => ({
+            amount: row.amount,
+            days: row.days,
+          }))
+        : DEFAULT_SAMPLE_ROWS.map((row) => ({ ...row }));
     setRows(samples);
     setResult(null);
     setError(null);
@@ -143,11 +152,16 @@ export function AuditCalculatorClient() {
 
   function validateRows(): string | null {
     const hasAmountInput = rows.some((row) => row.amount.trim() !== "");
-    const hasValidAmount = rows.some((row) => parseQuoteAmount(row.amount) != null);
-    if (!hasAmountInput || !hasValidAmount) return "Enter an estimate amount.";
+    const hasValidAmount = rows.some(
+      (row) => parseQuoteAmount(row.amount) != null,
+    );
+    if (!hasAmountInput || !hasValidAmount) {
+      return "Enter at least one quote amount.";
+    }
 
     const invalidDays = rows.some(
-      (row) => row.days.trim() !== "" && parseDaysSilent(row.days) == null,
+      (row) =>
+        row.days.trim() !== "" && parseDaysSilent(row.days) == null,
     );
     if (invalidDays) return "Use numbers only for days quiet.";
 
@@ -200,18 +214,19 @@ export function AuditCalculatorClient() {
       });
     });
 
-    for (let i = 1; i < ANALYSIS_STEPS.length; i++) {
+    for (let index = 1; index < ANALYSIS_STEPS.length; index += 1) {
       timersRef.current.push(
-        window.setTimeout(() => setAnalysisStep(i), stepMs * i),
+        window.setTimeout(() => setAnalysisStep(index), stepMs * index),
       );
     }
+
     timersRef.current.push(
       window.setTimeout(() => {
         setAnalysisStep(null);
         setResult(audit);
         track("audit_completed", {
           quote_count: audit.quotes.length,
-          has_days_silent: audit.quotes.some((q) => q.daysSilent != null),
+          has_days_silent: audit.quotes.some((quote) => quote.daysSilent != null),
           total_silent_quote_value_bucket: bucketCurrency(
             audit.totalSilentQuoteValue,
           ),
@@ -219,36 +234,37 @@ export function AuditCalculatorClient() {
           ...utms,
         });
 
-        // Anonymous attribution for the auto-marketing funnel.
-        // Fire-and-forget — never blocks, never throws, sends NO PII.
-        // Only UTMs + bucketed value + recovery window + a visitor hash.
         try {
           const params = new URLSearchParams(window.location.search);
           const visitorHash = (() => {
-            // Stable per-session hash from a salted visitor id (no raw IP).
-            // Reuses the existing __qrEvents ledger as a cheap session signal.
-            const ledger = (window as unknown as { __qrEvents?: Array<{ t: number }> }).__qrEvents;
-            const seed = ledger && ledger.length > 0 ? ledger[0]!.t : Date.now();
+            const ledger = (
+              window as unknown as { __qrEvents?: Array<{ t: number }> }
+            ).__qrEvents;
+            const seed =
+              ledger && ledger.length > 0 ? ledger[0]!.t : Date.now();
             return String(seed).slice(0, 16);
           })();
+
           void fetch("/api/admin/auto-marketing/audit-attribution", {
             method: "POST",
             headers: { "content-type": "application/json" },
             body: JSON.stringify({
-              utm_source: params.get("utm_source") ?? utms.utm_source ?? null,
-              utm_campaign: params.get("utm_campaign") ?? utms.utm_campaign ?? null,
+              utm_source:
+                params.get("utm_source") ?? utms.utm_source ?? null,
+              utm_campaign:
+                params.get("utm_campaign") ?? utms.utm_campaign ?? null,
               utm_trade: params.get("utm_trade") ?? null,
               utm_city: params.get("utm_city") ?? null,
               visitor_hash: visitorHash,
               audit_completed: true,
-              total_quiet_value_bucket: bucketCurrency(audit.totalSilentQuoteValue),
+              total_quiet_value_bucket: bucketCurrency(
+                audit.totalSilentQuoteValue,
+              ),
               top_recovery_window: audit.priorityBandLabel ?? null,
             }),
-          }).catch(() => {
-            // Attribution is best-effort; never let it break the audit UX.
-          });
+          }).catch(() => undefined);
         } catch {
-          // swallow — analytics must never break the page
+          // Analytics attribution is best-effort and must never break the audit.
         }
       }, stepMs * ANALYSIS_STEPS.length),
     );
@@ -261,7 +277,7 @@ export function AuditCalculatorClient() {
       setCopied(true);
       window.setTimeout(() => setCopied(false), 2000);
     } catch {
-      // Clipboard can be blocked; the message is visible to copy by hand.
+      // The message stays visible when clipboard access is unavailable.
     }
   }
 
@@ -269,616 +285,273 @@ export function AuditCalculatorClient() {
     <div
       id="quote-audit"
       data-audit-state={analyzing ? "analyzing" : result ? "result" : "idle"}
-      className="w-full max-w-full min-w-0 space-y-5 scroll-mt-6"
+      className="w-full max-w-full min-w-0 scroll-mt-4"
     >
-      {/* What you'll get — preview panel above the form */}
-      {!result && !analyzing ? (
-        <div className="rounded-2xl border border-brand/30 bg-surface-1/90 p-4 shadow-[0_12px_40px_rgba(0,0,0,0.18)] sm:p-5">
-          <p className="text-[10px] font-black uppercase tracking-widest text-brand">
-            What you&apos;ll get in 60 seconds
-          </p>
-          <ul className="mt-3 grid gap-2 sm:grid-cols-2">
-            {[
-              "Total quiet estimate value",
-              "Which quote to follow up first",
-              "Recovery window (Warm / Cooling / Cold)",
-              "Message to send today (ready to copy)",
-              "Follow-up order for all 3 quotes",
-              "Next move — clear and specific",
-            ].map((item) => (
-              <li
-                key={item}
-                className="flex items-start gap-2 rounded-lg border border-line-subtle bg-canvas/40 px-3 py-2"
-              >
-                <CheckCircle2 className="mt-0.5 h-3.5 w-3.5 shrink-0 text-success" aria-hidden="true" />
-                <span className="break-words text-xs font-semibold leading-5 text-ink-strong">
-                  {item}
-                </span>
-              </li>
-            ))}
-          </ul>
-        </div>
-      ) : null}
-
-      <form
-        onSubmit={handleSubmit}
-        noValidate
+      <section
         data-testid="audit-form-card"
-        className="w-full max-w-full min-w-0 rounded-2xl border border-line-strong/50 bg-surface-1/95 p-4 shadow-[0_24px_70px_rgba(0,0,0,0.22)] sm:p-5"
+        aria-labelledby="audit-form-title"
+        className="w-full max-w-full min-w-0 border border-line-strong bg-canvas shadow-[0_24px_70px_rgba(0,0,0,0.24)]"
       >
-        <div className="mb-4 min-w-0">
-          <p className="text-xs font-black uppercase tracking-widest text-brand">
-            Run a 60-second estimate audit
-          </p>
-          <h2 className="mt-2 break-words text-2xl font-black leading-tight text-ink-strong">
-            Find the estimate worth following up first.
-          </h2>
-          <p className="mt-2 break-words text-sm font-semibold leading-6 text-ink">
-            {tradeConfig.bridgeLine}
-          </p>
-          <p
-            id="audit-form-helper"
-            className="mt-2 max-w-full break-words text-sm leading-6 text-ink-muted"
-          >
-            Use estimates you already sent and have not heard back on. Rough
-            numbers are fine — this is a priority check, not accounting.
-          </p>
-        </div>
-
-        <fieldset
-          aria-describedby="audit-form-helper"
-          className="min-w-0 space-y-3"
-        >
-          <legend className="sr-only">Enter three quiet estimates</legend>
-          {rows.map((row, i) => (
-            <div
-              key={i}
-              className="w-full max-w-full min-w-0 rounded-xl border border-line-subtle bg-surface-2/90 p-3"
-            >
-              <p className="mb-3 text-xs font-black uppercase tracking-widest text-ink-muted">
-                Estimate {i + 1}
+        <header className="border-b border-line-strong px-4 py-5 sm:px-6">
+          <div className="flex min-w-0 flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+            <div className="min-w-0">
+              <div className="flex items-center gap-2 text-xs font-black uppercase tracking-widest text-brand">
+                <ClipboardList className="h-4 w-4" aria-hidden="true" />
+                Run the diagnostic
+              </div>
+              <h2
+                id="audit-form-title"
+                className="mt-2 max-w-3xl break-words text-2xl font-black leading-tight text-ink-strong sm:text-3xl"
+              >
+                Pull three old bids from the truck, sent folder, or notebook.
+              </h2>
+              <p
+                id="audit-form-helper"
+                className="mt-3 max-w-3xl break-words text-sm leading-6 text-ink-muted"
+              >
+                Use rough numbers. No customer names. No phone numbers. This is
+                not a CRM import. {tradeConfig.bridgeLine}
               </p>
-              <div className="grid min-w-0 grid-cols-1 gap-3 sm:grid-cols-[minmax(0,1fr)_minmax(9rem,0.55fr)]">
-                <div className="flex min-w-0 flex-col gap-1.5">
-                  <label
-                    htmlFor={`amount-${i}`}
-                    className="text-sm font-semibold text-ink"
-                  >
-                    Estimate amount
-                  </label>
-                  <input
-                    id={`amount-${i}`}
-                    aria-label={`Estimate #${i + 1} amount`}
-                    type="text"
-                    inputMode="decimal"
-                    autoComplete="off"
-                    placeholder={DEFAULT_SAMPLE_ROWS[i]?.amount ?? "3200"}
-                    value={row.amount}
-                    onChange={(e) => updateRow(i, "amount", e.target.value)}
-                    className="h-12 w-full max-w-full min-w-0 rounded-lg border border-line-subtle bg-canvas px-3 text-base text-ink-strong placeholder:font-normal placeholder:text-ink-muted/70 focus:border-brand focus:outline-none focus:ring-2 focus:ring-focus/40"
-                  />
+            </div>
+            <button
+              type="button"
+              onClick={loadSampleRows}
+              className="inline-flex min-h-10 w-full shrink-0 items-center justify-center rounded-lg border border-line-strong bg-surface-2 px-4 py-2 text-sm font-bold text-ink-strong transition hover:border-brand focus:outline-none focus-visible:ring-2 focus-visible:ring-focus sm:w-auto"
+            >
+              Load sample quotes
+            </button>
+          </div>
+        </header>
+
+        <form onSubmit={handleSubmit} noValidate className="p-4 sm:p-6">
+          <fieldset
+            aria-describedby="audit-form-helper"
+            className="grid min-w-0 gap-3 lg:grid-cols-3"
+          >
+            <legend className="sr-only">Enter three quiet quotes</legend>
+            {rows.map((row, index) => {
+              const liveQuote = liveQuotes[index]!;
+              const hasValidWindow =
+                liveQuote.amount != null &&
+                (!liveQuote.hasDaysInput || liveQuote.days != null);
+              const liveWindowLabel =
+                liveQuote.hasDaysInput && liveQuote.days != null
+                  ? liveQuote.descriptor.label
+                  : null;
+
+              return (
+                <div
+                  key={index}
+                  className="w-full max-w-full min-w-0 border border-line-subtle bg-surface-1 p-4"
+                >
+                  <div className="flex min-h-11 min-w-0 items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="text-xs font-black uppercase tracking-widest text-brand">
+                        Quote #{index + 1}
+                      </p>
+                      <p className="mt-1 break-words text-sm font-semibold leading-5 text-ink">
+                        {QUOTE_PROMPTS[index]}
+                      </p>
+                    </div>
+                    {liveWindowLabel && hasValidWindow ? (
+                      <span
+                        className={`shrink-0 rounded-full border px-2 py-1 text-[10px] font-black uppercase tracking-widest ${
+                          WINDOW_TONES[liveWindowLabel] ?? WINDOW_TONES.Unknown
+                        }`}
+                      >
+                        {liveWindowLabel}
+                      </span>
+                    ) : null}
+                  </div>
+
+                  <div className="mt-4 grid min-w-0 grid-cols-1 gap-3 sm:grid-cols-[minmax(0,1fr)_minmax(8rem,0.6fr)] lg:grid-cols-1">
+                    <div className="flex min-w-0 flex-col gap-1.5">
+                      <label
+                        htmlFor={`amount-${index}`}
+                        className="text-sm font-semibold text-ink"
+                      >
+                        Quote amount
+                      </label>
+                      <div className="relative">
+                        <span
+                          aria-hidden="true"
+                          className="pointer-events-none absolute inset-y-0 left-3 flex items-center font-mono text-ink-muted"
+                        >
+                          $
+                        </span>
+                        <input
+                          id={`amount-${index}`}
+                          aria-label={`Quote #${index + 1} amount`}
+                          type="text"
+                          inputMode="decimal"
+                          autoComplete="off"
+                          placeholder={DEFAULT_SAMPLE_ROWS[index]?.amount ?? "3200"}
+                          value={row.amount}
+                          onChange={(event) =>
+                            updateRow(index, "amount", event.target.value)
+                          }
+                          className="h-12 w-full max-w-full min-w-0 rounded-lg border border-line-subtle bg-canvas pl-7 pr-3 font-mono text-base text-ink-strong placeholder:text-ink-muted/70 focus:border-brand focus:outline-none focus:ring-2 focus:ring-focus/40"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="flex min-w-0 flex-col gap-1.5">
+                      <label
+                        htmlFor={`days-${index}`}
+                        className="text-sm font-semibold text-ink"
+                      >
+                        Days quiet
+                      </label>
+                      <input
+                        id={`days-${index}`}
+                        aria-label={`Quote #${index + 1} days quiet`}
+                        type="text"
+                        inputMode="numeric"
+                        autoComplete="off"
+                        placeholder={DEFAULT_SAMPLE_ROWS[index]?.days ?? "14"}
+                        value={row.days}
+                        onChange={(event) =>
+                          updateRow(index, "days", event.target.value)
+                        }
+                        className="h-12 w-full max-w-full min-w-0 rounded-lg border border-line-subtle bg-canvas px-3 font-mono text-base text-ink-strong placeholder:text-ink-muted/70 focus:border-brand focus:outline-none focus:ring-2 focus:ring-focus/40"
+                      />
+                    </div>
+                  </div>
                 </div>
-                <div className="flex min-w-0 flex-col gap-1.5">
-                  <label
-                    htmlFor={`days-${i}`}
-                    className="text-sm font-semibold text-ink"
-                  >
-                    Days quiet
-                  </label>
-                  <input
-                    id={`days-${i}`}
-                    aria-label={`Estimate #${i + 1} days quiet`}
-                    type="text"
-                    inputMode="numeric"
-                    autoComplete="off"
-                    placeholder={DEFAULT_SAMPLE_ROWS[i]?.days ?? "14"}
-                    value={row.days}
-                    onChange={(e) => updateRow(i, "days", e.target.value)}
-                    className="h-12 w-full max-w-full min-w-0 rounded-lg border border-line-subtle bg-canvas px-3 text-base text-ink-strong placeholder:font-normal placeholder:text-ink-muted/70 focus:border-brand focus:outline-none focus:ring-2 focus:ring-focus/40"
-                  />
-                </div>
+              );
+            })}
+          </fieldset>
+
+          <div className="mt-4 grid gap-px overflow-hidden rounded-lg border border-line-subtle bg-line-subtle md:grid-cols-[minmax(0,0.75fr)_minmax(0,1.25fr)]">
+            <div
+              data-testid="audit-live-total"
+              aria-live="polite"
+              className="min-w-0 bg-surface-2 p-4"
+            >
+              <div className="flex items-center gap-2 text-xs font-black uppercase tracking-widest text-ink-muted">
+                <Banknote className="h-4 w-4 text-money" aria-hidden="true" />
+                Money still quiet
+              </div>
+              <p className="mt-2 break-words font-mono text-3xl font-black text-money">
+                {formatCurrency(liveTotal)}
+              </p>
+              <p className="mt-1 text-xs text-ink-muted">
+                {enteredCount} of 3 quote amounts entered
+              </p>
+            </div>
+            <div className="min-w-0 bg-surface-1 p-4">
+              <p className="text-sm font-black text-ink-strong">
+                You already paid to create these quotes.
+              </p>
+              <p className="mt-1 text-sm leading-6 text-ink-muted">
+                This check tells you which quote to follow up first. Rough
+                numbers are enough.
+              </p>
+              <div className="mt-3 flex items-center gap-2 text-xs font-bold text-success">
+                <ShieldCheck className="h-4 w-4 shrink-0" aria-hidden="true" />
+                Quote amounts stay in this diagnostic. Analytics only receives
+                a broad value bucket.
               </div>
             </div>
-          ))}
-        </fieldset>
+          </div>
 
-        {error ? (
-          <p
-            role="alert"
-            aria-live="polite"
-            className="mt-4 rounded-lg border border-danger/40 bg-danger/10 p-3 text-sm font-semibold text-danger"
-          >
-            {error}
-          </p>
-        ) : null}
+          {error ? (
+            <p
+              role="alert"
+              aria-live="polite"
+              className="mt-4 rounded-lg border border-danger/40 bg-danger/10 p-3 text-sm font-semibold text-danger"
+            >
+              {error}
+            </p>
+          ) : null}
 
-        <div className="mt-4 w-full max-w-full rounded-xl border border-line-subtle bg-canvas p-3 text-sm leading-6 text-ink-muted">
-          <p className="max-w-full whitespace-normal break-words">
-            {tradeConfig.exampleLine}
-          </p>
-          <button
-            type="button"
-            onClick={loadSampleRows}
-            className="mt-2 text-sm font-bold text-brand transition hover:text-ink-strong focus:outline-none focus-visible:ring-2 focus-visible:ring-focus"
-          >
-            Try sample numbers
-          </button>
-        </div>
-
-        <Button
-          type="submit"
-          fullWidth
-          size="lg"
-          loading={analyzing}
-          disabled={analyzing}
-          data-testid="audit-submit"
-          className="mt-4 h-auto min-h-12 whitespace-normal px-4 py-3 text-center text-base leading-tight sm:text-lg"
-        >
-          {analyzing ? (
-            "Auditing..."
-          ) : (
-            <>
-              <span className="min-w-0">
-                Show me which estimate to follow up first
-              </span>
-              <ArrowRight className="h-4 w-4" aria-hidden="true" />
-            </>
-          )}
-        </Button>
-
-        <p className="mt-3 max-w-full break-words text-center text-xs leading-5 text-ink-muted">
-          No customer names. No phone numbers. No card. No signup before result.
-        </p>
-      </form>
+          <div className="mt-5 grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(19rem,0.55fr)] lg:items-center">
+            <div className="min-w-0">
+              <p className="max-w-full whitespace-normal break-words text-sm leading-6 text-ink-muted">
+                {tradeConfig.exampleLine}
+              </p>
+              <p className="mt-1 text-xs text-ink-muted">
+                No perfect inputs needed. No customer data. Result first.
+              </p>
+            </div>
+            <Button
+              type="submit"
+              fullWidth
+              size="lg"
+              loading={analyzing}
+              disabled={analyzing}
+              data-testid="audit-submit"
+              className="h-auto min-h-14 whitespace-normal px-4 py-3 text-center text-base font-black leading-tight sm:text-lg"
+            >
+              {analyzing ? (
+                "Finding the first move..."
+              ) : (
+                <>
+                  <span className="min-w-0">
+                    Show me which quote to text first
+                  </span>
+                  <ArrowRight className="h-4 w-4" aria-hidden="true" />
+                </>
+              )}
+            </Button>
+          </div>
+        </form>
+      </section>
 
       <div
         ref={outputRef}
-        className="min-w-0 max-w-full scroll-mt-4 empty:hidden"
+        className="mt-6 min-w-0 max-w-full scroll-mt-4 empty:hidden"
       >
         {analyzing ? (
           <div
             data-testid="audit-analysis"
             role="status"
             aria-live="polite"
-            className="w-full max-w-full min-w-0 rounded-2xl border border-line-subtle bg-surface-1 p-4 sm:p-5"
+            className="w-full max-w-full min-w-0 border border-line-strong bg-canvas p-5 sm:p-7"
           >
-            <div className="flex min-w-0 items-center gap-3">
+            <div className="flex items-center gap-3">
               <Loader2
-                className="h-5 w-5 shrink-0 animate-spin text-brand motion-reduce:animate-none"
+                className="h-5 w-5 shrink-0 animate-spin text-brand"
                 aria-hidden="true"
               />
-              <p
-                data-testid="audit-analysis-step"
-                className="min-w-0 break-words text-sm font-semibold text-ink-strong"
-              >
-                {ANALYSIS_STEPS[analysisStep ?? 0]}
-              </p>
-            </div>
-            <ol className="mt-3 space-y-1 text-xs text-ink-muted">
-              {ANALYSIS_STEPS.map((step, i) => (
-                <li
-                  key={step}
-                  className={
-                    analysisStep !== null && i < analysisStep
-                      ? "text-ink-muted/60 line-through decoration-1"
-                      : analysisStep !== null && i === analysisStep
-                        ? "text-ink"
-                        : "text-ink-muted/50"
-                  }
+              <div className="min-w-0">
+                <p className="text-xs font-black uppercase tracking-widest text-brand">
+                  Silent quote diagnostic
+                </p>
+                <p
+                  data-testid="audit-analysis-step"
+                  className="mt-1 break-words text-lg font-black text-ink-strong"
                 >
-                  {step}
-                </li>
+                  {ANALYSIS_STEPS[analysisStep ?? 0]}
+                </p>
+              </div>
+            </div>
+            <div className="mt-5 grid grid-cols-5 gap-2">
+              {ANALYSIS_STEPS.map((step, index) => (
+                <span
+                  key={step}
+                  className={`h-1.5 rounded-full ${
+                    index <= (analysisStep ?? 0) ? "bg-brand" : "bg-surface-3"
+                  }`}
+                />
               ))}
-            </ol>
+            </div>
+            <p className="mt-4 flex items-center gap-2 text-xs text-ink-muted">
+              <CheckCircle2 className="h-4 w-4 text-success" aria-hidden="true" />
+              Using only quote amount, days quiet, and your selected trade.
+            </p>
           </div>
-        ) : null}
-
-        {result && !result.error ? (
+        ) : result ? (
           <AuditResultView
             result={result}
             copied={copied}
             signupHref={signupHref}
-            utms={utms}
             tradeConfig={tradeConfig}
             onCopy={copyMessage}
+            onSignupClick={() => track("audit_signup_clicked", utms)}
           />
         ) : null}
       </div>
     </div>
-  );
-}
-
-function AuditResultView({
-  result,
-  copied,
-  signupHref,
-  utms,
-  tradeConfig,
-  onCopy,
-}: {
-  result: AuditResult;
-  copied: boolean;
-  signupHref: string;
-  utms: Record<string, string>;
-  tradeConfig: TradeConfig;
-  onCopy: () => void;
-}) {
-  const priority = result.priority;
-  const windowLabel = priority?.windowLabel ?? "Unknown";
-
-  return (
-    <div
-      data-testid="audit-result"
-      role="region"
-      aria-label="Your estimate audit result"
-      className="w-full max-w-full min-w-0 space-y-4 rounded-2xl border border-brand/45 bg-[linear-gradient(180deg,rgba(217,111,50,0.08),rgba(24,28,34,0.98))] p-4 shadow-[0_28px_90px_rgba(0,0,0,0.34)] sm:p-6"
-    >
-      <div className="min-w-0">
-        <p className="text-xs font-black uppercase tracking-widest text-success">
-          {tradeConfig.resultEyebrow}
-        </p>
-        <h2 className="mt-2 break-words text-2xl font-black leading-tight text-ink-strong">
-          Here is what to do today.
-        </h2>
-        <div
-          data-testid="audit-input-recap"
-          className="mt-3 flex min-w-0 flex-wrap items-center gap-2 text-xs text-ink-muted"
-        >
-          <span className="font-semibold text-ink">
-            Based on {result.rankedQuotes.length} estimate
-            {result.rankedQuotes.length === 1 ? "" : "s"}:
-          </span>
-          {result.rankedQuotes.map((q) => (
-            <span
-              key={q.index}
-              className="inline-flex min-w-0 items-center gap-1 rounded-full border border-line-subtle bg-surface-2 px-2.5 py-1"
-            >
-              <span className="whitespace-nowrap font-semibold text-ink-strong">
-                #{q.index} {formatCurrency(q.amount)}
-              </span>
-              {q.daysSilent != null ? (
-                <span className="text-ink-muted">· {q.daysSilent}d</span>
-              ) : null}
-            </span>
-          ))}
-        </div>
-      </div>
-
-      <div className="grid min-w-0 gap-3 sm:grid-cols-2">
-        <section className="min-w-0 rounded-xl border border-line-subtle bg-surface-1 p-4">
-          <p className="text-xs font-black uppercase tracking-widest text-ink-muted">
-            Total quiet estimate value
-          </p>
-          <p className="mt-2 whitespace-nowrap text-3xl font-black leading-none text-money sm:text-5xl">
-            {formatCurrency(result.totalSilentQuoteValue)}
-          </p>
-          <p className="mt-3 break-words text-sm leading-6 text-ink-muted">
-            This is the value sitting in the estimates you entered.
-          </p>
-        </section>
-
-        {priority ? (
-          <section
-            data-testid="audit-start-here"
-            className="min-w-0 rounded-xl border border-brand/30 bg-brand/10 p-4"
-          >
-            <p className="text-xs font-black uppercase tracking-widest text-brand">
-              Follow up this estimate first
-            </p>
-            <p className="mt-2 break-words text-xl font-black text-ink-strong">
-              Start with Estimate #{priority.index}
-            </p>
-            <p className="mt-1 whitespace-nowrap text-3xl font-black text-ink-strong">
-              {formatCurrency(priority.amount)}
-            </p>
-            <p className="mt-2 flex min-w-0 flex-wrap items-center gap-2 text-sm text-ink-muted">
-              {priority.daysSilent != null ? (
-                <span>{priority.daysSilent} days quiet</span>
-              ) : (
-                <span>Days quiet not entered</span>
-              )}
-              <span aria-hidden="true" className="text-ink-muted">
-                -
-              </span>
-              <span
-                data-testid="audit-start-window-badge"
-                className={`rounded-full border px-2 py-0.5 text-[10px] font-black uppercase tracking-widest ${
-                  WINDOW_TONES[windowLabel] ?? WINDOW_TONES.Unknown
-                }`}
-              >
-                {windowLabel}
-              </span>
-            </p>
-          </section>
-        ) : null}
-      </div>
-
-      {priority ? (
-        <section className="grid min-w-0 gap-3 sm:grid-cols-2">
-          <div className="min-w-0 rounded-xl border border-line-subtle bg-surface-1 p-4">
-            <p className="text-xs font-black uppercase tracking-widest text-ink-muted">
-              Recovery window
-            </p>
-            <p className="mt-2 text-lg font-black text-ink-strong">
-              {windowLabel}
-            </p>
-            <p className="mt-2 break-words text-sm leading-6 text-ink-muted">
-              {WINDOW_DEFINITIONS[windowLabel] ?? WINDOW_DEFINITIONS.Unknown}
-            </p>
-          </div>
-
-          <div
-            data-testid="audit-why-order"
-            className="min-w-0 rounded-xl border border-line-subtle bg-surface-1 p-4"
-          >
-            <p className="text-xs font-black uppercase tracking-widest text-ink-muted">
-              Why this one first
-            </p>
-            <p className="mt-2 break-words text-sm leading-6 text-ink">
-              We ranked this estimate using amount and days quiet.{" "}
-              {result.priorityReason}
-            </p>
-          </div>
-        </section>
-      ) : null}
-
-      <section className="min-w-0 rounded-xl border border-line-subtle bg-surface-1 p-4">
-        <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-          <div className="min-w-0">
-            <p className="text-xs font-black uppercase tracking-widest text-brand">
-              Best low-pressure message to send today
-            </p>
-            <p className="mt-1 break-words text-sm text-ink-muted">
-              Not a canned template — chosen for this estimate&apos;s recovery
-              window and the likely reason the homeowner went quiet. Designed
-              to lower pressure and make the next reply easier.
-            </p>
-          </div>
-          <button
-            type="button"
-            onClick={onCopy}
-            className="inline-flex w-full shrink-0 items-center justify-center gap-1 rounded-lg border border-line-subtle bg-surface-2 px-3 py-2 text-sm font-bold text-ink-strong transition hover:border-brand focus:outline-none focus-visible:ring-2 focus-visible:ring-focus sm:w-auto"
-          >
-            {copied ? (
-              <>
-                <Check className="h-4 w-4 text-success" aria-hidden="true" />
-                Copied
-              </>
-            ) : (
-              <>
-                <Clipboard className="h-4 w-4 text-brand" aria-hidden="true" />
-                Copy
-              </>
-            )}
-          </button>
-        </div>
-        <p className="mt-4 max-w-full whitespace-pre-wrap break-words rounded-xl border border-line-subtle bg-canvas p-4 text-base font-semibold leading-7 text-ink-strong">
-          {result.suggestedMessage}
-        </p>
-        {result.whyThisMessage ? (
-          <div className="mt-3 rounded-lg border border-line-subtle bg-canvas/40 p-3">
-            <p className="break-words text-xs leading-5 text-ink-muted">
-              <span className="font-bold text-ink-strong">Why this message:</span>{" "}
-              {result.whyThisMessage}
-            </p>
-          </div>
-        ) : null}
-        {result.oneTapOptions && result.oneTapOptions.length > 0 ? (
-          <div className="mt-3">
-            <p className="text-[10px] font-black uppercase tracking-widest text-ink-muted">
-              One-Tap Reply — easy ways to answer without typing a long reply
-            </p>
-            <div className="mt-2 flex flex-wrap gap-1.5">
-              {result.oneTapOptions.map((opt) => (
-                <span
-                  key={opt}
-                  className="rounded-full border border-success/30 bg-success/5 px-2.5 py-1 text-xs font-semibold text-success"
-                >
-                  {opt}
-                </span>
-              ))}
-            </div>
-            <p className="mt-2 break-words text-[11px] leading-5 text-ink-muted">
-              Each reply option tells you what to do next.
-            </p>
-          </div>
-        ) : null}
-      </section>
-
-      {/* Why this works — short, practical explanation (window-aware) */}
-      <section className="min-w-0 rounded-xl border border-line-subtle bg-surface-1 p-4">
-        <p className="text-xs font-black uppercase tracking-widest text-ink-muted">
-          Why this works
-        </p>
-        <ul className="mt-3 space-y-2 text-sm leading-6 text-ink">
-          <li className="flex items-start gap-2">
-            <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-success" aria-hidden="true" />
-            <span><strong className="text-ink-strong">Why this quote first:</strong> {result.priorityReason}</span>
-          </li>
-          <li className="flex items-start gap-2">
-            <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-success" aria-hidden="true" />
-            <span><strong className="text-ink-strong">Why the message is low-pressure:</strong> {lowPressureReasonForWindow(priority?.window)}</span>
-          </li>
-          <li className="flex items-start gap-2">
-            <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-success" aria-hidden="true" />
-            <span><strong className="text-ink-strong">Silence isn&apos;t always a no.</strong> Sometimes the homeowner just needs an easier way to answer.</span>
-          </li>
-        </ul>
-      </section>
-
-      <FollowUpOrder ranked={result.rankedQuotes} />
-
-      <section
-        data-testid="audit-next-moves"
-        className="min-w-0 rounded-xl border border-line-subtle bg-surface-1 p-4"
-      >
-        <p className="text-xs font-black uppercase tracking-widest text-brand">
-          Next move
-        </p>
-        <p className="mt-2 break-words text-sm leading-6 text-ink">
-          Send the message to the first estimate today. Then check the next
-          estimate in the order above.
-        </p>
-      </section>
-
-      <section
-        data-testid="audit-sequence-preview"
-        className="min-w-0 rounded-xl border border-line-subtle bg-surface-1 p-4"
-      >
-        <p className="text-xs font-black uppercase tracking-widest text-ink-muted">
-          If you save the plan
-        </p>
-        <p className="mt-2 break-words text-sm leading-6 text-ink">
-          Quote Reclaim keeps the follow-up order in one place and turns quiet
-          estimates into a 5-message recovery sequence you can work through.
-        </p>
-      </section>
-
-      {/* This is only the first move — bridge to the paid product */}
-      <section className="min-w-0 rounded-xl border border-brand/40 bg-[linear-gradient(180deg,rgba(217,111,50,0.06),rgba(24,28,34,0.4))] p-4 sm:p-5">
-        <p className="text-xs font-black uppercase tracking-widest text-brand">
-          This is only the first move
-        </p>
-        <h3 className="mt-2 break-words text-lg font-black leading-6 text-ink-strong">
-          This audit shows the first smart move. The full product helps you keep
-          going — without repeating the same weak follow-up.
-        </h3>
-        <p className="mt-2 break-words text-sm leading-6 text-ink">
-          Most follow-ups ask for an update. Quote Reclaim gives the homeowner
-          an easier way to answer.
-        </p>
-        <ul className="mt-3 grid gap-2 text-sm leading-6 text-ink sm:grid-cols-2">
-          {[
-            "What to send today",
-            "Why this message fits",
-            "What reply options to offer",
-            "When to follow up next",
-            "When to revise the quote",
-            "When to close it out",
-          ].map((item) => (
-            <li
-              key={item}
-              className="flex items-start gap-2 rounded-lg border border-line-subtle bg-canvas/40 px-3 py-2"
-            >
-              <CheckCircle2 className="mt-0.5 h-3.5 w-3.5 shrink-0 text-success" aria-hidden="true" />
-              <span className="break-words text-xs font-semibold leading-5 text-ink-strong">
-                {item}
-              </span>
-            </li>
-          ))}
-        </ul>
-        <p className="mt-3 text-xs leading-5 text-ink-muted">
-          $79/month after the free audit. First 3 estimates free, no card needed.
-          No software can promise a job back — but one recovered estimate can
-          cover it many times over.
-        </p>
-      </section>
-
-      <section
-        data-testid="audit-goes-deeper"
-        className="min-w-0 space-y-3 rounded-xl border border-brand/35 bg-brand/10 p-4"
-      >
-        <div className="min-w-0">
-          <p className="text-xs font-black uppercase tracking-widest text-brand">
-            Save this recovery plan
-          </p>
-          <p className="mt-2 break-words text-sm leading-6 text-ink">
-            Create an account to track more estimates, save messages, and keep
-            your follow-up order in one place.
-          </p>
-          <p className="mt-2 text-sm font-bold text-ink-strong">
-            First 3 estimates are free.
-          </p>
-        </div>
-        <a
-          href={signupHref}
-          data-testid="audit-signup-cta"
-          onClick={() => track("audit_signup_clicked", utms)}
-          className="inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-lg border border-brand bg-brand px-4 py-3 text-center text-base font-semibold leading-tight text-canvas shadow-[0_0_36px_rgba(217,111,50,0.28)] transition-colors hover:bg-brand-dark focus:outline-none focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2 focus-visible:ring-offset-canvas"
-        >
-          Save this recovery plan
-          <ArrowRight className="h-4 w-4" aria-hidden="true" />
-        </a>
-        <p className="text-center text-xs text-ink-muted">No card required.</p>
-      </section>
-    </div>
-  );
-}
-
-/** Window-aware "Why the message is low-pressure" explanation. */
-function lowPressureReasonForWindow(window: string | undefined): string {
-  switch (window) {
-    case "warm":
-      return "It asks one easy question instead of forcing a decision.";
-    case "cooling":
-      return "It gives the homeowner simple categories to answer with: timing, budget, scope, or comparison.";
-    case "cold":
-      return "It avoids pressure and gives a simple open, revise, or close path.";
-    case "closeout":
-      return "It removes the awkwardness of saying no while leaving the door open to reopen later.";
-    default:
-      return "It asks a specific question, not \u201Cany update?\u201D. That makes it easier for the homeowner to answer.";
-  }
-}
-
-function FollowUpOrder({ ranked }: { ranked: RankedAuditQuote[] }) {
-  return (
-    <section
-      data-testid="audit-follow-up-order"
-      className="min-w-0 rounded-xl border border-line-subtle bg-surface-1 p-4"
-    >
-      <p className="text-xs font-black uppercase tracking-widest text-brand">
-        Follow-up order
-      </p>
-      <ol className="mt-3 min-w-0 space-y-2">
-        {ranked.map((q) => (
-          <li
-            key={q.index}
-            data-testid={`audit-rank-row-${q.rank}`}
-            className={`min-w-0 rounded-lg border bg-surface-2 p-3 ${
-              q.rank === 1 ? "border-brand/45" : "border-line-subtle"
-            }`}
-          >
-            <div className="flex min-w-0 flex-wrap items-center justify-between gap-3">
-              <div className="flex min-w-0 items-center gap-3">
-                <span
-                  aria-hidden="true"
-                  className={`inline-flex h-7 w-7 items-center justify-center rounded-full text-xs font-black ${
-                    q.rank === 1
-                      ? "bg-brand text-canvas"
-                      : "bg-surface-1 text-ink-muted"
-                  }`}
-                >
-                  {q.rank}
-                </span>
-                <div className="min-w-0">
-                  <p className="break-words text-sm font-black text-ink-strong">
-                    Estimate #{q.index} - {formatCurrency(q.amount)}
-                  </p>
-                  <p className="break-words text-xs text-ink-muted">
-                    {q.daysSilent != null
-                      ? `${q.daysSilent} days quiet`
-                      : "Days quiet not entered"}
-                    <span className="sr-only"> - </span>
-                  </p>
-                </div>
-              </div>
-              <div className="flex min-w-0 flex-wrap items-center gap-2">
-                <span
-                  className={`rounded-full border px-2 py-0.5 text-[10px] font-black uppercase tracking-widest ${
-                    WINDOW_TONES[q.windowLabel] ?? WINDOW_TONES.Unknown
-                  }`}
-                >
-                  {q.windowLabel}
-                </span>
-                <span className="break-words text-xs font-black uppercase tracking-widest text-brand">
-                  {actionForRank(q)}
-                </span>
-              </div>
-            </div>
-          </li>
-        ))}
-      </ol>
-    </section>
   );
 }
