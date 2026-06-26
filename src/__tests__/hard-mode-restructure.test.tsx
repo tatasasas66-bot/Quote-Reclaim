@@ -44,9 +44,9 @@ afterEach(() => cleanup());
 
 describe("homepage hero restructure + email/copy honesty", () => {
   it("headline leads with sent estimates before new leads", () => {
-    expect(homepage).toMatch(/You did the drive\./);
-    expect(homepage).toMatch(/Don&apos;t let the quote die in silence/);
-    expect(homepage).toMatch(/Before buying another lead/);
+    expect(homepage).toMatch(
+      /Buying another lead while old estimates sit untouched is an\s+expensive habit\./,
+    );
   });
 
 it("primary CTA routes to the public audit doorway", () => {

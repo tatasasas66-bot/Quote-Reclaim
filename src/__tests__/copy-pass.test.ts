@@ -43,9 +43,9 @@ describe("Homepage hero copy (honest conversion rewrite)", () => {
   });
 
   it("uses the lead-before-estimates headline", () => {
-    expect(homepage).toMatch(/You did the drive\./);
-    expect(homepage).toMatch(/Don&apos;t let the quote die in silence/);
-    expect(homepage).toMatch(/Before buying another lead/);
+    expect(homepage).toMatch(
+      /Buying another lead while old estimates sit untouched is an\s+expensive habit\./,
+    );
   });
 
   it("subhead explains the audit doorway and ongoing recovery system", () => {

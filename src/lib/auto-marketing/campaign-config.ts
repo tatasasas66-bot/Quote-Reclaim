@@ -6,9 +6,8 @@
  * the templates. Keeping copy in version control (not the DB) makes it
  * reviewable, diffable, and testable.
  *
- * Templates use {first_name}, {company}, {city} merge fields — the same fields
- * Smartlead substitutes. The {audit_url} field is pre-built with UTM params
- * so every send is attributable.
+ * Templates avoid depending on first-name or fake personalization. Smartlead
+ * can still substitute fields in future variants if needed.
  */
 import { getCompliancePostalAddress } from "@/lib/marketing/config";
 
@@ -41,52 +40,61 @@ export const CONCRETE_DRIVEWAY_V1: CampaignConfig = {
     {
       step: 1,
       delayDays: 0,
-      subject: "quiet concrete quotes — {company}",
-      body: `Hi {first_name},
+      subject: "the quote in your truck",
+      body: `You already paid for the gas to drive out there. You already spent the time measuring and typing up the number.
 
-Before buying another lead, check the concrete estimates you already sent.
+Now it's just sitting there silent.
 
-Some quiet quotes are not dead — the homeowner may just need an easier way to answer.
+Easy to assume they were just getting three bids to keep their brother-in-law honest. But a big concrete job isn't an impulse buy. They usually go quiet because they're figuring out the money, not because they hate your price.
 
-Quote Reclaim shows which quote to follow up first and what message to send today.
+Before you buy another shared lead this week, check the estimates you already paid to create.
 
-Free 60-second audit:
-{audit_url}
+Plug in 3 old quote amounts and how long they've been quiet. No names, no signup, no card.
+https://www.quotereclaim.com/audit
 
-No signup. No card. No customer names.
+Reply "stop" and I'll close the loop.
 
-Reply "no" and I'll stop.
-
-— Quote Reclaim`,
+%signature%`,
     },
     {
       step: 2,
       delayDays: 3,
-      subject: "re: quiet concrete quotes — {company}",
-      body: `Just bumping this up.
+      subject: "Re: the quote in your truck",
+      body: `Most contractors don't follow up on old quotes because they don't know what to say without sounding desperate.
 
-The free audit takes about 60 seconds and shows which quiet concrete quote is worth following up first:
+"So, you ready to do the driveway?"
 
-{audit_url}
+It feels awkward. So the quote just dies.
 
-No signup, no card, no customer names.
+That's the expensive part: buying a new lead feels like progress, but reopening an old quote feels like rejection.
 
-Reply "no" and I'll stop.
+Quote Reclaim tells you which silent quote is worth reopening today, and gives you the exact message to send so you don't look like you're begging.
 
-— Quote Reclaim`,
+Takes 60 seconds:
+https://www.quotereclaim.com/audit
+
+Reply "stop" and I'll close the loop.
+
+%signature%`,
     },
     {
       step: 3,
       delayDays: 5,
-      subject: "re: quiet concrete quotes — {company}",
-      body: `Should I close this out?
+      subject: "Re: the quote in your truck",
+      body: `Buying another lead while old estimates sit untouched is an expensive habit.
 
-If quiet concrete quotes are not a problem for {company}, reply "no" and I'll stop.
+You're paying for strangers who might not answer the phone, while ignoring homeowners who already invited you onto their property and liked you enough to get a number.
 
-If they are, the free audit is here:
-{audit_url}
+Getting outbid by a guy with a wheelbarrow sucks. Losing the job because no one sent one clean follow-up is worse.
 
-— Quote Reclaim`,
+Some old quotes are dead. Some just need a better reopen than "just checking in."
+
+The audit is here if you want to see which one to ping first:
+https://www.quotereclaim.com/audit
+
+Reply "stop" and I'll close the loop.
+
+%signature%`,
     },
   ],
 };

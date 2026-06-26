@@ -77,7 +77,7 @@ export function campaignCanUploadLive(
   const sequence = JSON.stringify(campaign.sequence_config).toLowerCase();
   const address = compliancePostalAddress?.trim().toLowerCase() || null;
   const stopHandlingConfigured =
-    sequence.includes("reply \\\"no\\\"") &&
+    sequence.includes("reply \\\"stop\\\"") &&
     sequence.includes("stop");
   const complianceFooterConfigured = Boolean(
     address && sequence.includes(address),

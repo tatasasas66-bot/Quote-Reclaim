@@ -17,29 +17,40 @@ describe("campaign-config — concrete_driveway_v1", () => {
     expect(CONCRETE_DRIVEWAY_V1.steps[2]!.step).toBe(3);
   });
 
-  it("subject line contains {company} merge field", () => {
-    for (const step of CONCRETE_DRIVEWAY_V1.steps) {
-      expect(step.subject).toContain("{company}");
-    }
+  it("uses the sharp quote-in-your-truck subject thread", () => {
+    expect(CONCRETE_DRIVEWAY_V1.steps.map((step) => step.subject)).toEqual([
+      "the quote in your truck",
+      "Re: the quote in your truck",
+      "Re: the quote in your truck",
+    ]);
   });
 
-  it("email 1 body contains the core promise + audit URL + opt-out", () => {
+  it("email 1 body uses the direct audit URL without merge-field dependency", () => {
     const body = CONCRETE_DRIVEWAY_V1.steps[0]!.body;
-    expect(body).toContain("Before buying another lead");
-    expect(body).toContain("{audit_url}");
-    expect(body).toContain('Reply "no" and I\'ll stop');
-    expect(body).toContain("No signup. No card. No customer names.");
+    expect(body).toContain("You already paid for the gas");
+    expect(body).toContain("Before you buy another shared lead this week");
+    expect(body).toContain("https://www.quotereclaim.com/audit");
+    expect(body).toContain('Reply "stop" and I\'ll close the loop.');
+    expect(body).toContain("%signature%");
+    expect(body).not.toContain("{first_name}");
+    expect(body).not.toContain("{audit_url}");
   });
 
-  it("follow-up references 60 seconds", () => {
+  it("follow-up names the awkward-reopen problem and 60-second audit", () => {
     const body = CONCRETE_DRIVEWAY_V1.steps[1]!.body;
     expect(body).toContain("60 seconds");
+    expect(body).toContain("reopening an old quote feels like rejection");
+    expect(body).toContain("https://www.quotereclaim.com/audit");
   });
 
-  it("breakup gives an opt-out before the CTA", () => {
+  it("final email carries the expensive-habit line and opt-out", () => {
     const body = CONCRETE_DRIVEWAY_V1.steps[2]!.body;
-    expect(body).toContain("Should I close this out?");
-    expect(body).toContain('reply "no" and I\'ll stop');
+    expect(body).toContain(
+      "Buying another lead while old estimates sit untouched is an expensive habit.",
+    );
+    expect(body).toContain("guy with a wheelbarrow");
+    expect(body).toContain('Reply "stop" and I\'ll close the loop.');
+    expect(body).toContain("https://www.quotereclaim.com/audit");
   });
 
   it("auditUrl builds the correct trade-specific URL with UTMs", () => {
@@ -75,28 +86,31 @@ describe("renderEmail", () => {
       city: "Phoenix",
     });
     expect(rendered).not.toBeNull();
-    expect(rendered!.subject).toBe("quiet concrete quotes — Sun Belt Concrete");
-    expect(rendered!.body).toContain("Hi Mike,");
-    expect(rendered!.body).toContain("utm_city=Phoenix");
+    expect(rendered!.subject).toBe("the quote in your truck");
+    expect(rendered!.body).toContain("https://www.quotereclaim.com/audit");
+    expect(rendered!.body).not.toContain("Hi Mike,");
+    expect(rendered!.body).not.toContain("utm_city=Phoenix");
     expect(rendered!.body).not.toContain("{first_name}");
     expect(rendered!.body).not.toContain("{company}");
     expect(rendered!.body).not.toContain("{audit_url}");
   });
 
-  it("falls back to 'there' when first_name is missing", () => {
+  it("does not rely on first_name when it is missing", () => {
     const rendered = renderEmail("concrete_v1", 1, {
       company: "Acme Concrete",
       city: "Dallas",
     });
-    expect(rendered!.body).toContain("Hi there,");
+    expect(rendered!.body).not.toContain("Hi there,");
+    expect(rendered!.body).toContain("You already paid for the gas");
   });
 
-  it("falls back to default city when city is missing", () => {
+  it("still renders with the direct audit URL when city is missing", () => {
     const rendered = renderEmail("concrete_v1", 1, {
       first_name: "Mike",
       company: "Acme",
     });
-    expect(rendered!.body).toContain("utm_city=Phoenix");
+    expect(rendered!.body).toContain("https://www.quotereclaim.com/audit");
+    expect(rendered!.body).not.toContain("utm_city=Phoenix");
   });
 
   it("returns null for unknown variant", () => {

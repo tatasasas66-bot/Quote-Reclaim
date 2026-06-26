@@ -309,6 +309,29 @@ describe("audit URL and setup status", () => {
 });
 
 describe("compliance postal address gate", () => {
+  it("stores the sharp Smartlead sequence with direct audit links", () => {
+    const sequence = buildComplianceSafeSequence();
+    const steps = sequence.steps as Array<{ subject: string; body: string }>;
+    expect(steps.map((step) => step.subject)).toEqual([
+      "the quote in your truck",
+      "Re: the quote in your truck",
+      "Re: the quote in your truck",
+    ]);
+    expect(steps[0]?.body).toContain("You already paid for the gas");
+    expect(steps[0]?.body).toContain("Before you buy another shared lead this week");
+    expect(steps[1]?.body).toContain("reopening an old quote feels like rejection");
+    expect(steps[2]?.body).toContain(
+      "Buying another lead while old estimates sit untouched is an expensive habit.",
+    );
+    for (const step of steps) {
+      expect(step.body).toContain("https://www.quotereclaim.com/audit");
+      expect(step.body).toContain('Reply "stop" and I\'ll close the loop.');
+      expect(step.body).toContain("%signature%");
+      expect(step.body).not.toContain("{{first_name}}");
+      expect(step.body).not.toContain("{{audit_url}}");
+    }
+  });
+
   it("allows dry-run without a compliance postal address", () => {
     expect(marketingModeAllowed("dry_run", {})).toEqual({
       allowed: true,

@@ -432,9 +432,9 @@ const productionFiles = collectProductionSources(PRODUCTION_SRC_ROOT);
 
 describe("regression — homepage, support email, no Lemon, no dead checkout, no banned phrases", () => {
   it("homepage H1 uses the sent-estimates-before-leads positioning", () => {
-    expect(homepageSrc).toContain("You did the drive.");
-    expect(homepageSrc).toMatch(/Don&apos;t let the quote die in silence/);
-    expect(homepageSrc).toContain("Before buying another lead");
+    expect(homepageSrc).toMatch(
+      /Buying another lead while old estimates sit untouched is an\s+expensive habit\./,
+    );
   });
 
   it("homepage CTA uses the public audit doorway", () => {

@@ -209,8 +209,7 @@ export default function HomePage() {
               Quiet estimate recovery for US contractors
             </p>
             <h1 className="mt-4 max-w-3xl text-balance text-[length:clamp(1.75rem,3vw,2.75rem)] font-black leading-[1.1] text-ink-strong">
-              You did the drive. Don&apos;t let the quote die in silence — see
-              which one to follow up first.
+              Buying another lead while old estimates sit untouched is an expensive habit.
             </h1>
             <p className="mt-4 max-w-2xl break-words text-base leading-7 text-ink sm:text-lg">
               Quote Reclaim shows which quiet estimate to follow up first, the

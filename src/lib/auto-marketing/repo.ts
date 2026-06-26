@@ -306,7 +306,7 @@ export async function ensureDefaultCampaign(): Promise<CampaignRow | null> {
       name: "concrete_driveway_v1",
       trade: "concrete",
       city: null,
-      subject: "quiet concrete quotes — {company}",
+      subject: "the quote in your truck",
       email_variant: "concrete_v1",
       status: "draft",
     })

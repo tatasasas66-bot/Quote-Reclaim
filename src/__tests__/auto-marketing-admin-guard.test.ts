@@ -161,8 +161,9 @@ describe("audit-attribution route — PII safety", () => {
 describe("existing surfaces are not broken by auto-marketing", () => {
   it("homepage still has the approved headline", () => {
     const homepage = readSource("../app/page.tsx");
-    expect(homepage).toMatch(/You did the drive\./);
-    expect(homepage).toMatch(/Don&apos;t let the quote die in silence/);
+    expect(homepage).toMatch(
+      /Buying another lead while old estimates sit untouched is an\s+expensive habit\./,
+    );
   });
   it("audit page still has the audit form", () => {
     const audit = readSource("../app/audit/AuditCalculatorClient.tsx");
