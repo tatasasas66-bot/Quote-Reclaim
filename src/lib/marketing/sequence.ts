@@ -152,7 +152,7 @@ export function isOldDefaultMarketingSequenceConfig(
     if (!hasOnlyKeys(step, ["body", "delayDays", "subject"])) return false;
     const oldStep = OLD_CONCRETE_PHOENIX_SEQUENCE.steps[index];
     if (!oldStep) return false;
-    const allowedBodies = [oldStep.body];
+    const allowedBodies: string[] = [oldStep.body];
     if (address) allowedBodies.push(`${oldStep.body}\n\n${address}`);
     return (
       step.delayDays === oldStep.delayDays &&
