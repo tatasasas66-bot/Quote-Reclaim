@@ -95,6 +95,7 @@ describe("Apify result normalization", () => {
       twitters: false,
     });
     expect(typeof input.scrapeSocialMediaProfiles).toBe("object");
+    expect(input.countryCode).toBe("us");
     expect(input.scrapeContacts).toBe(true);
     expect(input.website).toBe("withWebsite");
   });
@@ -121,6 +122,7 @@ describe("Apify result normalization", () => {
         tiktoks: false,
         twitters: false,
       });
+      expect(payload.countryCode).toBe("us");
       expect(payload.scrapeContacts).toBe(true);
       return new Response(
         JSON.stringify({

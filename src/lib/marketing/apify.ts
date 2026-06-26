@@ -32,7 +32,7 @@ export type GoogleMapsActorInput = {
   locationQuery: string;
   maxCrawledPlacesPerSearch: number;
   language: "en";
-  countryCode: "US";
+  countryCode: "us";
   scrapeContacts: true;
   maximumLeadsEnrichmentRecords: number;
   scrapeSocialMediaProfiles: SocialMediaProfileOptions;
@@ -113,7 +113,7 @@ export function buildGoogleMapsActorInput(input: {
     locationQuery: input.city,
     maxCrawledPlacesPerSearch: input.maxPlaces,
     language: "en",
-    countryCode: "US",
+    countryCode: "us",
     scrapeContacts: true,
     maximumLeadsEnrichmentRecords: input.maxPlaces,
     scrapeSocialMediaProfiles: normalizeActorObjectOption(
