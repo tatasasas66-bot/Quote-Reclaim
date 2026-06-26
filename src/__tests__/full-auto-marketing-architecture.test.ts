@@ -19,6 +19,7 @@ const adminRoute = source(
 );
 const cronRoute = source("../app/api/cron/full-auto-marketing/route.ts");
 const orchestrator = source("../lib/marketing/full-auto-orchestrator.ts");
+const repo = source("../lib/marketing/repo.ts");
 const smartlead = source("../lib/marketing/smartlead.ts");
 const apify = source("../lib/marketing/apify.ts");
 const verifier = source("../lib/marketing/email-verifier.ts");
@@ -105,6 +106,13 @@ describe("routes and orchestration safety", () => {
     expect(smartlead).toContain("/campaigns/");
     expect(smartlead).toContain("lead_list");
     expect(orchestrator).toContain("getSmartleadCampaignStatus");
+  });
+
+  it("refreshes persisted old default sequence copy when campaigns load", () => {
+    expect(repo).toContain("refreshOldDefaultMarketingSequenceConfig");
+    expect(repo).toContain("refreshCampaignSequenceIfOldDefault");
+    expect(repo).toMatch(/listMarketingCampaigns[\s\S]*refreshCampaignSequenceIfOldDefault/);
+    expect(repo).toContain('.from("marketing_campaigns")');
   });
 
   it("sends social-media scraping as an object, never a boolean", () => {

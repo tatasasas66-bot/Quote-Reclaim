@@ -27,7 +27,12 @@ import {
   leadIsEligibleForSmartlead,
   verificationAllowsLiveUpload,
 } from "@/lib/marketing/safety";
-import { buildComplianceSafeSequence } from "@/lib/marketing/sequence";
+import {
+  buildComplianceSafeSequence,
+  OLD_CONCRETE_PHOENIX_SEQUENCE,
+  isOldDefaultMarketingSequenceConfig,
+  refreshOldDefaultMarketingSequenceConfig,
+} from "@/lib/marketing/sequence";
 import type { MarketingCampaign, MarketingLead } from "@/lib/marketing/types";
 
 const VALID_TEST_POSTAL_ADDRESS = "Authorized test postal address";
@@ -309,6 +314,55 @@ describe("audit URL and setup status", () => {
 });
 
 describe("compliance postal address gate", () => {
+  it("refreshes persisted campaigns that still have the exact old default sequence", () => {
+    const legacySequence = cloneSequence(OLD_CONCRETE_PHOENIX_SEQUENCE);
+    expect(isOldDefaultMarketingSequenceConfig(legacySequence)).toBe(true);
+
+    const refreshed = refreshOldDefaultMarketingSequenceConfig(legacySequence);
+    const steps = refreshed.steps as Array<{ subject: string; body: string }>;
+    expect(steps.map((step) => step.subject)).toEqual([
+      "the quote in your truck",
+      "Re: the quote in your truck",
+      "Re: the quote in your truck",
+    ]);
+    expect(steps[0]?.body).toContain("https://www.quotereclaim.com/audit");
+    expect(steps[0]?.body).not.toContain("{{first_name}}");
+    expect(steps[0]?.body).not.toContain("{{audit_url}}");
+  });
+
+  it("preserves the compliance footer when refreshing an old default sequence", () => {
+    const legacySequence = cloneSequence(OLD_CONCRETE_PHOENIX_SEQUENCE);
+    legacySequence.steps = (legacySequence.steps as Array<{ body: string }>).map(
+      (step) => ({
+        ...step,
+        body: `${step.body}\n\n${VALID_TEST_POSTAL_ADDRESS}`,
+      }),
+    );
+
+    const refreshed = refreshOldDefaultMarketingSequenceConfig(
+      legacySequence,
+      VALID_TEST_POSTAL_ADDRESS,
+    );
+    const steps = refreshed.steps as Array<{ body: string }>;
+    for (const step of steps) {
+      expect(step.body.endsWith(VALID_TEST_POSTAL_ADDRESS)).toBe(true);
+    }
+  });
+
+  it("does not overwrite custom campaign sequence copy", () => {
+    const customSequence = cloneSequence(OLD_CONCRETE_PHOENIX_SEQUENCE);
+    customSequence.steps = (
+      customSequence.steps as Array<{ subject: string; body: string }>
+    ).map((step, index) =>
+      index === 0 ? { ...step, subject: "custom subject" } : step,
+    );
+
+    expect(isOldDefaultMarketingSequenceConfig(customSequence)).toBe(false);
+    expect(refreshOldDefaultMarketingSequenceConfig(customSequence)).toBe(
+      customSequence,
+    );
+  });
+
   it("stores the sharp Smartlead sequence with direct audit links", () => {
     const sequence = buildComplianceSafeSequence();
     const steps = sequence.steps as Array<{ subject: string; body: string }>;
@@ -396,6 +450,10 @@ describe("compliance postal address gate", () => {
     }
   });
 });
+
+function cloneSequence(value: unknown): Record<string, unknown> {
+  return JSON.parse(JSON.stringify(value)) as Record<string, unknown>;
+}
 
 describe("email verifier", () => {
   it("does not fake validity when verifier configuration is missing", async () => {

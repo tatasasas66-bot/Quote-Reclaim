@@ -1,6 +1,8 @@
 import { createServiceSupabaseClient } from "@/lib/supabase/service";
+import { getCompliancePostalAddress } from "./config";
 import { buildMarketingAuditUrl, classifySuppressionText } from "./safety";
 import { normalizeMarketingEmail } from "./normalize";
+import { refreshOldDefaultMarketingSequenceConfig } from "./sequence";
 import type {
   MarketingCampaign,
   MarketingCampaignStatus,
@@ -22,33 +24,70 @@ function db() {
 }
 
 export async function listMarketingCampaigns(): Promise<MarketingCampaign[]> {
-  const { data } = await db()
+  const client = db();
+  const { data } = await client
     .from("marketing_campaigns")
     .select("*")
     .order("created_at", { ascending: false });
-  return (data ?? []) as MarketingCampaign[];
+  return Promise.all(
+    ((data ?? []) as MarketingCampaign[]).map((campaign) =>
+      refreshCampaignSequenceIfOldDefault(client, campaign),
+    ),
+  );
 }
 
 export async function getMarketingCampaign(
   id: string,
 ): Promise<MarketingCampaign | null> {
-  const { data } = await db()
+  const client = db();
+  const { data } = await client
     .from("marketing_campaigns")
     .select("*")
     .eq("id", id)
     .maybeSingle();
-  return (data as MarketingCampaign | null) ?? null;
+  const campaign = (data as MarketingCampaign | null) ?? null;
+  return campaign
+    ? refreshCampaignSequenceIfOldDefault(client, campaign)
+    : null;
 }
 
 export async function getMarketingCampaignBySmartleadId(
   smartleadCampaignId: string,
 ): Promise<MarketingCampaign | null> {
-  const { data } = await db()
+  const client = db();
+  const { data } = await client
     .from("marketing_campaigns")
     .select("*")
     .eq("smartlead_campaign_id", smartleadCampaignId)
     .maybeSingle();
-  return (data as MarketingCampaign | null) ?? null;
+  const campaign = (data as MarketingCampaign | null) ?? null;
+  return campaign
+    ? refreshCampaignSequenceIfOldDefault(client, campaign)
+    : null;
+}
+
+async function refreshCampaignSequenceIfOldDefault(
+  client: ReturnType<typeof db>,
+  campaign: MarketingCampaign,
+): Promise<MarketingCampaign> {
+  const nextSequence = refreshOldDefaultMarketingSequenceConfig(
+    campaign.sequence_config,
+    getCompliancePostalAddress(),
+  );
+  if (nextSequence === campaign.sequence_config) return campaign;
+  const { data, error } = await client
+    .from("marketing_campaigns")
+    .update({
+      sequence_config: nextSequence,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", campaign.id)
+    .select("*")
+    .single();
+  if (error || !data) {
+    throw new Error(error?.message ?? "Campaign sequence refresh failed");
+  }
+  return data as MarketingCampaign;
 }
 
 export async function createMarketingCampaign(input: {

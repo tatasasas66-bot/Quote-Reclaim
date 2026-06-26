@@ -61,6 +61,55 @@ Reply "stop" and I'll close the loop.
   ],
 } as const;
 
+export const OLD_CONCRETE_PHOENIX_SEQUENCE = {
+  sender: "hello@quotereclaim.com",
+  complianceRule: "Every email includes a plain-language stop instruction.",
+  steps: [
+    {
+      delayDays: 0,
+      subject: "quiet concrete quotes - {{company_name}}",
+      body: `Hi {{first_name}},
+
+Before buying another lead, check the concrete estimates you already sent.
+
+Driveway and patio quotes go quiet after the visit - not always because the homeowner said no, but because answering feels like work.
+
+Quote Reclaim shows which estimate to follow up first and what message to send today.
+
+Free 60-second audit, no signup, no card, no customer names:
+{{audit_url}}
+
+Reply "no" and I'll stop.`,
+    },
+    {
+      delayDays: 3,
+      subject: "quiet quote follow-up",
+      body: `Hi {{first_name}},
+
+A quiet quote is not always a lost quote. Sometimes the homeowner is stuck on timing, price, or one part of the scope.
+
+The free audit shows which estimate is most worth reopening first and the low-pressure message to send today:
+{{audit_url}}
+
+No signup, no card, no customer names.
+
+Reply "no" and I'll stop.`,
+    },
+    {
+      delayDays: 8,
+      subject: "should I close this out?",
+      body: `Hi {{first_name}},
+
+Last note from me. If quiet concrete estimates are not a problem for you, reply "no" and I'll close this out.
+
+If you do have a few old quotes sitting silent, this shows which one to reopen first:
+{{audit_url}}
+
+No pressure either way.`,
+    },
+  ],
+} as const;
+
 export function buildComplianceSafeSequence(
   compliancePostalAddress?: string | null,
 ): Record<string, unknown> {
@@ -72,6 +121,65 @@ export function buildComplianceSafeSequence(
       body: address ? `${step.body}\n\n${address}` : step.body,
     })),
   };
+}
+
+export function isOldDefaultMarketingSequenceConfig(
+  sequenceConfig: Record<string, unknown>,
+  compliancePostalAddress?: string | null,
+): boolean {
+  if (!hasOnlyKeys(sequenceConfig, ["complianceRule", "sender", "steps"])) {
+    return false;
+  }
+  if (sequenceConfig.sender !== OLD_CONCRETE_PHOENIX_SEQUENCE.sender) {
+    return false;
+  }
+  if (
+    sequenceConfig.complianceRule !==
+    OLD_CONCRETE_PHOENIX_SEQUENCE.complianceRule
+  ) {
+    return false;
+  }
+  if (!Array.isArray(sequenceConfig.steps)) return false;
+  if (sequenceConfig.steps.length !== OLD_CONCRETE_PHOENIX_SEQUENCE.steps.length) {
+    return false;
+  }
+  const address = compliancePostalAddress?.trim() || null;
+  return sequenceConfig.steps.every((rawStep, index) => {
+    if (!rawStep || typeof rawStep !== "object" || Array.isArray(rawStep)) {
+      return false;
+    }
+    const step = rawStep as Record<string, unknown>;
+    if (!hasOnlyKeys(step, ["body", "delayDays", "subject"])) return false;
+    const oldStep = OLD_CONCRETE_PHOENIX_SEQUENCE.steps[index];
+    if (!oldStep) return false;
+    const allowedBodies = [oldStep.body];
+    if (address) allowedBodies.push(`${oldStep.body}\n\n${address}`);
+    return (
+      step.delayDays === oldStep.delayDays &&
+      step.subject === oldStep.subject &&
+      typeof step.body === "string" &&
+      allowedBodies.includes(step.body)
+    );
+  });
+}
+
+export function refreshOldDefaultMarketingSequenceConfig(
+  sequenceConfig: Record<string, unknown>,
+  compliancePostalAddress?: string | null,
+): Record<string, unknown> {
+  if (!isOldDefaultMarketingSequenceConfig(sequenceConfig, compliancePostalAddress)) {
+    return sequenceConfig;
+  }
+  return buildComplianceSafeSequence(compliancePostalAddress);
+}
+
+function hasOnlyKeys(value: Record<string, unknown>, keys: string[]): boolean {
+  const actual = Object.keys(value).sort();
+  const expected = [...keys].sort();
+  return (
+    actual.length === expected.length &&
+    actual.every((key, index) => key === expected[index])
+  );
 }
 
 export const DEFAULT_CAMPAIGN_INPUT = {
