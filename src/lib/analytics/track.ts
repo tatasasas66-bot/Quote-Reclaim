@@ -14,7 +14,12 @@ export type AuditEvent =
   | "audit_page_viewed"
   | "audit_started"
   | "audit_completed"
-  | "audit_signup_clicked";
+  | "audit_signup_clicked"
+  | "audit_reply_branch_unlock_clicked"
+  | "audit_follow_up_unlock_clicked"
+  | "audit_result_cta_clicked"
+  | "audit_open_in_sms_clicked"
+  | "audit_faq_expanded";
 
 export type CrewGapEvent =
   | "crew_gap_page_viewed"

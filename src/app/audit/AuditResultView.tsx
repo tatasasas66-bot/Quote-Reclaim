@@ -1,14 +1,15 @@
 import {
   ArrowRight,
-  BarChart3,
+  BadgeCheck,
   Check,
   Clipboard,
+  Clock3,
   FileClock,
-  Gauge,
+  LockKeyhole,
   MessageCircleReply,
-  MessageSquareText,
-  Route,
+  Send,
   ShieldCheck,
+  Smartphone,
 } from "lucide-react";
 import { formatCurrency } from "@/lib/utils/currency";
 import type {
@@ -16,11 +17,14 @@ import type {
   RecoveryWindow,
 } from "@/lib/audit/silent-quote-audit";
 import type { TradeConfig } from "@/lib/audit/trade-config";
+import { AuditFaq } from "./AuditFaq";
 import { AuditFollowUpOrder } from "./AuditFollowUpOrder";
 import { AuditReplyPlaybook } from "./AuditReplyPlaybook";
 import {
+  appendAuditSignupReason,
+  buildAuditResultCta,
+  capitalizeDisplayMessage,
   directiveForWindow,
-  nextFollowupForWindow,
   WINDOW_DEFINITIONS,
   WINDOW_TONES,
 } from "./audit-presentation";
@@ -34,38 +38,38 @@ const SILENCE_REASONS = [
   "Avoiding the awkward no",
 ] as const;
 
-const PRODUCT_PREVIEW = [
+const CONTINUATION_TIMELINE = [
   {
-    name: "Silent Quote Command",
-    body: "The next quote worth working is already at the top.",
-    icon: Gauge,
+    when: "Today",
+    body: "You send the first clean reopen.",
+    caption: "Silent Quote Command",
+    icon: Send,
   },
   {
-    name: "Recovery Sequence",
-    body: "A clear follow-up order instead of repeating the same text.",
-    icon: Route,
+    when: "In 3 days",
+    body: "Quote Reclaim hands you the next text. Copy, paste, send.",
+    caption: "Recovery Sequence",
+    icon: Clock3,
   },
   {
-    name: "Reply Playbook",
-    body: "Price, timing, scope, and no each get a different next move.",
-    icon: MessageSquareText,
-  },
-  {
-    name: "One-Tap Reply",
-    body: "Make it easier for the homeowner to answer without a long explanation.",
+    when: "If they reply",
+    body: "Pick the branch - price, timing, scope, or no. Get the exact reply.",
+    caption: "Reply Playbook + One-Tap Reply",
     icon: MessageCircleReply,
   },
   {
-    name: "Got the Job",
-    body: "Mark the result and keep closed work out of the chase list.",
-    icon: Check,
-  },
-  {
-    name: "Monthly Recovery Report",
-    body: "See what was worked, reopened, booked, paused, or closed.",
-    icon: BarChart3,
+    when: "If it books",
+    body: "Tap Got the Job. See recovered revenue in your Monthly Recovery Report.",
+    caption: "Got the Job + Monthly Recovery Report",
+    icon: BadgeCheck,
   },
 ] as const;
+
+type ResultCtaAnalytics = {
+  quoteN: number;
+  window: string;
+  daysUntilCold: number;
+};
 
 type AuditResultViewProps = {
   result: AuditResult;
@@ -73,8 +77,32 @@ type AuditResultViewProps = {
   signupHref: string;
   tradeConfig: TradeConfig;
   onCopy: () => void;
+  onOpenSms: () => void;
+  onReplyBranchUnlock: (branchId: string) => void;
+  onFollowUpUnlock: () => void;
+  onResultCtaClick: (details: ResultCtaAnalytics) => void;
+  onFaqExpanded: (questionId: string) => void;
   onSignupClick: () => void;
 };
+
+function resultIntro(count: number): { headline: string; body: string } {
+  if (count === 1) {
+    return {
+      headline: "Your recovery move is ready.",
+      body: "You entered one quiet quote. Here's the move for it - and add two more anytime to rank which to text first.",
+    };
+  }
+  if (count === 2) {
+    return {
+      headline: "Your first move is clear.",
+      body: "You entered two quiet quotes. Here's the one to text first.",
+    };
+  }
+  return {
+    headline: "Your first move is clear.",
+    body: "This is a prioritization report, not a recovery promise. It turns three quiet quotes into one next action.",
+  };
+}
 
 export function AuditResultView({
   result,
@@ -82,12 +110,25 @@ export function AuditResultView({
   signupHref,
   tradeConfig,
   onCopy,
+  onOpenSms,
+  onReplyBranchUnlock,
+  onFollowUpUnlock,
+  onResultCtaClick,
+  onFaqExpanded,
   onSignupClick,
 }: AuditResultViewProps) {
   const priority = result.priority;
   const windowLabel = priority?.windowLabel ?? "Unknown";
-  const window = priority?.window ?? "unknown";
-  const nextFollowup = nextFollowupForWindow(window);
+  const intro = resultIntro(result.rankedQuotes.length);
+  const displayMessage = capitalizeDisplayMessage(result.suggestedMessage);
+  const followUpHref = appendAuditSignupReason(signupHref, "follow-up");
+  const replyUnlockHref = appendAuditSignupReason(
+    signupHref,
+    "reply-branches",
+  );
+  const resultCta = priority
+    ? buildAuditResultCta(priority, signupHref)
+    : null;
 
   return (
     <article
@@ -103,11 +144,13 @@ export function AuditResultView({
               {tradeConfig.resultEyebrow}
             </p>
             <h2 className="mt-2 max-w-3xl break-words text-3xl font-black leading-tight text-ink-strong sm:text-4xl">
-              Your first move is clear.
+              {intro.headline}
             </h2>
-            <p className="mt-3 max-w-2xl text-sm leading-6 text-ink-muted">
-              This is a prioritization report, not a recovery promise. It turns
-              three quiet quotes into one next action.
+            <p
+              data-testid="audit-result-intro"
+              className="mt-3 max-w-2xl text-sm leading-6 text-ink-muted"
+            >
+              {intro.body}
             </p>
           </div>
           <div
@@ -275,6 +318,8 @@ export function AuditResultView({
           </div>
         </section>
 
+        <AuditFollowUpOrder ranked={result.rankedQuotes} />
+
         <section
           aria-labelledby="message-today-title"
           className="border-t border-line-strong pt-7"
@@ -295,28 +340,44 @@ export function AuditResultView({
                 homeowner a low-pressure way to name the actual holdup.
               </p>
             </div>
-            <button
-              type="button"
-              onClick={onCopy}
-              className="inline-flex min-h-11 w-full shrink-0 items-center justify-center gap-2 rounded-lg border border-brand/50 bg-brand/10 px-4 py-2 text-sm font-black text-brand transition hover:bg-brand/15 focus:outline-none focus-visible:ring-2 focus-visible:ring-focus sm:w-auto"
-            >
-              {copied ? (
-                <>
-                  <Check className="h-4 w-4 text-success" aria-hidden="true" />
-                  Copied
-                </>
-              ) : (
-                <>
-                  <Clipboard className="h-4 w-4" aria-hidden="true" />
-                  Copy message
-                </>
-              )}
-            </button>
+            <div className="flex w-full shrink-0 flex-col gap-2 sm:w-auto sm:flex-row">
+              <button
+                type="button"
+                onClick={onOpenSms}
+                className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-lg border border-line-strong bg-surface-1 px-4 py-2 text-sm font-black text-ink-strong transition hover:border-brand focus:outline-none focus-visible:ring-2 focus-visible:ring-focus sm:w-auto"
+              >
+                <Smartphone className="h-4 w-4 text-brand" aria-hidden="true" />
+                Open in SMS
+              </button>
+              <button
+                type="button"
+                onClick={onCopy}
+                className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-lg border border-brand/50 bg-brand/10 px-4 py-2 text-sm font-black text-brand transition hover:bg-brand/15 focus:outline-none focus-visible:ring-2 focus-visible:ring-focus sm:w-auto"
+              >
+                {copied ? (
+                  <>
+                    <Check className="h-4 w-4 text-success" aria-hidden="true" />
+                    Copied
+                  </>
+                ) : (
+                  <>
+                    <Clipboard className="h-4 w-4" aria-hidden="true" />
+                    Copy message
+                  </>
+                )}
+              </button>
+            </div>
           </div>
 
           <div className="mt-5 border-l-4 border-brand bg-canvas px-4 py-5 sm:px-6">
-            <p className="max-w-3xl whitespace-pre-wrap break-words text-base font-semibold leading-8 text-ink-strong">
-              {result.suggestedMessage}
+            <p className="text-[10px] font-black uppercase tracking-widest text-ink-muted">
+              Paste this into your text thread:
+            </p>
+            <p
+              data-testid="audit-display-message"
+              className="mt-3 max-w-3xl whitespace-pre-wrap break-words text-base font-semibold leading-8 text-ink-strong"
+            >
+              {displayMessage}
             </p>
           </div>
 
@@ -362,104 +423,160 @@ export function AuditResultView({
                 id="next-followup-title"
                 className="mt-2 text-2xl font-black text-ink-strong"
               >
-                Follow up once more. Then stop chasing.
+                Keep the cadence. Unlock the words when you need them.
               </h3>
-              <ol className="mt-4 space-y-2">
-                {result.nextThreeMoves.map((move, index) => (
-                  <li
-                    key={move}
-                    className="flex items-start gap-3 text-sm leading-6 text-ink"
-                  >
-                    <span className="font-mono font-black text-money">
-                      {index + 1}
-                    </span>
-                    <span>{move}</span>
-                  </li>
-                ))}
+              <ol className="mt-4 space-y-3 text-sm leading-6 text-ink">
+                <li className="flex items-start gap-3">
+                  <span className="font-mono font-black text-money">1</span>
+                  <span>
+                    <strong className="text-ink-strong">Send today.</strong> Use
+                    the clean reopen above.
+                  </span>
+                </li>
+                <li className="flex items-start gap-3">
+                  <span className="font-mono font-black text-money">3</span>
+                  <span>
+                    <strong className="text-ink-strong">Day 3 follow-up.</strong>{" "}
+                    One short text if it stays quiet.
+                  </span>
+                </li>
+                <li className="flex items-start gap-3">
+                  <span className="font-mono font-black text-money">7</span>
+                  <span>
+                    <strong className="text-ink-strong">Day 7 closeout.</strong>{" "}
+                    Stop chasing and leave the door open.
+                  </span>
+                </li>
               </ol>
             </div>
-            <div className="min-w-0 border border-line-subtle bg-canvas p-5">
-              <p className="text-[10px] font-black uppercase tracking-widest text-ink-muted">
+            <div className="min-w-0 border border-brand/35 bg-brand/5 p-5">
+              <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-brand">
+                <LockKeyhole className="h-4 w-4" aria-hidden="true" />
                 Follow-up to send next
+              </div>
+              <p className="mt-3 break-words text-base font-semibold leading-7 text-ink-strong">
+                Day 3: one short follow-up. It&apos;s 2 sentences - shorter than
+                the first, and gives them a one-word exit so they don&apos;t
+                have to explain.
               </p>
-              <p className="mt-3 whitespace-pre-wrap break-words text-base font-semibold leading-7 text-ink-strong">
-                {nextFollowup}
-              </p>
+              <a
+                href={followUpHref}
+                data-testid="audit-follow-up-unlock"
+                onClick={onFollowUpUnlock}
+                className="mt-4 inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-lg border border-brand bg-brand px-4 py-2 text-center text-sm font-black text-canvas transition hover:bg-brand-dark focus:outline-none focus-visible:ring-2 focus-visible:ring-focus sm:w-auto"
+              >
+                Get the day-3 text &mdash; free, no card
+                <ArrowRight className="h-4 w-4" aria-hidden="true" />
+              </a>
             </div>
           </div>
         </section>
 
-        <AuditFollowUpOrder ranked={result.rankedQuotes} />
-        <AuditReplyPlaybook />
+        <AuditReplyPlaybook
+          unlockHref={replyUnlockHref}
+          onUnlock={onReplyBranchUnlock}
+        />
 
         <section
           data-testid="audit-product-preview"
           aria-labelledby="product-preview-title"
           className="border-t border-line-strong pt-7"
         >
-          <div className="flex min-w-0 flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-            <div className="min-w-0">
-              <p className="text-xs font-black uppercase tracking-widest text-brand">
-                What this looks like inside Quote Reclaim
-              </p>
-              <h3
-                id="product-preview-title"
-                className="mt-2 max-w-3xl text-2xl font-black text-ink-strong"
-              >
-                Every quiet quote gets a next move, not a guess.
-              </h3>
-            </div>
+          <p className="text-xs font-black uppercase tracking-widest text-brand">
+            The continuation
+          </p>
+          <div className="mt-2 flex min-w-0 flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+            <h3
+              id="product-preview-title"
+              className="max-w-3xl text-2xl font-black text-ink-strong"
+            >
+              What happens after today&apos;s text
+            </h3>
             <span className="inline-flex w-fit items-center gap-2 rounded-full border border-line-subtle bg-surface-1 px-3 py-1.5 text-xs font-bold text-ink-muted">
               <ShieldCheck className="h-4 w-4 text-success" aria-hidden="true" />
               Sample preview, not customer data
             </span>
           </div>
 
-          <div className="mt-5 grid gap-px overflow-hidden rounded-lg border border-line-subtle bg-line-subtle sm:grid-cols-2 lg:grid-cols-3">
-            {PRODUCT_PREVIEW.map(({ name, body, icon: Icon }) => (
-              <div key={name} className="min-w-0 bg-surface-1 p-5">
-                <Icon className="h-5 w-5 text-brand" aria-hidden="true" />
-                <h4 className="mt-4 font-black text-ink-strong">{name}</h4>
-                <p className="mt-2 break-words text-sm leading-6 text-ink-muted">
-                  {body}
-                </p>
-              </div>
-            ))}
-          </div>
-        </section>
-
-        <section
-          data-testid="audit-goes-deeper"
-          className="mt-7 border border-brand/45 bg-brand/10 p-5 sm:p-7"
-        >
-          <div className="grid min-w-0 gap-6 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-end">
-            <div className="min-w-0">
-              <p className="text-xs font-black uppercase tracking-widest text-brand">
-                You found the first quote
-              </p>
-              <h3 className="mt-2 max-w-3xl break-words text-2xl font-black leading-tight text-ink-strong sm:text-3xl">
-                Quote Reclaim keeps the rest from going quiet.
-              </h3>
-              <p className="mt-3 max-w-2xl text-sm leading-6 text-ink">
-                Save this recovery plan, work the follow-up order, and know what
-                to do when the homeowner answers. First 3 estimates are free.
-              </p>
-            </div>
-            <a
-              href={signupHref}
-              data-testid="audit-signup-cta"
-              onClick={onSignupClick}
-              className="inline-flex min-h-12 w-full shrink-0 items-center justify-center gap-2 rounded-lg border border-brand bg-brand px-5 py-3 text-center text-base font-black leading-tight text-canvas transition-colors hover:bg-brand-dark focus:outline-none focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2 focus-visible:ring-offset-canvas lg:w-auto"
-            >
-              Turn this into a follow-up system
-              <ArrowRight className="h-4 w-4" aria-hidden="true" />
-            </a>
-          </div>
-          <p className="mt-4 flex items-center gap-2 text-xs text-ink-muted lg:justify-end">
-            <FileClock className="h-4 w-4" aria-hidden="true" />
-            No card required. Nothing is sent without you.
+          <ol className="mt-6 grid gap-px overflow-hidden rounded-lg border border-line-subtle bg-line-subtle lg:grid-cols-4">
+            {CONTINUATION_TIMELINE.map(
+              ({ when, body, caption, icon: Icon }, index) => (
+                <li key={when} className="relative min-w-0 bg-surface-1 p-5">
+                  <div className="flex items-center justify-between gap-3">
+                    <Icon className="h-5 w-5 text-brand" aria-hidden="true" />
+                    <span className="font-mono text-xs font-black text-money">
+                      0{index + 1}
+                    </span>
+                  </div>
+                  <h4 className="mt-5 font-black text-ink-strong">{when}</h4>
+                  <p className="mt-2 text-sm leading-6 text-ink">{body}</p>
+                  <p className="mt-4 text-[10px] font-black uppercase tracking-widest text-ink-muted">
+                    {caption}
+                  </p>
+                </li>
+              ),
+            )}
+          </ol>
+          <p className="mt-4 text-sm leading-6 text-ink-muted">
+            $79/month after the free audit. First 3 estimates free. No card to
+            see your result.
           </p>
         </section>
+
+        <AuditFaq onExpand={onFaqExpanded} />
+
+        {priority && resultCta ? (
+          <section
+            data-testid="audit-goes-deeper"
+            className="mt-7 border border-brand/45 bg-brand/10 p-5 sm:p-7"
+          >
+            <div className="grid min-w-0 gap-6 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-end">
+              <div className="min-w-0">
+                <p className="text-xs font-black uppercase tracking-widest text-brand">
+                  You found the first move
+                </p>
+                <h3 className="mt-2 max-w-3xl break-words text-2xl font-black leading-tight text-ink-strong sm:text-3xl">
+                  {resultCta.headline}
+                </h3>
+                <p
+                  data-testid="audit-result-cta-urgency"
+                  className="mt-3 max-w-3xl text-sm font-semibold leading-6 text-ink-strong"
+                >
+                  {resultCta.urgency}
+                </p>
+                <p className="mt-3 max-w-3xl text-sm leading-6 text-ink">
+                  Today you send the first clean reopen. In 3 days, Quote Reclaim
+                  hands you the next text. If they reply with price, you get the
+                  price reply. If it books, you tap Got the Job.
+                </p>
+                <p className="mt-3 text-sm font-bold text-ink-strong">
+                  You send every text. We just hand you the next move.
+                </p>
+              </div>
+              <a
+                href={resultCta.href}
+                data-testid="audit-signup-cta"
+                onClick={() => {
+                  onSignupClick();
+                  onResultCtaClick({
+                    quoteN: priority.index,
+                    window: priority.window,
+                    daysUntilCold: resultCta.daysUntilCold,
+                  });
+                }}
+                className="inline-flex min-h-12 w-full max-w-md shrink-0 items-center justify-center gap-2 rounded-lg border border-brand bg-brand px-5 py-3 text-center text-base font-black leading-tight text-canvas transition-colors hover:bg-brand-dark focus:outline-none focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2 focus-visible:ring-offset-canvas lg:w-auto"
+              >
+                {resultCta.button}
+                <ArrowRight className="h-4 w-4" aria-hidden="true" />
+              </a>
+            </div>
+            <p className="mt-4 flex items-center gap-2 text-xs text-ink-muted lg:justify-end">
+              <FileClock className="h-4 w-4" aria-hidden="true" />
+              No card. You send every text - we just hand you the words. First 3
+              estimates free.
+            </p>
+          </section>
+        ) : null}
       </div>
     </article>
   );

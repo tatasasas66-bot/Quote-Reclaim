@@ -2,6 +2,7 @@ import type {
   RankedAuditQuote,
   RecoveryWindow,
 } from "@/lib/audit/silent-quote-audit";
+import { formatCurrency } from "@/lib/utils/currency";
 
 export const WINDOW_TONES: Record<string, string> = {
   Warm: "border-success/40 bg-success/10 text-success",
@@ -42,14 +43,105 @@ export function directiveForWindow(window: RecoveryWindow): string {
   }
 }
 
-export function nextFollowupForWindow(window: RecoveryWindow): string {
-  if (window === "closeout") {
-    return "Hey, I am closing this estimate out on my side for now. If the project comes back around, reply here and I can reopen the conversation.";
+export type AuditResultCta = {
+  headline: string;
+  urgency: string;
+  button: string;
+  href: string;
+  daysUntilCold: number;
+};
+
+export function appendAuditSignupReason(
+  signupHref: string,
+  reason: string,
+  leadQuote?: number,
+): string {
+  const separator = signupHref.includes("?") ? "&" : "?";
+  const leadQuoteParam =
+    leadQuote == null ? "" : `&lead_quote=${encodeURIComponent(leadQuote)}`;
+  return `${signupHref}${separator}reason=${encodeURIComponent(reason)}${leadQuoteParam}`;
+}
+
+export function buildAuditResultCta(
+  quote: RankedAuditQuote,
+  signupHref: string,
+): AuditResultCta {
+  const quoteLabel = `Quote #${quote.index}`;
+  const amount = formatCurrency(quote.amount);
+  const days = quote.daysSilent;
+  const href = appendAuditSignupReason(signupHref, "result-cta", quote.index);
+
+  if (quote.window === "warm") {
+    return {
+      headline: `Work ${quoteLabel} while it's still Warm.`,
+      urgency:
+        days == null
+          ? `${quoteLabel} is a ${amount} quote and still Warm. Work it before it cools off.`
+          : `${quoteLabel} is a ${amount} quote and still Warm at ${days} days quiet. Work it before it cools off.`,
+      button: "Save the next move for this quote",
+      href,
+      daysUntilCold: days == null ? 0 : Math.max(0, 22 - days),
+    };
   }
 
-  if (window === "cold") {
-    return "Hey, one last note before I close this estimate out: if the project is still alive but the timing changed, reply with a better month and I will leave it there.";
+  if (quote.window === "cooling") {
+    const daysUntilCold = days == null ? 0 : Math.max(0, 22 - days);
+    return {
+      headline:
+        daysUntilCold > 0
+          ? `Don't let ${quoteLabel} go Cold.`
+          : `${quoteLabel} is already Cold.`,
+      urgency:
+        daysUntilCold > 0
+          ? `${quoteLabel} is a ${amount} quote in Cooling. It hits Cold in ${daysUntilCold} ${daysUntilCold === 1 ? "day" : "days"}. After that, reopening gets harder.`
+          : `${quoteLabel} is a ${amount} quote and already Cold. Reopen it once, cleanly.`,
+      button:
+        daysUntilCold > 0
+          ? "Send me the next move before this quote goes Cold"
+          : "Get the clean reopen and closeout move",
+      href,
+      daysUntilCold,
+    };
   }
 
-  return "Hey, one last thing before I close the estimate out: is the holdup timing, budget, or scope? One word is enough.";
+  if (quote.window === "cold") {
+    const daysUntilCloseout =
+      days == null ? 0 : Math.max(0, 45 - days);
+    return {
+      headline: `${quoteLabel} is already Cold. Reopen it once, cleanly.`,
+      urgency:
+        daysUntilCloseout > 0
+          ? `${quoteLabel} is a ${amount} quote at ${days} days quiet. It reaches Closeout in ${daysUntilCloseout} ${daysUntilCloseout === 1 ? "day" : "days"}.`
+          : `${quoteLabel} is a ${amount} quote and already Cold. Reopen it once, cleanly.`,
+      button: "Get the clean reopen and closeout move",
+      href,
+      daysUntilCold: 0,
+    };
+  }
+
+  if (quote.window === "closeout") {
+    return {
+      headline: "This quote is in Closeout. Reopen once, then stop chasing.",
+      urgency:
+        days == null
+          ? `${quoteLabel} is a ${amount} quote in Closeout. Reopen once respectfully, then close the loop.`
+          : `${quoteLabel} is a ${amount} quote at ${days} days quiet. Reopen once respectfully, then close the loop.`,
+      button: "Get the respectful closeout move",
+      href,
+      daysUntilCold: 0,
+    };
+  }
+
+  return {
+    headline: `Save the next move for ${quoteLabel}.`,
+    urgency: `${quoteLabel} is a ${amount} quote. Add days quiet for a sharper recovery window.`,
+    button: "Save the next move for this quote",
+    href,
+    daysUntilCold: 0,
+  };
+}
+
+export function capitalizeDisplayMessage(message: string): string {
+  if (!message) return message;
+  return message.charAt(0).toUpperCase() + message.slice(1);
 }

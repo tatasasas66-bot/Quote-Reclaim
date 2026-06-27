@@ -156,7 +156,7 @@ export function AuditCalculatorClient() {
       (row) => parseQuoteAmount(row.amount) != null,
     );
     if (!hasAmountInput || !hasValidAmount) {
-      return "Enter at least one quote amount.";
+      return "Enter at least one quiet quote to see your first move.";
     }
 
     const invalidDays = rows.some(
@@ -279,6 +279,15 @@ export function AuditCalculatorClient() {
     } catch {
       // The message stays visible when clipboard access is unavailable.
     }
+  }
+
+  function openMessageInSms() {
+    if (!result?.suggestedMessage) return;
+    window.open(`sms:?&body=${encodeURIComponent(result.suggestedMessage)}`);
+    track("audit_open_in_sms_clicked", {
+      quote_n: result.priority?.index ?? null,
+      ...utms,
+    });
   }
 
   return (
@@ -438,6 +447,12 @@ export function AuditCalculatorClient() {
               <p className="mt-1 text-xs text-ink-muted">
                 {enteredCount} of 3 quote amounts entered
               </p>
+              {enteredCount < ROW_COUNT ? (
+                <p className="mt-2 text-xs leading-5 text-ink-muted">
+                  One quote is enough for a recovery move. Two or three make the
+                  ranking sharper.
+                </p>
+              ) : null}
             </div>
             <div className="min-w-0 bg-surface-1 p-4">
               <p className="text-sm font-black text-ink-strong">
@@ -548,6 +563,30 @@ export function AuditCalculatorClient() {
             signupHref={signupHref}
             tradeConfig={tradeConfig}
             onCopy={copyMessage}
+            onOpenSms={openMessageInSms}
+            onReplyBranchUnlock={(branch) =>
+              track("audit_reply_branch_unlock_clicked", {
+                branch,
+                ...utms,
+              })
+            }
+            onFollowUpUnlock={() =>
+              track("audit_follow_up_unlock_clicked", utms)
+            }
+            onResultCtaClick={({ quoteN, window, daysUntilCold }) =>
+              track("audit_result_cta_clicked", {
+                quote_n: quoteN,
+                window,
+                days_until_cold: daysUntilCold,
+                ...utms,
+              })
+            }
+            onFaqExpanded={(questionId) =>
+              track("audit_faq_expanded", {
+                question_id: questionId,
+                ...utms,
+              })
+            }
             onSignupClick={() => track("audit_signup_clicked", utms)}
           />
         ) : null}

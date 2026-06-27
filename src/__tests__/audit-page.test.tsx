@@ -23,6 +23,11 @@ import {
   ANALYSIS_STEP_MS_DEFAULT,
   ANALYSIS_STEP_MS_REDUCED,
 } from "@/app/audit/AuditCalculatorClient";
+import {
+  buildAuditResultCta,
+  capitalizeDisplayMessage,
+} from "@/app/audit/audit-presentation";
+import { runSilentQuoteAudit } from "@/lib/audit/silent-quote-audit";
 
 function readSource(rel: string): string {
   return readFileSync(fileURLToPath(new URL(rel, import.meta.url)), "utf8");
@@ -79,9 +84,17 @@ const clientSrc = readSource("../app/audit/AuditCalculatorClient.tsx");
 const resultSrc = readSource("../app/audit/AuditResultView.tsx");
 const replySrc = readSource("../app/audit/AuditReplyPlaybook.tsx");
 const orderSrc = readSource("../app/audit/AuditFollowUpOrder.tsx");
-const allAuditSrc = [pageSrc, clientSrc, resultSrc, replySrc, orderSrc].join(
-  "\n",
-);
+const faqSrc = readSource("../app/audit/AuditFaq.tsx");
+const presentationSrc = readSource("../app/audit/audit-presentation.ts");
+const allAuditSrc = [
+  pageSrc,
+  clientSrc,
+  resultSrc,
+  replySrc,
+  orderSrc,
+  faqSrc,
+  presentationSrc,
+].join("\n");
 
 afterEach(cleanup);
 
@@ -128,7 +141,7 @@ describe("/audit static landing page shell", () => {
     expect(pageSrc).not.toMatch(/phone support|call us|fake/i);
   });
 
-  it("includes the pain reframe, simple process, and straight answers", () => {
+  it("includes the pain reframe and simple process before the result", () => {
     render(<AuditPage />);
     expect(
       screen.getByRole("heading", {
@@ -139,9 +152,6 @@ describe("/audit static landing page shell", () => {
       screen.getByRole("heading", {
         name: /One quote\. One message\. One next move\./i,
       }),
-    ).toBeTruthy();
-    expect(
-      screen.getByRole("heading", { name: /No trick behind the result/i }),
     ).toBeTruthy();
     expect(
       screen.getByRole("link", {
@@ -234,6 +244,33 @@ describe("audit form - safe to try", () => {
     expect(screen.queryByTestId("audit-result")).toBeNull();
   });
 
+  it("shows every existing recovery window badge live before submit", () => {
+    render(<AuditCalculatorClient />);
+    const amount = screen.getByLabelText(/quote #1 amount/i);
+    const days = screen.getByLabelText(/quote #1 days quiet/i);
+    fireEvent.change(amount, { target: { value: "5000" } });
+
+    for (const [dayValue, label] of [
+      ["5", "Warm"],
+      ["14", "Cooling"],
+      ["30", "Cold"],
+      ["60", "Closeout"],
+    ]) {
+      fireEvent.change(days, { target: { value: dayValue } });
+      expect(screen.getByText(new RegExp(`^${label}$`, "i"))).toBeTruthy();
+    }
+  });
+
+  it("reminds partial entries that one quote is enough", () => {
+    render(<AuditCalculatorClient />);
+    fillFirstQuote("5000", "14");
+    expect(
+      screen.getByText(
+        /One quote is enough for a recovery move\. Two or three make the ranking sharper\./i,
+      ),
+    ).toBeTruthy();
+  });
+
   it("shows friendly validation only after submit", () => {
     render(<AuditCalculatorClient />);
     expect(screen.queryByRole("alert")).toBeNull();
@@ -243,7 +280,7 @@ describe("audit form - safe to try", () => {
       }),
     );
     expect(screen.getByRole("alert").textContent).toMatch(
-      /Enter at least one quote amount/i,
+      /Enter at least one quiet quote to see your first move/i,
     );
     expect(screen.queryByTestId("audit-result")).toBeNull();
   });
@@ -397,10 +434,133 @@ describe("funnel - value before signup", () => {
     expect(result.textContent).toMatch(/Message to send today/i);
     expect(result.textContent).toMatch(/Next follow-up order/i);
     expect(result.textContent).toMatch(/If they reply/i);
-    expect(result.textContent).toMatch(/What this looks like inside Quote Reclaim/i);
-    expect(result.textContent).toMatch(/Turn this into a follow-up system/i);
+    expect(result.textContent).toMatch(/What happens after today's text/i);
+    expect(result.textContent).toMatch(/Don't let Quote #1 go Cold/i);
     expect(screen.getByTestId("audit-reply-playbook")).toBeTruthy();
     expect(screen.getByTestId("audit-product-preview")).toBeTruthy();
+  });
+
+  it("shows one reply branch fully and locks the other four behind the same free signup path", () => {
+    render(<AuditCalculatorClient />);
+    fillFirstQuote("5000", "14");
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: /show me which quote to text first/i,
+      }),
+    );
+    runFullAnalysis();
+
+    const freeBranch = screen.getByTestId("audit-reply-free");
+    expect(freeBranch.textContent).toMatch(/Still interested/i);
+    expect(freeBranch.textContent).toMatch(/don't over-talk it/i);
+    expect(freeBranch.textContent).toMatch(/here's the link to pick back up/i);
+
+    for (const id of [
+      "price-concern",
+      "bad-timing",
+      "need-to-talk",
+      "went-another-way",
+    ]) {
+      const locked = screen.getByTestId(`audit-reply-locked-${id}`);
+      expect(locked.getAttribute("href")).toContain("reason=reply-branches");
+    }
+    expect(screen.queryByText(/Clarify scope before discounting/i)).toBeNull();
+    expect(screen.getByTestId("audit-reply-unlock-cta").textContent).toMatch(
+      /Unlock all 5 replies/i,
+    );
+  });
+
+  it("keeps the cadence visible but replaces the full day-3 message with a teaser", () => {
+    render(<AuditCalculatorClient />);
+    fillFirstQuote("5000", "14");
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: /show me which quote to text first/i,
+      }),
+    );
+    runFullAnalysis();
+
+    const moves = screen.getByTestId("audit-next-moves");
+    expect(moves.textContent).toMatch(/Send today/i);
+    expect(moves.textContent).toMatch(/Day 3 follow-up/i);
+    expect(moves.textContent).toMatch(/Day 7 closeout/i);
+    expect(moves.textContent).toMatch(/It's 2 sentences/i);
+    expect(moves.textContent).not.toMatch(
+      /one last thing before I close the estimate out/i,
+    );
+    expect(screen.getByTestId("audit-follow-up-unlock").getAttribute("href")).toContain(
+      "reason=follow-up",
+    );
+  });
+
+  it("opens the hard FAQ objections and adds the missing questions after the product preview", () => {
+    render(<AuditCalculatorClient />);
+    fillFirstQuote("5000", "14");
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: /show me which quote to text first/i,
+      }),
+    );
+    runFullAnalysis();
+
+    const faq = screen.getByTestId("audit-faq");
+    const crm = screen.getByText("Is this another CRM?").closest("details");
+    const every = screen
+      .getByText("Will every old quote come back?")
+      .closest("details");
+    expect((crm as HTMLDetailsElement).open).toBe(true);
+    expect((every as HTMLDetailsElement).open).toBe(true);
+    expect(faq.textContent).toMatch(/What if I only have one quiet estimate/i);
+    expect(faq.textContent).toMatch(/What happens after the free audit/i);
+    expect(faq.textContent).toMatch(/Why not just buy more leads/i);
+    expect(
+      screen.getByTestId("audit-product-preview").compareDocumentPosition(faq) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+    expect(
+      faq.compareDocumentPosition(screen.getByTestId("audit-goes-deeper")) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+  });
+
+  it("uses count-aware intro copy for one, two, and three quotes", () => {
+    const cases = [
+      {
+        fill: () => fillFirstQuote("5000", "14"),
+        expected: /You entered one quiet quote/i,
+      },
+      {
+        fill: () => {
+          fillFirstQuote("5000", "14");
+          fireEvent.change(screen.getByLabelText(/quote #2 amount/i), {
+            target: { value: "3500" },
+          });
+          fireEvent.change(screen.getByLabelText(/quote #2 days quiet/i), {
+            target: { value: "9" },
+          });
+        },
+        expected: /You entered two quiet quotes/i,
+      },
+      {
+        fill: fillThreeQuotes,
+        expected: /It turns three quiet quotes into one next action/i,
+      },
+    ];
+
+    for (const testCase of cases) {
+      const view = render(<AuditCalculatorClient />);
+      testCase.fill();
+      fireEvent.click(
+        screen.getByRole("button", {
+          name: /show me which quote to text first/i,
+        }),
+      );
+      runFullAnalysis();
+      expect(screen.getByTestId("audit-result-intro").textContent).toMatch(
+        testCase.expected,
+      );
+      view.unmount();
+    }
   });
 
   it("preserves Quote #3 as the first warm recommendation for the regression input", () => {
@@ -460,11 +620,13 @@ describe("funnel - value before signup", () => {
     expect(screen.queryByTestId("audit-signup-cta")).toBeNull();
     runFullAnalysis();
     const cta = screen.getByTestId("audit-signup-cta");
-    expect(cta.textContent).toMatch(/Turn this into a follow-up system/i);
+    expect(cta.textContent).toMatch(/Save the next move for this quote/i);
     expect(cta.getAttribute("href")).toMatch(/^\/sign-up\?next=/);
+    expect(cta.getAttribute("href")).toContain("reason=result-cta");
+    expect(cta.getAttribute("href")).toContain("lead_quote=1");
   });
 
-  it("copy button writes the suggested message when clipboard is available", async () => {
+  it("capitalizes the displayed message while copying the original text", async () => {
     const writeText = vi.fn().mockResolvedValue(undefined);
     Object.defineProperty(navigator, "clipboard", {
       configurable: true,
@@ -480,13 +642,91 @@ describe("funnel - value before signup", () => {
     );
     runFullAnalysis();
 
+    const displayed = screen.getByTestId("audit-display-message").textContent ?? "";
+    expect(displayed.charAt(0)).toBe(displayed.charAt(0).toUpperCase());
+
     await act(async () => {
       fireEvent.click(screen.getByRole("button", { name: /Copy message/i }));
     });
-    expect(writeText).toHaveBeenCalledWith(
-      expect.stringMatching(/estimate/i),
-    );
+    const copiedMessage = String(writeText.mock.calls[0]?.[0]);
+    expect(copiedMessage).toMatch(/estimate/i);
+    expect(copiedMessage.charAt(0)).toBe(copiedMessage.charAt(0).toLowerCase());
     expect(screen.getByRole("button", { name: /Copied/i })).toBeTruthy();
+  });
+
+  it("opens the SMS app with only the original message body and no recipient", () => {
+    const open = vi.spyOn(window, "open").mockImplementation(() => null);
+    render(<AuditCalculatorClient />);
+    fillFirstQuote("5000", "20");
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: /show me which quote to text first/i,
+      }),
+    );
+    runFullAnalysis();
+
+    fireEvent.click(screen.getByRole("button", { name: /Open in SMS/i }));
+    expect(open).toHaveBeenCalledTimes(1);
+    const smsUrl = String(open.mock.calls[0]?.[0]);
+    expect(smsUrl).toMatch(/^sms:\?&body=/);
+    expect(smsUrl).not.toMatch(/(?:to|phone|recipient)=/i);
+    open.mockRestore();
+  });
+});
+
+describe("audit result CTA window math", () => {
+  it("uses the priority quote number, amount, window, and days until Cold", () => {
+    const audit = runSilentQuoteAudit([
+      { amountRaw: "8500", daysSilentRaw: "14" },
+    ]);
+    const cta = buildAuditResultCta(
+      audit.priority!,
+      "/sign-up?next=%2Fonboarding%2Freveal",
+    );
+    expect(cta.headline).toBe("Don't let Quote #1 go Cold.");
+    expect(cta.urgency).toContain("$8,500");
+    expect(cta.urgency).toContain("Cooling");
+    expect(cta.urgency).toContain("8 days");
+    expect(cta.daysUntilCold).toBe(8);
+    expect(cta.href).toContain("reason=result-cta");
+    expect(cta.href).toContain("lead_quote=1");
+  });
+
+  it("uses truthful Warm, Cold, and Closeout variants", () => {
+    const cases = [
+      {
+        days: "5",
+        headline: /still Warm/i,
+        button: /Save the next move/i,
+      },
+      {
+        days: "30",
+        headline: /already Cold/i,
+        button: /clean reopen and closeout/i,
+      },
+      {
+        days: "60",
+        headline: /in Closeout/i,
+        button: /respectful closeout/i,
+      },
+    ];
+
+    for (const item of cases) {
+      const audit = runSilentQuoteAudit([
+        { amountRaw: "5000", daysSilentRaw: item.days },
+      ]);
+      const cta = buildAuditResultCta(
+        audit.priority!,
+        "/sign-up?next=%2Fonboarding%2Freveal",
+      );
+      expect(cta.headline).toMatch(item.headline);
+      expect(cta.button).toMatch(item.button);
+    }
+  });
+
+  it("capitalizes display copy without changing the original", () => {
+    expect(capitalizeDisplayMessage("quick check")).toBe("Quick check");
+    expect("quick check").toBe("quick check");
   });
 });
 
@@ -542,11 +782,16 @@ describe("copy and positioning guardrails", () => {
 });
 
 describe("analytics events are preserved without a new vendor", () => {
-  it("fires the four documented audit funnel events only", () => {
+  it("fires the documented audit funnel and conversion-loop events only", () => {
     expect(clientSrc).toContain('track("audit_page_viewed"');
     expect(clientSrc).toContain('track("audit_started"');
     expect(clientSrc).toContain('track("audit_completed"');
     expect(clientSrc).toContain('track("audit_signup_clicked"');
+    expect(clientSrc).toContain('track("audit_reply_branch_unlock_clicked"');
+    expect(clientSrc).toContain('track("audit_follow_up_unlock_clicked"');
+    expect(clientSrc).toContain('track("audit_result_cta_clicked"');
+    expect(clientSrc).toContain('track("audit_open_in_sms_clicked"');
+    expect(clientSrc).toContain('track("audit_faq_expanded"');
 
     const trackCalls = clientSrc.match(/track\("([a-z_]+)"/g) ?? [];
     const names = new Set(
@@ -554,7 +799,12 @@ describe("analytics events are preserved without a new vendor", () => {
     );
     expect(Array.from(names).sort()).toEqual([
       "audit_completed",
+      "audit_faq_expanded",
+      "audit_follow_up_unlock_clicked",
+      "audit_open_in_sms_clicked",
       "audit_page_viewed",
+      "audit_reply_branch_unlock_clicked",
+      "audit_result_cta_clicked",
       "audit_signup_clicked",
       "audit_started",
     ]);

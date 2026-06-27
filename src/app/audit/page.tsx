@@ -51,29 +51,6 @@ const STEPS = [
   },
 ] as const;
 
-const ANSWERS = [
-  {
-    question: "Is this another CRM?",
-    answer:
-      "No. Keep the estimating app, spreadsheet, or notebook you already use. This only helps you decide which quiet quote deserves the next text.",
-  },
-  {
-    question: "Are customer names or phone numbers needed?",
-    answer:
-      "No. The diagnostic uses only quote amount and days quiet. Do not enter customer data.",
-  },
-  {
-    question: "Does the homeowner get contacted?",
-    answer:
-      "No. You get a message to review and send yourself. Nothing is sent from this page.",
-  },
-  {
-    question: "Will every old quote come back?",
-    answer:
-      "No. Some quotes are dead. The point is to make one smart first move and give a quiet homeowner an easier way to answer.",
-  },
-] as const;
-
 export default function AuditPage() {
   return (
     <main className="min-h-screen w-full max-w-[100dvw] overflow-x-hidden bg-canvas text-ink">
@@ -92,7 +69,7 @@ export default function AuditPage() {
             prefetch={false}
             className="shrink-0 rounded-lg px-3 py-2 text-sm font-semibold text-ink-muted transition hover:bg-surface-2 hover:text-ink-strong focus:outline-none focus-visible:ring-2 focus-visible:ring-focus"
           >
-            Sign in
+            Already in? Sign in
           </Link>
         </div>
       </header>
@@ -237,34 +214,6 @@ export default function AuditPage() {
               </li>
             ))}
           </ol>
-        </div>
-      </section>
-
-      <section aria-labelledby="audit-answers-title">
-        <div className="mx-auto grid w-full max-w-7xl gap-8 px-4 py-12 sm:px-6 lg:grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)] lg:px-8 lg:py-16">
-          <div className="min-w-0">
-            <p className="text-xs font-black uppercase tracking-widest text-brand">
-              Straight answers
-            </p>
-            <h2
-              id="audit-answers-title"
-              className="mt-3 text-3xl font-black text-ink-strong"
-            >
-              No trick behind the result.
-            </h2>
-          </div>
-          <div className="min-w-0 divide-y divide-line-subtle border-y border-line-subtle">
-            {ANSWERS.map((item) => (
-              <details key={item.question} className="group py-5">
-                <summary className="cursor-pointer list-none pr-8 font-bold text-ink-strong marker:hidden">
-                  {item.question}
-                </summary>
-                <p className="mt-3 max-w-2xl text-sm leading-6 text-ink-muted">
-                  {item.answer}
-                </p>
-              </details>
-            ))}
-          </div>
         </div>
       </section>
 
