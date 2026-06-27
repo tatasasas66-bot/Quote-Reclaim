@@ -69,6 +69,13 @@ function wordsToNumber(tokens: string[]): number | null {
 
 // Trade aliases → canonical TRADES value. Longer phrases first.
 const TRADE_ALIASES: Array<[RegExp, string]> = [
+  [/\bconcrete\b|\bdriveway\b|\bslab\b/, "Concrete"],
+  [/\bfenc(?:e|ing)\b/, "Fencing"],
+  [/\bfloor(?:ing)?\b/, "Flooring"],
+  [/\bwindows?\b|\bdoors?\b/, "Windows & Doors"],
+  [/\bsiding\b/, "Siding"],
+  [/\bdrywall\b|\bsheetrock\b/, "Drywall"],
+  [/\btree service\b|\btree removal\b|\barborist\b/, "Tree Service"],
   [/\bgeneral contract(?:ing|or)?\b/, "General Contracting"],
   [/\bhvac\b/, "HVAC"],
   [/\b(?:heating|cooling|air condition(?:ing|er)?|a\/?c)\b/, "HVAC"],

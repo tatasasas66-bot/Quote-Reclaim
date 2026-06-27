@@ -294,9 +294,8 @@ describe("quote detail command panel (unified next-move source of truth)", () =>
     expect(quoteDetail).toMatch(
       /<SendEarlyButton[\s\S]*variant="primary"[\s\S]*size="lg"[\s\S]*fullWidth/,
     );
-    expect(quoteDetail).toContain(
-      '<CopyButton text={viewModel.copyMessage} label="Copy"',
-    );
+    expect(quoteDetail).toContain("text={viewModel.copyMessage}");
+    expect(quoteDetail).toContain('source="quote_command"');
   });
 
   it("future follow-ups are collapsed but still rendered in the 5-message plan", () => {

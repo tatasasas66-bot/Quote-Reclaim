@@ -134,7 +134,7 @@ describe("age-aware message parity — cron matches UI for each window", () => {
     expect(rec.window).toBe("closeout");
     expect(rec.messageFamily).toBe("Clean Closeout");
     expect(rec.message).toContain("close out");
-    expect(rec.message).toContain("reopen");
+    expect(rec.message).toContain("no restart, no re-quote");
     expect(rec.message).not.toContain("quick check");
     expect(rec.message).not.toContain("timing, budget");
     expect(rec.message).not.toContain("Which helps most");
@@ -148,7 +148,9 @@ describe("age-aware message parity — cron matches UI for each window", () => {
     });
     expect(rec.window).toBe("warm");
     expect(rec.messageFamily).toBe("Estimate Check");
-    expect(rec.message).toContain("quick check");
+    expect(rec.message).toContain(
+      "any question on scope, timing, or price I can clear up here?",
+    );
   });
 });
 

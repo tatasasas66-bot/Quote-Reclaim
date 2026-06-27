@@ -209,6 +209,14 @@ function buildReplyTextFor(input: RecordReplyInput): string {
   switch (input.answerType) {
     case "interested":
       return "[One-tap] The customer tapped: Let's do it — what's next?";
+    case "price_concern":
+      return "[One-tap] The customer tapped: Price is the hold-up.";
+    case "bad_timing":
+      return "[One-tap] The customer tapped: Timing's off.";
+    case "need_to_talk":
+      return "[One-tap] The customer tapped: Can we talk?";
+    case "went_another_way":
+      return "[One-tap] The customer tapped: Went another way.";
     case "question":
       return (input.questionText ?? "").trim() || "[One-tap] (no question text)";
     case "not_now":

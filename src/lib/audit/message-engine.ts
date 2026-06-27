@@ -12,7 +12,11 @@
  * Window classification delegates to the centralized recovery-logic module.
  */
 
-import { getRecoveryWindow, getProjectNoun as centralizedGetProjectNoun } from "@/lib/recovery/recovery-logic";
+import {
+  getOneTapOptions,
+  getProjectNoun as centralizedGetProjectNoun,
+  getRecoveryWindow,
+} from "@/lib/recovery/recovery-logic";
 
 export type MessageWindow = "warm" | "cooling" | "cold" | "closeout";
 
@@ -110,92 +114,73 @@ export function generateFollowupMessage(input: {
 }): GeneratedMessage {
   const window = messageWindowForDays(input.daysSilent);
   const noun = projectNounForTrade(input.trade);
-  const project = noun === "estimate" ? "estimate" : `${noun} estimate`;
   const name = input.firstName?.trim() || null;
 
   switch (window) {
     case "warm":
-      return warmMessage(name, project);
+      return warmMessage(name);
     case "cooling":
-      return coolingMessage(name, project);
+      return coolingMessage(name, noun);
     case "cold":
-      return coldMessage(name, project);
+      return coldMessage(noun);
     case "closeout":
-      return closeoutMessage(name, project);
+      return closeoutMessage(noun);
   }
 }
 
-function warmMessage(name: string | null, project: string): GeneratedMessage {
+function warmMessage(name: string | null): GeneratedMessage {
   const greeting = name ? `Hi ${name} — ` : "";
   return {
-    message: `${greeting}quick check on the ${project} — any question on scope, timing, or price I can clear up here?`,
+    message: name
+      ? `${greeting}any question on scope, timing, or price I can clear up here?`
+      : "Any question on scope, timing, or price I can clear up here?",
     window: "warm",
     messageFamily: "quick_check",
     whyThisMessage:
       "The estimate is still fresh, so the goal is to reopen the conversation with one easy question.",
     whyThisWorks:
       "It asks for one small question instead of forcing the homeowner to make a full decision.",
-    oneTapOptions: [
-      "Have one question",
-      "Still reviewing",
-      "Timing is the issue",
-      "Not right now",
-    ],
+    oneTapOptions: getOneTapOptions("warm"),
   };
 }
 
-function coolingMessage(name: string | null, project: string): GeneratedMessage {
+function coolingMessage(name: string | null, projectNoun: string): GeneratedMessage {
   const greeting = name ? `Hi ${name} — ` : "";
   return {
-    message: `${greeting}when a quote goes quiet, it's usually timing, budget, or one part of the scope. If one of those is the hold-up on the ${project}, reply with which one and I'll make it easier.`,
+    message: `${greeting}no pressure on the ${projectNoun}. If it's timing, budget, or one part of the scope that's holding it up, reply with which one and I'll sharpen that piece. If it's a pass, 'no' works too — no awkward follow-up from me.`,
     window: "cooling",
     messageFamily: "friction_diagnosis",
     whyThisMessage:
       "The homeowner may be stuck on timing, budget, or scope. This message gives them easy categories to answer with.",
     whyThisWorks:
       "It gives the homeowner easy categories to answer with, instead of making them explain the whole situation.",
-    oneTapOptions: [
-      "Budget",
-      "Timing",
-      "Scope question",
-      "Still comparing",
-    ],
+    oneTapOptions: getOneTapOptions("cooling"),
   };
 }
 
-function coldMessage(_name: string | null, project: string): GeneratedMessage {
+function coldMessage(projectNoun: string): GeneratedMessage {
   return {
-    message: `I can keep the ${project} open, revise it, or close it out for now. Which helps most?`,
+    message: `I can keep this ${projectNoun} open, revise it, or close it out. Which helps most?`,
     window: "cold",
     messageFamily: "open_revise_close",
     whyThisMessage:
       "The quote is older, so the goal is not pressure. The message gives them a simple open, revise, or close choice.",
     whyThisWorks:
       "It gives the homeowner control and turns silence into a simple status choice.",
-    oneTapOptions: [
-      "Keep open",
-      "Revise it",
-      "Close it for now",
-      "Went another direction",
-    ],
+    oneTapOptions: getOneTapOptions("cold"),
   };
 }
 
-function closeoutMessage(_name: string | null, project: string): GeneratedMessage {
+function closeoutMessage(projectNoun: string): GeneratedMessage {
   return {
-    message: `I'm going to close out the ${project} on my side for now so I'm not sending follow-ups you don't need. If you want to reopen it later, reply here and I'll pull it back up.`,
+    message: `I'll close out the ${projectNoun} on my side so it's off your plate. If the timing changes later, text me here and I'll send a fresh number — no restart, no re-quote, no awkward conversation.`,
     window: "closeout",
     messageFamily: "clean_closeout",
     whyThisMessage:
       "It removes the awkwardness of saying no and leaves the door open if the project becomes active later.",
     whyThisWorks:
       "It removes the guilt of saying no and gives the homeowner a safe way to reopen later.",
-    oneTapOptions: [
-      "Reopen later",
-      "Close it",
-      "Still possible",
-      "Went another direction",
-    ],
+    oneTapOptions: getOneTapOptions("closeout"),
   };
 }
 

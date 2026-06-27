@@ -6,6 +6,7 @@ import { persistRecoveryPlan } from "@/lib/quotes/recovery-plan-write";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { createServiceSupabaseClient } from "@/lib/supabase/service";
 import { titleCaseName } from "@/lib/utils/title-case";
+import { TRADES } from "@/lib/utils/normalize";
 import { MAX_IMPORT_ROWS, type ParsedQuote } from "./parse-quotes";
 
 export type ImportResult =
@@ -18,17 +19,7 @@ export type ImportResult =
     }
   | { ok: false; error: string };
 
-const ALLOWED_TRADES = new Set([
-  "Roofing",
-  "HVAC",
-  "Plumbing",
-  "Electrical",
-  "Remodeling",
-  "General Contracting",
-  "Painting",
-  "Landscaping",
-  "Concrete",
-]);
+const ALLOWED_TRADES = new Set<string>(TRADES);
 
 const MAX_AMOUNT_USD = 10_000_000;
 const MAX_NAME_LEN = 200;

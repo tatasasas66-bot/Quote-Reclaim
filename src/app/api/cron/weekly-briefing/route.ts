@@ -1,20 +1,30 @@
 import { randomUUID } from "node:crypto";
 import { type NextRequest, NextResponse } from "next/server";
-import { createServiceSupabaseClient } from "@/lib/supabase/service";
+import { sendRecoveryEmail } from "@/lib/messaging/email-provider";
+import { appBaseUrl } from "@/lib/quotes/one-tap-reply";
+import { effectiveDaysSilent } from "@/lib/recovery/effective-days";
+import {
+  pickSundayResetQuote,
+  sundayResetEmail,
+  type SundayResetCandidate,
+} from "@/lib/recovery/sunday-reset";
 import { requireCronAuth } from "@/lib/security/require-cron";
+import { createServiceSupabaseClient } from "@/lib/supabase/service";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 const CRON_NAME = "weekly_briefing";
-const BRIEFING_HORIZON_DAYS = 7;
 
-type BriefingRow = {
+type QuoteRow = {
+  id: string;
   user_id: string;
-  pending_count: number;
-  silent_value: number;
-  recovered_this_month: number;
-  next_due_count: number;
+  client_name: string;
+  estimate_amount: number;
+  days_silent: number;
+  quote_sent_at: string | null;
+  created_at: string;
+  outcome: string;
 };
 
 export async function GET(request: NextRequest): Promise<NextResponse> {
@@ -33,6 +43,7 @@ async function handleBriefing(request: NextRequest): Promise<NextResponse> {
 
   const supabase = createServiceSupabaseClient();
   const cronRunId = randomUUID();
+  const now = new Date();
 
   await supabase.from("cron_runs").insert({
     id: cronRunId,
@@ -40,104 +51,146 @@ async function handleBriefing(request: NextRequest): Promise<NextResponse> {
     status: "running",
   });
 
-  // Find every user with at least one pending quote — those are the
-  // contractors who'd want a briefing this week.
-  const { data: pendingQuotes, error: qError } = await supabase
-    .from("quotes")
-    .select("user_id, estimate_amount, outcome, won_at")
-    .eq("outcome", "pending");
+  const [profilesResult, quotesResult, remindersResult] = await Promise.all([
+    supabase
+      .from("profiles")
+      .select("id, email, briefing_enabled")
+      .eq("briefing_enabled", true),
+    supabase
+      .from("quotes")
+      .select(
+        "id, user_id, client_name, estimate_amount, days_silent, quote_sent_at, created_at, outcome",
+      )
+      .eq("outcome", "pending"),
+    supabase
+      .from("reminders")
+      .select("quote_id, user_id, sent, sent_at, paused_at"),
+  ]);
 
-  if (qError) {
-    await supabase
-      .from("cron_runs")
-      .update({
-        status: "failed",
-        errors: [{ stage: "pending_query", error: qError.message }],
-        completed_at: new Date().toISOString(),
-      })
-      .eq("id", cronRunId);
+  const loadError =
+    profilesResult.error ?? quotesResult.error ?? remindersResult.error;
+  if (loadError) {
+    await finalize(cronRunId, "failed", {
+      errors: [{ stage: "load", code: loadError.code ?? "unknown" }],
+    });
     return NextResponse.json(
-      { error: "Query failed", cron_run_id: cronRunId },
+      { error: "Sunday Reset data load failed", cron_run_id: cronRunId },
       { status: 500 },
     );
   }
 
-  const pendingByUser = new Map<string, { count: number; value: number }>();
-  for (const q of pendingQuotes ?? []) {
-    const userId = q.user_id as string;
-    const cur = pendingByUser.get(userId) ?? { count: 0, value: 0 };
-    cur.count += 1;
-    cur.value += Number(q.estimate_amount ?? 0);
-    pendingByUser.set(userId, cur);
-  }
-
-  const horizonIso = new Date(
-    Date.now() + BRIEFING_HORIZON_DAYS * 24 * 60 * 60 * 1000,
-  ).toISOString();
-  const monthStartIso = (() => {
-    const d = new Date();
-    d.setUTCDate(1);
-    d.setUTCHours(0, 0, 0, 0);
-    return d.toISOString();
-  })();
-
-  const briefings: BriefingRow[] = [];
-
-  for (const [userId, agg] of Array.from(pendingByUser.entries())) {
-    const [dueRes, recoveredRes] = await Promise.all([
-      supabase
-        .from("reminders")
-        .select("id", { count: "exact", head: true })
-        .eq("user_id", userId)
-        .eq("sent", false)
-        .is("paused_at", null)
-        .lte("send_at", horizonIso),
-      supabase
-        .from("quotes")
-        .select("estimate_amount")
-        .eq("user_id", userId)
-        .eq("outcome", "won")
-        .gte("won_at", monthStartIso),
-    ]);
-
-    const nextDueCount = dueRes.count ?? 0;
-    const recoveredThisMonth = (recoveredRes.data ?? []).reduce(
-      (sum, q) => sum + Number(q.estimate_amount ?? 0),
-      0,
-    );
-
-    briefings.push({
-      user_id: userId,
-      pending_count: agg.count,
-      silent_value: agg.value,
-      recovered_this_month: recoveredThisMonth,
-      next_due_count: nextDueCount,
+  const remindersByQuote = new Map<
+    string,
+    Array<{ sent: boolean; sent_at: string | null; paused_at: string | null }>
+  >();
+  for (const reminder of remindersResult.data ?? []) {
+    const quoteId = String(reminder.quote_id);
+    const rows = remindersByQuote.get(quoteId) ?? [];
+    rows.push({
+      sent: Boolean(reminder.sent),
+      sent_at: reminder.sent_at,
+      paused_at: reminder.paused_at,
     });
+    remindersByQuote.set(quoteId, rows);
   }
 
-  // TODO (Phase 11+): when SMS briefing is explicitly enabled per-user and
-  // the messaging service is configured, deliver these summaries via SMS.
-  // For Phase 10 we only compute and store the snapshot in cron_runs.metadata
-  // so ops can verify the foundation works.
+  const quotesByUser = new Map<string, SundayResetCandidate[]>();
+  for (const rawQuote of quotesResult.data ?? []) {
+    const quote = rawQuote as QuoteRow;
+    const reminders = remindersByQuote.get(quote.id) ?? [];
+    const unsent = reminders.filter((reminder) => !reminder.sent);
+    const paused =
+      unsent.length > 0 &&
+      unsent.every((reminder) => reminder.paused_at !== null);
+    const lastContactAt =
+      reminders
+        .filter((reminder) => reminder.sent && reminder.sent_at)
+        .map((reminder) => String(reminder.sent_at))
+        .sort()
+        .at(-1) ?? null;
+    const rows = quotesByUser.get(quote.user_id) ?? [];
+    rows.push({
+      id: quote.id,
+      clientLabel: quote.client_name || "Quiet estimate",
+      amount: Number(quote.estimate_amount ?? 0),
+      daysQuiet: effectiveDaysSilent(quote, now.getTime()),
+      outcome: quote.outcome,
+      paused,
+      lastContactAt,
+    });
+    quotesByUser.set(quote.user_id, rows);
+  }
 
-  await supabase
-    .from("cron_runs")
-    .update({
-      status: "success",
-      metadata: {
-        candidates: briefings.length,
-        horizon_days: BRIEFING_HORIZON_DAYS,
-        // Cap stored sample so cron_runs row stays small; full set lives in
-        // the per-user computation above.
-        sample: briefings.slice(0, 25),
-      },
-      completed_at: new Date().toISOString(),
-    })
-    .eq("id", cronRunId);
+  let sent = 0;
+  let noEligibleQuote = 0;
+  const errors: Array<{ user_id: string; code: string }> = [];
+
+  for (const profile of profilesResult.data ?? []) {
+    const userId = String(profile.id);
+    const email = String(profile.email ?? "").trim();
+    if (!email) continue;
+
+    const pick = pickSundayResetQuote(
+      quotesByUser.get(userId) ?? [],
+      now.getTime(),
+    );
+    if (!pick) {
+      noEligibleQuote += 1;
+      continue;
+    }
+
+    const recoveryPlanUrl = `${appBaseUrl()}/quotes/${pick.id}?source=sunday-reset`;
+    const message = sundayResetEmail({ quote: pick, recoveryPlanUrl });
+    const result = await sendRecoveryEmail({
+      to: email,
+      subject: message.subject,
+      body: message.body,
+    });
+    if (result.ok) {
+      sent += 1;
+    } else {
+      errors.push({ user_id: userId, code: "email_send_failed" });
+    }
+  }
+
+  const status = errors.length > 0 ? "partial" : "success";
+  await finalize(cronRunId, status, {
+    reminders_sent: sent,
+    errors,
+    metadata: {
+      event: "sunday_reset_sent",
+      enabled_contractors: profilesResult.data?.length ?? 0,
+      sent,
+      no_eligible_quote: noEligibleQuote,
+      schedule_timezone: "UTC",
+    },
+  });
 
   return NextResponse.json({
     cron_run_id: cronRunId,
-    candidates: briefings.length,
-    briefings,
+    sent,
+    no_eligible_quote: noEligibleQuote,
+    errors: errors.length,
   });
+
+  async function finalize(
+    id: string,
+    status: "success" | "partial" | "failed",
+    values: {
+      reminders_sent?: number;
+      errors?: unknown[];
+      metadata?: Record<string, unknown>;
+    },
+  ) {
+    await supabase
+      .from("cron_runs")
+      .update({
+        status,
+        reminders_sent: values.reminders_sent ?? 0,
+        errors: values.errors ?? [],
+        metadata: values.metadata ?? {},
+        completed_at: new Date().toISOString(),
+      })
+      .eq("id", id);
+  }
 }

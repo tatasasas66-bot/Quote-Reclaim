@@ -186,9 +186,10 @@ describe("[5] reply persists into both tables and pauses the sequence", () => {
 // ───────────────────────────────────────────────────────────────────────
 
 describe("[6] reply is visible to the contractor on the quote detail page", () => {
-  it("the detail page reads the latest one-tap reply and the active option list", () => {
+  it("the detail page reads the latest one-tap reply and uses the fixed safe choices", () => {
     expect(quoteDetailSrc).toContain("getLatestOneTapReply");
-    expect(quoteDetailSrc).toContain("listActiveReplyOptions");
+    expect(quoteDetailSrc).not.toContain("listActiveReplyOptions");
+    expect(oneTapCard).toContain("ONE_TAP_CHOICES");
     expect(quoteDetailSrc).toMatch(/<OneTapReplyCard[\s\S]{0,200}latestReply=\{latestOneTapReply\}/);
   });
 

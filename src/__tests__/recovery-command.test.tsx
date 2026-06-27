@@ -287,7 +287,7 @@ describe("send-button safety on the quote detail page", () => {
     // email-due and email-queued — so an old quiet quote can be sent by hand
     // now even though its automatic send_at is a future window.
     expect(viewModelSrc).toMatch(
-      /messageType === "email" \? canManualSendToday\(input\.move\) : true/,
+      /!disabled && messageType === "email" && canManualSendToday\(input\.move\)/,
     );
     expect(viewModelSrc).not.toMatch(
       /messageType === "email" \? move\.kind === "email-due" : true/,
@@ -302,7 +302,10 @@ describe("send-button safety on the quote detail page", () => {
     expect(viewModelSrc).toContain(
       "const action = isCurrent ? currentAction : null",
     );
-    expect(detailPage).toMatch(/<CopyButton text=\{card\.copyMessage\} \/>/);
+    expect(detailPage).toContain("text={card.copyMessage}");
+    expect(detailPage).toContain(
+      "source={`recovery_sequence_${card.key}`}",
+    );
   });
 
   it("the next actionable card is visually highlighted for thumb/scan targeting", () => {
@@ -383,12 +386,12 @@ describe("all recovery surfaces derive from the ViewModel", () => {
     );
   });
 
-  it("the chip says 'sends' only for email mode; copy mode says 'scheduled'", () => {
+  it("the chip names the due date and preferred contact channel", () => {
     expect(viewModelSrc).toContain(
-      "`Next follow-up sends ${currentScheduledLabel}`",
+      "`Next follow-up due: ${currentScheduledLabel}",
     );
     expect(viewModelSrc).toContain(
-      "`Next follow-up scheduled ${currentScheduledLabel}`",
+      'preferredChannel === "COPY" ? "Copy" : preferredChannel',
     );
   });
 });

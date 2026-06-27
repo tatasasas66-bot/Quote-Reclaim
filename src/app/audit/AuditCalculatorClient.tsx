@@ -284,8 +284,37 @@ export function AuditCalculatorClient() {
   function openMessageInSms() {
     if (!result?.suggestedMessage) return;
     window.open(`sms:?&body=${encodeURIComponent(result.suggestedMessage)}`);
+    track("sms_opened", {
+      surface: "audit_result",
+      quote_n: result.priority?.index ?? null,
+      message_type: `${result.priority?.window ?? "unknown"}_recovery`,
+      trade: tradeConfig.trade,
+      recovery_window: result.priority?.window ?? null,
+      quote_amount: result.priority?.amount ?? null,
+      days_quiet: result.priority?.daysSilent ?? null,
+      ...utms,
+    });
     track("audit_open_in_sms_clicked", {
       quote_n: result.priority?.index ?? null,
+      ...utms,
+    });
+  }
+
+  function openMessageInWhatsapp() {
+    if (!result?.suggestedMessage) return;
+    window.open(
+      `https://wa.me/?text=${encodeURIComponent(result.suggestedMessage)}`,
+      "_blank",
+      "noopener,noreferrer",
+    );
+    track("whatsapp_opened", {
+      surface: "audit_result",
+      quote_n: result.priority?.index ?? null,
+      message_type: `${result.priority?.window ?? "unknown"}_recovery`,
+      trade: tradeConfig.trade,
+      recovery_window: result.priority?.window ?? null,
+      quote_amount: result.priority?.amount ?? null,
+      days_quiet: result.priority?.daysSilent ?? null,
       ...utms,
     });
   }
@@ -564,6 +593,7 @@ export function AuditCalculatorClient() {
             tradeConfig={tradeConfig}
             onCopy={copyMessage}
             onOpenSms={openMessageInSms}
+            onOpenWhatsapp={openMessageInWhatsapp}
             onReplyBranchUnlock={(branch) =>
               track("audit_reply_branch_unlock_clicked", {
                 branch,

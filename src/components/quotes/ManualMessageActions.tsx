@@ -3,13 +3,14 @@
 import * as React from "react";
 import { Check, Copy, MessageSquareText, Send } from "lucide-react";
 import { Button } from "@/components/ui";
-import { track } from "@/lib/analytics/track";
+import { track, type TrackProps } from "@/lib/analytics/track";
 import { cn } from "@/lib/utils/cn";
 
 type Props = {
   message: string;
   source: string;
   className?: string;
+  tracking?: TrackProps;
 };
 
 function smsHref(message: string): string {
@@ -20,7 +21,12 @@ function whatsappHref(message: string): string {
   return `https://wa.me/?text=${encodeURIComponent(message)}`;
 }
 
-export function ManualMessageActions({ message, source, className }: Props) {
+export function ManualMessageActions({
+  message,
+  source,
+  className,
+  tracking = {},
+}: Props) {
   const [copied, setCopied] = React.useState<"sms" | "whatsapp" | null>(null);
   const timer = React.useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -35,7 +41,9 @@ export function ManualMessageActions({ message, source, className }: Props) {
       await navigator.clipboard.writeText(message);
       track(channel === "sms" ? "sms_copied" : "whatsapp_copied", {
         surface: source,
+        ...tracking,
       });
+      trackSundayResetAction(`${channel}_copied`);
       setCopied(channel);
       if (timer.current) clearTimeout(timer.current);
       timer.current = setTimeout(() => setCopied(null), 1500);
@@ -53,14 +61,17 @@ export function ManualMessageActions({ message, source, className }: Props) {
       )}
     >
       <p className="text-xs leading-5 text-ink-muted">
-        SMS and WhatsApp are manual. Quote Reclaim prepares the message; you
-        choose where to send it.
+        Nothing sends until you tap send. Quote Reclaim prepares the message;
+        you choose the contact and send it yourself.
       </p>
       <div className="mt-3 grid min-w-0 grid-cols-1 gap-2 sm:grid-cols-2">
         <a
           href={smsHref(message)}
-          onClick={() => track("sms_opened", { surface: source })}
-          className="inline-flex min-h-10 min-w-0 items-center justify-center gap-2 rounded-lg border border-line-strong bg-surface-2 px-3 py-2 text-center text-sm font-semibold text-ink-strong transition hover:bg-surface-3 focus:outline-none focus-visible:ring-2 focus-visible:ring-focus"
+          onClick={() => {
+            track("sms_opened", { surface: source, ...tracking });
+            trackSundayResetAction("sms_opened");
+          }}
+          className="inline-flex min-h-10 min-w-0 items-center justify-center gap-2 rounded-lg border border-brand bg-brand px-3 py-2 text-center text-sm font-semibold text-canvas transition hover:bg-brand-dark focus:outline-none focus-visible:ring-2 focus-visible:ring-focus"
         >
           <MessageSquareText className="h-4 w-4 shrink-0" aria-hidden="true" />
           <span className="min-w-0 break-words">Open SMS</span>
@@ -69,7 +80,10 @@ export function ManualMessageActions({ message, source, className }: Props) {
           href={whatsappHref(message)}
           target="_blank"
           rel="noreferrer"
-          onClick={() => track("whatsapp_opened", { surface: source })}
+          onClick={() => {
+            track("whatsapp_opened", { surface: source, ...tracking });
+            trackSundayResetAction("whatsapp_opened");
+          }}
           className="inline-flex min-h-10 min-w-0 items-center justify-center gap-2 rounded-lg border border-line-strong bg-surface-2 px-3 py-2 text-center text-sm font-semibold text-ink-strong transition hover:bg-surface-3 focus:outline-none focus-visible:ring-2 focus-visible:ring-focus"
         >
           <Send className="h-4 w-4 shrink-0" aria-hidden="true" />
@@ -112,4 +126,16 @@ export function ManualMessageActions({ message, source, className }: Props) {
       </div>
     </div>
   );
+
+  function trackSundayResetAction(actionType: string) {
+    if (
+      new URLSearchParams(window.location.search).get("source") ===
+      "sunday-reset"
+    ) {
+      track("sunday_reset_action_taken", {
+        action_type: actionType,
+        ...tracking,
+      });
+    }
+  }
 }

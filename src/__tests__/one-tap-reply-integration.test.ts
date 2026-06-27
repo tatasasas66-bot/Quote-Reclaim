@@ -17,6 +17,10 @@ const migration = readSource(
   "../../supabase/migrations/010_one_tap_reply.sql",
 );
 const helpers = readSource("../lib/quotes/one-tap-reply.ts");
+const choices = readSource("../lib/quotes/one-tap-choices.ts");
+const branchMigration = readSource(
+  "../../supabase/migrations/20260627134140_one_tap_reply_branches.sql",
+);
 const serverHelpers = readSource("../lib/quotes/one-tap-reply-server.ts");
 const cron = readSource("../app/api/cron/send/route.ts");
 const detailPage = readSource("../app/(app)/quotes/[id]/page.tsx");
@@ -173,15 +177,29 @@ describe("public reply page", () => {
     expect(replyPage).not.toMatch(/select\([^)]*job_description/);
   });
 
-  it("ReplyForm exposes the three primary buttons exactly", () => {
-    expect(replyForm).toContain("Let&apos;s do it — what&apos;s next?");
-    expect(replyForm).toContain("I have one question");
-    expect(replyForm).toContain("Not right now");
+  it("ReplyForm exposes the five playbook choices exactly", () => {
+    expect(replyForm).toContain("ONE_TAP_CHOICES.map");
+    for (const label of [
+      "Let's do it — what's next?",
+      "Price is the hold-up",
+      "Timing's off",
+      "Can we talk?",
+      "Went another way",
+    ]) {
+      expect(choices).toContain(label);
+    }
   });
 
-  it("question branch requires a textarea before submission", () => {
-    expect(replyForm).toContain("What question do you have?");
-    expect(replyForm).toMatch(/disabled=\{questionText\.trim\(\)\.length < 3\}/);
+  it("the compatibility migration persists all five branch IDs", () => {
+    for (const answer of [
+      "interested",
+      "price_concern",
+      "bad_timing",
+      "need_to_talk",
+      "went_another_way",
+    ]) {
+      expect(branchMigration).toContain(`'${answer}'`);
+    }
   });
 });
 

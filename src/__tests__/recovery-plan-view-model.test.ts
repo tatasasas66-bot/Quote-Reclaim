@@ -163,32 +163,18 @@ describe("buildRecoveryPlanViewModel", () => {
     }
   });
 
-  it("keeps seven reply paths and window-specific One-Tap options", () => {
-    expect(build(2).replyPlaybook).toHaveLength(7);
-    expect(build(2).oneTapOptions).toEqual([
-      "Have one question",
-      "Still reviewing",
-      "Timing is the issue",
-      "Not right now",
-    ]);
-    expect(build(14).oneTapOptions).toEqual([
-      "Budget",
-      "Timing",
-      "Scope question",
-      "Still comparing",
-    ]);
-    expect(build(30).oneTapOptions).toEqual([
-      "Keep open",
-      "Revise it",
-      "Close it for now",
-      "Went another direction",
-    ]);
-    expect(build(52).oneTapOptions).toEqual([
-      "Reopen later",
-      "Close it",
-      "Still possible",
-      "Went another direction",
-    ]);
+  it("keeps the reply playbook aligned to five One-Tap choices", () => {
+    expect(build(2).replyPlaybook).toHaveLength(8);
+    const expected = [
+      "Let's do it — what's next?",
+      "Price is the hold-up",
+      "Timing's off",
+      "Can we talk?",
+      "Went another way",
+    ];
+    for (const days of [2, 14, 30, 52]) {
+      expect(build(days).oneTapOptions).toEqual(expected);
+    }
   });
 
   it("never leaks stale persisted reminder copy into customer-facing messages", () => {
@@ -245,7 +231,7 @@ describe("buildRecoveryPlanViewModel", () => {
     expect(page).toContain("viewModel.sequenceCards");
     expect(page).toContain("viewModel.currentMessage");
     expect(page).toContain("viewModel.quietSignal");
-    expect(page).toContain("suggestedOptions={viewModel.oneTapOptions}");
+    expect(page).toContain("trade={quote.trade}");
     expect(page).toContain("viewModel.replyPlaybook");
   });
 });

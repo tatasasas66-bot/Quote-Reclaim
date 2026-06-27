@@ -46,6 +46,7 @@ const detailPage = readSource("../app/(app)/quotes/[id]/page.tsx");
 const quoteActions = readSource("../components/quotes/QuoteActions.tsx");
 const quietCard = readSource("../components/quotes/QuietSignalCard.tsx");
 const manualActions = readSource("../components/quotes/ManualMessageActions.tsx");
+const replyPlaybook = readSource("../components/quotes/ReplyPlaybook.tsx");
 const stepStatusSrc = readSource("../lib/quotes/step-status.ts");
 const viewModelSrc = readSource("../lib/recovery/recovery-plan-view-model.ts");
 const recoveryLogicSrc = readSource("../lib/recovery/recovery-logic.ts");
@@ -69,9 +70,8 @@ describe("quote detail command-center hierarchy", () => {
     expect(detailPage).toMatch(
       /<SendEarlyButton[\s\S]*variant="primary"[\s\S]*size="lg"[\s\S]*fullWidth/,
     );
-    expect(detailPage).toContain(
-      '<CopyButton text={viewModel.copyMessage} label="Copy"',
-    );
+    expect(detailPage).toContain("text={viewModel.copyMessage}");
+    expect(detailPage).toContain('source="quote_command"');
   });
 
   it("makes the command panel action-first, then shows the reply playbook", () => {
@@ -79,11 +79,10 @@ describe("quote detail command-center hierarchy", () => {
     expect(viewModelSrc).toContain('"Send this today"');
     expect(viewModelSrc).toContain("the next reply is already ready");
     expect(detailPage).toContain("Message to send");
-    expect(detailPage).toContain("Reply playbook");
-    expect(detailPage).toContain(
-      "{viewModel.replyPlaybook.length} next replies ready",
-    );
-    expect(detailPage).toContain("Copy reply");
+    expect(detailPage).toContain("<ReplyPlaybook");
+    expect(replyPlaybook).toContain("Reply playbook");
+    expect(replyPlaybook).toContain("{paths.length} next replies ready");
+    expect(replyPlaybook).toContain("Copy reply");
   });
 
   it("shows one active reason in the command panel and collapses future reasons", () => {
@@ -94,12 +93,12 @@ describe("quote detail command-center hierarchy", () => {
   });
 
   it("shows reply rescue paths in the command panel for the likely customer replies", () => {
-    expect(detailPage).toContain('data-testid="reply-rescue-paths"');
-    expect(viewModelSrc).toContain("Yes / still interested");
-    expect(viewModelSrc).toContain("It feels high");
-    expect(viewModelSrc).toContain("Need to wait");
-    expect(viewModelSrc).toContain("Chose someone else");
-    expect(viewModelSrc).toContain("must-do, optional, and later");
+    expect(replyPlaybook).toContain('data-testid="reply-rescue-paths"');
+    expect(recoveryLogicSrc).toContain("Still interested");
+    expect(recoveryLogicSrc).toContain("Price concern");
+    expect(recoveryLogicSrc).toContain("Bad timing");
+    expect(recoveryLogicSrc).toContain("Went another way");
+    expect(recoveryLogicSrc).toContain("must-do, optional, and later");
   });
 
   it("keeps the 5-message sequence intact behind the active command", () => {
@@ -120,15 +119,19 @@ describe("quote detail command-center hierarchy", () => {
     expect(manualActions).toContain("Copy WhatsApp message");
     expect(manualActions).toContain("sms:?body=");
     expect(manualActions).toContain("https://wa.me/?text=");
-    expect(manualActions).toContain("SMS and WhatsApp are manual");
+    expect(manualActions).toContain("Nothing sends until you tap send");
     expect(manualActions).toContain("grid min-w-0 grid-cols-1 gap-2 sm:grid-cols-2");
     expect(manualActions).toContain("min-h-10");
     expect(manualActions).toContain("break-words");
   });
 
   it("manual SMS and WhatsApp analytics never include raw message, quote, or customer data", () => {
-    expect(manualActions).toContain('track("sms_opened", { surface: source })');
-    expect(manualActions).toContain('track("whatsapp_opened", { surface: source })');
+    expect(manualActions).toContain(
+      'track("sms_opened", { surface: source, ...tracking })',
+    );
+    expect(manualActions).toContain(
+      'track("whatsapp_opened", { surface: source, ...tracking })',
+    );
     expect(manualActions).toMatch(/track\(channel === "sms" \? "sms_copied" : "whatsapp_copied",[\s\S]*surface: source/);
     expect(manualActions).not.toMatch(/track\([^)]*\{\s*(message|body|client|customer|amount|phone|quote)\s*:/i);
   });

@@ -13,6 +13,13 @@ export function titleCase(input: string | null | undefined): string {
 }
 
 const TRADE_OPTIONS = [
+  "Concrete",
+  "Fencing",
+  "Flooring",
+  "Windows & Doors",
+  "Siding",
+  "Drywall",
+  "Tree Service",
   "HVAC",
   "Plumbing",
   "Roofing",

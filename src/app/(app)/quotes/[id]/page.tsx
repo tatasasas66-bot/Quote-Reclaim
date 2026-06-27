@@ -7,6 +7,7 @@ import {
   ManualMessageActions,
   OneTapReplyCard,
   QuietSignalCard,
+  ReplyPlaybook,
   QuoteActions,
   ReplyRadarCard,
   SendEarlyButton,
@@ -17,7 +18,6 @@ import { suggestResponse } from "@/lib/ai/suggest-response";
 import { requireUser } from "@/lib/auth/require-user";
 import {
   getLatestOneTapReply,
-  listActiveReplyOptions,
 } from "@/lib/quotes/one-tap-reply-server";
 import {
   getProfileStats,
@@ -29,6 +29,8 @@ import {
   type RecoveryPlanSequenceCard,
   type RecoveryPlanViewModel,
 } from "@/lib/recovery/recovery-plan-view-model";
+import { getProjectNoun } from "@/lib/recovery/recovery-logic";
+import { SundayResetTracker } from "@/components/quotes/SundayResetTracker";
 import { createServiceSupabaseClient } from "@/lib/supabase/service";
 import { titleCaseName } from "@/lib/utils/title-case";
 
@@ -39,8 +41,10 @@ type Params = { id: string };
 
 export default async function QuoteDetailPage({
   params,
+  searchParams,
 }: {
   params: Params;
+  searchParams?: { source?: string };
 }) {
   const { user, supabase } = await requireUser();
   if (!user || !supabase) redirect("/sign-in");
@@ -89,10 +93,10 @@ export default async function QuoteDetailPage({
         }
       : null;
 
-  const [latestOneTapReply, customOneTapOptions] = await Promise.all([
-    getLatestOneTapReply(serviceClient, String(quote.id)),
-    listActiveReplyOptions(serviceClient, String(quote.id)),
-  ]);
+  const latestOneTapReply = await getLatestOneTapReply(
+    serviceClient,
+    String(quote.id),
+  );
 
   const viewModel = buildRecoveryPlanViewModel({
     quote: { ...quote, hasReply: hasReplyForQuote },
@@ -102,6 +106,9 @@ export default async function QuoteDetailPage({
 
   return (
     <main className="mx-auto flex min-h-screen w-full max-w-5xl flex-col gap-8 bg-canvas px-4 py-8 sm:px-6">
+      {searchParams?.source === "sunday-reset" ? (
+        <SundayResetTracker quoteId={quote.id} />
+      ) : null}
       <header className="flex items-center justify-between border-b border-line-subtle/80 pb-5">
         <Link
           href="/dashboard"
@@ -133,9 +140,8 @@ export default async function QuoteDetailPage({
       <OneTapReplyCard
         quoteId={viewModel.quote.id}
         clientFirstName={viewModel.quote.clientFirstName}
+        trade={quote.trade}
         latestReply={latestOneTapReply}
-        options={customOneTapOptions}
-        suggestedOptions={viewModel.oneTapOptions}
       />
       <QuoteSummary
         viewModel={viewModel}
@@ -221,6 +227,14 @@ function CommandActionPanel({
           >
             {viewModel.currentMessage}
           </p>
+          {viewModel.quote.phone ? (
+            <ManualMessageActions
+              message={viewModel.smsMessage}
+              source="quote_command"
+              tracking={messageTracking(viewModel, viewModel.currentMove)}
+              className="mt-4"
+            />
+          ) : null}
           <div
             data-testid="quote-command-actions"
             className="mt-4 flex flex-wrap gap-2"
@@ -236,13 +250,18 @@ function CommandActionPanel({
                 fullWidth
               />
             ) : null}
-            <CopyButton text={viewModel.copyMessage} label="Copy" />
+            <CopyButton
+              text={viewModel.copyMessage}
+              label="Copy"
+              source="quote_command"
+              tracking={messageTracking(viewModel, viewModel.currentMove)}
+            />
           </div>
-          <ManualMessageActions
-            message={viewModel.smsMessage}
-            source="quote_command"
-            className="mt-3"
-          />
+          {!viewModel.quote.phone && !viewModel.quote.email ? (
+            <p className="mt-3 text-xs font-semibold text-ink-muted">
+              Add a phone or email to send faster.
+            </p>
+          ) : null}
           <p
             data-testid="quote-command-reason"
             className="mt-3 text-sm leading-6 text-ink-muted"
@@ -250,7 +269,10 @@ function CommandActionPanel({
             <span className="font-semibold text-ink">Why this works:</span>{" "}
             {viewModel.currentWhyThisWorks}
           </p>
-          <ReplyPlaybook viewModel={viewModel} />
+          <ReplyPlaybook
+            paths={viewModel.replyPlaybook}
+            trade={viewModel.quote.trade}
+          />
         </div>
       </div>
     </section>
@@ -287,47 +309,6 @@ function CommandChip({
     >
       {label}
     </span>
-  );
-}
-
-function ReplyPlaybook({ viewModel }: { viewModel: RecoveryPlanViewModel }) {
-  return (
-    <div
-      data-testid="reply-rescue-paths"
-      className="mt-4 rounded-lg border border-brand/25 bg-brand/5 p-3"
-    >
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <p className="text-xs font-black uppercase tracking-widest text-brand">
-          Reply playbook
-        </p>
-        <p className="text-xs font-semibold text-ink-muted">
-          {viewModel.replyPlaybook.length} next replies ready
-        </p>
-      </div>
-      <p className="mt-2 text-xs leading-5 text-ink-muted">
-        Use the reply that matches what they say. No guessing, no starting
-        over.
-      </p>
-      <div className="mt-3 grid gap-2 sm:grid-cols-2">
-        {viewModel.replyPlaybook.map((path) => (
-          <div
-            key={path.label}
-            className="flex min-h-full flex-col rounded-md border border-line-subtle bg-canvas/45 p-3"
-          >
-            <p className="text-[10px] font-black uppercase tracking-widest text-ink-muted">
-              {path.trigger}
-            </p>
-            <p className="mt-1 text-sm font-bold text-ink">{path.label}</p>
-            <p className="mt-1 text-xs leading-5 text-ink-muted">
-              {path.response}
-            </p>
-            <div className="mt-auto pt-3">
-              <CopyButton text={path.response} label="Copy reply" />
-            </div>
-          </div>
-        ))}
-      </div>
-    </div>
   );
 }
 
@@ -422,18 +403,24 @@ function QuoteSummary({
       </dl>
 
       {viewModel.status === "running" || viewModel.status === "paused" ? (
-        <div className="flex flex-wrap items-center gap-3 border-t border-line-subtle p-5 sm:p-6">
-          <QuoteActions
-            quoteId={viewModel.quote.id}
-            status={viewModel.status}
-            amount={viewModel.quote.amount}
-            allTimeRecovered={allTimeRecovered}
-          />
-          <Link href={`/quotes/${viewModel.quote.id}/edit`}>
-            <Button variant="ghost" size="sm">
-              Edit quote
-            </Button>
-          </Link>
+        <div className="border-t border-line-subtle p-5 sm:p-6">
+          <p className="mb-3 max-w-3xl text-xs leading-5 text-ink-muted">
+            Recovered revenue = any quiet estimate that books after you send a
+            follow-up. Mark Got the Job to track it.
+          </p>
+          <div className="flex flex-wrap items-center gap-3">
+            <QuoteActions
+              quoteId={viewModel.quote.id}
+              status={viewModel.status}
+              amount={viewModel.quote.amount}
+              allTimeRecovered={allTimeRecovered}
+            />
+            <Link href={`/quotes/${viewModel.quote.id}/edit`}>
+              <Button variant="ghost" size="sm">
+                Edit quote
+              </Button>
+            </Link>
+          </div>
         </div>
       ) : null}
     </section>
@@ -504,7 +491,11 @@ function RecoveryPlanSection({
       ) : (
         <ol className="grid gap-3">
           {viewModel.sequenceCards.map((card) => (
-            <ReminderCard key={card.key} card={card} />
+            <ReminderCard
+              key={card.key}
+              card={card}
+              viewModel={viewModel}
+            />
           ))}
         </ol>
       )}
@@ -512,7 +503,13 @@ function RecoveryPlanSection({
   );
 }
 
-function ReminderCard({ card }: { card: RecoveryPlanSequenceCard }) {
+function ReminderCard({
+  card,
+  viewModel,
+}: {
+  card: RecoveryPlanSequenceCard;
+  viewModel: RecoveryPlanViewModel;
+}) {
   const header = (
     <div className="flex flex-wrap items-center justify-between gap-2 border-b border-line-subtle px-4 py-3">
       <span className="text-xs font-black uppercase tracking-widest text-brand">
@@ -527,6 +524,14 @@ function ReminderCard({ card }: { card: RecoveryPlanSequenceCard }) {
       <p className="whitespace-pre-wrap px-4 pt-4 text-sm leading-7 text-ink-strong">
         {card.message}
       </p>
+      {viewModel.quote.phone ? (
+        <ManualMessageActions
+          message={card.smsMessage}
+          source={`recovery_sequence_${card.key}`}
+          tracking={messageTracking(viewModel, card.family)}
+          className="mx-4 mt-4"
+        />
+      ) : null}
 
       {card.isCurrent ? (
         <p className="mx-4 mt-3 text-xs leading-5 text-ink-muted">
@@ -556,7 +561,11 @@ function ReminderCard({ card }: { card: RecoveryPlanSequenceCard }) {
           ) : null}
         </div>
         <div className="flex items-center gap-1">
-          <CopyButton text={card.copyMessage} />
+          <CopyButton
+            text={card.copyMessage}
+            source={`recovery_sequence_${card.key}`}
+            tracking={messageTracking(viewModel, card.family)}
+          />
           {card.action?.showSendToday ? (
             <SendEarlyButton
               reminderId={card.action.reminderId}
@@ -567,11 +576,11 @@ function ReminderCard({ card }: { card: RecoveryPlanSequenceCard }) {
           ) : null}
         </div>
       </div>
-      <ManualMessageActions
-        message={card.smsMessage}
-        source={`recovery_sequence_${card.key}`}
-        className="mx-4 mb-4"
-      />
+      {!viewModel.quote.phone && !viewModel.quote.email ? (
+        <p className="mx-4 mb-4 text-xs font-semibold text-ink-muted">
+          Add a phone or email to send faster.
+        </p>
+      ) : null}
     </>
   );
 
@@ -602,4 +611,19 @@ function ReminderCard({ card }: { card: RecoveryPlanSequenceCard }) {
       {messageBody}
     </li>
   );
+}
+
+function messageTracking(
+  viewModel: RecoveryPlanViewModel,
+  messageType: string,
+) {
+  return {
+    quote_id: viewModel.quote.id,
+    message_type: messageType,
+    trade: viewModel.quote.trade,
+    project_noun: getProjectNoun(viewModel.quote.trade),
+    recovery_window: viewModel.recoveryWindow,
+    quote_amount: viewModel.quote.amount,
+    days_quiet: viewModel.quote.daysQuiet,
+  };
 }

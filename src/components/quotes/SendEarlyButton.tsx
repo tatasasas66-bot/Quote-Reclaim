@@ -6,6 +6,7 @@ import {
   sendReminderManualAction,
   sendReminderManualEmailAction,
 } from "@/lib/quotes/actions";
+import { track } from "@/lib/analytics/track";
 
 type Props = {
   reminderId: string;
@@ -57,6 +58,21 @@ export function SendEarlyButton({
           : await sendReminderManualAction(reminderId);
       if (result.ok) {
         setState("sent");
+        if (messageType === "email") {
+          track("email_action_clicked", {
+            reminder_id: reminderId,
+            action_type: "email_sent",
+          });
+        }
+        if (
+          new URLSearchParams(window.location.search).get("source") ===
+          "sunday-reset"
+        ) {
+          track("sunday_reset_action_taken", {
+            reminder_id: reminderId,
+            action_type: `${messageType}_sent`,
+          });
+        }
       } else {
         setState("error");
         setErrorMsg(result.error);

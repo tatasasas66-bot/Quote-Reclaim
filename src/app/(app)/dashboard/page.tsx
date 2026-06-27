@@ -11,6 +11,7 @@ import { MetricCards } from "@/components/dashboard/MetricCards";
 import { RecoveryWindowAlert } from "@/components/dashboard/RecoveryWindowAlert";
 import { WonJobsGallery } from "@/components/dashboard/WonJobsGallery";
 import { ActivityFeed } from "@/components/dashboard/ActivityFeed";
+import { SundayNightReset } from "@/components/dashboard/SundayNightReset";
 import { IntelligencePanel } from "@/components/intelligence/IntelligencePanel";
 import { requireUser } from "@/lib/auth/require-user";
 import {
@@ -123,6 +124,12 @@ export default async function DashboardPage() {
               isPaid={isPaid}
               paddleAvailable={paddleClientConfigured()}
             />
+            <Link
+              href="/recovery-report"
+              className="whitespace-nowrap rounded text-xs font-medium text-ink-muted hover:text-ink-strong focus:outline-none focus-visible:ring-2 focus-visible:ring-focus"
+            >
+              Report
+            </Link>
             <form action="/api/auth/sign-out" method="post">
               <button
                 type="submit"
@@ -294,6 +301,9 @@ export default async function DashboardPage() {
           <IntelligencePanel
             totalSequences={pending.length + jobsWonLifetime}
             unlockAt={5}
+          />
+          <SundayNightReset
+            enabled={profile?.briefing_enabled !== false}
           />
           <ActivityFeed userId={user.id} />
         </aside>

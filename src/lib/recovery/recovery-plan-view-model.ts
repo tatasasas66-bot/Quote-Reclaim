@@ -1,4 +1,4 @@
-import { fallbackMessages, projectLabel } from "@/lib/ai/fallback-messages";
+import { fallbackMessages } from "@/lib/ai/fallback-messages";
 import { formatScheduleDateTime } from "@/lib/quotes/business-hours";
 import {
   canManualSendToday,
@@ -16,12 +16,14 @@ import {
   getOneTapOptions,
   getPriorityLabel,
   getQuietSignal,
+  getReplyPlaybook,
   getRecommendedMessage,
   getRecoveryWindow,
   getRecoveryWindowLabel,
   getWhyThisWorks,
   getWhyThisWorksForStep,
   type MessageFamily,
+  type ReplyPlaybookPath,
   type RecoveryWindow,
 } from "@/lib/recovery/recovery-logic";
 import { formatCurrency } from "@/lib/utils/currency";
@@ -33,11 +35,7 @@ export type RecoveryPlanQuote = QuoteRow & {
   hasReply?: boolean;
 };
 
-export type RecoveryPlanReplyPath = {
-  label: string;
-  trigger: string;
-  response: string;
-};
+export type RecoveryPlanReplyPath = ReplyPlaybookPath;
 
 export type RecoveryPlanAction = {
   reminderId: string;
@@ -56,7 +54,7 @@ export type RecoveryPlanSequenceCard = {
   helperLabel: string | null;
   scheduledAt: string | null;
   scheduledLabel: string | null;
-  channelLabel: "EMAIL" | "SMS";
+  channelLabel: "EMAIL" | "SMS" | "COPY";
   message: string;
   whyThisWorks: string;
   copyMessage: string;
@@ -79,6 +77,7 @@ export type RecoveryPlanViewModel = {
     id: string;
     displayName: string;
     clientFirstName: string;
+    trade: string;
     metaLine: string;
     amount: number;
     amountLabel: string;
@@ -203,54 +202,13 @@ function messageKey(family: MessageFamily): string {
   return family.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
 }
 
-function replyPlaybook(quote: QuoteRow): RecoveryPlanReplyPath[] {
-  const project = projectLabel(quote.trade);
-  return [
-    {
-      label: "Interested",
-      trigger: "Yes / still interested",
-      response: `Great. Want me to keep ${project} as written, or adjust timing before you decide?`,
-    },
-    {
-      label: "Price concern",
-      trigger: "It feels high",
-      response: `Totally fair. I can break ${project} into must-do, optional, and later so you can see what drives the total. Want that?`,
-    },
-    {
-      label: "Timing delay",
-      trigger: "Need to wait",
-      response: `No problem. Should I pause ${project} and check back later, or close it out for now?`,
-    },
-    {
-      label: "Scope question",
-      trigger: "Part feels unclear",
-      response:
-        "Of course. Tell me which part feels unclear and I'll break that part down plainly.",
-    },
-    {
-      label: "Still comparing",
-      trigger: "Comparing estimates",
-      response:
-        "That makes sense. I can help make sure the estimates cover the same scope before you compare totals.",
-    },
-    {
-      label: "Went another way",
-      trigger: "Chose someone else",
-      response: `Thanks for letting me know. I'll close ${project} on my end and keep the door open if anything changes.`,
-    },
-    {
-      label: "Close it for now",
-      trigger: "Not right now",
-      response: `No problem. I'll close ${project} on my side for now. If you want to reopen it later, reply here.`,
-    },
-  ];
-}
-
 function buildInstruction(input: {
   status: RecoveryPlanStatus;
   hasReply: boolean;
   currentMove: MessageFamily;
   currentScheduledLabel: string | null;
+  hasEmail: boolean;
+  hasPhone: boolean;
   move: ReturnType<typeof computeNextMove>;
 }): string | null {
   if (input.hasReply) {
@@ -260,6 +218,14 @@ function buildInstruction(input: {
     return `Recovery is paused. Resume when you are ready to send ${input.currentMove}.`;
   }
   if (input.status === "won" || input.status === "closed") return null;
+  if (input.hasPhone) {
+    return input.currentScheduledLabel
+      ? `${input.currentMove} is due ${input.currentScheduledLabel}. Open SMS when you're ready; nothing sends until you tap send.`
+      : `${input.currentMove} is ready. Open SMS when you're ready; nothing sends until you tap send.`;
+  }
+  if (!input.hasEmail) {
+    return `${input.currentMove} is ready to copy. Add a phone or email to send faster.`;
+  }
 
   switch (input.move.kind) {
     case "email-queued":
@@ -301,8 +267,7 @@ function buildAction(input: {
     !hasRecipient ||
     !isActionable;
   const showSendToday =
-    !disabled &&
-    (messageType === "email" ? canManualSendToday(input.move) : true);
+    !disabled && messageType === "email" && canManualSendToday(input.move);
 
   return {
     reminderId: reminder.id,
@@ -331,6 +296,11 @@ export function buildRecoveryPlanViewModel({
   const hasReply = Boolean(quote.hasReply);
   const hasEmail = Boolean(quote.client_email);
   const hasPhone = Boolean(quote.client_phone);
+  const preferredChannel: "SMS" | "EMAIL" | "COPY" = hasPhone
+    ? "SMS"
+    : hasEmail
+      ? "EMAIL"
+      : "COPY";
   const move = computeNextMove({
     status,
     reminders,
@@ -400,8 +370,7 @@ export function buildRecoveryPlanViewModel({
         scheduledLabel: scheduledAt
           ? formatScheduleDateTime(scheduledAt)
           : null,
-        channelLabel:
-          reminder.message_type === "email" ? "EMAIL" : "SMS",
+        channelLabel: preferredChannel,
         message,
         whyThisWorks: isCurrent
           ? currentWhyThisWorks
@@ -446,14 +415,14 @@ export function buildRecoveryPlanViewModel({
       ? null
       : status === "paused"
         ? "Recovery is paused. Future reminders won't send until you resume."
-        : hasEmail
-          ? "The rest of the sequence stays behind this message and sends by email on schedule."
+        : hasPhone
+          ? "The rest of the sequence stays here. Open SMS when each touch is due; nothing sends until you tap send."
+          : hasEmail
+            ? "The rest of the sequence stays behind this message and sends by email on schedule."
           : "The rest of the sequence stays here, ready to copy when each touch comes due.";
   const sequenceScheduleLabel =
     status === "running" && currentScheduledLabel && !hasReply
-      ? hasEmail
-        ? `Next follow-up sends ${currentScheduledLabel}`
-        : `Next follow-up scheduled ${currentScheduledLabel}`
+      ? `Next follow-up due: ${currentScheduledLabel} · ${preferredChannel === "COPY" ? "Copy" : preferredChannel}`
       : null;
 
   return {
@@ -461,6 +430,7 @@ export function buildRecoveryPlanViewModel({
       id: quote.id,
       displayName,
       clientFirstName,
+      trade: quote.trade,
       metaLine: tradeLocationLine(quote.trade, quote.city, quote.state),
       amount: quote.estimate_amount,
       amountLabel,
@@ -485,6 +455,8 @@ export function buildRecoveryPlanViewModel({
       hasReply,
       currentMove,
       currentScheduledLabel,
+      hasEmail,
+      hasPhone,
       move,
     }),
     commandHeading: currentReminder ? "Send this today" : `Work ${displayName}`,
@@ -501,6 +473,6 @@ export function buildRecoveryPlanViewModel({
     sequenceCards,
     quietSignal,
     oneTapOptions: getOneTapOptions(recoveryWindow),
-    replyPlaybook: replyPlaybook(quote),
+    replyPlaybook: getReplyPlaybook(quote.trade),
   };
 }

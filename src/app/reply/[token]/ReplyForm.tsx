@@ -2,26 +2,23 @@
 
 import * as React from "react";
 import { submitOneTapReply, type ReplyActionResult } from "./actions";
-import type { ReplyOption } from "@/lib/quotes/one-tap-reply-server";
-import type { OneTapAnswerType } from "@/lib/quotes/one-tap-reply";
-import { formatCurrency } from "@/lib/utils/currency";
+import {
+  type OneTapAnswerType,
+} from "@/lib/quotes/one-tap-reply";
+import { ONE_TAP_CHOICES } from "@/lib/quotes/one-tap-choices";
 
 type ReplyFormProps = {
   token: string;
-  contractorFirstName: string;
-  options: ReplyOption[];
 };
 
 type ViewState =
   | { kind: "choose" }
-  | { kind: "question" }
   | { kind: "submitting" }
   | { kind: "done"; result: ReplyActionResult }
   | { kind: "error"; message: string };
 
-export function ReplyForm({ token, contractorFirstName, options }: ReplyFormProps) {
+export function ReplyForm({ token }: ReplyFormProps) {
   const [view, setView] = React.useState<ViewState>({ kind: "choose" });
-  const [questionText, setQuestionText] = React.useState("");
 
   const submit = React.useCallback(
     async (input: Parameters<typeof submitOneTapReply>[0]) => {
@@ -67,57 +64,6 @@ export function ReplyForm({ token, contractorFirstName, options }: ReplyFormProp
     );
   }
 
-  if (view.kind === "question") {
-    return (
-      <form
-        className="mt-6 space-y-4 rounded-lg border border-line-subtle bg-surface-1 p-5"
-        onSubmit={(e) => {
-          e.preventDefault();
-          submit({
-            token,
-            answerType: "question",
-            questionText,
-          });
-        }}
-      >
-        <label
-          htmlFor="otr-question"
-          className="block text-sm font-bold text-ink-strong"
-        >
-          What question do you have?
-        </label>
-        <textarea
-          id="otr-question"
-          name="question"
-          required
-          minLength={3}
-          maxLength={1000}
-          rows={4}
-          value={questionText}
-          onChange={(e) => setQuestionText(e.target.value)}
-          className="w-full rounded-md border border-line-subtle bg-canvas p-3 text-base leading-7 text-ink-strong outline-none placeholder:text-ink-muted focus:border-brand focus:ring-2 focus:ring-focus"
-          placeholder="Type your question here…"
-        />
-        <div className="flex flex-col gap-2 sm:flex-row sm:justify-end">
-          <button
-            type="button"
-            onClick={() => setView({ kind: "choose" })}
-            className="inline-flex min-h-12 items-center justify-center rounded-md border border-line-subtle px-5 py-3 text-base font-semibold text-ink hover:text-ink-strong"
-          >
-            Back
-          </button>
-          <button
-            type="submit"
-            disabled={questionText.trim().length < 3}
-            className="inline-flex min-h-12 items-center justify-center rounded-md bg-brand px-5 py-3 text-base font-bold text-canvas shadow-[0_0_36px_rgba(217,111,50,0.35)] disabled:opacity-50"
-          >
-            Send question
-          </button>
-        </div>
-      </form>
-    );
-  }
-
   // view.kind === "choose"
   return (
     <div className="mt-6 space-y-4">
@@ -126,71 +72,16 @@ export function ReplyForm({ token, contractorFirstName, options }: ReplyFormProp
       </p>
 
       <div className="grid gap-3">
-        <PrimaryButton
-          onClick={() => submit({ token, answerType: "interested" })}
-          tone="success"
-        >
-          Let&apos;s do it — what&apos;s next?
-        </PrimaryButton>
-        <PrimaryButton
-          onClick={() => setView({ kind: "question" })}
-          tone="brand"
-        >
-          I have one question
-        </PrimaryButton>
-        <PrimaryButton
-          onClick={() => submit({ token, answerType: "not_now" })}
-          tone="neutral"
-        >
-          Not right now
-        </PrimaryButton>
+        {ONE_TAP_CHOICES.map((choice, index) => (
+          <PrimaryButton
+            key={choice.id}
+            onClick={() => submit({ token, answerType: choice.id })}
+            tone={index === 0 ? "success" : "neutral"}
+          >
+            {choice.label}
+          </PrimaryButton>
+        ))}
       </div>
-
-      {options.length > 0 ? (
-        <section
-          aria-label="Another way to move forward"
-          className="mt-2 space-y-3 rounded-lg border border-line-subtle bg-surface-1 p-5"
-        >
-          <p className="text-xs font-black uppercase tracking-widest text-ink-muted">
-            Another way to move forward
-          </p>
-          <p className="text-sm text-ink-muted">
-            {contractorFirstName} also approved these alternatives.
-          </p>
-          <div className="grid gap-2">
-            {options.map((o) => (
-              <button
-                key={o.id}
-                type="button"
-                onClick={() =>
-                  submit({
-                    token,
-                    answerType: "option_selected",
-                    selectedOptionId: o.id,
-                  })
-                }
-                className="flex min-h-14 w-full items-center justify-between gap-3 rounded-md border border-line-subtle bg-canvas px-4 py-3 text-left hover:border-brand/60"
-              >
-                <span className="min-w-0">
-                  <span className="block text-base font-bold text-ink-strong">
-                    {o.label}
-                  </span>
-                  {o.note ? (
-                    <span className="mt-0.5 block text-sm text-ink-muted">
-                      {o.note}
-                    </span>
-                  ) : null}
-                </span>
-                <span className="shrink-0 text-base font-black tabular-nums text-ink-strong">
-                  {o.amountCents != null
-                    ? formatCurrency(o.amountCents / 100)
-                    : ""}
-                </span>
-              </button>
-            ))}
-          </div>
-        </section>
-      ) : null}
     </div>
   );
 }
@@ -231,11 +122,19 @@ function ThanksPanel({
   const message =
     kind === "interested"
       ? `Thanks — ${contractorFirstName} will follow up with the next step.`
-      : kind === "question"
-        ? `Thanks — your question was sent to ${contractorFirstName}.`
-        : kind === "not_now"
-          ? `Thanks — we'll let ${contractorFirstName} know.`
-          : `Thanks — ${contractorFirstName} will follow up about this option.`;
+      : kind === "price_concern"
+        ? `Thanks — ${contractorFirstName} will follow up about the price.`
+        : kind === "bad_timing"
+          ? `Thanks — ${contractorFirstName} will follow up about timing.`
+          : kind === "need_to_talk"
+            ? `Thanks — ${contractorFirstName} will reach out to talk.`
+            : kind === "went_another_way"
+              ? `Thanks — we'll let ${contractorFirstName} know.`
+              : kind === "question"
+                ? `Thanks — your question was sent to ${contractorFirstName}.`
+                : kind === "not_now"
+                  ? `Thanks — we'll let ${contractorFirstName} know.`
+                  : `Thanks — ${contractorFirstName} will follow up about this option.`;
 
   return (
     <section

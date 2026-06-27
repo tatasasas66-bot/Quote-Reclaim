@@ -807,6 +807,8 @@ describe("analytics events are preserved without a new vendor", () => {
       "audit_result_cta_clicked",
       "audit_signup_clicked",
       "audit_started",
+      "sms_opened",
+      "whatsapp_opened",
     ]);
   });
 

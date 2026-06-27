@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import { createServiceSupabaseClient } from "@/lib/supabase/service";
 import {
   resolveOneTapLink,
-  listActiveReplyOptions,
 } from "@/lib/quotes/one-tap-reply-server";
 import { canRenderReplyPage } from "@/lib/quotes/one-tap-reply";
 import { projectLabel } from "@/lib/ai/fallback-messages";
@@ -59,8 +58,6 @@ export default async function PublicReplyPage({ params }: PageParams) {
     .maybeSingle();
   const contractorFirstName = pickContractorName(profile?.email);
 
-  const options = await listActiveReplyOptions(supabase, String(quote.id));
-
   // Minimal estimate summary. Deliberately does NOT include the homeowner's
   // own contact info, location, job description, or any internal IDs.
   return (
@@ -96,11 +93,7 @@ export default async function PublicReplyPage({ params }: PageParams) {
           </p>
         </section>
 
-        <ReplyForm
-          token={token}
-          contractorFirstName={contractorFirstName}
-          options={options}
-        />
+        <ReplyForm token={token} />
       </div>
     </main>
   );

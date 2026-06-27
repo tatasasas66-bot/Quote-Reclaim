@@ -410,27 +410,30 @@ describe("/api/cron/weekly-briefing route", () => {
     expect(briefingRoute).toMatch(/if \(!auth\.ok\)/);
   });
 
-  it("computes pending count, silent value, recovered this month, next due count", () => {
-    expect(briefingRoute).toContain("pending_count");
-    expect(briefingRoute).toContain("silent_value");
-    expect(briefingRoute).toContain("recovered_this_month");
-    expect(briefingRoute).toContain("next_due_count");
+  it("selects one eligible quote with the centralized Sunday Reset logic", () => {
+    expect(briefingRoute).toContain("pickSundayResetQuote");
+    expect(briefingRoute).toContain('eq("outcome", "pending")');
+    expect(briefingRoute).toContain("lastContactAt");
+    expect(briefingRoute).toContain("paused");
   });
 
-  it("does NOT send SMS in Phase 10 (foundation only)", () => {
+  it("sends contractor email only and never sends SMS", () => {
+    expect(briefingRoute).toContain("sendRecoveryEmail");
+    expect(briefingRoute).toContain("profile.email");
     expect(briefingRoute).not.toMatch(/getMessagingService\(\)/);
-    expect(briefingRoute).not.toMatch(/\.send\(/);
   });
 
-  it("writes a cron_runs row and finalizes status=success on completion", () => {
+  it("writes a cron_runs row and finalizes the run", () => {
     expect(briefingRoute).toMatch(
       /from\("cron_runs"\)\.insert\(\{[\s\S]*?status:\s*"running"/,
     );
-    expect(briefingRoute).toMatch(/status:\s*"success"/);
+    expect(briefingRoute).toContain("await finalize(cronRunId, status");
   });
 
-  it("leaves a TODO for Phase 11+ SMS delivery", () => {
-    expect(briefingRoute).toMatch(/TODO[\s\S]*?Phase 11/);
+  it("records the Sunday Reset event and UTC schedule without homeowner data", () => {
+    expect(briefingRoute).toContain('event: "sunday_reset_sent"');
+    expect(briefingRoute).toContain('schedule_timezone: "UTC"');
+    expect(briefingRoute).not.toContain("client_phone");
   });
 
   it("uses service client", () => {
@@ -505,11 +508,14 @@ describe("vercel.json cron schedule", () => {
   //   { "path": "/api/cron/send", "schedule": "*/15 * * * *" }
   //   { "path": "/api/cron/weekly-briefing", "schedule": "0 13 * * 1" }
 
-  it("does not register Vercel cron jobs (Hobby plan — no sub-daily cron support)", () => {
+  it("registers the contractor-only Sunday Reset once per week", () => {
     const parsed = JSON.parse(vercelConfig);
-    // crons key must be absent or empty; Hobby plan rejects frequent crons
-    const crons = parsed.crons;
-    expect(!crons || (Array.isArray(crons) && crons.length === 0)).toBe(true);
+    expect(parsed.crons).toEqual([
+      {
+        path: "/api/cron/weekly-briefing",
+        schedule: "0 19 * * 0",
+      },
+    ]);
   });
 
   it("cron route files still exist in the codebase", () => {

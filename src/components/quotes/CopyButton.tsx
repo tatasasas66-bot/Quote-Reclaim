@@ -3,13 +3,23 @@
 import * as React from "react";
 import { Check, Copy } from "lucide-react";
 import { Button } from "@/components/ui";
+import { track, type TrackProps } from "@/lib/analytics/track";
 
 type Props = {
   text: string;
   label?: string;
+  onCopied?: () => void;
+  source?: string;
+  tracking?: TrackProps;
 };
 
-export function CopyButton({ text, label = "Copy" }: Props) {
+export function CopyButton({
+  text,
+  label = "Copy",
+  onCopied,
+  source = "unknown",
+  tracking = {},
+}: Props) {
   const [copied, setCopied] = React.useState(false);
   const timer = React.useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -22,6 +32,14 @@ export function CopyButton({ text, label = "Copy" }: Props) {
   async function onClick() {
     try {
       await navigator.clipboard.writeText(text);
+      track("message_copied", { surface: source, ...tracking });
+      if (isSundayResetVisit()) {
+        track("sunday_reset_action_taken", {
+          action_type: "message_copied",
+          ...tracking,
+        });
+      }
+      onCopied?.();
       setCopied(true);
       if (timer.current) clearTimeout(timer.current);
       timer.current = setTimeout(() => setCopied(false), 1500);
@@ -46,4 +64,8 @@ export function CopyButton({ text, label = "Copy" }: Props) {
       <span>{copied ? "Copied" : label}</span>
     </Button>
   );
+}
+
+function isSundayResetVisit(): boolean {
+  return new URLSearchParams(window.location.search).get("source") === "sunday-reset";
 }

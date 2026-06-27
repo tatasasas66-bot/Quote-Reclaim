@@ -26,7 +26,7 @@ describe("Recovery Plan UI: /quotes/[id]", () => {
   it("uses plainer status copy after the command panel", () => {
     expect(viewModel).toContain('return "Running"');
     expect(viewModel).toContain('return "Paused"');
-    expect(viewModel).toContain("Next follow-up sends");
+    expect(viewModel).toContain("Next follow-up due:");
     expect(detailPage).not.toContain("Recovery running");
   });
 

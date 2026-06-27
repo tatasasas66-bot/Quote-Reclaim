@@ -52,9 +52,13 @@ describe("tokenHashMatches", () => {
 });
 
 describe("isAnswerType + closed set", () => {
-  it("exposes exactly the four allowed answer types", () => {
+  it("exposes the five current branches plus legacy stored answer types", () => {
     expect([...ANSWER_TYPES]).toEqual([
       "interested",
+      "price_concern",
+      "bad_timing",
+      "need_to_talk",
+      "went_another_way",
       "question",
       "not_now",
       "option_selected",

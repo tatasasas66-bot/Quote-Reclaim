@@ -28,12 +28,23 @@ export type CrewGapEvent =
   | "crew_gap_signup_clicked";
 
 export type ManualMessageEvent =
+  | "message_copied"
+  | "email_action_clicked"
   | "sms_opened"
   | "sms_copied"
   | "whatsapp_opened"
   | "whatsapp_copied";
 
-export type TrackEvent = AuditEvent | CrewGapEvent | ManualMessageEvent;
+export type SundayResetEvent =
+  | "sunday_reset_sent"
+  | "sunday_reset_clicked"
+  | "sunday_reset_action_taken";
+
+export type TrackEvent =
+  | AuditEvent
+  | CrewGapEvent
+  | ManualMessageEvent
+  | SundayResetEvent;
 
 export type TrackProps = Record<string, string | number | boolean | null>;
 

@@ -78,6 +78,7 @@ type AuditResultViewProps = {
   tradeConfig: TradeConfig;
   onCopy: () => void;
   onOpenSms: () => void;
+  onOpenWhatsapp: () => void;
   onReplyBranchUnlock: (branchId: string) => void;
   onFollowUpUnlock: () => void;
   onResultCtaClick: (details: ResultCtaAnalytics) => void;
@@ -111,6 +112,7 @@ export function AuditResultView({
   tradeConfig,
   onCopy,
   onOpenSms,
+  onOpenWhatsapp,
   onReplyBranchUnlock,
   onFollowUpUnlock,
   onResultCtaClick,
@@ -340,7 +342,11 @@ export function AuditResultView({
                 homeowner a low-pressure way to name the actual holdup.
               </p>
             </div>
-            <div className="flex w-full shrink-0 flex-col gap-2 sm:w-auto sm:flex-row">
+            <div className="flex w-full shrink-0 flex-col gap-2 sm:w-auto">
+              <p className="text-xs text-ink-muted">
+                Nothing sends until you tap send.
+              </p>
+              <div className="grid gap-2 sm:grid-cols-3">
               <button
                 type="button"
                 onClick={onOpenSms}
@@ -348,6 +354,14 @@ export function AuditResultView({
               >
                 <Smartphone className="h-4 w-4 text-brand" aria-hidden="true" />
                 Open in SMS
+              </button>
+              <button
+                type="button"
+                onClick={onOpenWhatsapp}
+                className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-lg border border-line-strong bg-surface-1 px-4 py-2 text-sm font-black text-ink-strong transition hover:border-brand focus:outline-none focus-visible:ring-2 focus-visible:ring-focus sm:w-auto"
+              >
+                <Send className="h-4 w-4 text-success" aria-hidden="true" />
+                Open in WhatsApp
               </button>
               <button
                 type="button"
@@ -366,6 +380,7 @@ export function AuditResultView({
                   </>
                 )}
               </button>
+              </div>
             </div>
           </div>
 

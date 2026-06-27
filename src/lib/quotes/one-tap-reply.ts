@@ -62,12 +62,20 @@ export function tokenHashMatches(rawFromUrl: string, storedHash: string): boolea
 
 export const ANSWER_TYPES = [
   "interested",
+  "price_concern",
+  "bad_timing",
+  "need_to_talk",
+  "went_another_way",
+  // Legacy values remain readable for existing links and stored replies.
   "question",
   "not_now",
   "option_selected",
 ] as const;
 
 export type OneTapAnswerType = (typeof ANSWER_TYPES)[number];
+
+export type { OneTapBranchAnswer } from "./one-tap-choices";
+export { ONE_TAP_CHOICES } from "./one-tap-choices";
 
 export function isAnswerType(value: unknown): value is OneTapAnswerType {
   return (
@@ -89,6 +97,14 @@ export function mapAnswerTypeToReplyIntent(
   switch (answer) {
     case "interested":
       return "positive";
+    case "price_concern":
+      return "price_objection";
+    case "bad_timing":
+      return "needs_time";
+    case "need_to_talk":
+      return "question";
+    case "went_another_way":
+      return "not_interested";
     case "option_selected":
       return "positive";
     case "question":

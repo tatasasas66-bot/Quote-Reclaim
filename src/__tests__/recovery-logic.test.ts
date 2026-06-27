@@ -16,6 +16,7 @@ import {
   getQuietSignal,
   getRecommendedMessage,
   getProjectNoun,
+  getReplyPlaybook,
   containsBannedPhrase,
   BANNED_PHRASES,
   CADENCE_DAYS,
@@ -185,27 +186,17 @@ describe("why-this-works varies by window", () => {
 // ---------------------------------------------------------------------------
 
 describe("one-tap options match recovery window", () => {
-  it("warm has 4 options including 'Have one question'", () => {
-    const opts = getOneTapOptions("warm");
-    expect(opts).toHaveLength(4);
-    expect(opts).toContain("Have one question");
-  });
-  it("cooling has 4 options including 'Budget' and 'Timing'", () => {
-    const opts = getOneTapOptions("cooling");
-    expect(opts).toHaveLength(4);
-    expect(opts).toContain("Budget");
-    expect(opts).toContain("Timing");
-  });
-  it("cold has 4 options including 'Keep open' and 'Revise it'", () => {
-    const opts = getOneTapOptions("cold");
-    expect(opts).toHaveLength(4);
-    expect(opts).toContain("Keep open");
-    expect(opts).toContain("Revise it");
-  });
-  it("closeout has 4 options including 'Reopen later'", () => {
-    const opts = getOneTapOptions("closeout");
-    expect(opts).toHaveLength(4);
-    expect(opts).toContain("Reopen later");
+  it("uses the same five playbook-aligned choices in every window", () => {
+    const expected = [
+      "Let's do it — what's next?",
+      "Price is the hold-up",
+      "Timing's off",
+      "Can we talk?",
+      "Went another way",
+    ];
+    for (const window of ["warm", "cooling", "cold", "closeout"] as const) {
+      expect(getOneTapOptions(window)).toEqual(expected);
+    }
   });
 });
 
@@ -245,8 +236,9 @@ describe("recommended message matches recovery window", () => {
     const rec = getRecommendedMessage({ daysQuiet: 3, firstName: "Ali", trade: "concrete" });
     expect(rec.window).toBe("warm");
     expect(rec.messageFamily).toBe("Estimate Check");
-    expect(rec.message).toContain("quick check");
-    expect(rec.message).toContain("driveway estimate");
+    expect(rec.message).toContain(
+      "any question on scope, timing, or price I can clear up here?",
+    );
   });
   it("cooling message diagnoses timing/budget/scope", () => {
     const rec = getRecommendedMessage({ daysQuiet: 14, firstName: "Ali", trade: "electrical" });
@@ -254,6 +246,7 @@ describe("recommended message matches recovery window", () => {
     expect(rec.message).toContain("timing");
     expect(rec.message).toContain("budget");
     expect(rec.message).toContain("scope");
+    expect(rec.message).toContain("no awkward follow-up from me");
   });
   it("cold message offers open/revise/close", () => {
     const rec = getRecommendedMessage({ daysQuiet: 30, trade: "electrical" });
@@ -266,11 +259,13 @@ describe("recommended message matches recovery window", () => {
     const rec = getRecommendedMessage({ daysQuiet: 50, trade: "electrical" });
     expect(rec.window).toBe("closeout");
     expect(rec.message).toContain("close out");
-    expect(rec.message).toContain("reopen");
+    expect(rec.message).toContain(
+      "no restart, no re-quote, no awkward conversation",
+    );
   });
   it("concrete trade uses 'driveway' noun", () => {
-    const rec = getRecommendedMessage({ daysQuiet: 3, trade: "concrete" });
-    expect(rec.message).toContain("driveway estimate");
+    const rec = getRecommendedMessage({ daysQuiet: 14, trade: "concrete" });
+    expect(rec.message).toContain("the driveway");
   });
 });
 
@@ -324,7 +319,34 @@ describe("project nouns are trade-specific", () => {
     expect(getProjectNoun("fencing")).toBe("fence");
   });
   it("unknown trade → estimate", () => {
-    expect(getProjectNoun("electrical")).toBe("estimate");
+    expect(getProjectNoun("electrical")).toBe("work");
+    expect(getProjectNoun("solar")).toBe("estimate");
     expect(getProjectNoun(null)).toBe("estimate");
+  });
+  it("covers every newly supported trade", () => {
+    expect(getProjectNoun("flooring")).toBe("floor");
+    expect(getProjectNoun("windows & doors")).toBe("install");
+    expect(getProjectNoun("siding")).toBe("siding");
+    expect(getProjectNoun("drywall")).toBe("work");
+    expect(getProjectNoun("tree service")).toBe("removal");
+  });
+});
+
+describe("trade-native reply playbook", () => {
+  const paths = getReplyPlaybook("Concrete");
+
+  it("uses the exact price and comparison moves", () => {
+    expect(
+      paths.find((path) => path.id === "price_concern")?.response,
+    ).toContain("pick the piece that fits");
+    expect(
+      paths.find((path) => path.id === "still_comparing")?.response,
+    ).toContain("did anyone trim it to come in lower");
+  });
+
+  it("uses the concrete project noun", () => {
+    expect(paths.find((path) => path.id === "bad_timing")?.response).toContain(
+      "the driveway",
+    );
   });
 });

@@ -45,6 +45,21 @@ export type MessageFamily =
 
 export type QuietSignalLabel = "Early" | "Waiting" | "Cooling off" | "Closeout";
 
+export type ReplyPlaybookPath = {
+  id:
+    | "still_interested"
+    | "price_concern"
+    | "bad_timing"
+    | "scope_question"
+    | "still_comparing"
+    | "need_to_talk"
+    | "went_another_way"
+    | "close_for_now";
+  label: string;
+  trigger: string;
+  response: string;
+};
+
 // ---------------------------------------------------------------------------
 // Recovery window classification — THE single source of truth
 // ---------------------------------------------------------------------------
@@ -200,18 +215,14 @@ export function getWhyThisWorksForStep(step: 1 | 2 | 3 | 4 | 5): string {
 // ---------------------------------------------------------------------------
 
 export function getOneTapOptions(window: RecoveryWindow): string[] {
-  switch (window) {
-    case "warm":
-      return ["Have one question", "Still reviewing", "Timing is the issue", "Not right now"];
-    case "cooling":
-      return ["Budget", "Timing", "Scope question", "Still comparing"];
-    case "cold":
-      return ["Keep open", "Revise it", "Close it for now", "Went another direction"];
-    case "closeout":
-      return ["Reopen later", "Close it", "Still possible", "Went another direction"];
-    default:
-      return ["Have one question", "Still reviewing", "Timing is the issue", "Not right now"];
-  }
+  void window;
+  return [
+    "Let's do it — what's next?",
+    "Price is the hold-up",
+    "Timing's off",
+    "Can we talk?",
+    "Went another way",
+  ];
 }
 
 // ---------------------------------------------------------------------------
@@ -291,30 +302,28 @@ export function getRecommendedMessage(input: {
   const window = getRecoveryWindow(input.daysQuiet);
   const name = input.firstName?.trim() || null;
   const noun = getProjectNoun(input.trade);
-  const project = noun === "estimate" ? "estimate" : `${noun} estimate`;
+  const greeting = name ? `Hi ${name} — ` : "";
 
   let message: string;
   switch (window) {
     case "warm":
       message = name
-        ? `Hi ${name} — quick check on the ${project} — any question on scope, timing, or price I can clear up here?`
-        : `Quick check on the ${project} — any question on scope, timing, or price I can clear up here?`;
+        ? `${greeting}any question on scope, timing, or price I can clear up here?`
+        : "Any question on scope, timing, or price I can clear up here?";
       break;
     case "cooling":
-      message = name
-        ? `Hi ${name} — when a quote goes quiet, it's usually timing, budget, or one part of the scope. If one of those is the hold-up on the ${project}, reply with which one and I'll make it easier.`
-        : `When a quote goes quiet, it's usually timing, budget, or one part of the scope. If one of those is the hold-up on the ${project}, reply with which one and I'll make it easier.`;
+      message = `${greeting}no pressure on the ${noun}. If it's timing, budget, or one part of the scope that's holding it up, reply with which one and I'll sharpen that piece. If it's a pass, 'no' works too — no awkward follow-up from me.`;
       break;
     case "cold":
-      message = `I can keep the ${project} open, revise it, or close it out for now. Which helps most?`;
+      message = `I can keep this ${noun} open, revise it, or close it out. Which helps most?`;
       break;
     case "closeout":
-      message = `I'm going to close out the ${project} on my side for now so I'm not sending follow-ups you don't need. If you want to reopen it later, reply here and I'll pull it back up.`;
+      message = `I'll close out the ${noun} on my side so it's off your plate. If the timing changes later, text me here and I'll send a fresh number — no restart, no re-quote, no awkward conversation.`;
       break;
     default:
       message = name
-        ? `Hi ${name} — quick check on the ${project} — any question on scope, timing, or price I can clear up here?`
-        : `Quick check on the ${project} — any question on scope, timing, or price I can clear up here?`;
+        ? `${greeting}any question on scope, timing, or price I can clear up here?`
+        : "Any question on scope, timing, or price I can clear up here?";
   }
 
   return {
@@ -330,22 +339,148 @@ export function getRecommendedMessage(input: {
 // Project noun — trade-specific (used by message engine + audit)
 // ---------------------------------------------------------------------------
 
-const PROJECT_NOUNS: ReadonlyMap<string, string> = new Map<string, string>([
+export const PROJECT_NOUNS: ReadonlyMap<string, string> = new Map<string, string>([
   ["concrete", "driveway"],
   ["driveway", "driveway"],
-  ["fencing", "fence"],
-  ["fence", "fence"],
-  ["painting", "painting"],
-  ["painter", "painting"],
-  ["hvac", "AC"],
   ["roofing", "roof"],
   ["roofer", "roof"],
+  ["hvac", "system"],
+  ["plumbing", "job"],
+  ["painting", "project"],
+  ["painter", "project"],
+  ["landscaping", "project"],
+  ["remodeling", "project"],
+  ["fencing", "fence"],
+  ["fence", "fence"],
+  ["flooring", "floor"],
+  ["windows & doors", "install"],
+  ["windows and doors", "install"],
+  ["siding", "siding"],
+  ["drywall", "work"],
+  ["tree service", "removal"],
+  ["electrical", "work"],
+  ["general contracting", "project"],
+  ["other", "estimate"],
 ]);
 
 export function getProjectNoun(trade: string | null | undefined): string {
   if (!trade) return "estimate";
   const key = trade.trim().toLowerCase();
   return PROJECT_NOUNS.get(key) ?? "estimate";
+}
+
+export function getReplyPlaybook(
+  trade: string | null | undefined,
+): ReplyPlaybookPath[] {
+  const noun = getProjectNoun(trade);
+  return [
+    {
+      id: "still_interested",
+      label: "Still interested",
+      trigger: "Let's do it — what's next?",
+      response:
+        "Good news. Want me to hold the dates, or do you need to adjust timing first? Either way I'll have it ready.",
+    },
+    {
+      id: "price_concern",
+      label: "Price concern",
+      trigger: "Price is the hold-up",
+      response:
+        "Totally fair. I can break it into must-do, optional, and later — so you see exactly what drives the total and pick the piece that fits. Want me to send that breakdown?",
+    },
+    {
+      id: "bad_timing",
+      label: "Bad timing",
+      trigger: "Timing's off",
+      response: `No problem. Want me to hold the ${noun} and check back in a few weeks, or close it out for now? Either is fine — just tell me which.`,
+    },
+    {
+      id: "scope_question",
+      label: "Scope question",
+      trigger: "Part feels unclear",
+      response:
+        "Sure — which part feels unclear? I'll break just that piece down so you can see what you're paying for.",
+    },
+    {
+      id: "still_comparing",
+      label: "Still comparing",
+      trigger: "Comparing estimates",
+      response:
+        "Makes sense — apples to apples matters. One thing to check: are the other estimates covering the same scope, or did anyone trim it to come in lower? I can send a quick side-by-side if it helps.",
+    },
+    {
+      id: "need_to_talk",
+      label: "Need to talk",
+      trigger: "Can we talk?",
+      response:
+        "Absolutely. I can call when it works for you. Send me a good time and I'll keep it short.",
+    },
+    {
+      id: "went_another_way",
+      label: "Went another way",
+      trigger: "Went another way",
+      response: `Thanks for letting me know. I'll close the ${noun} on my end and keep the door open if anything changes.`,
+    },
+    {
+      id: "close_for_now",
+      label: "Close it for now",
+      trigger: "Not right now",
+      response: `No problem — I'll close it out on my side. If the timing changes later, text me here and I'll pull the ${noun} back up. No re-quote needed.`,
+    },
+  ];
+}
+
+const SCOPE_COMPARISON_ITEMS: Readonly<Record<string, readonly string[]>> = {
+  concrete: [
+    "Demo + haul-off",
+    "Base prep",
+    "Rebar",
+    "Pour",
+    "Finish",
+    "Cleanup",
+  ],
+  roofing: [
+    "Tear-off",
+    "Underlayment",
+    "Shingles",
+    "Flashing",
+    "Vent pipe boots",
+    "Cleanup",
+  ],
+  hvac: ["Equipment", "Ductwork", "Thermostat", "Permit", "Removal of old unit"],
+  painting: ["Prep", "Patch", "Prime", "Two coats", "Trim", "Cleanup"],
+  fencing: ["Tear-out", "Posts", "Rails", "Pickets/panels", "Gates", "Cleanup"],
+  flooring: ["Demo", "Subfloor prep", "Material", "Install", "Trim", "Cleanup"],
+  "windows & doors": [
+    "Removal",
+    "Install",
+    "Flashing/seal",
+    "Trim",
+    "Cleanup",
+  ],
+};
+
+const FALLBACK_SCOPE_ITEMS = [
+  "Scope",
+  "Materials",
+  "Labor",
+  "Cleanup",
+  "Timeline",
+] as const;
+
+export function getScopeComparisonItems(
+  trade: string | null | undefined,
+): readonly string[] {
+  const key = trade?.trim().toLowerCase() ?? "";
+  return SCOPE_COMPARISON_ITEMS[key] ?? FALLBACK_SCOPE_ITEMS;
+}
+
+export function buildScopeComparisonMessage(
+  trade: string | null | undefined,
+): string {
+  const items = getScopeComparisonItems(trade);
+  const commonTrimItem = items[Math.max(0, items.length - 2)] ?? "cleanup";
+  return `Here's what's included in my estimate: ${items.join(", ")}. One thing to check on the other bids — are they including ${commonTrimItem}? I can send a quick side-by-side if it helps.`;
 }
 
 // ---------------------------------------------------------------------------

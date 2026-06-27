@@ -16,6 +16,7 @@ import {
 } from "@/lib/onboarding/actions";
 import { formatCurrency } from "@/lib/utils/currency";
 import { FREE_PLAN_LIMIT } from "@/lib/payments/entitlement";
+import { TRADES } from "@/lib/utils/normalize";
 
 type Props = {
   isPaid: boolean;
@@ -39,18 +40,6 @@ import {
 } from "./transition-and-copy";
 
 type Step = "input" | "preview" | "transitioning" | "reveal" | "submitting";
-
-const TRADES = [
-  "Roofing",
-  "HVAC",
-  "Plumbing",
-  "Electrical",
-  "Remodeling",
-  "General Contracting",
-  "Painting",
-  "Landscaping",
-  "Concrete",
-];
 
 const PASTE_PLACEHOLDER = [
   "Jane Smith    8,500    2026-05-15",

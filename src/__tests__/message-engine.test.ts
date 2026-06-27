@@ -62,10 +62,10 @@ describe("projectNounForTrade", () => {
     expect(projectNounForTrade("fencing")).toBe("fence");
   });
   it("painting → painting", () => {
-    expect(projectNounForTrade("painting")).toBe("painting");
+    expect(projectNounForTrade("painting")).toBe("project");
   });
   it("hvac → AC", () => {
-    expect(projectNounForTrade("hvac")).toBe("AC");
+    expect(projectNounForTrade("hvac")).toBe("system");
   });
   it("roofing → roof", () => {
     expect(projectNounForTrade("roofing")).toBe("roof");
@@ -144,8 +144,9 @@ describe("warm message", () => {
   it("has quick_check family", () => {
     expect(gen.messageFamily).toBe("quick_check");
   });
-  it("has 4 one-tap options", () => {
-    expect(gen.oneTapOptions).toHaveLength(4);
+  it("has 5 playbook-aligned one-tap options", () => {
+    expect(gen.oneTapOptions).toHaveLength(5);
+    expect(gen.oneTapOptions).toContain("Price is the hold-up");
   });
   it("whyThisMessage mentions the estimate is fresh", () => {
     expect(gen.whyThisMessage.toLowerCase()).toContain("fresh");
@@ -166,10 +167,10 @@ describe("cooling message", () => {
   it("has friction_diagnosis family", () => {
     expect(gen.messageFamily).toBe("friction_diagnosis");
   });
-  it("has 4 one-tap options including Budget and Timing", () => {
-    expect(gen.oneTapOptions).toHaveLength(4);
-    expect(gen.oneTapOptions).toContain("Budget");
-    expect(gen.oneTapOptions).toContain("Timing");
+  it("has the 5 playbook-aligned one-tap options", () => {
+    expect(gen.oneTapOptions).toHaveLength(5);
+    expect(gen.oneTapOptions).toContain("Timing's off");
+    expect(gen.oneTapOptions).toContain("Can we talk?");
   });
   it("whyThisMessage mentions timing, budget, or scope", () => {
     expect(gen.whyThisMessage.toLowerCase()).toMatch(/timing|budget|scope/);
@@ -190,10 +191,9 @@ describe("cold message", () => {
   it("has open_revise_close family", () => {
     expect(gen.messageFamily).toBe("open_revise_close");
   });
-  it("has 4 one-tap options including Keep open and Revise it", () => {
-    expect(gen.oneTapOptions).toHaveLength(4);
-    expect(gen.oneTapOptions).toContain("Keep open");
-    expect(gen.oneTapOptions).toContain("Revise it");
+  it("has the 5 playbook-aligned one-tap options", () => {
+    expect(gen.oneTapOptions).toHaveLength(5);
+    expect(gen.oneTapOptions).toContain("Went another way");
   });
   it("whyThisMessage mentions open, revise, or close", () => {
     expect(gen.whyThisMessage.toLowerCase()).toMatch(/open|revise|close/);
@@ -208,7 +208,9 @@ describe("closeout message", () => {
   const gen = generateFollowupMessage({ daysSilent: 60 });
   it("closes cleanly without guilt", () => {
     expect(gen.message).toMatch(/close out/i);
-    expect(gen.message).toMatch(/reopen/i);
+    expect(gen.message).toContain(
+      "no restart, no re-quote, no awkward conversation",
+    );
   });
   it("does not sound desperate", () => {
     expect(gen.message.toLowerCase()).not.toMatch(/desperate|please|beg|last/);
@@ -216,9 +218,9 @@ describe("closeout message", () => {
   it("has clean_closeout family", () => {
     expect(gen.messageFamily).toBe("clean_closeout");
   });
-  it("has 4 one-tap options including Reopen later", () => {
-    expect(gen.oneTapOptions).toHaveLength(4);
-    expect(gen.oneTapOptions).toContain("Reopen later");
+  it("has the 5 playbook-aligned one-tap options", () => {
+    expect(gen.oneTapOptions).toHaveLength(5);
+    expect(gen.oneTapOptions).toContain("Went another way");
   });
   it("whyThisMessage mentions removing awkwardness or leaving the door open", () => {
     expect(gen.whyThisMessage.toLowerCase()).toMatch(/awkward|door|reopen/);
@@ -230,28 +232,24 @@ describe("closeout message", () => {
 // ---------------------------------------------------------------------------
 
 describe("concrete trade uses driveway language", () => {
-  it("warm message says 'driveway estimate'", () => {
-    const gen = generateFollowupMessage({ daysSilent: 3, trade: "concrete" });
-    expect(gen.message).toContain("driveway estimate");
-  });
-  it("cooling message says 'driveway estimate'", () => {
+  it("cooling message says driveway", () => {
     const gen = generateFollowupMessage({ daysSilent: 14, trade: "concrete" });
-    expect(gen.message).toContain("driveway estimate");
+    expect(gen.message).toContain("the driveway");
   });
-  it("cold message says 'driveway estimate'", () => {
+  it("cold message says driveway", () => {
     const gen = generateFollowupMessage({ daysSilent: 30, trade: "concrete" });
-    expect(gen.message).toContain("driveway estimate");
+    expect(gen.message).toContain("this driveway");
   });
-  it("closeout message says 'driveway estimate'", () => {
+  it("closeout message says driveway", () => {
     const gen = generateFollowupMessage({ daysSilent: 60, trade: "concrete" });
-    expect(gen.message).toContain("driveway estimate");
+    expect(gen.message).toContain("the driveway");
   });
   it("driveway trade also produces driveway language", () => {
-    const gen = generateFollowupMessage({ daysSilent: 3, trade: "driveway" });
-    expect(gen.message).toContain("driveway estimate");
+    const gen = generateFollowupMessage({ daysSilent: 14, trade: "driveway" });
+    expect(gen.message).toContain("the driveway");
   });
   it("generic (no trade) says 'estimate' not 'driveway'", () => {
-    const gen = generateFollowupMessage({ daysSilent: 3 });
+    const gen = generateFollowupMessage({ daysSilent: 14 });
     expect(gen.message).toContain("estimate");
     expect(gen.message).not.toContain("driveway");
   });
@@ -269,7 +267,7 @@ describe("first name handling", () => {
   it("warm message works without first name", () => {
     const gen = generateFollowupMessage({ daysSilent: 3, firstName: null });
     expect(gen.message).not.toContain("Hi Jane");
-    expect(gen.message).toMatch(/quick check/i);
+    expect(gen.message).toMatch(/^Any question/i);
   });
   it("cold message does not use first name (direct opener)", () => {
     const gen = generateFollowupMessage({ daysSilent: 30, firstName: "Jane" });

@@ -133,12 +133,18 @@ const comparison = [
 ] as const;
 
 const trades = [
+  ["Concrete", "driveways and slabs are worth reopening"],
   ["Painting", "many estimates, many no-replies"],
   ["Remodeling", "high-ticket projects go quiet"],
   ["Roofing", "big estimates need timely follow-up"],
   ["HVAC", "replacement quotes need fast timing"],
   ["Plumbing", "quoted work gets delayed and forgotten"],
   ["Fencing", "seasonal demand creates follow-up windows"],
+  ["Flooring", "scope and material choices stall decisions"],
+  ["Windows & Doors", "install decisions need clean follow-up"],
+  ["Siding", "large exterior quotes need a next move"],
+  ["Drywall", "smaller work still disappears into silence"],
+  ["Tree Service", "removal quotes can cool off quickly"],
   ["Landscaping", "crew gaps matter"],
 ] as const;
 
@@ -178,6 +184,10 @@ const faqs = [
   {
     q: "Can Quote Reclaim promise I win the job?",
     a: "No. No software can promise a job back. Quote Reclaim helps you act on sent estimates instead of guessing or forgetting.",
+  },
+  {
+    q: "Why do homeowners go quiet after a quote?",
+    a: "Sometimes it is price. Sometimes timing. Sometimes they are comparing bids. Sometimes saying “no” just feels awkward, so they say nothing. Quote Reclaim gives them a cleaner way to answer — budget, timing, scope, call, or no — so you are not stuck sending “just checking in.”",
   },
 ] as const;
 
@@ -444,7 +454,7 @@ export default function HomePage() {
         <div className="grid gap-7 lg:grid-cols-[0.82fr_1.18fr] lg:items-center">
           <SectionHeading
             title="Make it easy for the homeowner to answer."
-            body="Homeowners often go quiet because writing the real answer feels awkward. Quote Reclaim gives them a simple reply link, then shows you the next move."
+            body="Sometimes quiet isn't a hard no. It's timing, budget, scope confusion, or the awkwardness of saying no. Quote Reclaim gives the homeowner an easier way to answer — without making you sound desperate."
           />
           <div className="rounded-2xl border border-brand/30 bg-surface-1/85 p-5 shadow-[0_18px_54px_rgba(0,0,0,0.18)]">
             <p className="text-xs font-black uppercase tracking-widest text-brand">
@@ -456,8 +466,10 @@ export default function HomePage() {
             <div className="mt-4 grid gap-2">
               {[
                 "Let's do it — what's next?",
-                "I have one question",
-                "Not right now",
+                "Price is the hold-up",
+                "Timing's off",
+                "Can we talk?",
+                "Went another way",
               ].map((choice) => (
                 <div
                   key={choice}
