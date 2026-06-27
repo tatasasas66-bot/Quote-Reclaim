@@ -17,11 +17,17 @@ import {
 } from "@/lib/marketing/full-auto-orchestrator";
 import {
   createMarketingCampaign,
+  getMarketingCampaign,
+  getMarketingCampaignBySmartleadId,
   suppressMarketingLead,
   unsuppressMarketingLead,
   updateMarketingCampaign,
 } from "@/lib/marketing/repo";
 import { buildComplianceSafeSequence } from "@/lib/marketing/sequence";
+import {
+  normalizeSmartleadCampaignId,
+  SMARTLEAD_CAMPAIGN_MAPPING_REQUIRED,
+} from "@/lib/marketing/smartlead-campaign-id";
 import type {
   MarketingCampaignStatus,
   MarketingMode,
@@ -40,6 +46,7 @@ type Action =
   | "cycle"
   | "set_status"
   | "set_mode"
+  | "set_smartlead_campaign"
   | "suppress_lead"
   | "unsuppress_lead";
 
@@ -102,7 +109,16 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
           result: await verifyCampaignEmails(requiredId(campaignId)),
         });
       case "upload": {
-        const result = await uploadCampaignLeads(requiredId(campaignId));
+        const id = requiredId(campaignId);
+        const campaign = await getMarketingCampaign(id);
+        if (!campaign) throw new Error("Campaign not found");
+        if (!campaign.smartlead_campaign_id) {
+          return NextResponse.json(
+            { ok: false, error: SMARTLEAD_CAMPAIGN_MAPPING_REQUIRED },
+            { status: 400 },
+          );
+        }
+        const result = await uploadCampaignLeads(id);
         if (result.reason === LIVE_COMPLIANCE_BLOCK_REASON) {
           return NextResponse.json(
             { ok: false, dry_run_allowed: true, error: result.reason },
@@ -161,6 +177,26 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
           ),
         });
         return NextResponse.json({ ok: true, mode });
+      }
+      case "set_smartlead_campaign": {
+        const id = requiredId(campaignId);
+        const campaign = await getMarketingCampaign(id);
+        if (!campaign) throw new Error("Campaign not found");
+        const smartleadCampaignId = normalizeSmartleadCampaignId(
+          body.smartleadCampaignId,
+        );
+        const existing = await getMarketingCampaignBySmartleadId(
+          smartleadCampaignId,
+        );
+        if (existing && existing.id !== id) {
+          throw new Error(
+            `Smartlead campaign ${smartleadCampaignId} is already mapped to ${existing.name}.`,
+          );
+        }
+        await updateMarketingCampaign(id, {
+          smartlead_campaign_id: smartleadCampaignId,
+        });
+        return NextResponse.json({ ok: true, smartleadCampaignId });
       }
       case "suppress_lead":
         return NextResponse.json({

@@ -115,6 +115,27 @@ describe("routes and orchestration safety", () => {
     expect(repo).toContain('.from("marketing_campaigns")');
   });
 
+  it("updates Smartlead mapping on the selected campaign without creating a duplicate", () => {
+    expect(adminClient).toContain(
+      "Smartlead campaign ID for selected campaign",
+    );
+    expect(adminClient).toContain("Save Smartlead mapping");
+    expect(adminRoute).toContain('case "set_smartlead_campaign"');
+    expect(adminRoute).toContain("getMarketingCampaignBySmartleadId");
+    expect(adminRoute).toContain(
+      "smartlead_campaign_id: smartleadCampaignId",
+    );
+    expect(repo).toContain("smartlead_campaign_id: string | null");
+  });
+
+  it("guards lead upload when no Smartlead campaign is mapped", () => {
+    expect(adminClient).toContain("SMARTLEAD_CAMPAIGN_MAPPING_REQUIRED");
+    expect(adminRoute).toContain("SMARTLEAD_CAMPAIGN_MAPPING_REQUIRED");
+    expect(adminRoute).toMatch(
+      /case "upload"[\s\S]*!campaign\.smartlead_campaign_id[\s\S]*SMARTLEAD_CAMPAIGN_MAPPING_REQUIRED/,
+    );
+  });
+
   it("sends social-media scraping as an object, never a boolean", () => {
     expect(apify).toContain("DISABLED_SOCIAL_MEDIA_PROFILES");
     expect(apify).toContain("normalizeActorObjectOption");

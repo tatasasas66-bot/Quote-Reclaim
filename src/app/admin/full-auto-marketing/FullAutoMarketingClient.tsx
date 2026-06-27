@@ -8,8 +8,10 @@ import {
   CirclePlay,
   CloudDownload,
   Database,
+  Link2,
   MailCheck,
   RefreshCw,
+  Save,
   Search,
   Send,
   ShieldCheck,
@@ -23,6 +25,10 @@ import type {
   MarketingSetupStatus,
 } from "@/lib/marketing/types";
 import { DEFAULT_CAMPAIGN_INPUT } from "@/lib/marketing/sequence";
+import {
+  normalizeSmartleadCampaignId,
+  SMARTLEAD_CAMPAIGN_MAPPING_REQUIRED,
+} from "@/lib/marketing/smartlead-campaign-id";
 
 type Props = {
   setup: MarketingSetupStatus;
@@ -61,6 +67,9 @@ export function FullAutoMarketingClient({
   const [busy, setBusy] = React.useState<string | null>(null);
   const [message, setMessage] = React.useState<string | null>(null);
   const [showCreate, setShowCreate] = React.useState(campaigns.length === 0);
+  const [smartleadCampaignId, setSmartleadCampaignId] = React.useState(
+    campaigns[0]?.smartlead_campaign_id ?? "",
+  );
   const [draft, setDraft] = React.useState<CampaignDraft>({
     name: DEFAULT_CAMPAIGN_INPUT.name,
     slug: DEFAULT_CAMPAIGN_INPUT.slug,
@@ -100,6 +109,36 @@ export function FullAutoMarketingClient({
       dailyCap: Number(draft.dailyCap),
       mode: DEFAULT_CAMPAIGN_INPUT.mode,
     });
+  }
+
+  function selectCampaign(nextCampaignId: string) {
+    const nextCampaign = campaigns.find(
+      (campaign) => campaign.id === nextCampaignId,
+    );
+    setCampaignId(nextCampaignId);
+    setSmartleadCampaignId(nextCampaign?.smartlead_campaign_id ?? "");
+    setMessage(null);
+  }
+
+  async function saveSmartleadMapping() {
+    try {
+      const normalized = normalizeSmartleadCampaignId(smartleadCampaignId);
+      await call("set_smartlead_campaign", {
+        smartleadCampaignId: normalized,
+      });
+    } catch (error) {
+      setMessage(
+        error instanceof Error ? error.message : "Smartlead mapping failed",
+      );
+    }
+  }
+
+  function runAction(action: Action) {
+    if (action === "upload" && !selected?.smartlead_campaign_id) {
+      setMessage(SMARTLEAD_CAMPAIGN_MAPPING_REQUIRED);
+      return;
+    }
+    void call(action);
   }
 
   return (
@@ -309,7 +348,7 @@ export function FullAutoMarketingClient({
                   Campaign
                   <select
                     value={campaignId}
-                    onChange={(event) => setCampaignId(event.target.value)}
+                    onChange={(event) => selectCampaign(event.target.value)}
                     className="mt-2 w-full min-w-0 rounded-md border border-line-strong bg-surface-1 px-3 py-2.5 text-sm"
                   >
                     {campaigns.map((campaign) => (
@@ -355,42 +394,81 @@ export function FullAutoMarketingClient({
                 </div>
               </div>
 
+              <div className="grid gap-3 border-b border-line-subtle pb-4 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-end">
+                <label className="min-w-0 text-xs font-bold uppercase tracking-wider text-ink-muted">
+                  Smartlead campaign ID for selected campaign
+                  <div className="relative mt-2">
+                    <Link2
+                      className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-muted"
+                      aria-hidden="true"
+                    />
+                    <input
+                      value={smartleadCampaignId}
+                      inputMode="numeric"
+                      autoComplete="off"
+                      aria-describedby="smartlead-mapping-help"
+                      onChange={(event) =>
+                        setSmartleadCampaignId(event.target.value)
+                      }
+                      className="h-11 w-full min-w-0 rounded-md border border-line-strong bg-surface-1 pl-9 pr-3 font-mono text-sm font-medium normal-case tracking-normal text-ink-strong"
+                    />
+                  </div>
+                  <span
+                    id="smartlead-mapping-help"
+                    className="mt-2 block text-xs font-normal normal-case leading-5 tracking-normal text-ink-muted"
+                  >
+                    Updates this campaign only. Saving does not upload leads or
+                    change dry-run/live mode.
+                  </span>
+                </label>
+                <button
+                  type="button"
+                  onClick={() => void saveSmartleadMapping()}
+                  disabled={Boolean(busy)}
+                  className="inline-flex min-h-11 items-center justify-center gap-2 rounded-md border border-brand bg-brand px-4 py-2 text-sm font-bold text-canvas hover:bg-brand-dark disabled:opacity-50"
+                >
+                  <Save className="h-4 w-4" aria-hidden="true" />
+                  {busy === "set_smartlead_campaign"
+                    ? "Saving..."
+                    : "Save Smartlead mapping"}
+                </button>
+              </div>
+
               <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
                 <ActionButton
                   icon={Search}
                   label="Run lead search"
                   action="start_search"
                   busy={busy}
-                  onRun={(action) => call(action)}
+                  onRun={runAction}
                 />
                 <ActionButton
                   icon={CloudDownload}
                   label="Ingest latest dataset"
                   action="ingest"
                   busy={busy}
-                  onRun={(action) => call(action)}
+                  onRun={runAction}
                 />
                 <ActionButton
                   icon={MailCheck}
                   label="Verify pending emails"
                   action="verify"
                   busy={busy}
-                  onRun={(action) => call(action)}
+                  onRun={runAction}
                 />
                 <ActionButton
                   icon={Send}
                   label="Upload valid leads"
                   action="upload"
                   busy={busy}
-                  disabled={!setup.complianceAddressConfigured}
-                  onRun={(action) => call(action)}
+                  onRun={runAction}
                 />
                 <ActionButton
                   icon={RefreshCw}
                   label="Sync Smartlead"
                   action="sync"
                   busy={busy}
-                  onRun={(action) => call(action)}
+                  onRun={runAction}
                 />
                 <ActionButton
                   icon={ShieldCheck}
@@ -402,7 +480,7 @@ export function FullAutoMarketingClient({
                     !setup.complianceAddressConfigured
                   }
                   primary
-                  onRun={(action) => call(action)}
+                  onRun={runAction}
                 />
               </div>
             </>
