@@ -1,6 +1,8 @@
-import { titleCase } from "@/lib/utils/normalize";
 import type { RecoveryMessage, RecoveryContext } from "./generate-recovery-plan";
-import { getSequenceFamily } from "@/lib/recovery/recovery-logic";
+import {
+  getRecommendedMessage,
+  getSequenceFamily,
+} from "@/lib/recovery/recovery-logic";
 
 /**
  * Deterministic fallback templates. Voice target: a real, experienced
@@ -110,11 +112,6 @@ const TRADE_WORDS: Record<string, string> = {
 /** Delegates to the centralized recovery-logic module SEQUENCE_FAMILIES. */
 function FRAMEWORKS(n: 1 | 2 | 3 | 4 | 5): RecoveryMessage["framework"] {
   return getSequenceFamily(n);
-}
-
-function cleanName(value: string | null | undefined, fallback: string): string {
-  const first = (value ?? "").trim().split(/\s+/)[0] ?? "";
-  return titleCase(first.replace(/[.,]/g, "")) || fallback;
 }
 
 function resolveTrade(
@@ -457,26 +454,13 @@ export function researchSequenceMessages(ctx: RecoveryContext): {
   day14: string;
   day30: string;
 } {
-  const project = projectLabel(ctx.trade);
-  const detail = jobDetail(ctx.trade, ctx.jobDescription);
-  const vars: VariantVars = {
-    firstName: cleanName(ctx.firstName, "there"),
-    // No placeholder identity. When the contractor name is unknown the
-    // Day 1 opener simply omits the "<Name> here." clause — a message signed
-    // "Contractor here" reads like a bot and burns trust on the first touch.
-    contractorFirstName: cleanName(ctx.contractorFirstName, ""),
-    project,
-    projectDetail: projectDetailPhrase(project, detail),
-    tradeWord: tradeWord(ctx.trade),
-  };
-  const seed = variantSeed(ctx);
-
+  const messageContext = { firstName: ctx.firstName, trade: ctx.trade };
   return {
-    day1: DAY1_VARIANTS[pickVariant(seed, 1)](vars),
-    day3: DAY3_VARIANTS[pickVariant(seed, 3)](vars),
-    day7: DAY7_VARIANTS[pickVariant(seed, 7)](vars),
-    day14: DAY14_VARIANTS[pickVariant(seed, 14)](vars),
-    day30: DAY30_VARIANTS[pickVariant(seed, 30)](vars),
+    day1: getRecommendedMessage("Estimate Check", messageContext),
+    day3: getRecommendedMessage("Decision Friction", messageContext),
+    day7: getRecommendedMessage("Scope Rescue", messageContext),
+    day14: getRecommendedMessage("Open, Revise, or Close", messageContext),
+    day30: getRecommendedMessage("Clean Closeout", messageContext),
   };
 }
 

@@ -16,6 +16,7 @@ export type ImportResult =
       skippedByGate: number;
       totalSilent: number;
       remainingSilent: number;
+      priorityQuoteId: string | null;
     }
   | { ok: false; error: string };
 
@@ -98,6 +99,7 @@ export async function importSilentQuotesAction(input: {
   const userId = userData.user.id;
 
   let imported = 0;
+  let priorityQuoteId: string | null = null;
   let skippedByGate = 0;
   const totalSilent = cleaned.reduce((s, r) => s + r.amount, 0);
 
@@ -150,6 +152,7 @@ export async function importSilentQuotesAction(input: {
     }
 
     const quoteId = String(insertResult.data.id);
+    if (!priorityQuoteId) priorityQuoteId = quoteId;
     const sequenceId = String(insertResult.data.sequence_id ?? "");
 
     // Generate + persist the 5-step recovery plan through the SAME shared
@@ -209,7 +212,7 @@ export async function importSilentQuotesAction(input: {
   // should not be bounced back here.
   await userClient
     .from("profiles")
-    .update({ onboarding_done: true })
+    .update({ onboarding_done: true, trade })
     .eq("id", userId);
 
   revalidatePath("/dashboard");
@@ -224,6 +227,7 @@ export async function importSilentQuotesAction(input: {
     skippedByGate,
     totalSilent,
     remainingSilent,
+    priorityQuoteId,
   };
 }
 
@@ -231,13 +235,18 @@ export async function importSilentQuotesAction(input: {
  * Skip onboarding without importing — marks the profile so future logins
  * land on the dashboard instead of the reveal page.
  */
-export async function skipOnboardingAction(): Promise<{ ok: boolean }> {
+export async function skipOnboardingAction(
+  trade?: string,
+): Promise<{ ok: boolean }> {
   const userClient = createServerSupabaseClient();
   const { data: userData } = await userClient.auth.getUser();
   if (!userData.user) return { ok: false };
   await userClient
     .from("profiles")
-    .update({ onboarding_done: true })
+    .update({
+      onboarding_done: true,
+      ...(trade && ALLOWED_TRADES.has(trade) ? { trade } : {}),
+    })
     .eq("id", userData.user.id);
   revalidatePath("/dashboard");
   return { ok: true };

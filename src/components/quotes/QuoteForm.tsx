@@ -17,10 +17,11 @@ type FormAction = (
 type Props = {
   mode: "create" | "edit";
   initial?: QuoteRow;
+  defaultTrade?: string | null;
   action: FormAction;
 };
 
-export function QuoteForm({ mode, initial, action }: Props) {
+export function QuoteForm({ mode, initial, defaultTrade, action }: Props) {
   const [state, formAction] = useFormState<ActionResult | null, FormData>(
     action,
     null,
@@ -44,7 +45,7 @@ export function QuoteForm({ mode, initial, action }: Props) {
   }, []);
 
   const clientName = voice?.client_name || initial?.client_name || "";
-  const trade = voice?.trade || initial?.trade || "";
+  const trade = voice?.trade || initial?.trade || defaultTrade || "";
   const amount = voice?.estimate_amount || initial?.estimate_amount?.toString() || "";
   const daysSilent = voice?.days_silent || (initial?.days_silent ?? 0).toString();
   const city = voice?.city || initial?.city || "";

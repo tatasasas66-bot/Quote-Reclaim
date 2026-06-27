@@ -1,156 +1,85 @@
 import { describe, expect, it } from "vitest";
+import {
+  getProjectNoun,
+  getRecommendedMessage,
+  getReplyPlaybook,
+  getSequenceFamily,
+} from "@/lib/recovery/recovery-logic";
 import { researchSequenceMessages } from "@/lib/ai/fallback-messages";
-import type { RecoveryContext } from "@/lib/ai/generate-recovery-plan";
 
-const EMOJI_REGEX = /[\uD83C-\uD83E][\uDC00-\uDFFF]|[☀-➿]/;
+const TRADE_NOUNS = [
+  ["Concrete", "driveway"],
+  ["Roofing", "roof"],
+  ["HVAC", "system"],
+  ["Plumbing", "job"],
+  ["Electrical", "work"],
+  ["Remodeling", "project"],
+  ["General Contracting", "project"],
+  ["Painting", "project"],
+  ["Landscaping", "project"],
+  ["Fencing", "fence"],
+  ["Flooring", "floor"],
+  ["Windows & Doors", "install"],
+  ["Siding", "siding"],
+  ["Drywall", "work"],
+  ["Tree Service", "removal"],
+  ["Other", "estimate"],
+] as const;
 
-const SCENARIOS: Array<{
-  label: string;
-  ctx: RecoveryContext;
-  expectedFirstName: string;
-}> = [
-  {
-    label: "HVAC — lowercase first name",
-    ctx: { firstName: "jane", contractorFirstName: "Aaron", trade: "HVAC", estimateAmount: 7900 },
-    expectedFirstName: "Jane",
-  },
-  {
-    label: "Roofing — uppercase first name",
-    ctx: { firstName: "SARAH", contractorFirstName: "Mike", trade: "Roofing", estimateAmount: 8500 },
-    expectedFirstName: "Sarah",
-  },
-  {
-    label: "Plumbing — normal name",
-    ctx: { firstName: "Tom", contractorFirstName: "Luis", trade: "Plumbing", estimateAmount: 2400 },
-    expectedFirstName: "Tom",
-  },
-  {
-    label: "Remodeling — null contractor name",
-    ctx: { firstName: "David", contractorFirstName: null, trade: "Remodeling", estimateAmount: 18000 },
-    expectedFirstName: "David",
-  },
-  {
-    label: "General Contracting",
-    ctx: { firstName: "Amanda", contractorFirstName: "Pat", trade: "General Contracting", estimateAmount: 12500 },
-    expectedFirstName: "Amanda",
-  },
-  {
-    label: "Painting",
-    ctx: { firstName: "Lisa", contractorFirstName: "Dan", trade: "Painting", estimateAmount: 3800 },
-    expectedFirstName: "Lisa",
-  },
-  {
-    label: "Landscaping",
-    ctx: { firstName: "Chris", contractorFirstName: "Ben", trade: "Landscaping", estimateAmount: 5200 },
-    expectedFirstName: "Chris",
-  },
-  {
-    label: "Concrete",
-    ctx: { firstName: "Karen", contractorFirstName: "Will", trade: "Concrete", estimateAmount: 4800 },
-    expectedFirstName: "Karen",
-  },
-  {
-    label: "Other",
-    ctx: { firstName: "Robin", contractorFirstName: "Sam", trade: "Other", estimateAmount: 1500 },
-    expectedFirstName: "Robin",
-  },
-];
+describe("unified recovery message library", () => {
+  it.each(TRADE_NOUNS)("maps %s to %s", (trade, noun) => {
+    expect(getProjectNoun(trade)).toBe(noun);
+  });
 
-describe("contractor-native sequence structural rules", () => {
-  for (const { label, ctx, expectedFirstName } of SCENARIOS) {
-    describe(label, () => {
-      const seq = researchSequenceMessages(ctx);
-      const allMessages = [seq.day1, seq.day3, seq.day7, seq.day14, seq.day30];
+  it("uses the exact five centralized messages for fallback schedules", () => {
+    const context = { firstName: "Jane", trade: "Concrete", estimateAmount: 9000 };
+    const sequence = researchSequenceMessages(context);
+    expect(Object.values(sequence)).toEqual(
+      ([1, 2, 3, 4, 5] as const).map((step) =>
+        getRecommendedMessage(getSequenceFamily(step), context),
+      ),
+    );
+  });
 
-      it("Day 1 opens with 'Hey {Name} —' or 'Hey {Name},' (the only Hey in the sequence)", () => {
-        // Either separator is valid — both are natural contractor openings and
-        // the rewrite uses both for variation across quotes.
-        const opensCorrectly =
-          new RegExp(`^Hey ${expectedFirstName} —`).test(seq.day1) ||
-          new RegExp(`^Hey ${expectedFirstName},`).test(seq.day1);
-        expect(opensCorrectly).toBe(true);
-        // Only Day 1 uses "Hey" — the rest of the sequence drops it.
-        expect(seq.day3).not.toMatch(/\bHey\b/i);
-        expect(seq.day7).not.toMatch(/\bHey\b/i);
-        expect(seq.day14).not.toMatch(/\bHey\b/i);
-        expect(seq.day30).not.toMatch(/\bHey\b/i);
-      });
+  it("keeps the required shame-removal closes verbatim", () => {
+    expect(
+      getRecommendedMessage("Decision Friction", {
+        firstName: "Jane",
+        trade: "Concrete",
+      }),
+    ).toContain("no awkward follow-up from me");
+    expect(
+      getRecommendedMessage("Clean Closeout", {
+        firstName: "Jane",
+        trade: "Concrete",
+      }),
+    ).toContain("no restart, no re-quote, no awkward conversation");
+  });
 
-      it("Day 3 starts with the client name only — no greeting word", () => {
-        expect(seq.day3).toMatch(new RegExp(`^${expectedFirstName},`));
-        expect(seq.day3).not.toMatch(/^(Hi|Hey)\b/i);
-      });
+  it("contains no generic 'this estimate' message", () => {
+    for (const trade of TRADE_NOUNS.slice(0, -1).map(([name]) => name)) {
+      for (const step of [1, 2, 3, 4, 5] as const) {
+        expect(
+          getRecommendedMessage(getSequenceFamily(step), {
+            firstName: "Jane",
+            trade,
+          }).toLowerCase(),
+        ).not.toContain("this estimate");
+      }
+    }
+  });
 
-      it("Day 7 omits the client name and never opens with a greeting", () => {
-        expect(seq.day7).not.toContain(expectedFirstName);
-        expect(seq.day7).not.toMatch(/^(Hi|Hey)\b/i);
-      });
-
-      it("Day 7 is a Scope Rescue ask: smaller path, no pressure", () => {
-        expect(seq.day7).toMatch(
-          /separate|break it into|phase|must-do|later pieces|holding things up|simpler path|not quite right/i,
-        );
-        expect(seq.day7).not.toMatch(/\b(discount|sale|deal|cheaper|coupon|promo)\b/i);
-      });
-
-      it("Day 14 leads with the client name and offers options without any discount language", () => {
-        expect(seq.day14).toMatch(new RegExp(`^${expectedFirstName},`));
-        expect(seq.day14.toLowerCase()).not.toMatch(
-          /\b(discount|sale|deal|cheaper|coupon|promo)\b/,
-        );
-        expect(seq.day14).not.toMatch(/drop the price|lower the price|price drop/i);
-      });
-
-      it("Day 30 leads with the client name, is declarative (no '?'), and closes out cleanly", () => {
-        expect(seq.day30).toMatch(new RegExp(`^${expectedFirstName},`));
-        expect((seq.day30.match(/\?/g) ?? []).length).toBe(0);
-        expect(seq.day30.toLowerCase()).toMatch(
-          /close .*out|close out|mark .* closed|step back|going to close/,
-        );
-      });
-
-      it("no message contains a banned phrase from the rewrite contract", () => {
-        for (const msg of allMessages) {
-          const lower = msg.toLowerCase();
-          expect(lower).not.toContain("just checking");
-          expect(lower).not.toContain("touching base");
-          expect(lower).not.toContain("circling back");
-          expect(lower).not.toContain("circle back");
-          expect(lower).not.toContain("hope this finds you well");
-          expect(lower).not.toContain("dead or just on pause");
-          expect(lower).not.toContain("just need one word");
-          expect(lower).not.toContain("locking the schedule today");
-          expect(lower).not.toContain("releasing it");
-          expect(lower).not.toContain("let the slot go");
-        }
-      });
-
-      it("no message exceeds 220 characters", () => {
-        for (const msg of allMessages) {
-          expect(msg.length).toBeLessThanOrEqual(220);
-        }
-      });
-
-      it("no message contains an exclamation mark", () => {
-        for (const msg of allMessages) {
-          expect(msg).not.toContain("!");
-        }
-      });
-
-      it("no message contains emoji", () => {
-        for (const msg of allMessages) {
-          expect(EMOJI_REGEX.test(msg)).toBe(false);
-        }
-      });
-
-      it("client name is title-cased in Day 1 and Day 3", () => {
-        expect(seq.day1).toContain(expectedFirstName);
-        expect(seq.day3).toContain(expectedFirstName);
-        if (ctx.firstName !== expectedFirstName) {
-          expect(seq.day1).not.toContain(ctx.firstName);
-          expect(seq.day3).not.toContain(ctx.firstName);
-        }
-      });
-    });
-  }
+  it("ships financing and margin-protection branches for quotes over $5k", () => {
+    const paths = getReplyPlaybook("Concrete", 9000);
+    expect(paths).toHaveLength(10);
+    expect(paths.find((path) => path.id === "still_comparing")?.response).toContain(
+      "did anyone trim it to come in lower",
+    );
+    expect(paths.find((path) => path.id === "financing")?.response).toContain(
+      "milestone payments",
+    );
+    expect(paths.find((path) => path.id === "do_it_for_less")?.response).toContain(
+      "I can't cut the price without cutting the work",
+    );
+  });
 });

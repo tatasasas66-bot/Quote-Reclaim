@@ -249,8 +249,8 @@ describe("/quotes/[id] page: Send early wiring", () => {
 
   it("uses SendEarlyButton instead of a hardcoded disabled button", () => {
     expect(detailPage).toContain("SendEarlyButton");
-    expect(detailPage).toContain("reminderId={card.action.reminderId}");
-    expect(detailPage).toContain("disabled={card.action.disabled}");
+    expect(detailPage).toContain("reminderId={action.reminderId}");
+    expect(detailPage).toContain("disabled={action.disabled}");
   });
 
   it("does not render 'Send Now' anywhere", () => {

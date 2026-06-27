@@ -16,6 +16,7 @@ import {
 import { isReplyIntent } from "@/lib/ai/classify-reply";
 import { suggestResponse } from "@/lib/ai/suggest-response";
 import { requireUser } from "@/lib/auth/require-user";
+import { MONTHLY_PRICE_USD } from "@/lib/payments/entitlement";
 import {
   getLatestOneTapReply,
 } from "@/lib/quotes/one-tap-reply-server";
@@ -33,6 +34,7 @@ import { getProjectNoun } from "@/lib/recovery/recovery-logic";
 import { SundayResetTracker } from "@/components/quotes/SundayResetTracker";
 import { createServiceSupabaseClient } from "@/lib/supabase/service";
 import { titleCaseName } from "@/lib/utils/title-case";
+import { recordAuditEvent } from "@/lib/audit-events";
 
 export const metadata: Metadata = { title: "Quote - Quote Reclaim" };
 export const dynamic = "force-dynamic";
@@ -55,6 +57,18 @@ export default async function QuoteDetailPage({
     getProfileStats(supabase, user.id),
   ]);
   if (!quote) notFound();
+  await recordAuditEvent(supabase, {
+    userId: user.id,
+    quoteId: quote.id,
+    type: "price_check_viewed",
+  });
+  if (searchParams?.source === "sunday-reset") {
+    await recordAuditEvent(supabase, {
+      userId: user.id,
+      quoteId: quote.id,
+      type: "sunday_reset_opened",
+    });
+  }
 
   const serviceClient = createServiceSupabaseClient();
   const { data: outboundRows } = await serviceClient
@@ -135,6 +149,7 @@ export default async function QuoteDetailPage({
         </p>
       </div>
 
+      <QuietSignalCard signal={viewModel.quietSignal} />
       <CommandActionPanel viewModel={viewModel} />
       <ReplyRadarCard reply={replyRadar} />
       <OneTapReplyCard
@@ -148,7 +163,6 @@ export default async function QuoteDetailPage({
         allTimeRecovered={profile?.recovered_amount ?? 0}
       />
       <RecoveryPlanSection viewModel={viewModel} />
-      <QuietSignalCard signal={viewModel.quietSignal} />
     </main>
   );
 }
@@ -162,6 +176,7 @@ function CommandActionPanel({
 
   return (
     <section
+      id="quote-command-panel"
       data-testid="quote-command-panel"
       aria-labelledby="quote-command-heading"
       className="rounded-xl border border-brand/45 bg-surface-1 shadow-[0_28px_86px_rgba(0,0,0,0.34)]"
@@ -272,6 +287,7 @@ function CommandActionPanel({
           <ReplyPlaybook
             paths={viewModel.replyPlaybook}
             trade={viewModel.quote.trade}
+            quoteId={viewModel.quote.id}
           />
         </div>
       </div>
@@ -335,6 +351,10 @@ function QuoteSummary({
         : viewModel.scoreTone === "danger"
           ? "danger"
           : "neutral";
+  const projectNoun = getProjectNoun(viewModel.quote.trade);
+  const opportunityMultiple = Math.floor(
+    viewModel.quote.amount / MONTHLY_PRICE_USD,
+  );
 
   return (
     <section className="rounded-lg border border-line-subtle bg-surface-1 shadow-[0_24px_74px_rgba(0,0,0,0.32)]">
@@ -407,6 +427,15 @@ function QuoteSummary({
           <p className="mb-3 max-w-3xl text-xs leading-5 text-ink-muted">
             Recovered revenue = any quiet estimate that books after you send a
             follow-up. Mark Got the Job to track it.
+          </p>
+          <p
+            data-testid="quote-price-check"
+            className="mb-4 max-w-3xl text-sm font-semibold leading-6 text-ink-strong"
+          >
+            If this {projectNoun} comes back, that&apos;s{" "}
+            {viewModel.quote.amountLabel} / ${MONTHLY_PRICE_USD} ={" "}
+            {opportunityMultiple}x a year of Quote Reclaim. No promises
+            &mdash; just the size of the opportunity.
           </p>
           <div className="flex flex-wrap items-center gap-3">
             <QuoteActions
@@ -566,13 +595,13 @@ function ReminderCard({
             source={`recovery_sequence_${card.key}`}
             tracking={messageTracking(viewModel, card.family)}
           />
-          {card.action?.showSendToday ? (
-            <SendEarlyButton
-              reminderId={card.action.reminderId}
-              followupNumber={card.action.followupNumber}
-              disabled={card.action.disabled}
-              messageType={card.action.messageType}
-            />
+          {card.isCurrent ? (
+            <a
+              href="#quote-command-panel"
+              className="rounded px-2 py-1 text-xs font-semibold text-ink-muted hover:text-ink-strong focus:outline-none focus-visible:ring-2 focus-visible:ring-focus"
+            >
+              ↑ sent from above
+            </a>
           ) : null}
         </div>
       </div>

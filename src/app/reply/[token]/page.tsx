@@ -53,7 +53,7 @@ export default async function PublicReplyPage({ params }: PageParams) {
 
   const { data: profile } = await supabase
     .from("profiles")
-    .select("email")
+    .select("email, contractor_phone")
     .eq("id", quote.user_id)
     .maybeSingle();
   const contractorFirstName = pickContractorName(profile?.email);
@@ -93,7 +93,12 @@ export default async function PublicReplyPage({ params }: PageParams) {
           </p>
         </section>
 
-        <ReplyForm token={token} />
+        <ReplyForm
+          token={token}
+          contractorFirstName={contractorFirstName}
+          contractorEmail={profile?.email ?? null}
+          contractorPhone={profile?.contractor_phone ?? null}
+        />
       </div>
     </main>
   );

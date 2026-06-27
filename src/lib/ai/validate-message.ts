@@ -15,7 +15,7 @@ export type ValidationResult = {
   reasons: string[];
 };
 
-export const MAX_MESSAGE_CHARS = 220;
+export const MAX_MESSAGE_CHARS = 320;
 
 // Multi-word and discriminative banned phrases. Multi-word entries are checked
 // as case-insensitive substrings; single tokens that match /^[a-z0-9]+$/ are
@@ -128,9 +128,26 @@ const CORPORATE_WORDS: readonly string[] = [
 // (e.g., "Remodeling" → "the remodel estimate"; "General Contracting" → "the project
 // estimate"). This map lets the trade check pass when a recognised synonym appears.
 const TRADE_KEYWORD_SYNONYMS: Record<string, string[]> = {
-  remodeling: ["remodel"],
+  remodeling: ["remodel", "project"],
+  "general contracting": ["project"],
+  other: ["estimate"],
   general: ["project"],
   contracting: ["project"],
+  concrete: ["driveway"],
+  roofing: ["roof"],
+  hvac: ["system"],
+  plumbing: ["job"],
+  electrical: ["work"],
+  painting: ["project"],
+  landscaping: ["project"],
+  fencing: ["fence"],
+  flooring: ["floor"],
+  windows: ["install"],
+  doors: ["install"],
+  siding: ["siding"],
+  drywall: ["work"],
+  tree: ["removal"],
+  service: ["removal"],
 };
 
 // Detect emoji without the `/u` flag for TS target compatibility:
@@ -269,26 +286,6 @@ export function validateMessage(
 
   const firstName = (ctx.firstName ?? "").trim();
   const firstNameLower = normalizeForScan(firstName);
-
-  if (ctx.followupNumber === 1 && firstNameLower) {
-    // Day 1 must lead with "Hey {FirstName}" — followed by either em-dash
-    // ("Hey Jane — Mike here.") or comma ("Hey Jane, I looked over..."). Both
-    // are natural contractor openings and the rewrite uses both for variation.
-    const okEmdash = lower.startsWith(`hey ${firstNameLower} —`);
-    const okComma = lower.startsWith(`hey ${firstNameLower},`);
-    if (!okEmdash && !okComma) {
-      reasons.push('day 1 must start with "Hey {FirstName} —" or "Hey {FirstName},"');
-    }
-  }
-
-  if (ctx.followupNumber === 2 && firstNameLower) {
-    if (!lower.startsWith(`${firstNameLower},`)) {
-      reasons.push('day 2 must start with "{FirstName},"');
-    }
-    if (/^(hi|hey)\b/i.test(trimmed)) {
-      reasons.push("day 2 must not start with a greeting");
-    }
-  }
 
   if (ctx.followupNumber === 3) {
     // Day 7 (Voss Takeaway). The canonical v0 omits the name entirely; v1/v3

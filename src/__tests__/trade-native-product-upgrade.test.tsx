@@ -160,7 +160,7 @@ describe("Sunday Night Reset", () => {
         "https://www.quotereclaim.com/quotes/quote-1?source=sunday-reset",
     });
     expect(email.body).toContain("You send every text");
-    expect(email.body).toContain("Nothing is sent to the homeowner");
+    expect(email.body).toContain("One tap. The message is ready.");
   });
 });
 
@@ -198,7 +198,7 @@ describe("Recovery Report attribution", () => {
   it("renders honest empty performance copy and hides the multiple at zero", () => {
     const reportPage = source("../app/(app)/recovery-report/page.tsx");
     expect(reportPage).toContain(
-      "Message performance appears after you send a few follow-ups",
+      "Not enough data yet — keep working your quotes. This fills in as you go.",
     );
     expect(reportPage).toContain("subscriptionMultiple != null");
     expect(reportPage).toContain("It is attribution help, not a guarantee");

@@ -30,6 +30,7 @@ export type ProfileStats = {
   is_paid: boolean;
   onboarding_done: boolean;
   briefing_enabled: boolean;
+  trade: string | null;
 };
 
 export async function listPendingQuotes(
@@ -94,6 +95,23 @@ export async function listRemindersForQuote(
   return (data ?? []) as ReminderRow[];
 }
 
+export async function listPendingReminders(
+  supabase: SupabaseClient,
+  userId: string,
+): Promise<ReminderRow[]> {
+  const { data, error } = await supabase
+    .from("reminders")
+    .select(
+      "id,user_id,quote_id,followup_number,message_type,message_text,framework_used,cta_type,send_at,sent,sent_at,paused_at,created_at",
+    )
+    .eq("user_id", userId)
+    .eq("sent", false)
+    .is("paused_at", null)
+    .order("send_at", { ascending: true });
+  if (error) throw new Error(`listPendingReminders failed: ${error.message}`);
+  return (data ?? []) as ReminderRow[];
+}
+
 export async function getProfileStats(
   supabase: SupabaseClient,
   userId: string,
@@ -101,7 +119,7 @@ export async function getProfileStats(
   const { data, error } = await supabase
     .from("profiles")
     .select(
-      "jobs_won, recovered_amount, usage_count, is_paid, onboarding_done, briefing_enabled",
+      "jobs_won, recovered_amount, usage_count, is_paid, onboarding_done, briefing_enabled, trade",
     )
     .eq("id", userId)
     .maybeSingle();
@@ -114,6 +132,7 @@ export async function getProfileStats(
     is_paid: Boolean(data.is_paid),
     onboarding_done: Boolean(data.onboarding_done),
     briefing_enabled: data.briefing_enabled !== false,
+    trade: data.trade ? String(data.trade) : null,
   };
 }
 

@@ -32,6 +32,7 @@ export default async function OnboardingRevealPage() {
       isPaid={isPaid}
       usageCount={usage}
       pendingCount={pendingCount}
+      defaultTrade={profile?.trade}
     />
   );
 }

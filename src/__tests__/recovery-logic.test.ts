@@ -167,17 +167,17 @@ describe("why-this-works varies by window", () => {
     const explanations = windows.map((w) => getWhyThisWorks(w));
     expect(new Set(explanations).size).toBe(4);
   });
-  it("warm mentions 'fresh'", () => {
-    expect(getWhyThisWorks("warm").toLowerCase()).toContain("fresh");
+  it("warm mentions early silence", () => {
+    expect(getWhyThisWorks("warm").toLowerCase()).toContain("early silence");
   });
   it("cooling mentions 'categories'", () => {
     expect(getWhyThisWorks("cooling").toLowerCase()).toContain("categories");
   });
-  it("cold mentions 'open, revise'", () => {
-    expect(getWhyThisWorks("cold").toLowerCase()).toContain("open, revise");
+  it("cold mentions an exit ramp", () => {
+    expect(getWhyThisWorks("cold").toLowerCase()).toContain("exit ramp");
   });
-  it("closeout mentions 'awkwardness'", () => {
-    expect(getWhyThisWorks("closeout").toLowerCase()).toContain("awkwardness");
+  it("closeout mentions mental clutter", () => {
+    expect(getWhyThisWorks("closeout").toLowerCase()).toContain("mental clutter");
   });
 });
 
@@ -186,17 +186,12 @@ describe("why-this-works varies by window", () => {
 // ---------------------------------------------------------------------------
 
 describe("one-tap options match recovery window", () => {
-  it("uses the same five playbook-aligned choices in every window", () => {
-    const expected = [
-      "Let's do it — what's next?",
-      "Price is the hold-up",
-      "Timing's off",
-      "Can we talk?",
-      "Went another way",
-    ];
-    for (const window of ["warm", "cooling", "cold", "closeout"] as const) {
-      expect(getOneTapOptions(window)).toEqual(expected);
-    }
+  it("uses the window-aware option sets", () => {
+    expect(getOneTapOptions("warm")).toHaveLength(4);
+    expect(getOneTapOptions("cooling")).toHaveLength(6);
+    expect(getOneTapOptions("cooling")).toContain("Still comparing");
+    expect(getOneTapOptions("cold")).toHaveLength(4);
+    expect(getOneTapOptions("closeout")).toHaveLength(4);
   });
 });
 
@@ -236,9 +231,7 @@ describe("recommended message matches recovery window", () => {
     const rec = getRecommendedMessage({ daysQuiet: 3, firstName: "Ali", trade: "concrete" });
     expect(rec.window).toBe("warm");
     expect(rec.messageFamily).toBe("Estimate Check");
-    expect(rec.message).toContain(
-      "any question on scope, timing, or price I can clear up here?",
-    );
+    expect(rec.message).toContain("any question on the driveway I can clear up?");
   });
   it("cooling message diagnoses timing/budget/scope", () => {
     const rec = getRecommendedMessage({ daysQuiet: 14, firstName: "Ali", trade: "electrical" });

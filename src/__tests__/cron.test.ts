@@ -510,12 +510,14 @@ describe("vercel.json cron schedule", () => {
 
   it("registers the contractor-only Sunday Reset once per week", () => {
     const parsed = JSON.parse(vercelConfig);
-    expect(parsed.crons).toEqual([
-      {
-        path: "/api/cron/weekly-briefing",
-        schedule: "0 19 * * 0",
-      },
-    ]);
+    expect(parsed.crons).toContainEqual({
+      path: "/api/cron/weekly-briefing",
+      schedule: "0 19 * * 0",
+    });
+    expect(parsed.crons).toContainEqual({
+      path: "/api/cron/reply-check",
+      schedule: "0 14 * * *",
+    });
   });
 
   it("cron route files still exist in the codebase", () => {

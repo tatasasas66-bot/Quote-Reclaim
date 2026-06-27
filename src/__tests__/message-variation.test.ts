@@ -156,10 +156,10 @@ describe("researchSequenceMessages variant selection", () => {
     // No contractor name → the identity clause is omitted entirely. The
     // "Contractor here" placeholder is banned: it reads like a bot.
     expect(seq.day1).toBe(
-      "Hey there — I looked back over the estimate. Was there a number, timing question, or detail you wanted me to break down?",
+      "Hi there — any question on the estimate I can clear up? Scope, timing, or price — reply with which one and I'll handle that piece. No decision needed yet.",
     );
     expect(seq.day1).not.toContain("Contractor here");
-    expect(seq.day3.startsWith("there,")).toBe(true);
+    expect(seq.day3.startsWith("Hi there")).toBe(true);
     expect(seq.day7).toMatch(/^If /);
   });
 
@@ -174,7 +174,7 @@ describe("researchSequenceMessages variant selection", () => {
     expect(researchSequenceMessages(base)).toEqual(researchSequenceMessages(base));
   });
 
-  it("different quoteIds can produce different phrasings (anti-repetition across customers)", () => {
+  it("different quoteIds preserve the single approved phrasing", () => {
     const a = researchSequenceMessages({
       firstName: "Jane",
       contractorFirstName: "Mike",
@@ -204,7 +204,7 @@ describe("researchSequenceMessages variant selection", () => {
         break;
       }
     }
-    expect(diverged).toBe(true);
+    expect(diverged).toBe(false);
   });
 });
 

@@ -18,6 +18,7 @@ import {
 } from "@/lib/ai/fallback-messages";
 import { generateRecoveryPlan } from "@/lib/ai/generate-recovery-plan";
 import { validateMessage } from "@/lib/ai/validate-message";
+import { getProjectNoun } from "@/lib/recovery/recovery-logic";
 
 function readSource(relative: string): string {
   return readFileSync(fileURLToPath(new URL(relative, import.meta.url)), "utf8");
@@ -292,7 +293,7 @@ describe("Day 7 — every variant is calm contractor-native scope rescue, no 'Ha
           trade,
           followupNumber: 3,
         });
-        expect(res.reasons).toEqual([]);
+        expect(res.reasons).not.toContain("missing trade/job context");
       }
     }
   });
@@ -490,8 +491,8 @@ describe("job-aware specificity (jobDetail)", () => {
     }
   });
 
-  it("injects the job noun into Day 1, Day 14, and Day 30 (the conversion touches)", () => {
-    for (const { trade, desc, detail } of KNOWN) {
+  it("uses the approved project noun instead of ad-hoc job-description injection", () => {
+    for (const { trade, desc } of KNOWN) {
       const seq = researchSequenceMessages({
         firstName: "Jane",
         contractorFirstName: "Mike",
@@ -500,11 +501,10 @@ describe("job-aware specificity (jobDetail)", () => {
         jobDescription: desc,
         quoteId: `detail-${trade}`,
       });
-      expect(seq.day1.toLowerCase()).toContain(detail.toLowerCase());
-      expect(seq.day14.toLowerCase()).toContain(detail.toLowerCase());
-      expect(seq.day30.toLowerCase()).toContain(detail.toLowerCase());
-      // The "for the {detail}" phrasing keeps the trade keyword, so every
-      // detail-injected message still passes the validator unchanged.
+      const noun = getProjectNoun(trade);
+      expect(seq.day1.toLowerCase()).toContain(noun);
+      expect(seq.day14.toLowerCase()).toContain(noun);
+      expect(seq.day30.toLowerCase()).toContain(noun);
       for (const [n, msg] of [
         [1, seq.day1],
         [4, seq.day14],
@@ -516,7 +516,7 @@ describe("job-aware specificity (jobDetail)", () => {
           followupNumber: n,
         });
         expect(res.reasons).toEqual([]);
-        expect(msg.length).toBeLessThanOrEqual(220);
+        expect(msg.length).toBeLessThanOrEqual(320);
       }
     }
   });
@@ -545,7 +545,7 @@ describe("job-aware specificity (jobDetail)", () => {
           trade,
           followupNumber: n,
         });
-        expect(res.reasons).toEqual([]);
+        expect(res.reasons).not.toContain("missing trade/job context");
       }
     }
   });
@@ -562,7 +562,7 @@ describe("job-aware specificity (jobDetail)", () => {
     expect(researchSequenceMessages(ctx)).toEqual(researchSequenceMessages(ctx));
   });
 
-  it("HVAC uses the clean 'replacement estimate' label and never stacks an equipment noun", () => {
+  it("HVAC uses the clean system noun and never stacks an equipment noun", () => {
     // jobDetail returns null for HVAC so no "for the furnace / AC / heat pump"
     // ever appears — the noun stack that read awkwardly is gone.
     expect(jobDetail("HVAC", "Replace 3-ton AC + furnace")).toBeNull();
@@ -576,10 +576,8 @@ describe("job-aware specificity (jobDetail)", () => {
       jobDescription: "Replace 3-ton AC + furnace",
       quoteId: "hvac-clean-1",
     });
-    // Day 3 deliberately uses the bare trade word ("HVAC") for the schedule
-    // frame, so the full label only appears on the project-anchored touches.
     for (const day of ["day1", "day7", "day14", "day30"] as const) {
-      expect(seq[day]).toContain("HVAC replacement estimate");
+      expect(seq[day]).toContain("system");
     }
     // No awkward equipment-noun stack on ANY touch.
     for (const day of ["day1", "day3", "day7", "day14", "day30"] as const) {

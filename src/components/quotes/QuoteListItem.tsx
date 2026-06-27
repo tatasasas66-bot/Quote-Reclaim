@@ -1,4 +1,5 @@
 import Link from "next/link";
+import type { ReactNode } from "react";
 import { ArrowRight, ClipboardList } from "lucide-react";
 import { RiskBadge } from "@/components/dashboard/RiskBadge";
 import { nextBestAction } from "@/lib/quotes/next-best-action";
@@ -23,9 +24,13 @@ const severityClass: Record<"info" | "rust" | "warning" | "success", string> = {
 export function QuoteListItem({
   quote,
   hasReply = false,
+  replyPrompt,
+  oneTapLabel,
 }: {
   quote: QuoteRow;
   hasReply?: boolean;
+  replyPrompt?: ReactNode;
+  oneTapLabel?: string | null;
 }) {
   const level = riskLevel(quote);
   const score = getRecoveryScore(quote);
@@ -48,10 +53,22 @@ export function QuoteListItem({
   const barFillPct = priorityBarFill(score.score);
 
   return (
-    <li>
+    <li className="overflow-hidden rounded-lg border border-line-subtle bg-surface-1 shadow-[0_16px_46px_rgba(0,0,0,0.22)]">
+      {oneTapLabel ? (
+        <Link
+          href={`/quotes/${quote.id}?reply=one-tap#reply-rescue-paths`}
+          className="flex flex-wrap items-center justify-between gap-2 border-b border-success/35 bg-success/10 px-4 py-3 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-focus"
+        >
+          <span className="font-black text-ink-strong">
+            ⚡ {displayName} tapped &apos;{oneTapLabel}&apos; via One-Tap Reply.
+          </span>
+          <span className="font-black text-success">Open the reply →</span>
+        </Link>
+      ) : null}
+      {replyPrompt}
       <Link
         href={`/quotes/${quote.id}`}
-        className="group block rounded-lg border border-line-subtle bg-surface-1 p-4 shadow-[0_16px_46px_rgba(0,0,0,0.22)] transition-colors hover:border-brand/45 hover:bg-surface-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-focus"
+        className="group block p-4 transition-colors hover:bg-surface-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-focus"
         aria-label={`Open recovery plan for ${displayName}`}
       >
         <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">

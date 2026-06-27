@@ -58,6 +58,7 @@ function toDisplaySignal(
     signal: signalLabel,
     evidence: signal.evidence,
     recommendedMove: signal.recommendedMove,
+    shameLine: "Replying should feel safe.",
     currentMoveAnchorId: signal.recommendedFollowupNumber
       ? `followup-${signal.recommendedFollowupNumber}`
       : null,

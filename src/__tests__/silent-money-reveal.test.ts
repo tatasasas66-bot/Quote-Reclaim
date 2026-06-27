@@ -315,7 +315,7 @@ describe("RevealClient — copy, CTAs, and brand guardrails", () => {
       /Skip — start with one quote instead/,
     );
     expect(revealClientSrc).toMatch(
-      /skipOnboardingAction\(\)[\s\S]{0,80}router\.push\("\/quotes\/new"\)/,
+      /skipOnboardingAction\(trade\)[\s\S]{0,80}router\.push\("\/quotes\/new"\)/,
     );
     // In-flow secondary path beside the textarea reinforces the same idea,
     // so a contractor who only sees CTAs next to inputs still finds it.

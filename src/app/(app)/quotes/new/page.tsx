@@ -89,7 +89,11 @@ export default async function NewQuotePage() {
             </div>
           </section>
 
-          <QuoteForm mode="create" action={createQuoteAction} />
+          <QuoteForm
+            mode="create"
+            action={createQuoteAction}
+            defaultTrade={profile?.trade}
+          />
         </div>
       )}
     </main>

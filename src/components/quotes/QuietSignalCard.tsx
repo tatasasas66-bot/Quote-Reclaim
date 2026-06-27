@@ -72,6 +72,9 @@ export function QuietSignalCard({
         <p className="mt-2 text-sm leading-7 text-ink-strong">
           {signal.recommendedMove}
         </p>
+        <p className="mt-2 text-xs leading-5 text-ink-muted">
+          {signal.shameLine}
+        </p>
         {signal.currentMoveAnchorId ? (
           <div className="mt-3">
             <Link

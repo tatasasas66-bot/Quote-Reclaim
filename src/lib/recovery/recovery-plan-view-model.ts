@@ -1,4 +1,3 @@
-import { fallbackMessages } from "@/lib/ai/fallback-messages";
 import { formatScheduleDateTime } from "@/lib/quotes/business-hours";
 import {
   canManualSendToday,
@@ -69,6 +68,7 @@ export type RecoveryPlanQuietSignal = {
   signal: string;
   evidence: string[];
   recommendedMove: string;
+  shameLine: string;
   currentMoveAnchorId: string | null;
 };
 
@@ -331,32 +331,20 @@ export function buildRecoveryPlanViewModel({
     move,
   });
 
-  const generatedSequence = fallbackMessages({
+  const messageContext = {
     firstName: quote.client_name,
     trade: quote.trade,
-    estimateAmount: quote.estimate_amount,
-    jobDescription: quote.job_description,
-    city: quote.city,
-    state: quote.state,
-    quoteId: quote.id,
-    daysSilent: daysQuiet,
-  });
-  const generatedByStep = new Map(
-    generatedSequence.map((message) => [message.followup_number, message.message]),
-  );
+  };
   const sequenceDefinition = SEQUENCE_BY_WINDOW[normalizedWindow];
   const sequenceCards = sequenceDefinition
     .slice(0, pendingReminders.length)
     .map((definition, index): RecoveryPlanSequenceCard => {
       const reminder = pendingReminders[index]!;
       const isCurrent = index === 0;
-      const message = isCurrent
-        ? currentMessage
-        : generatedByStep.get(definition.sourceStep) ?? "";
+      const message = getRecommendedMessage(definition.family, messageContext);
       const scheduledAt = isCurrent
         ? currentScheduledAt
         : reminder.send_at;
-      const action = isCurrent ? currentAction : null;
       return {
         key: messageKey(definition.family),
         anchorId: isCurrent
@@ -379,7 +367,7 @@ export function buildRecoveryPlanViewModel({
         smsMessage: message,
         whatsappMessage: message,
         isCurrent,
-        action,
+        action: null,
       };
     });
 
@@ -396,6 +384,7 @@ export function buildRecoveryPlanViewModel({
             ...centralizedQuietSignal.evidence,
           ],
           recommendedMove: centralizedQuietSignal.recommendedMove,
+          shameLine: centralizedQuietSignal.shameLine,
           currentMoveAnchorId:
             sequenceCards[0]?.anchorId ?? null,
         }
@@ -473,6 +462,6 @@ export function buildRecoveryPlanViewModel({
     sequenceCards,
     quietSignal,
     oneTapOptions: getOneTapOptions(recoveryWindow),
-    replyPlaybook: getReplyPlaybook(quote.trade),
+    replyPlaybook: getReplyPlaybook(quote.trade, quote.estimate_amount),
   };
 }

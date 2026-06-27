@@ -63,14 +63,13 @@ export function sundayResetEmail(input: {
   recoveryPlanUrl: string;
 }): { subject: string; body: string } {
   return {
-    subject: "Sunday Night Reset: one quote to work this week",
+    subject: `📌 This week's recovery move: ${input.quote.clientLabel}, $${Math.round(input.quote.amount).toLocaleString("en-US")}, ${input.quote.recoveryWindowLabel}`,
     body: [
-      `📌 This week's recovery move: ${input.quote.clientLabel}, $${Math.round(input.quote.amount).toLocaleString("en-US")}, ${input.quote.recoveryWindowLabel}.`,
-      "",
       `Text this today: ${input.recoveryPlanUrl}`,
       "",
-      "You send every text. Quote Reclaim just hands you the next move.",
-      "Nothing is sent to the homeowner from this reminder.",
+      "One tap. The message is ready.",
+      "",
+      "You send every text. We just hand you the next move.",
     ].join("\n"),
   };
 }

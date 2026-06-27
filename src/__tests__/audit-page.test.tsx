@@ -650,7 +650,7 @@ describe("funnel - value before signup", () => {
     });
     const copiedMessage = String(writeText.mock.calls[0]?.[0]);
     expect(copiedMessage).toMatch(/estimate/i);
-    expect(copiedMessage.charAt(0)).toBe(copiedMessage.charAt(0).toLowerCase());
+    expect(copiedMessage.charAt(0)).toBe(copiedMessage.charAt(0).toUpperCase());
     expect(screen.getByRole("button", { name: /Copied/i })).toBeTruthy();
   });
 

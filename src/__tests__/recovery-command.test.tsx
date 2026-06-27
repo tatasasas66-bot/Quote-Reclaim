@@ -273,12 +273,9 @@ describe("next-move wording contract", () => {
 // ───────────────────────────────────────────────────────────────────────
 
 describe("send-button safety on the quote detail page", () => {
-  it("only the next actionable card can render the send button", () => {
-    expect(viewModelSrc).toContain("const isActionable");
-    expect(viewModelSrc).toContain("showSendToday");
-    expect(detailPage).toMatch(
-      /\{card\.action\?\.showSendToday \?\s*\(\s*<SendEarlyButton/,
-    );
+  it("renders Send today only in the primary command panel", () => {
+    expect(detailPage.match(/<SendEarlyButton/g)).toHaveLength(1);
+    expect(detailPage).not.toMatch(/card\.action\?\.showSendToday/);
   });
 
   it("the next actionable email step shows the manual send button whether due OR future-queued", () => {
@@ -298,10 +295,7 @@ describe("send-button safety on the quote detail page", () => {
     // The render gate folds r.sent / paused / status into sendEarlyDisabled
     // AND requires isNextActionable, so a sent or later-sequence card cannot
     // render the button at all (not merely disabled — absent).
-    expect(viewModelSrc).toContain("const disabled =");
-    expect(viewModelSrc).toContain(
-      "const action = isCurrent ? currentAction : null",
-    );
+    expect(viewModelSrc).toContain("action: null");
     expect(detailPage).toContain("text={card.copyMessage}");
     expect(detailPage).toContain(
       "source={`recovery_sequence_${card.key}`}",
@@ -470,7 +464,7 @@ describe("follow-up copy bans", () => {
       trade: "Roofing",
       estimateAmount: 12_000,
     });
-    expect(seq.day1).toMatch(/^Hey Chris\b/);
+    expect(seq.day1).toMatch(/^Hi Chris\b/);
     expect(seq.day1).not.toContain("Contractor here");
     // The canonical v0 path (empty seed) omits the identity clause cleanly.
     const v0 = researchSequenceMessages({
@@ -480,7 +474,7 @@ describe("follow-up copy bans", () => {
       estimateAmount: 0,
     });
     expect(v0.day1).toBe(
-      "Hey there — I looked back over the estimate. Was there a number, timing question, or detail you wanted me to break down?",
+      "Hi there — any question on the estimate I can clear up? Scope, timing, or price — reply with which one and I'll handle that piece. No decision needed yet.",
     );
   });
 

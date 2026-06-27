@@ -30,6 +30,7 @@ type Props = {
    * exactly one bulk-import logic path.
    */
   surface?: "onboarding" | "import";
+  defaultTrade?: string | null;
 };
 
 import {
@@ -39,7 +40,15 @@ import {
   REVEAL_TRANSITION_MIN_MS,
 } from "./transition-and-copy";
 
-type Step = "input" | "preview" | "transitioning" | "reveal" | "submitting";
+type Step =
+  | "audit-saved"
+  | "input"
+  | "preview"
+  | "transitioning"
+  | "reveal"
+  | "submitting";
+
+const AUDIT_HANDOFF_KEY = "quote-reclaim:audit-result-v1";
 
 const PASTE_PLACEHOLDER = [
   "Jane Smith    8,500    2026-05-15",
@@ -61,13 +70,70 @@ export function RevealClient({
   usageCount,
   pendingCount,
   surface = "onboarding",
+  defaultTrade,
 }: Props) {
   const router = useRouter();
   const [step, setStep] = React.useState<Step>("input");
-  const [trade, setTrade] = React.useState<string>("Roofing");
+  const [trade, setTrade] = React.useState<string>(
+    defaultTrade && TRADES.includes(defaultTrade as (typeof TRADES)[number])
+      ? defaultTrade
+      : "Roofing",
+  );
   const [pasted, setPasted] = React.useState<string>("");
   const [parsed, setParsed] = React.useState<ParseSummary | null>(null);
   const [error, setError] = React.useState<string | null>(null);
+  const [auditPriorityIndex, setAuditPriorityIndex] = React.useState<number | null>(
+    null,
+  );
+  const fromAudit = auditPriorityIndex != null;
+
+  React.useEffect(() => {
+    if (surface !== "onboarding") return;
+    try {
+      const raw = window.sessionStorage.getItem(AUDIT_HANDOFF_KEY);
+      if (!raw) return;
+      const handoff = JSON.parse(raw) as {
+        trade?: string;
+        quotes?: ParsedQuote[];
+        priorityIndex?: number | null;
+      };
+      const rows = Array.isArray(handoff.quotes)
+        ? handoff.quotes
+            .slice(0, 3)
+            .filter(
+              (row) =>
+                row &&
+                typeof row.name === "string" &&
+                Number.isFinite(row.amount) &&
+                row.amount > 0,
+            )
+        : [];
+      if (rows.length === 0) return;
+      const savedTrade =
+        handoff.trade &&
+        TRADES.includes(handoff.trade as (typeof TRADES)[number])
+          ? handoff.trade
+          : trade;
+      setTrade(savedTrade);
+      setParsed({
+        rows,
+        skipped: 0,
+        totalAmount: rows.reduce((sum, row) => sum + row.amount, 0),
+        truncatedAt: null,
+      });
+      setPasted(
+        rows
+          .map((row) => `${row.name}\t${row.amount}\t${row.daysSilent}`)
+          .join("\n"),
+      );
+      setAuditPriorityIndex(handoff.priorityIndex ?? 1);
+      setStep("audit-saved");
+    } catch {
+      // A malformed or blocked session handoff falls back to normal onboarding.
+    }
+    // Read once on entry; changing the trade selector should not replay storage.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [surface]);
 
   // Free remaining = how many more quotes the free user can land via the
   // top-3 gate. Existing usage already counts against this allowance.
@@ -144,7 +210,16 @@ export function RevealClient({
       setStep("reveal");
       return;
     }
-    router.push("/dashboard");
+    try {
+      window.sessionStorage.removeItem(AUDIT_HANDOFF_KEY);
+    } catch {
+      // Non-fatal.
+    }
+    router.push(
+      fromAudit && result.priorityQuoteId
+        ? `/quotes/${result.priorityQuoteId}`
+        : "/dashboard",
+    );
   }
 
   async function handleSkip() {
@@ -154,7 +229,7 @@ export function RevealClient({
       router.push("/dashboard");
       return;
     }
-    await skipOnboardingAction();
+    await skipOnboardingAction(trade);
     router.push("/quotes/new");
   }
 
@@ -177,6 +252,52 @@ export function RevealClient({
             {headerSecondaryLabel}
           </button>
         </header>
+
+        {step === "audit-saved" && parsed ? (
+          <section className="mx-auto mt-10 w-full max-w-2xl border-y border-line-subtle py-8">
+            <p className="text-xs font-black uppercase tracking-widest text-brand">
+              Audit saved
+            </p>
+            <h1 className="mt-2 text-3xl font-black text-ink-strong sm:text-4xl">
+              Your audit is saved. Here&apos;s your #1 move.
+            </h1>
+            {(() => {
+              const priority =
+                parsed.rows.find((row) =>
+                  row.name.endsWith(String(auditPriorityIndex)),
+                ) ?? parsed.rows[0]!;
+              return (
+                <p className="mt-4 text-xl font-black text-ink-strong">
+                  {priority.name}, {formatCurrency(priority.amount)},{" "}
+                  {priority.daysSilent <= 7
+                    ? "Warm"
+                    : priority.daysSilent <= 21
+                      ? "Cooling"
+                      : priority.daysSilent < 45
+                        ? "Cold"
+                        : "Closeout"}.
+                </p>
+              );
+            })()}
+            <div className="mt-6 flex flex-col gap-3 sm:flex-row">
+              <Button
+                type="button"
+                size="lg"
+                onClick={() => void handleStartRecovering()}
+              >
+                Save and open the plan →
+              </Button>
+              <Button
+                type="button"
+                size="lg"
+                variant="ghost"
+                onClick={() => setStep("input")}
+              >
+                Add more estimates
+              </Button>
+            </div>
+          </section>
+        ) : null}
 
         {step === "input" && (
           <InputStep

@@ -54,10 +54,18 @@ export type ReplyPlaybookPath = {
     | "still_comparing"
     | "need_to_talk"
     | "went_another_way"
-    | "close_for_now";
+    | "close_for_now"
+    | "financing"
+    | "do_it_for_less";
   label: string;
   trigger: string;
   response: string;
+  whyThisWorks?: string;
+};
+
+export type RecoveryMessageContext = {
+  firstName?: string | null;
+  trade?: string | null;
 };
 
 // ---------------------------------------------------------------------------
@@ -177,18 +185,23 @@ export function getSequenceFamily(step: 1 | 2 | 3 | 4 | 5): MessageFamily {
 // ---------------------------------------------------------------------------
 
 export function getWhyThisWorks(window: RecoveryWindow): string {
-  switch (window) {
-    case "warm":
-      return "The estimate is still fresh, so one clear question is easier to answer than forcing a full decision.";
-    case "cooling":
-      return "It gives the homeowner simple categories to answer with instead of making them explain the whole situation.";
-    case "cold":
-      return "It avoids pressure and gives a simple open, revise, or close path.";
-    case "closeout":
-      return "It removes the awkwardness of saying no while leaving the door open to reopen later.";
-    default:
-      return "It asks a specific question, not 'any update?'. That makes it easier for the homeowner to answer.";
-  }
+  return getWhyThisWorksForFamily(getMessageFamily(window));
+}
+
+export function getWhyThisWorksForFamily(family: MessageFamily): string {
+  const explanations: Record<MessageFamily, string> = {
+    "Estimate Check":
+      "Early silence is normal. One low-pressure question is easier to answer than a decision.",
+    "Decision Friction":
+      "Homeowners stall because deciding feels like work. Named categories make replying cheap. If it's a pass, giving them permission to say 'no' makes them more likely to reply at all.",
+    "Scope Rescue":
+      "The full project can feel like too much. A trimmed scope unlocks a smaller yes.",
+    "Open, Revise, or Close":
+      "At this age they need an exit ramp. Three one-word options remove the awkwardness.",
+    "Clean Closeout":
+      "Old estimates become mental clutter. A clean close frees both sides and leaves the door open.",
+  };
+  return explanations[family];
 }
 
 /**
@@ -196,18 +209,7 @@ export function getWhyThisWorks(window: RecoveryWindow): string {
  * Step 3 (Scope Rescue) is not window-specific — it always uses the scope-rescue explanation.
  */
 export function getWhyThisWorksForStep(step: 1 | 2 | 3 | 4 | 5): string {
-  switch (step) {
-    case 1:
-      return "The estimate is still fresh, so one clear question is easier to answer than forcing a full decision.";
-    case 2:
-      return "It gives the homeowner simple categories to answer with instead of making them explain the whole situation.";
-    case 3:
-      return "If total cost or scope is the blocker, a smaller path gives them a way back without asking for a discount.";
-    case 4:
-      return "It turns silence into a simple status choice: keep open, revise, or close.";
-    case 5:
-      return "It removes the awkwardness of saying no while leaving the door open to reopen later.";
-  }
+  return getWhyThisWorksForFamily(getSequenceFamily(step));
 }
 
 // ---------------------------------------------------------------------------
@@ -215,14 +217,24 @@ export function getWhyThisWorksForStep(step: 1 | 2 | 3 | 4 | 5): string {
 // ---------------------------------------------------------------------------
 
 export function getOneTapOptions(window: RecoveryWindow): string[] {
-  void window;
-  return [
-    "Let's do it — what's next?",
-    "Price is the hold-up",
-    "Timing's off",
-    "Can we talk?",
-    "Went another way",
-  ];
+  switch (window) {
+    case "cooling":
+      return [
+        "Let's do it",
+        "Price is the hold-up",
+        "Timing's off",
+        "Still comparing",
+        "Can we talk?",
+        "Went another way",
+      ];
+    case "cold":
+      return ["Keep open", "Revise it", "Close it for now", "Went another direction"];
+    case "closeout":
+      return ["Reopen later", "Close it", "Still possible", "Went another direction"];
+    case "warm":
+    case "unknown":
+      return ["Have one question", "Still reviewing", "Timing is the issue", "Not right now"];
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -234,6 +246,7 @@ export function getQuietSignal(window: RecoveryWindow): {
   stallReason: string;
   evidence: string[];
   recommendedMove: string;
+  shameLine: string;
 } {
   switch (window) {
     case "warm":
@@ -241,10 +254,12 @@ export function getQuietSignal(window: RecoveryWindow): {
         signal: "Early",
         stallReason: "Normal early silence",
         evidence: [
-          "This estimate is still fresh.",
+          "The quote is still fresh.",
           "There is not enough reply history to call a specific stall reason.",
         ],
         recommendedMove: "Send one clear, low-pressure question today.",
+        shameLine:
+          "Homeowners often go quiet early because answering feels like committing. This message makes replying safe.",
       };
     case "cooling":
       return {
@@ -254,6 +269,8 @@ export function getQuietSignal(window: RecoveryWindow): {
           "The homeowner may be stuck on timing, budget, scope, or comparison.",
         ],
         recommendedMove: "Use a message that gives them easy categories to answer with.",
+        shameLine:
+          "Homeowners often go quiet because saying 'I can't afford it' feels embarrassing. This message gives them a way to say 'budget' without the shame.",
       };
     case "cold":
       return {
@@ -263,6 +280,8 @@ export function getQuietSignal(window: RecoveryWindow): {
           "The estimate is older and pressure may reduce replies.",
         ],
         recommendedMove: "Send an open, revise, or close message today.",
+        shameLine:
+          "At this age, the silence is usually about not knowing how to say no. Three one-word exits make it easy.",
       };
     case "closeout":
       return {
@@ -273,66 +292,82 @@ export function getQuietSignal(window: RecoveryWindow): {
         ],
         recommendedMove:
           "Close it professionally while leaving the door open to reopen later.",
+        shameLine:
+          "Old quotes become mental clutter for both sides. A clean close frees everyone.",
       };
     default:
       return {
         signal: "Early",
         stallReason: "Normal early silence",
-        evidence: ["This estimate is still fresh."],
+        evidence: ["The quote is still fresh."],
         recommendedMove: "Send one clear, low-pressure question today.",
+        shameLine:
+          "Homeowners often go quiet early because answering feels like committing. This message makes replying safe.",
       };
   }
 }
 
 // ---------------------------------------------------------------------------
-// Recommended message — per recovery window (deterministic, no AI)
+// Recommended messages — one deterministic family library for every surface
 // ---------------------------------------------------------------------------
 
-export function getRecommendedMessage(input: {
+type WindowRecommendationInput = {
   daysQuiet: number | null;
   firstName?: string | null;
   trade?: string | null;
-}): {
+};
+
+type WindowRecommendation = {
   message: string;
   window: RecoveryWindow;
   messageFamily: MessageFamily;
   whyThisWorks: string;
   oneTapOptions: string[];
-} {
-  const window = getRecoveryWindow(input.daysQuiet);
-  const name = input.firstName?.trim() || null;
-  const noun = getProjectNoun(input.trade);
-  const greeting = name ? `Hi ${name} — ` : "";
+};
 
-  let message: string;
-  switch (window) {
-    case "warm":
-      message = name
-        ? `${greeting}any question on scope, timing, or price I can clear up here?`
-        : "Any question on scope, timing, or price I can clear up here?";
-      break;
-    case "cooling":
-      message = `${greeting}no pressure on the ${noun}. If it's timing, budget, or one part of the scope that's holding it up, reply with which one and I'll sharpen that piece. If it's a pass, 'no' works too — no awkward follow-up from me.`;
-      break;
-    case "cold":
-      message = `I can keep this ${noun} open, revise it, or close it out. Which helps most?`;
-      break;
-    case "closeout":
-      message = `I'll close out the ${noun} on my side so it's off your plate. If the timing changes later, text me here and I'll send a fresh number — no restart, no re-quote, no awkward conversation.`;
-      break;
-    default:
-      message = name
-        ? `${greeting}any question on scope, timing, or price I can clear up here?`
-        : "Any question on scope, timing, or price I can clear up here?";
+export function getRecommendedMessage(
+  family: MessageFamily,
+  context: RecoveryMessageContext,
+): string;
+export function getRecommendedMessage(
+  input: WindowRecommendationInput,
+): WindowRecommendation;
+export function getRecommendedMessage(
+  familyOrInput: MessageFamily | WindowRecommendationInput,
+  context?: RecoveryMessageContext,
+): string | WindowRecommendation {
+  if (typeof familyOrInput === "string") {
+    const name = cleanFirstName(context?.firstName);
+    const noun = getProjectNoun(context?.trade);
+    const messages: Record<MessageFamily, string> = {
+      "Estimate Check":
+        `Hi ${name} — any question on the ${noun} I can clear up? Scope, timing, or price — reply with which one and I'll handle that piece. No decision needed yet.`,
+      "Decision Friction":
+        `Hi ${name} — no pressure on the ${noun}. If it's timing, budget, or one part of the scope that's holding it up, reply with which one and I'll sharpen that piece. If it's a pass, 'no' works too — no awkward follow-up from me.`,
+      "Scope Rescue":
+        `If the ${noun} is close but the total's holding it up, I can trim it to just the must-do piece — same quality, smaller number. Want me to send that version?`,
+      "Open, Revise, or Close":
+        `${name} — I can keep this ${noun} open, revise it, or close it out. Which helps most? One word is enough.`,
+      "Clean Closeout":
+        `${name} — I'll close out the ${noun} on my side so it's off your plate. If the timing changes later, text me here and I'll send a fresh number — no restart, no re-quote, no awkward conversation.`,
+    };
+    return messages[familyOrInput];
   }
 
+  const window = getRecoveryWindow(familyOrInput.daysQuiet);
+  const messageFamily = getMessageFamily(window);
   return {
-    message,
+    message: getRecommendedMessage(messageFamily, familyOrInput),
     window,
-    messageFamily: getMessageFamily(window),
+    messageFamily,
     whyThisWorks: getWhyThisWorks(window),
     oneTapOptions: getOneTapOptions(window),
   };
+}
+
+function cleanFirstName(value: string | null | undefined): string {
+  const first = value?.trim().split(/\s+/)[0] ?? "";
+  return first || "there";
 }
 
 // ---------------------------------------------------------------------------
@@ -371,9 +406,10 @@ export function getProjectNoun(trade: string | null | undefined): string {
 
 export function getReplyPlaybook(
   trade: string | null | undefined,
+  estimateAmount?: number | null,
 ): ReplyPlaybookPath[] {
   const noun = getProjectNoun(trade);
-  return [
+  const paths: ReplyPlaybookPath[] = [
     {
       id: "still_interested",
       label: "Still interested",
@@ -385,8 +421,7 @@ export function getReplyPlaybook(
       id: "price_concern",
       label: "Price concern",
       trigger: "Price is the hold-up",
-      response:
-        "Totally fair. I can break it into must-do, optional, and later — so you see exactly what drives the total and pick the piece that fits. Want me to send that breakdown?",
+      response: `Totally fair. I can break the ${noun} into must-do, optional, and later — so you see exactly what drives the total and pick the piece that fits. Want me to send that breakdown?`,
     },
     {
       id: "bad_timing",
@@ -427,7 +462,34 @@ export function getReplyPlaybook(
       trigger: "Not right now",
       response: `No problem — I'll close it out on my side. If the timing changes later, text me here and I'll pull the ${noun} back up. No re-quote needed.`,
     },
+    {
+      id: "do_it_for_less",
+      label: "Can you do it for less?",
+      trigger: "Can you do it for less?",
+      response:
+        "Honest answer: I can't cut the price without cutting the work behind it. What I CAN do is trim the scope to a smaller version — same quality, smaller number. Want me to send that option?",
+      whyThisWorks:
+        "Discounting kills margin. Trimming scope protects both the price and the quality.",
+    },
   ];
+  if (Number(estimateAmount ?? 0) > 5_000) {
+    paths.splice(8, 0, {
+      id: "financing",
+      label: "Financing",
+      trigger: "Payment timing",
+      response: `If payment timing is the hold-up, I can split the ${noun} into a deposit + milestone payments so the total doesn't hit all at once. Want me to send how that would look?`,
+      whyThisWorks:
+        "Big totals stall on cash flow, not disinterest. Splitting it removes the payment fear.",
+    });
+  }
+  return paths;
+}
+
+export function buildPaymentPlanMessage(
+  trade: string | null | undefined,
+): string {
+  const noun = getProjectNoun(trade);
+  return `Here's how we can split the ${noun}: 30% deposit to start, 40% at midpoint, 30% on completion. That keeps the total from hitting all at once. Want me to set that up?`;
 }
 
 const SCOPE_COMPARISON_ITEMS: Readonly<Record<string, readonly string[]>> = {

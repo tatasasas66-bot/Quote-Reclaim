@@ -144,9 +144,9 @@ describe("warm message", () => {
   it("has quick_check family", () => {
     expect(gen.messageFamily).toBe("quick_check");
   });
-  it("has 5 playbook-aligned one-tap options", () => {
-    expect(gen.oneTapOptions).toHaveLength(5);
-    expect(gen.oneTapOptions).toContain("Price is the hold-up");
+  it("has the warm one-tap options", () => {
+    expect(gen.oneTapOptions).toHaveLength(4);
+    expect(gen.oneTapOptions).toContain("Have one question");
   });
   it("whyThisMessage mentions the estimate is fresh", () => {
     expect(gen.whyThisMessage.toLowerCase()).toContain("fresh");
@@ -167,8 +167,8 @@ describe("cooling message", () => {
   it("has friction_diagnosis family", () => {
     expect(gen.messageFamily).toBe("friction_diagnosis");
   });
-  it("has the 5 playbook-aligned one-tap options", () => {
-    expect(gen.oneTapOptions).toHaveLength(5);
+  it("has the six cooling one-tap options", () => {
+    expect(gen.oneTapOptions).toHaveLength(6);
     expect(gen.oneTapOptions).toContain("Timing's off");
     expect(gen.oneTapOptions).toContain("Can we talk?");
   });
@@ -191,9 +191,9 @@ describe("cold message", () => {
   it("has open_revise_close family", () => {
     expect(gen.messageFamily).toBe("open_revise_close");
   });
-  it("has the 5 playbook-aligned one-tap options", () => {
-    expect(gen.oneTapOptions).toHaveLength(5);
-    expect(gen.oneTapOptions).toContain("Went another way");
+  it("has the cold one-tap options", () => {
+    expect(gen.oneTapOptions).toHaveLength(4);
+    expect(gen.oneTapOptions).toContain("Went another direction");
   });
   it("whyThisMessage mentions open, revise, or close", () => {
     expect(gen.whyThisMessage.toLowerCase()).toMatch(/open|revise|close/);
@@ -218,9 +218,9 @@ describe("closeout message", () => {
   it("has clean_closeout family", () => {
     expect(gen.messageFamily).toBe("clean_closeout");
   });
-  it("has the 5 playbook-aligned one-tap options", () => {
-    expect(gen.oneTapOptions).toHaveLength(5);
-    expect(gen.oneTapOptions).toContain("Went another way");
+  it("has the closeout one-tap options", () => {
+    expect(gen.oneTapOptions).toHaveLength(4);
+    expect(gen.oneTapOptions).toContain("Went another direction");
   });
   it("whyThisMessage mentions removing awkwardness or leaving the door open", () => {
     expect(gen.whyThisMessage.toLowerCase()).toMatch(/awkward|door|reopen/);
@@ -267,7 +267,7 @@ describe("first name handling", () => {
   it("warm message works without first name", () => {
     const gen = generateFollowupMessage({ daysSilent: 3, firstName: null });
     expect(gen.message).not.toContain("Hi Jane");
-    expect(gen.message).toMatch(/^Any question/i);
+    expect(gen.message).toMatch(/^Hi there/i);
   });
   it("cold message does not use first name (direct opener)", () => {
     const gen = generateFollowupMessage({ daysSilent: 30, firstName: "Jane" });

@@ -3,7 +3,10 @@
 import * as React from "react";
 import { createOneTapLinkForQuote } from "@/app/(app)/quotes/[id]/one-tap-actions";
 import type { LatestOneTapReply } from "@/lib/quotes/one-tap-reply-server";
-import { ONE_TAP_CHOICES } from "@/lib/quotes/one-tap-choices";
+import {
+  ONE_TAP_CHOICES,
+  STILL_COMPARING_MARKER,
+} from "@/lib/quotes/one-tap-choices";
 import { getReplyPlaybook } from "@/lib/recovery/recovery-logic";
 
 type OneTapReplyCardProps = {
@@ -129,7 +132,10 @@ function LatestReplyPanel({
     went_another_way: "went_another_way",
   } as const;
   const branchId =
-    latestReply.answerType in branchMap
+    latestReply.answerType === "question" &&
+    latestReply.questionText === STILL_COMPARING_MARKER
+      ? "still_comparing"
+      : latestReply.answerType in branchMap
       ? branchMap[latestReply.answerType as keyof typeof branchMap]
       : null;
   const branch = branchId

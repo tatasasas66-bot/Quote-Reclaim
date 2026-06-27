@@ -148,9 +148,7 @@ describe("age-aware message parity — cron matches UI for each window", () => {
     });
     expect(rec.window).toBe("warm");
     expect(rec.messageFamily).toBe("Estimate Check");
-    expect(rec.message).toContain(
-      "any question on scope, timing, or price I can clear up here?",
-    );
+    expect(rec.message).toContain("any question on the work I can clear up?");
   });
 });
 

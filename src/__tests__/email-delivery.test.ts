@@ -377,7 +377,7 @@ describe("/quotes/[id]: channel-aware intro copy", () => {
   });
 
   it("passes messageType to SendEarlyButton so it picks the right action", () => {
-    expect(detailPage).toContain("messageType={card.action.messageType}");
+    expect(detailPage).toContain("messageType={action.messageType}");
   });
 });
 

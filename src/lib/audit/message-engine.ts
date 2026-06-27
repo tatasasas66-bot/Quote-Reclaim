@@ -15,7 +15,9 @@
 import {
   getOneTapOptions,
   getProjectNoun as centralizedGetProjectNoun,
+  getRecommendedMessage,
   getRecoveryWindow,
+  getWhyThisWorksForFamily,
 } from "@/lib/recovery/recovery-logic";
 
 export type MessageWindow = "warm" | "cooling" | "cold" | "closeout";
@@ -113,73 +115,84 @@ export function generateFollowupMessage(input: {
   trade?: string | null;
 }): GeneratedMessage {
   const window = messageWindowForDays(input.daysSilent);
-  const noun = projectNounForTrade(input.trade);
   const name = input.firstName?.trim() || null;
 
   switch (window) {
     case "warm":
-      return warmMessage(name);
+      return warmMessage(name, input.trade);
     case "cooling":
-      return coolingMessage(name, noun);
+      return coolingMessage(name, input.trade);
     case "cold":
-      return coldMessage(noun);
+      return coldMessage(input.trade);
     case "closeout":
-      return closeoutMessage(noun);
+      return closeoutMessage(input.trade);
   }
 }
 
-function warmMessage(name: string | null): GeneratedMessage {
-  const greeting = name ? `Hi ${name} — ` : "";
+function warmMessage(
+  name: string | null,
+  trade: string | null | undefined,
+): GeneratedMessage {
   return {
-    message: name
-      ? `${greeting}any question on scope, timing, or price I can clear up here?`
-      : "Any question on scope, timing, or price I can clear up here?",
+    message: getRecommendedMessage("Estimate Check", {
+      firstName: name,
+      trade,
+    }),
     window: "warm",
     messageFamily: "quick_check",
     whyThisMessage:
       "The estimate is still fresh, so the goal is to reopen the conversation with one easy question.",
-    whyThisWorks:
-      "It asks for one small question instead of forcing the homeowner to make a full decision.",
+    whyThisWorks: getWhyThisWorksForFamily("Estimate Check"),
     oneTapOptions: getOneTapOptions("warm"),
   };
 }
 
-function coolingMessage(name: string | null, projectNoun: string): GeneratedMessage {
-  const greeting = name ? `Hi ${name} — ` : "";
+function coolingMessage(
+  name: string | null,
+  trade: string | null | undefined,
+): GeneratedMessage {
   return {
-    message: `${greeting}no pressure on the ${projectNoun}. If it's timing, budget, or one part of the scope that's holding it up, reply with which one and I'll sharpen that piece. If it's a pass, 'no' works too — no awkward follow-up from me.`,
+    message: getRecommendedMessage("Decision Friction", {
+      firstName: name,
+      trade,
+    }),
     window: "cooling",
     messageFamily: "friction_diagnosis",
     whyThisMessage:
       "The homeowner may be stuck on timing, budget, or scope. This message gives them easy categories to answer with.",
-    whyThisWorks:
-      "It gives the homeowner easy categories to answer with, instead of making them explain the whole situation.",
+    whyThisWorks: getWhyThisWorksForFamily("Decision Friction"),
     oneTapOptions: getOneTapOptions("cooling"),
   };
 }
 
-function coldMessage(projectNoun: string): GeneratedMessage {
+function coldMessage(
+  trade: string | null | undefined,
+): GeneratedMessage {
   return {
-    message: `I can keep this ${projectNoun} open, revise it, or close it out. Which helps most?`,
+    message: getRecommendedMessage("Open, Revise, or Close", {
+      trade,
+    }),
     window: "cold",
     messageFamily: "open_revise_close",
     whyThisMessage:
       "The quote is older, so the goal is not pressure. The message gives them a simple open, revise, or close choice.",
-    whyThisWorks:
-      "It gives the homeowner control and turns silence into a simple status choice.",
+    whyThisWorks: getWhyThisWorksForFamily("Open, Revise, or Close"),
     oneTapOptions: getOneTapOptions("cold"),
   };
 }
 
-function closeoutMessage(projectNoun: string): GeneratedMessage {
+function closeoutMessage(
+  trade: string | null | undefined,
+): GeneratedMessage {
   return {
-    message: `I'll close out the ${projectNoun} on my side so it's off your plate. If the timing changes later, text me here and I'll send a fresh number — no restart, no re-quote, no awkward conversation.`,
+    message: getRecommendedMessage("Clean Closeout", {
+      trade,
+    }),
     window: "closeout",
     messageFamily: "clean_closeout",
     whyThisMessage:
       "It removes the awkwardness of saying no and leaves the door open if the project becomes active later.",
-    whyThisWorks:
-      "It removes the guilt of saying no and gives the homeowner a safe way to reopen later.",
+    whyThisWorks: getWhyThisWorksForFamily("Clean Closeout"),
     oneTapOptions: getOneTapOptions("closeout"),
   };
 }

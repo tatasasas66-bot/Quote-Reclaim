@@ -12,6 +12,9 @@ import { RecoveryWindowAlert } from "@/components/dashboard/RecoveryWindowAlert"
 import { WonJobsGallery } from "@/components/dashboard/WonJobsGallery";
 import { ActivityFeed } from "@/components/dashboard/ActivityFeed";
 import { SundayNightReset } from "@/components/dashboard/SundayNightReset";
+import { TodaysMoves } from "@/components/dashboard/TodaysMoves";
+import { ReplyCheckPrompt } from "@/components/dashboard/ReplyCheckPrompt";
+import { PwaInstallHint } from "@/components/dashboard/PwaInstallHint";
 import { IntelligencePanel } from "@/components/intelligence/IntelligencePanel";
 import { requireUser } from "@/lib/auth/require-user";
 import {
@@ -19,6 +22,7 @@ import {
   listWonQuotes,
   getProfileStats,
   getMonthlyRecoveryActivity,
+  listPendingReminders,
   type QuoteRow,
 } from "@/lib/quotes/repo";
 import { effectiveDaysSilent } from "@/lib/recovery/effective-days";
@@ -27,6 +31,16 @@ import { getRecoveryScore } from "@/lib/quotes/recovery-score";
 import { FREE_PLAN_LIMIT } from "@/lib/payments/entitlement";
 import { paddleClientConfigured } from "@/lib/payments/paddle-provider";
 import { formatCurrency } from "@/lib/utils/currency";
+import { listAuditEvents } from "@/lib/audit-events";
+import {
+  calculateRecoveryStreak,
+  selectReplyChecks,
+  selectTodaysMoves,
+} from "@/lib/recovery/daily-loop";
+import {
+  ONE_TAP_CHOICES,
+  STILL_COMPARING_MARKER,
+} from "@/lib/quotes/one-tap-choices";
 
 export const metadata: Metadata = { title: "Dashboard – Quote Reclaim" };
 export const dynamic = "force-dynamic";
@@ -38,7 +52,8 @@ export default async function DashboardPage() {
   const monthStartMs = monthStartUtc();
   const nextMonthStartMs = nextMonthStartUtc();
 
-  const [pending, wonQuotes, profile, monthlyActivity] = await Promise.all([
+  const [pending, wonQuotes, profile, monthlyActivity, reminders, auditEvents] =
+    await Promise.all([
     listPendingQuotes(supabase, user.id),
     listWonQuotes(supabase, user.id),
     getProfileStats(supabase, user.id),
@@ -48,7 +63,38 @@ export default async function DashboardPage() {
       new Date(monthStartMs).toISOString(),
       new Date(nextMonthStartMs).toISOString(),
     ),
+    listPendingReminders(supabase, user.id),
+    listAuditEvents(supabase, user.id),
   ]);
+
+  const quoteIds = pending.map((quote) => quote.id);
+  const oneTapResult =
+    quoteIds.length > 0
+      ? await supabase
+          .from("one_tap_replies")
+          .select("quote_id,answer_type,question_text,created_at")
+          .in("quote_id", quoteIds)
+          .order("created_at", { ascending: false })
+      : { data: [], error: null };
+  const oneTapByQuote = new Map<string, string>();
+  for (const reply of oneTapResult.data ?? []) {
+    const quoteId = String(reply.quote_id);
+    if (oneTapByQuote.has(quoteId)) continue;
+    const choice = ONE_TAP_CHOICES.find(
+      (option) =>
+        (option.answerType === reply.answer_type &&
+          option.answerType !== "question") ||
+        (option.id === "still_comparing" &&
+          reply.answer_type === "question" &&
+          reply.question_text === STILL_COMPARING_MARKER),
+    );
+    if (choice) oneTapByQuote.set(quoteId, choice.label);
+  }
+  const todaysMoves = selectTodaysMoves({ quotes: pending, reminders });
+  const streak = calculateRecoveryStreak(auditEvents);
+  const replyChecks = new Map(
+    selectReplyChecks(auditEvents).map((check) => [check.quoteId, check]),
+  );
 
   // Silent Money Reveal — first-run flow. New users (no quotes yet AND
   // onboarding_done flag still false) get the bulk-import reveal so their
@@ -110,6 +156,8 @@ export default async function DashboardPage() {
 
   return (
     <main className="mx-auto flex min-h-screen w-full max-w-7xl flex-col gap-8 bg-canvas px-4 pt-8 pb-[calc(6rem+env(safe-area-inset-bottom))] sm:px-6 sm:pb-8 lg:px-8">
+      <PwaInstallHint />
+      <TodaysMoves moves={todaysMoves} streak={streak} />
       <header className="border-b border-line-subtle/80 pb-5">
         <div className="flex items-center justify-between gap-3">
           <p className="whitespace-nowrap text-xs font-semibold uppercase tracking-widest text-brand">
@@ -243,6 +291,12 @@ export default async function DashboardPage() {
               >
                 Paste more quotes →
               </Link>
+              <Link
+                href="/quotes/new?voice=1"
+                className="rounded text-sm font-semibold text-ink-muted hover:text-ink-strong focus:outline-none focus-visible:ring-2 focus-visible:ring-focus"
+              >
+                🎙 Add by voice
+              </Link>
               <Link href="/quotes/new">
                 <Button size="sm">+ Add Silent Quote</Button>
               </Link>
@@ -253,15 +307,35 @@ export default async function DashboardPage() {
             // Slim, secondary hint — the First Recovery Command panel above is
             // the single focal point on an empty dashboard, so this stays quiet
             // and just explains what will land here.
-            <p className="rounded-lg border border-dashed border-line-subtle bg-surface-1 px-5 py-6 text-sm leading-6 text-ink-muted">
-              Quiet estimates land here ranked by dollars, risk, age, and next
-              move — so you always know what deserves action and what to leave
-              alone.
-            </p>
+            <div className="rounded-lg border border-dashed border-line-subtle bg-surface-1 px-5 py-6">
+              <p className="text-sm leading-6 text-ink-muted">
+                No quiet quotes yet. Add your first — amount and days quiet —
+                and we&apos;ll tell you what to text today.
+              </p>
+              <Link
+                href="/quotes/new"
+                className="mt-3 inline-flex min-h-10 items-center rounded-md bg-brand px-3 py-2 text-sm font-black text-canvas focus:outline-none focus-visible:ring-2 focus-visible:ring-focus"
+              >
+                Add Silent Quote →
+              </Link>
+            </div>
           ) : (
             <ul className="grid gap-3">
               {pending.map((q) => (
-                <QuoteListItem key={q.id} quote={q} />
+                <QuoteListItem
+                  key={q.id}
+                  quote={q}
+                  oneTapLabel={oneTapByQuote.get(q.id) ?? null}
+                  replyPrompt={
+                    replyChecks.has(q.id) ? (
+                      <ReplyCheckPrompt
+                        quoteId={q.id}
+                        clientName={q.client_name}
+                        reaskCount={replyChecks.get(q.id)!.reaskCount}
+                      />
+                    ) : null
+                  }
+                />
               ))}
             </ul>
           )}

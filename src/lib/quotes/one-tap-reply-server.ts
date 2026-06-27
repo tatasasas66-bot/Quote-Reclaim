@@ -13,6 +13,7 @@ import {
   mapAnswerTypeToReplyIntent,
   type OneTapAnswerType,
 } from "./one-tap-reply";
+import { recordAuditEvent } from "@/lib/audit-events";
 
 export type IssuedLink = {
   /** The full public URL the email should embed. */
@@ -191,6 +192,18 @@ export async function recordOneTapReply(
       `[one-tap] recovery_events insert failed code=${evtError.code ?? "unknown"}`,
     );
   }
+
+  await recordAuditEvent(supabase, {
+    userId: input.userId,
+    quoteId: input.quoteId,
+    type: "one_tap_reply",
+    meta: {
+      option:
+        input.answerType === "question" && input.questionText
+          ? input.questionText
+          : input.answerType,
+    },
+  });
 
   // Pause unsent reminders — exactly what email-inbound / twilio-inbound do.
   // A reply through any channel should stop the rest of the sequence.

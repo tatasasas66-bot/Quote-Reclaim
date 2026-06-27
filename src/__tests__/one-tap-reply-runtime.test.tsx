@@ -4,6 +4,7 @@ import * as React from "react";
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ReplyForm } from "@/app/reply/[token]/ReplyForm";
+import { STILL_COMPARING_MARKER } from "@/lib/quotes/one-tap-choices";
 import { OneTapReplyCard } from "@/components/quotes/OneTapReplyCard";
 
 const submitOneTapReply = vi.fn();
@@ -35,13 +36,14 @@ describe("ReplyForm playbook alignment", () => {
     ["Let's do it — what's next?", "interested"],
     ["Price is the hold-up", "price_concern"],
     ["Timing's off", "bad_timing"],
+    ["Still comparing", "question"],
     ["Can we talk?", "need_to_talk"],
     ["Went another way", "went_another_way"],
   ] as const;
 
-  it("renders exactly the five customer choices", () => {
+  it("renders exactly the six customer choices", () => {
     render(<ReplyForm token="token-123" />);
-    expect(screen.getAllByRole("button")).toHaveLength(5);
+    expect(screen.getAllByRole("button")).toHaveLength(6);
     for (const [label] of choices) {
       expect(screen.getByRole("button", { name: label })).toBeTruthy();
     }
@@ -52,10 +54,19 @@ describe("ReplyForm playbook alignment", () => {
       render(<ReplyForm token="token-123" />);
       fireEvent.click(screen.getByRole("button", { name: label }));
       await waitFor(() =>
-        expect(submitOneTapReply).toHaveBeenCalledWith({
-          token: "token-123",
-          answerType,
-        }),
+        expect(submitOneTapReply).toHaveBeenCalledWith(
+          label === "Still comparing"
+            ? {
+                token: "token-123",
+                answerType,
+                questionText: STILL_COMPARING_MARKER,
+              }
+            : {
+                token: "token-123",
+                answerType,
+                questionText: undefined,
+              },
+        ),
       );
     });
   }

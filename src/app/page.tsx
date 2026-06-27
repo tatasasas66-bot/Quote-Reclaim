@@ -22,6 +22,19 @@ export const metadata: Metadata = {
 
 const trustPills = ["No customer names", "No phone numbers", "No card", "Result first"] as const;
 
+const monthlyIncludes = [
+  "Unlimited quiet quotes",
+  "5-message recovery sequences per quote",
+  "10-branch reply playbook (price, timing, scope, financing, do-it-for-less, and more)",
+  "One-Tap Reply (homeowner replies in 5 seconds)",
+  "Manual SMS + WhatsApp (one-tap, from your phone)",
+  "Got-the-Job recovered revenue tracking",
+  "Monthly Recovery Report",
+  "Crew Gap Rescue",
+  "Recovery streak + daily due-queue",
+  "Sunday Night Reset",
+] as const;
+
 const bridgeSteps = [
   {
     step: "01",
@@ -187,7 +200,7 @@ const faqs = [
   },
   {
     q: "Why do homeowners go quiet after a quote?",
-    a: "Sometimes it is price. Sometimes timing. Sometimes they are comparing bids. Sometimes saying “no” just feels awkward, so they say nothing. Quote Reclaim gives them a cleaner way to answer — budget, timing, scope, call, or no — so you are not stuck sending “just checking in.”",
+    a: "Mostly shame. Saying 'I can't afford it' or 'I went with someone cheaper' feels humiliating, so they say nothing. Quote Reclaim's messages give the homeowner permission to say 'budget' or 'no' without the embarrassment — which is why they actually reply.",
   },
 ] as const;
 
@@ -226,6 +239,12 @@ export default function HomePage() {
               low-pressure message to send today, and the next move to keep every sent estimate moving
               until it books, pauses, or closes. Before buying another lead, check the estimates you
               already sent.
+            </p>
+            <p className="mt-3 max-w-2xl break-words text-sm font-semibold leading-6 text-ink">
+              Homeowners don&apos;t ghost because they&apos;re busy. They ghost
+              because saying &apos;I can&apos;t afford it&apos; feels humiliating.
+              Quote Reclaim gives them a way to answer that doesn&apos;t feel
+              embarrassing.
             </p>
             <p className="mt-3 max-w-xl break-words text-sm leading-6 text-ink-muted">
               Free 60-second audit. No names, no phone numbers, no card. See
@@ -468,6 +487,7 @@ export default function HomePage() {
                 "Let's do it — what's next?",
                 "Price is the hold-up",
                 "Timing's off",
+                "Still comparing",
                 "Can we talk?",
                 "Went another way",
               ].map((choice) => (
@@ -575,12 +595,34 @@ export default function HomePage() {
       </SectionShell>
 
       <SectionShell id="price-math" eyebrow="Price math">
-        <div className="grid gap-7 lg:grid-cols-[0.8fr_1.2fr] lg:items-center">
+        <div className="grid gap-7 lg:grid-cols-[0.8fr_1.2fr] lg:items-start">
           <SectionHeading
             title="One recovered job can make the math obvious."
             body={`Quote Reclaim is ${PAYWALL_PRICE_LABEL}. One recovered estimate can cover it many times over.`}
           />
-          <PriceMathCard />
+          <div className="grid gap-5">
+            <PriceMathCard />
+            <div className="border-y border-line-subtle py-5">
+              <h3 className="text-xl font-black text-ink-strong">
+                $79/month includes:
+              </h3>
+              <ul className="mt-4 grid gap-2 sm:grid-cols-2">
+                {monthlyIncludes.map((item) => (
+                  <li key={item} className="flex gap-2 text-sm leading-6 text-ink">
+                    <CheckCircle2
+                      className="mt-1 h-4 w-4 shrink-0 text-success"
+                      aria-hidden="true"
+                    />
+                    <span>{item}</span>
+                  </li>
+                ))}
+              </ul>
+              <p className="mt-4 text-sm font-semibold text-ink-muted">
+                No card to see your result. First 3 estimates free. Cancel
+                anytime.
+              </p>
+            </div>
+          </div>
         </div>
       </SectionShell>
 

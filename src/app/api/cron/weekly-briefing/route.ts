@@ -10,6 +10,7 @@ import {
 } from "@/lib/recovery/sunday-reset";
 import { requireCronAuth } from "@/lib/security/require-cron";
 import { createServiceSupabaseClient } from "@/lib/supabase/service";
+import { recordAuditEvent } from "@/lib/audit-events";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -148,6 +149,12 @@ async function handleBriefing(request: NextRequest): Promise<NextResponse> {
     });
     if (result.ok) {
       sent += 1;
+      await recordAuditEvent(supabase, {
+        userId,
+        quoteId: pick.id,
+        type: "sunday_reset_sent",
+        meta: { expectedRecoveryValue: pick.expectedRecoveryValue },
+      });
     } else {
       errors.push({ user_id: userId, code: "email_send_failed" });
     }

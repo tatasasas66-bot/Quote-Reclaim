@@ -146,7 +146,7 @@ describe("quote detail command-center hierarchy", () => {
       quoteId: "roofing-non-painting",
     });
     const all = Object.values(seq).join(" ");
-    expect(all).toMatch(/roofing/i);
+    expect(all).toMatch(/roof/i);
     expect(all).not.toMatch(/painting/i);
   });
 

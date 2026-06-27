@@ -7,6 +7,8 @@ import { requireUser } from "@/lib/auth/require-user";
 import { MONTHLY_PRICE_USD } from "@/lib/payments/entitlement";
 import { getRecoveryReportData } from "@/lib/recovery/recovery-report";
 import { formatCurrency } from "@/lib/utils/currency";
+import { recordAuditEvent } from "@/lib/audit-events";
+import { tradeLabel } from "@/lib/quotes/quote-display";
 
 export const metadata: Metadata = {
   title: "Recovery Report - Quote Reclaim",
@@ -18,6 +20,11 @@ export default async function RecoveryReportPage() {
   if (!user || !supabase) redirect("/sign-in");
 
   const report = await getRecoveryReportData(supabase, user.id);
+  await recordAuditEvent(supabase, {
+    userId: user.id,
+    type: "recovery_report_viewed",
+    meta: { month: report.monthLabel },
+  });
   const subscriptionMultiple =
     report.estimatedRecoveredThisMonth > 0
       ? report.estimatedRecoveredThisMonth / MONTHLY_PRICE_USD
@@ -41,7 +48,7 @@ export default async function RecoveryReportPage() {
             Recovery Report
           </p>
           <h1 className="mt-2 text-3xl font-black text-ink-strong sm:text-4xl">
-            What came back after the follow-up.
+            {report.monthLabel} Recovery Report
           </h1>
           <p className="mt-3 max-w-3xl text-sm leading-6 text-ink-muted">
             This report counts quiet estimates that booked after a follow-up
@@ -49,34 +56,16 @@ export default async function RecoveryReportPage() {
           </p>
         </section>
 
-        <section
-          aria-label="Recovery metrics"
-          className="grid border-b border-line-subtle sm:grid-cols-2 lg:grid-cols-3"
-        >
-          <Metric
-            label="Follow-ups sent this month"
-            value={String(report.followupsSentThisMonth)}
-          />
-          <Metric
-            label="Replies received this month"
-            value={String(report.repliesReceivedThisMonth)}
-          />
-          <Metric
-            label="Jobs booked this month"
-            value={String(report.jobsBookedThisMonth)}
-          />
-          <Metric
-            label="Estimated recovered revenue"
-            value={formatCurrency(report.estimatedRecoveredThisMonth)}
-          />
-          <Metric
-            label="All-time recovered revenue"
-            value={formatCurrency(report.allTimeRecoveredRevenue)}
-          />
-          <Metric
-            label="Quotes still at risk"
-            value={String(report.quotesStillAtRisk)}
-          />
+        <section aria-label="Recovery funnel" className="border-b border-line-subtle py-7">
+          <div className="grid gap-3 md:grid-cols-[1fr_auto_1fr_auto_1fr_auto_1fr] md:items-center">
+            <Metric label="Follow-ups sent" value={String(report.followupsSentThisMonth)} />
+            <ArrowRight className="hidden h-5 w-5 text-ink-muted md:block" aria-hidden="true" />
+            <Metric label="Replies received" value={String(report.repliesReceivedThisMonth)} />
+            <ArrowRight className="hidden h-5 w-5 text-ink-muted md:block" aria-hidden="true" />
+            <Metric label="Jobs booked" value={String(report.jobsBookedThisMonth)} />
+            <ArrowRight className="hidden h-5 w-5 text-ink-muted md:block" aria-hidden="true" />
+            <Metric label="Recovered revenue" value={formatCurrency(report.estimatedRecoveredThisMonth)} />
+          </div>
         </section>
 
         {subscriptionMultiple != null ? (
@@ -141,20 +130,77 @@ export default async function RecoveryReportPage() {
               id="message-performance-title"
               className="mt-2 text-2xl font-black text-ink-strong"
             >
-              Message performance needs a little history.
+              {report.messagePerformanceReady
+                ? "Reply rate by message family"
+                : "Messages that worked"}
             </h2>
-            <p className="mt-3 text-sm leading-6 text-ink-muted">
-              Message performance appears after you send a few follow-ups.
-              Quote Reclaim will not guess from an empty sample.
-            </p>
+            {report.messagePerformanceReady ? (
+              <ol className="mt-4 divide-y divide-line-subtle border-y border-line-subtle">
+                {report.messagePerformance.map((row) => (
+                  <li key={row.family} className="flex items-center justify-between gap-4 py-3">
+                    <span className="text-sm font-bold text-ink-strong">{row.family}</span>
+                    <span className="text-sm tabular-nums text-ink-muted">
+                      {Math.round(row.replyRate * 100)}% · {row.replies}/{row.opened}
+                    </span>
+                  </li>
+                ))}
+              </ol>
+            ) : (
+              <p className="mt-3 text-sm leading-6 text-ink-muted">
+                Not enough data yet — keep working your quotes. This fills in as you go.
+              </p>
+            )}
           </section>
         </div>
+
+        <section className="grid gap-8 border-t border-line-subtle py-8 lg:grid-cols-2">
+          <div>
+            <p className="text-xs font-black uppercase tracking-widest text-brand">
+              Top recovered trade
+            </p>
+            <p className="mt-2 text-2xl font-black text-ink-strong">
+              {report.topRecoveredTrade
+                ? tradeLabel(report.topRecoveredTrade)
+                : "Not enough data yet"}
+            </p>
+          </div>
+          <div>
+            <p className="text-xs font-black uppercase tracking-widest text-brand">
+              Quotes still at risk
+            </p>
+            {report.atRiskQuotes.length > 0 ? (
+              <ul className="mt-3 divide-y divide-line-subtle border-y border-line-subtle">
+                {report.atRiskQuotes.slice(0, 5).map((quote) => (
+                  <li key={quote.id} className="flex items-center justify-between gap-3 py-3">
+                    <Link className="font-bold text-ink-strong" href={`/quotes/${quote.id}`}>
+                      {quote.clientName}
+                    </Link>
+                    <span className="text-sm text-ink-muted">
+                      {formatCurrency(quote.amount)} · {quote.daysQuiet} days quiet
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="mt-3 text-sm text-ink-muted">
+                Not enough data yet — keep working your quotes. This fills in as you go.
+              </p>
+            )}
+          </div>
+        </section>
 
         <p className="flex items-start gap-2 border-t border-line-subtle py-6 text-xs leading-5 text-ink-muted">
           <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
           Recovered revenue is tracked, estimated attribution. It does not
           claim Quote Reclaim caused the job.
         </p>
+        <Link
+          href="/dashboard?focus=today"
+          className="mb-8 inline-flex min-h-11 items-center gap-2 rounded-md bg-brand px-4 py-2 text-sm font-black text-canvas focus:outline-none focus-visible:ring-2 focus-visible:ring-focus"
+        >
+          Keep the streak going
+          <ArrowRight className="h-4 w-4" aria-hidden="true" />
+        </Link>
       </div>
     </main>
   );
@@ -162,11 +208,11 @@ export default async function RecoveryReportPage() {
 
 function Metric({ label, value }: { label: string; value: string }) {
   return (
-    <div className="min-w-0 border-b border-line-subtle py-6 sm:px-5 sm:first:pl-0 lg:border-b-0">
+    <div className="min-w-0 py-3">
       <p className="text-xs font-black uppercase tracking-widest text-ink-muted">
         {label}
       </p>
-      <p className="mt-3 break-words text-3xl font-black tabular-nums text-ink-strong">
+      <p className="mt-2 break-words text-2xl font-black tabular-nums text-ink-strong">
         {value}
       </p>
     </div>

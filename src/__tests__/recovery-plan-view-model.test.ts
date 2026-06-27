@@ -163,18 +163,13 @@ describe("buildRecoveryPlanViewModel", () => {
     }
   });
 
-  it("keeps the reply playbook aligned to five One-Tap choices", () => {
-    expect(build(2).replyPlaybook).toHaveLength(8);
-    const expected = [
-      "Let's do it — what's next?",
-      "Price is the hold-up",
-      "Timing's off",
-      "Can we talk?",
-      "Went another way",
-    ];
-    for (const days of [2, 14, 30, 52]) {
-      expect(build(days).oneTapOptions).toEqual(expected);
-    }
+  it("ships all ten reply paths and window-aware One-Tap choices", () => {
+    expect(build(2).replyPlaybook).toHaveLength(10);
+    expect(build(2).oneTapOptions).toHaveLength(4);
+    expect(build(14).oneTapOptions).toContain("Still comparing");
+    expect(build(14).oneTapOptions).toHaveLength(6);
+    expect(build(30).oneTapOptions).toHaveLength(4);
+    expect(build(52).oneTapOptions).toHaveLength(4);
   });
 
   it("never leaks stale persisted reminder copy into customer-facing messages", () => {

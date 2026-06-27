@@ -26,6 +26,7 @@ import { AuditResultView } from "./AuditResultView";
 import { WINDOW_TONES } from "./audit-presentation";
 
 const ROW_COUNT = 3;
+export const AUDIT_HANDOFF_KEY = "quote-reclaim:audit-result-v1";
 const DEFAULT_SAMPLE_ROWS = [
   { amount: "3200", days: "14" },
   { amount: "5800", days: "24" },
@@ -224,6 +225,24 @@ export function AuditCalculatorClient() {
       window.setTimeout(() => {
         setAnalysisStep(null);
         setResult(audit);
+        try {
+          window.sessionStorage.setItem(
+            AUDIT_HANDOFF_KEY,
+            JSON.stringify({
+              trade: tradeConfig.trade,
+              quotes: audit.quotes.map((quote) => ({
+                name: `Quote #${quote.index}`,
+                amount: quote.amount,
+                daysSilent: quote.daysSilent ?? 0,
+                email: null,
+              })),
+              priorityIndex: audit.priority?.index ?? null,
+              window: audit.priority?.window ?? null,
+            }),
+          );
+        } catch {
+          // The audit result remains usable when session storage is blocked.
+        }
         track("audit_completed", {
           quote_count: audit.quotes.length,
           has_days_silent: audit.quotes.some((quote) => quote.daysSilent != null),
