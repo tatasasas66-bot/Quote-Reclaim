@@ -158,7 +158,10 @@ export default async function DashboardPage() {
     <main className="mx-auto flex min-h-screen w-full max-w-7xl flex-col gap-8 bg-canvas px-4 pt-8 pb-[calc(6rem+env(safe-area-inset-bottom))] sm:px-6 sm:pb-8 lg:px-8">
       <PwaInstallHint />
       <TodaysMoves moves={todaysMoves} streak={streak} />
-      <header className="border-b border-line-subtle/80 pb-5">
+      <header
+        id="silent-quote-command"
+        className="scroll-mt-4 border-b border-line-subtle/80 pb-5"
+      >
         <div className="flex items-center justify-between gap-3">
           <p className="whitespace-nowrap text-xs font-semibold uppercase tracking-widest text-brand">
             QUOTE RECLAIM
