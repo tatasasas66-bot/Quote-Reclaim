@@ -60,10 +60,16 @@ export function TodaysMoves({
           </h2>
         </div>
         <div className="flex flex-wrap items-center justify-end gap-x-4 gap-y-2">
-          <div className="flex items-center gap-2 text-sm font-black text-warning">
-            <Flame className="h-5 w-5" aria-hidden="true" />
-            {streak.count}-day recovery streak
-          </div>
+          {streak.count > 0 ? (
+            <div className="flex items-center gap-2 text-sm font-black text-warning">
+              <Flame className="h-5 w-5" aria-hidden="true" />
+              {streak.count}-day recovery streak
+            </div>
+          ) : (
+            <p className="text-sm font-semibold text-ink-muted">
+              Your recovery streak starts with your first move.
+            </p>
+          )}
           {moves.length > 0 ? (
             <a
               href="#silent-quote-command"

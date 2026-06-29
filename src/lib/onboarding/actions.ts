@@ -21,6 +21,7 @@ export type ImportResult =
   | { ok: false; error: string };
 
 const ALLOWED_TRADES = new Set<string>(TRADES);
+const AUDIT_IMPORT_LIMIT = 3;
 
 const MAX_AMOUNT_USD = 10_000_000;
 const MAX_NAME_LEN = 200;
@@ -54,28 +55,34 @@ function quoteSentAtFromDaysSilent(daysSilent: number): string {
 
 /**
  * Bulk-import silent quotes from the Reveal flow. Server is the security
- * boundary — re-validates every row, caps at MAX_IMPORT_ROWS, and uses the
- * existing per-row free-trial gate (check_and_increment_usage). Free users
- * land their top 3 by amount; the rest are skipped (the dashboard paywall
- * surfaces the remaining $ as upgrade pressure). Paid users land all rows.
+ * boundary — re-validates every row and caps at MAX_IMPORT_ROWS. Reusable
+ * imports use the existing per-row free-trial gate. A first-run audit may
+ * save three result rows once without consuming the manual quote allowance.
  *
  * Always marks onboarding_done = true so the user is never bounced back to
  * this flow on the next sign-in.
  */
 export async function importSilentQuotesAction(input: {
   trade: string;
+  projectType?: string;
   rows: ParsedQuote[];
+  origin?: "audit" | "bulk";
 }): Promise<ImportResult> {
   const userClient = createServerSupabaseClient();
   const { data: userData } = await userClient.auth.getUser();
   if (!userData.user) return { ok: false, error: "Not signed in" };
 
   const trade = String(input.trade ?? "").trim();
+  const projectType = String(input.projectType ?? "").trim().slice(0, 80);
+  const auditImport = input.origin === "audit";
+  const effectiveProjectType = projectType || (auditImport ? "Estimate" : null);
   if (!ALLOWED_TRADES.has(trade)) {
     return { ok: false, error: "Unrecognized trade" };
   }
 
-  const rawRows = Array.isArray(input.rows) ? input.rows : [];
+  const rawRows = Array.isArray(input.rows)
+    ? input.rows.slice(0, auditImport ? AUDIT_IMPORT_LIMIT : MAX_IMPORT_ROWS)
+    : [];
   if (rawRows.length === 0) {
     return { ok: false, error: "Nothing to import" };
   }
@@ -98,21 +105,39 @@ export async function importSilentQuotesAction(input: {
   const serviceClient = createServiceSupabaseClient();
   const userId = userData.user.id;
 
+  if (auditImport) {
+    const { data: claimedProfile, error: claimError } = await serviceClient
+      .from("profiles")
+      .update({ onboarding_done: true, trade })
+      .eq("id", userId)
+      .eq("onboarding_done", false)
+      .select("id")
+      .maybeSingle();
+    if (claimError || !claimedProfile) {
+      return {
+        ok: false,
+        error:
+          "This audit has already been saved. Open the dashboard to continue.",
+      };
+    }
+  }
+
   let imported = 0;
   let priorityQuoteId: string | null = null;
   let skippedByGate = 0;
   const totalSilent = cleaned.reduce((s, r) => s + r.amount, 0);
 
   for (const row of cleaned) {
-    // Use the existing per-row gate — never bypass the free allowance,
-    // even for bulk imports. This is the security contract of the trial.
-    const gate = await serviceClient.rpc("check_and_increment_usage", {
-      p_user_id: userId,
-    });
-    const gateResult = gate.data as { allowed: boolean } | null;
-    if (gate.error || !gateResult || !gateResult.allowed) {
-      skippedByGate++;
-      continue;
+    // Except for the one-time audit save, every row uses the existing gate.
+    if (!auditImport) {
+      const gate = await serviceClient.rpc("check_and_increment_usage", {
+        p_user_id: userId,
+      });
+      const gateResult = gate.data as { allowed: boolean } | null;
+      if (gate.error || !gateResult || !gateResult.allowed) {
+        skippedByGate++;
+        continue;
+      }
     }
 
     const normalizedName = titleCaseName(row.name);
@@ -131,6 +156,7 @@ export async function importSilentQuotesAction(input: {
       .insert({
         user_id: userId,
         trade,
+        project_type: effectiveProjectType,
         city: "",
         state: "",
         estimate_amount: row.amount,
@@ -175,6 +201,7 @@ export async function importSilentQuotesAction(input: {
         firstName: normalizedName.split(/\s+/)[0] || "there",
         contractorFirstName: null,
         trade,
+        projectType: effectiveProjectType,
         estimateAmount: row.amount,
         jobDescription: null,
         city: null,

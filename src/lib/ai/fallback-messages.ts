@@ -60,15 +60,9 @@ const ALIASES: Record<string, string> = {
   patio: "concrete",
 };
 
-// Full "the X estimate" noun phrase — used where a message wants the complete
-// reference ("looked back over the roofing estimate").
 const PROJECT_LABELS: Record<string, string> = {
   roofing: "the roofing estimate",
   plumbing: "the plumbing estimate",
-  // HVAC reads as a noun-stack when an equipment detail is appended
-  // ("the HVAC estimate for the furnace"). The ICP is replacement/install,
-  // so the richer label carries the specificity itself and HVAC is excluded
-  // from per-job detail injection below.
   hvac: "the HVAC replacement estimate",
   electrical: "the electrical estimate",
   remodeling: "the remodel estimate",
@@ -130,11 +124,19 @@ export function projectLabel(
   projectType?: string | null,
 ): string {
   if (projectType?.trim()) {
-    return `the ${getProjectNoun(trade, projectType)} estimate`;
+    const noun = getProjectNoun(trade, projectType);
+    return noun === "estimate" ? "the estimate" : `the ${noun} estimate`;
   }
   const lower = trade.trim().toLowerCase();
   if (!lower) return "the estimate";
   return resolveTrade(trade, PROJECT_LABELS, `the ${lower} estimate`);
+}
+
+export function oneTapProjectLabel(
+  trade: string,
+  projectType?: string | null,
+): string {
+  return projectType?.trim() ? projectLabel(trade, projectType) : "the estimate";
 }
 
 export function tradeWord(trade: string): string {
@@ -222,17 +224,17 @@ const JOB_NOUNS: Record<string, ReadonlyArray<[RegExp, string]>> = {
   ],
 };
 
-/** Resolve a freeform trade string to the canonical JOB_NOUNS / PROJECT_LABELS key. */
+/** Resolve a freeform trade string to the canonical JOB_NOUNS key. */
 function canonicalTradeKey(trade: string): string {
   const lower = trade.trim().toLowerCase();
   if (!lower) return "other";
-  if (PROJECT_LABELS[lower]) return lower;
+  if (JOB_NOUNS[lower]) return lower;
   const aliasMatch = ALIASES[lower];
   if (aliasMatch) return aliasMatch.toLowerCase();
   for (const [alias, canonical] of Object.entries(ALIASES)) {
     if (lower.includes(alias)) return canonical.toLowerCase();
   }
-  for (const key of Object.keys(PROJECT_LABELS)) {
+  for (const key of Object.keys(JOB_NOUNS)) {
     if (lower.includes(key)) return key;
   }
   return "other";

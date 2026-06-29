@@ -3,6 +3,7 @@ import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import {
   fallbackMessages,
+  oneTapProjectLabel,
   projectLabel,
   researchSequenceMessages,
 } from "@/lib/ai/fallback-messages";
@@ -82,7 +83,7 @@ describe("homeowner message engine v2", () => {
     }
   });
 
-  it("prefers project type and preserves legacy trade fallback", () => {
+  it("prefers project type and keeps One-Tap neutral when it is missing", () => {
     expect(getProjectNoun("Concrete", "Patio")).toBe("patio");
     expect(getProjectNoun("Concrete", "Driveway")).toBe("driveway");
     expect(getProjectNoun("Concrete", null)).toBe("driveway");
@@ -91,6 +92,10 @@ describe("homeowner message engine v2", () => {
       "the driveway estimate",
     );
     expect(projectLabel("Concrete", null)).toBe("the concrete estimate");
+    expect(oneTapProjectLabel("Concrete", "Patio")).toBe(
+      "the patio estimate",
+    );
+    expect(oneTapProjectLabel("Roofing", null)).toBe("the estimate");
   });
 
   it("adds spouse approval and manual persistent-silence branches", () => {

@@ -18,6 +18,7 @@ import {
   parseDaysSilent,
   parseSilentQuotesInput,
 } from "@/lib/onboarding/parse-quotes";
+import { resolveAuditHandoffTrade } from "@/lib/onboarding/audit-handoff";
 
 function readSource(rel: string): string {
   return readFileSync(fileURLToPath(new URL(rel, import.meta.url)), "utf8");
@@ -210,9 +211,28 @@ describe("importSilentQuotesAction — security contract", () => {
     expect(actionSrc).toContain("check_and_increment_usage");
     // The gate is called inside the per-row loop.
     expect(actionSrc).toMatch(
-      /for \(const row of cleaned\)[\s\S]*?check_and_increment_usage/,
+      /for \(const row of cleaned\)[\s\S]*?if \(!auditImport\)[\s\S]*?check_and_increment_usage/,
     );
     expect(actionSrc).toMatch(/if \(gate\.error \|\| !gateResult \|\| !gateResult\.allowed\)/);
+  });
+
+  it("saves at most three audit rows once without consuming manual usage", () => {
+    expect(actionSrc).toContain("AUDIT_IMPORT_LIMIT = 3");
+    expect(actionSrc).toMatch(
+      /auditImport \? AUDIT_IMPORT_LIMIT : MAX_IMPORT_ROWS/,
+    );
+    expect(actionSrc).toMatch(
+      /\.eq\("onboarding_done", false\)[\s\S]*?\.select\("id"\)/,
+    );
+    expect(actionSrc).not.toMatch(/usage_count\s*:/);
+  });
+
+  it("persists the selected project type into quotes and recovery plans", () => {
+    expect(actionSrc).toContain(
+      'effectiveProjectType = projectType || (auditImport ? "Estimate" : null)',
+    );
+    expect(actionSrc).toContain("project_type: effectiveProjectType");
+    expect(actionSrc).toContain("projectType: effectiveProjectType");
   });
 
   it("sorts cleaned rows by amount DESC so the top-value quotes get the trial slots", () => {
@@ -300,6 +320,28 @@ describe("/onboarding/reveal page — auth-gated", () => {
 });
 
 describe("RevealClient — copy, CTAs, and brand guardrails", () => {
+  it("normalizes a trusted concrete source without defaulting generic traffic", () => {
+    expect(resolveAuditHandoffTrade("concrete", null)).toBe("Concrete");
+    expect(resolveAuditHandoffTrade("default", null)).toBe("");
+    expect(resolveAuditHandoffTrade("default", "Roofing")).toBe("");
+    expect(resolveAuditHandoffTrade(null, null)).toBe("");
+    expect(resolveAuditHandoffTrade(null, "Roofing")).toBe("Roofing");
+  });
+
+  it("asks for trade and project type before saving the audit plan", () => {
+    expect(revealClientSrc).toContain("What kind of estimate is this?");
+    expect(revealClientSrc).toContain('id="audit-trade"');
+    expect(revealClientSrc).toContain('id="audit-project-type"');
+    expect(revealClientSrc).toContain("getProjectTypeOptions(trade)");
+    expect(revealClientSrc).toMatch(/disabled=\{!trade\}/);
+  });
+
+  it("passes audit origin, trade, and project type to the server action", () => {
+    expect(revealClientSrc).toMatch(
+      /importSilentQuotesAction\(\{[\s\S]*?trade,[\s\S]*?projectType,[\s\S]*?origin: fromAudit \? "audit" : "bulk"/,
+    );
+  });
+
   it("renders the 4-step flow: paste/preview/transitioning/reveal", () => {
     expect(revealClientSrc).toContain('"input"');
     expect(revealClientSrc).toContain('"preview"');

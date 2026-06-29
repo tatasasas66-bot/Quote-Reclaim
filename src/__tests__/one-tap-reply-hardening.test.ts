@@ -43,6 +43,10 @@ const publicPage = readSource("../app/reply/[token]/page.tsx");
 const replyForm = readSource("../app/reply/[token]/ReplyForm.tsx");
 const quoteDetailSrc = readSource("../app/(app)/quotes/[id]/page.tsx");
 const oneTapCard = readSource("../components/quotes/OneTapReplyCard.tsx");
+const quoteActions = readSource("../lib/quotes/actions.ts");
+const oneTapActions = readSource(
+  "../app/(app)/quotes/[id]/one-tap-actions.ts",
+);
 
 // ───────────────────────────────────────────────────────────────────────
 // 1. Token mint — secure raw + persisted hash, never the raw token
@@ -235,15 +239,32 @@ describe("[7] invalid/tampered/missing links render the same 'unavailable' page"
 // ───────────────────────────────────────────────────────────────────────
 
 describe("[8] public reply page leaks no contractor or customer private data", () => {
-  it("renders only: trade label, dollar amount, and contractor first name", () => {
-    // The current project type is preferred, with the trade phrase retained
-    // for legacy quotes where project_type is null.
+  it("uses the edited quote's live project type for every fresh token", () => {
+    expect(quoteActions).toMatch(
+      /\.update\(\{[\s\S]*?trade: input\.trade,[\s\S]*?project_type: input\.project_type \|\| null/,
+    );
+    expect(oneTapActions).toContain(
+      "issueOneTapLink(supabase, quoteId, null)",
+    );
+    expect(publicPage).toMatch(
+      /\.eq\("id", link\.quoteId\)[\s\S]*?\.maybeSingle\(\)/,
+    );
+    expect(publicPage).toContain(
+      "oneTapProjectLabel(quote.trade, quote.project_type)",
+    );
+  });
+
+  it("renders only: current project label, dollar amount, and contractor first name", () => {
+    // The current project type is preferred; legacy null project types are
+    // rendered with the neutral estimate fallback.
     // Dollar amount comes from estimate_amount via formatCurrency.
     // Contractor first name comes from the email LOCAL PART only (never the
     // full email), via pickContractorName.
     expect(publicPage).toContain(
-      "projectLabel(quote.trade, quote.project_type)",
+      "oneTapProjectLabel(quote.trade, quote.project_type)",
     );
+    expect(publicPage).toContain('export const dynamic = "force-dynamic"');
+    expect(publicPage).toContain("noStore();");
     expect(publicPage).toMatch(
       /select\([\s\S]*?project_type[\s\S]*?\)\s*\.eq\("id", link\.quoteId\)/,
     );

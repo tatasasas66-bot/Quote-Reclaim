@@ -22,11 +22,12 @@ import {
   type AuditResult,
 } from "@/lib/audit/silent-quote-audit";
 import { resolveTradeConfig, type TradeConfig } from "@/lib/audit/trade-config";
+import { AUDIT_HANDOFF_KEY } from "@/lib/onboarding/audit-handoff";
 import { AuditResultView } from "./AuditResultView";
 import { WINDOW_TONES } from "./audit-presentation";
 
 const ROW_COUNT = 3;
-export const AUDIT_HANDOFF_KEY = "quote-reclaim:audit-result-v1";
+export { AUDIT_HANDOFF_KEY } from "@/lib/onboarding/audit-handoff";
 const DEFAULT_SAMPLE_ROWS = [
   { amount: "3200", days: "14" },
   { amount: "5800", days: "24" },

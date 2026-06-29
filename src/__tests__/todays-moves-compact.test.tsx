@@ -53,6 +53,19 @@ beforeEach(() => {
 });
 
 describe("compact Today's Moves", () => {
+  it("starts the streak with first-move guidance instead of showing 0 days", () => {
+    render(
+      <TodaysMoves
+        moves={[]}
+        streak={{ count: 0, resetYesterday: false }}
+      />,
+    );
+    expect(
+      screen.getByText("Your recovery streak starts with your first move."),
+    ).toBeTruthy();
+    expect(screen.queryByText("0-day recovery streak")).toBeNull();
+  });
+
   it("shows a compact success state for zero moves", () => {
     render(<TodaysMoves moves={[]} streak={STREAK} />);
     expect(screen.getByText("No moves due right now.")).toBeTruthy();

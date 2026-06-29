@@ -390,7 +390,7 @@ function cleanFirstName(value: string | null | undefined): string {
 }
 
 // ---------------------------------------------------------------------------
-// Project noun — trade-specific (used by message engine + audit)
+// Project noun suggestions and explicit homeowner-facing nouns
 // ---------------------------------------------------------------------------
 
 export const PROJECT_NOUNS: ReadonlyMap<string, string> = new Map<string, string>([

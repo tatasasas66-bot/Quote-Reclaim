@@ -1,10 +1,11 @@
 import type { Metadata } from "next";
+import { unstable_noStore as noStore } from "next/cache";
 import { createServiceSupabaseClient } from "@/lib/supabase/service";
 import {
   resolveOneTapLink,
 } from "@/lib/quotes/one-tap-reply-server";
 import { canRenderReplyPage } from "@/lib/quotes/one-tap-reply";
-import { projectLabel } from "@/lib/ai/fallback-messages";
+import { oneTapProjectLabel } from "@/lib/ai/fallback-messages";
 import { titleCaseName } from "@/lib/utils/title-case";
 import { formatCurrency } from "@/lib/utils/currency";
 import { ReplyForm } from "./ReplyForm";
@@ -27,6 +28,7 @@ type PageParams = { params: Promise<{ token: string }> };
  * isn't available" page so we never leak which gate tripped.
  */
 export default async function PublicReplyPage({ params }: PageParams) {
+  noStore();
   const { token } = await params;
   const supabase = createServiceSupabaseClient();
 
@@ -83,7 +85,7 @@ export default async function PublicReplyPage({ params }: PageParams) {
             Estimate
           </p>
           <p className="mt-2 text-lg font-bold leading-7 text-ink-strong">
-            {projectLabel(quote.trade, quote.project_type)}
+            {oneTapProjectLabel(quote.trade, quote.project_type)}
           </p>
           <p className="mt-1 text-3xl font-black tabular-nums text-ink-strong">
             {formatCurrency(Number(quote.estimate_amount ?? 0))}

@@ -14,8 +14,13 @@ import {
   importSilentQuotesAction,
   skipOnboardingAction,
 } from "@/lib/onboarding/actions";
+import {
+  AUDIT_HANDOFF_KEY,
+  resolveAuditHandoffTrade,
+} from "@/lib/onboarding/audit-handoff";
 import { formatCurrency } from "@/lib/utils/currency";
 import { FREE_PLAN_LIMIT } from "@/lib/payments/entitlement";
+import { getProjectTypeOptions } from "@/lib/recovery/recovery-logic";
 import { TRADES } from "@/lib/utils/normalize";
 
 type Props = {
@@ -48,8 +53,6 @@ type Step =
   | "reveal"
   | "submitting";
 
-const AUDIT_HANDOFF_KEY = "quote-reclaim:audit-result-v1";
-
 const PASTE_PLACEHOLDER = [
   "Jane Smith    8,500    2026-05-15",
   "Tom Roberts   12,000   2026-05-22    tom@example.com",
@@ -75,10 +78,9 @@ export function RevealClient({
   const router = useRouter();
   const [step, setStep] = React.useState<Step>("input");
   const [trade, setTrade] = React.useState<string>(
-    defaultTrade && TRADES.includes(defaultTrade as (typeof TRADES)[number])
-      ? defaultTrade
-      : "Roofing",
+    resolveAuditHandoffTrade(null, defaultTrade),
   );
+  const [projectType, setProjectType] = React.useState("");
   const [pasted, setPasted] = React.useState<string>("");
   const [parsed, setParsed] = React.useState<ParseSummary | null>(null);
   const [error, setError] = React.useState<string | null>(null);
@@ -94,6 +96,7 @@ export function RevealClient({
       if (!raw) return;
       const handoff = JSON.parse(raw) as {
         trade?: string;
+        projectType?: string;
         quotes?: ParsedQuote[];
         priorityIndex?: number | null;
       };
@@ -109,12 +112,13 @@ export function RevealClient({
             )
         : [];
       if (rows.length === 0) return;
-      const savedTrade =
-        handoff.trade &&
-        TRADES.includes(handoff.trade as (typeof TRADES)[number])
-          ? handoff.trade
-          : trade;
+      const savedTrade = resolveAuditHandoffTrade(handoff.trade, defaultTrade);
       setTrade(savedTrade);
+      setProjectType(
+        typeof handoff.projectType === "string"
+          ? handoff.projectType.trim().slice(0, 80)
+          : "",
+      );
       setParsed({
         rows,
         skipped: 0,
@@ -144,6 +148,10 @@ export function RevealClient({
   // ── handlers ─────────────────────────────────────────────────────────
   function handleScan() {
     setError(null);
+    if (!trade) {
+      setError("Choose the trade for these estimates.");
+      return;
+    }
     if (!pasted.trim()) {
       setError("Paste at least one estimate to scan.");
       return;
@@ -199,15 +207,21 @@ export function RevealClient({
 
   async function handleStartRecovering() {
     if (!parsed) return;
+    if (!trade) {
+      setError("Choose a trade before saving the plan.");
+      return;
+    }
     setStep("submitting");
     setError(null);
     const result = await importSilentQuotesAction({
       trade,
+      projectType,
       rows: parsed.rows,
+      origin: fromAudit ? "audit" : "bulk",
     });
     if (!result.ok) {
       setError(result.error);
-      setStep("reveal");
+      setStep(fromAudit ? "audit-saved" : "reveal");
       return;
     }
     try {
@@ -279,10 +293,75 @@ export function RevealClient({
                 </p>
               );
             })()}
+            <div className="mt-7 rounded-lg border border-line-subtle bg-surface-1 p-5">
+              <h2 className="text-lg font-black text-ink-strong">
+                What kind of estimate is this?
+              </h2>
+              <p className="mt-1 text-sm leading-6 text-ink-muted">
+                This keeps every homeowner message specific to the actual job.
+              </p>
+              <label
+                htmlFor="audit-trade"
+                className="mt-5 block text-sm font-semibold text-ink"
+              >
+                Trade
+              </label>
+              <select
+                id="audit-trade"
+                value={trade}
+                onChange={(event) => {
+                  setTrade(event.target.value);
+                  setProjectType("");
+                  setError(null);
+                }}
+                className="mt-2 h-12 w-full rounded-md border border-line-strong bg-surface-2 px-3 text-base font-semibold text-ink-strong focus:outline-none focus-visible:ring-2 focus-visible:ring-focus"
+              >
+                <option value="">Select a trade</option>
+                {TRADES.map((option) => (
+                  <option key={option} value={option}>
+                    {option}
+                  </option>
+                ))}
+              </select>
+              <label
+                htmlFor="audit-project-type"
+                className="mt-5 block text-sm font-semibold text-ink"
+              >
+                Project type{" "}
+                <span className="font-normal text-ink-muted">
+                  (optional, recommended)
+                </span>
+              </label>
+              <input
+                id="audit-project-type"
+                list="audit-project-type-options"
+                value={projectType}
+                onChange={(event) =>
+                  setProjectType(event.target.value.slice(0, 80))
+                }
+                maxLength={80}
+                placeholder={
+                  getProjectTypeOptions(trade)[0] ??
+                  "Driveway, patio, repair..."
+                }
+                className="mt-2 h-12 w-full rounded-md border border-line-strong bg-surface-2 px-3 text-base text-ink-strong focus:outline-none focus-visible:ring-2 focus-visible:ring-focus"
+              />
+              <datalist id="audit-project-type-options">
+                {getProjectTypeOptions(trade).map((option) => (
+                  <option key={option} value={option} />
+                ))}
+              </datalist>
+              {error ? (
+                <p role="alert" className="mt-3 text-sm text-danger">
+                  {error}
+                </p>
+              ) : null}
+            </div>
             <div className="mt-6 flex flex-col gap-3 sm:flex-row">
               <Button
                 type="button"
                 size="lg"
+                disabled={!trade}
                 onClick={() => void handleStartRecovering()}
               >
                 Save and open the plan →
@@ -484,6 +563,7 @@ function InputStep({
           onChange={(e) => setTrade(e.target.value)}
           className="mt-2 h-12 w-full rounded-md border border-line-strong bg-surface-2 px-3 text-base font-semibold text-ink-strong focus:outline-none focus-visible:ring-2 focus-visible:ring-focus"
         >
+          <option value="">Select a trade</option>
           {TRADES.map((t) => (
             <option key={t} value={t}>
               {t}
