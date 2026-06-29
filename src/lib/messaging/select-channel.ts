@@ -28,6 +28,11 @@ export function selectChannel(quote: {
 /**
  * Build the standard recovery email subject.
  */
-export function recoveryEmailSubject(trade: string): string {
-  return `Following up on your ${trade} estimate`;
+export function recoveryEmailSubject(
+  trade: string,
+  projectType?: string | null,
+): string {
+  const noun = getProjectNoun(trade, projectType);
+  return noun === "estimate" ? "re: your estimate" : `re: your ${noun} estimate`;
 }
+import { getProjectNoun } from "@/lib/recovery/recovery-logic";

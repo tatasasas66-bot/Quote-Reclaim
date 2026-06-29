@@ -7,8 +7,9 @@ import {
 export type ScoringContext = {
   firstName?: string;
   trade?: string;
+  projectType?: string | null;
   ctaType?: string;
-  followupNumber?: 1 | 2 | 3 | 4 | 5;
+  followupNumber?: 1 | 2 | 3 | 4 | 5 | 6;
 };
 
 /**
@@ -96,22 +97,29 @@ export function scoreMessage(
   if (trimmed.length > MAX_MESSAGE_CHARS) score -= 25;
   if (trimmed.length < 40) score -= 15;
 
-  // Client first name is intentionally absent from Day 7 / followup 3.
-  if (ctx.firstName && ctx.firstName.length > 0 && ctx.followupNumber !== 3) {
+  // Only Day 5 intentionally addresses the homeowner by name.
+  if (ctx.firstName && ctx.firstName.length > 0 && ctx.followupNumber === 2) {
     if (!lower.includes(ctx.firstName.toLowerCase())) score -= 20;
   }
 
   // Trade / context
-  if (ctx.trade && ctx.trade.length > 0) {
+  if (ctx.projectType && ctx.projectType.trim().length > 0) {
+    if (!lower.includes(ctx.projectType.trim().toLowerCase())) score -= 15;
+  } else if (ctx.trade && ctx.trade.length > 0) {
     const kws = tradeKeywords(ctx.trade);
     if (!kws.some((k) => lower.includes(k))) score -= 15;
   }
 
   // CTA count
   const questions = (trimmed.match(/\?/g) ?? []).length;
-  // Day 30 (Final Breakup) is declarative on purpose; do not penalize it for
-  // having zero questions.
-  if (questions === 0 && ctx.followupNumber !== 5) score -= 8;
+  // Closeout and reopen-later are declarative on purpose.
+  if (
+    questions === 0 &&
+    ctx.followupNumber !== 5 &&
+    ctx.followupNumber !== 6
+  ) {
+    score -= 8;
+  }
   if (questions > 1) score -= 25;
 
   // Pressure

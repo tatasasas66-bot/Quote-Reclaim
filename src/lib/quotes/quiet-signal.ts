@@ -89,7 +89,7 @@ export type QuietSignal = {
    * the card scrolls to that follow-up — we do NOT auto-swap the sequence.
    * Null when the recommendation is to keep the default cadence.
    */
-  recommendedFollowupNumber: 1 | 2 | 3 | 4 | 5 | null;
+  recommendedFollowupNumber: 1 | 2 | 3 | 4 | 5 | 6 | null;
   /**
    * Internal-only. UI MUST NOT render this. Exposed so tests can assert the
    * 0.80 gate behavior precisely without prying into engine internals.
@@ -185,7 +185,7 @@ export function computeQuietSignal(s: SilenceSignals): QuietSignal | null {
         "That usually means they are weighing it, not rejecting it.",
       ],
       recommendedMove:
-        "Hold the estimate open and let the schedule check run at Day 3. No need to push.",
+        "Hold the estimate open and let the scope check run at Day 5. No need to push.",
       recommendedFollowupNumber: 2,
       confidence: 0.95,
     };

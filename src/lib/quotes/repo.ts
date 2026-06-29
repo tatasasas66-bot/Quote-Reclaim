@@ -1,4 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import type { FollowupNumber } from "@/lib/recovery/recovery-logic";
 
 export type QuoteOutcome = "pending" | "won" | "closed";
 
@@ -6,6 +7,7 @@ export type QuoteRow = {
   id: string;
   user_id: string;
   trade: string;
+  project_type?: string | null;
   city: string | null;
   state: string | null;
   estimate_amount: number;
@@ -66,7 +68,7 @@ export type ReminderRow = {
   id: string;
   user_id: string;
   quote_id: string;
-  followup_number: 1 | 2 | 3 | 4 | 5;
+  followup_number: FollowupNumber;
   message_type: string;
   message_text: string;
   framework_used: string | null;

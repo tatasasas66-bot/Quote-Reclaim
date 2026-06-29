@@ -50,6 +50,7 @@ export const quoteInputSchema = z
     trade: z.enum(TRADES, {
       errorMap: () => ({ message: "Choose a trade from the list" }),
     }),
+    project_type: optionalText(80),
     estimate_amount: z
       .number({ invalid_type_error: "Enter a number" })
       .positive("Estimate must be greater than zero")

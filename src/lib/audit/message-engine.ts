@@ -113,36 +113,39 @@ export function generateFollowupMessage(input: {
   daysSilent: number | null;
   firstName?: string | null;
   trade?: string | null;
+  projectType?: string | null;
 }): GeneratedMessage {
   const window = messageWindowForDays(input.daysSilent);
   const name = input.firstName?.trim() || null;
 
   switch (window) {
     case "warm":
-      return warmMessage(name, input.trade);
+      return warmMessage(name, input.trade, input.projectType);
     case "cooling":
-      return coolingMessage(name, input.trade);
+      return coolingMessage(name, input.trade, input.projectType);
     case "cold":
-      return coldMessage(input.trade);
+      return coldMessage(input.trade, input.projectType);
     case "closeout":
-      return closeoutMessage(input.trade);
+      return closeoutMessage(input.trade, input.projectType);
   }
 }
 
 function warmMessage(
   name: string | null,
   trade: string | null | undefined,
+  projectType?: string | null,
 ): GeneratedMessage {
   return {
-    message: getRecommendedMessage("Estimate Check", {
+    message: getRecommendedMessage("Decision Friction", {
       firstName: name,
       trade,
+      projectType,
     }),
     window: "warm",
     messageFamily: "quick_check",
     whyThisMessage:
       "The estimate is still fresh, so the goal is to reopen the conversation with one easy question.",
-    whyThisWorks: getWhyThisWorksForFamily("Estimate Check"),
+    whyThisWorks: getWhyThisWorksForFamily("Decision Friction"),
     oneTapOptions: getOneTapOptions("warm"),
   };
 }
@@ -150,27 +153,31 @@ function warmMessage(
 function coolingMessage(
   name: string | null,
   trade: string | null | undefined,
+  projectType?: string | null,
 ): GeneratedMessage {
   return {
-    message: getRecommendedMessage("Decision Friction", {
+    message: getRecommendedMessage("Soft Decision Check", {
       firstName: name,
       trade,
+      projectType,
     }),
     window: "cooling",
     messageFamily: "friction_diagnosis",
     whyThisMessage:
-      "The homeowner may be stuck on timing, budget, or scope. This message gives them easy categories to answer with.",
-    whyThisWorks: getWhyThisWorksForFamily("Decision Friction"),
+      "The homeowner may already have decided but feel awkward saying it. This message makes keep or close equally safe.",
+    whyThisWorks: getWhyThisWorksForFamily("Soft Decision Check"),
     oneTapOptions: getOneTapOptions("cooling"),
   };
 }
 
 function coldMessage(
   trade: string | null | undefined,
+  projectType?: string | null,
 ): GeneratedMessage {
   return {
     message: getRecommendedMessage("Open, Revise, or Close", {
       trade,
+      projectType,
     }),
     window: "cold",
     messageFamily: "open_revise_close",
@@ -183,10 +190,12 @@ function coldMessage(
 
 function closeoutMessage(
   trade: string | null | undefined,
+  projectType?: string | null,
 ): GeneratedMessage {
   return {
     message: getRecommendedMessage("Clean Closeout", {
       trade,
+      projectType,
     }),
     window: "closeout",
     messageFamily: "clean_closeout",

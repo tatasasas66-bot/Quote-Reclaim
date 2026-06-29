@@ -60,7 +60,7 @@ export default async function NewQuotePage() {
                 Add a silent quote
               </h1>
               <p className="mt-3 text-base leading-7 text-ink-muted">
-                Turn one quiet estimate into a 5-message recovery plan in under
+                Turn one quiet estimate into a 6-message recovery plan in under
                 a minute.
               </p>
               <p className="mt-3 text-sm text-ink-muted">
@@ -84,7 +84,7 @@ export default async function NewQuotePage() {
               </p>
               <p className="mt-2 text-sm leading-6 text-ink-muted">
                 New files join the command queue with a priority, a next move,
-                and a 5-message plan.
+                and a 6-message plan.
               </p>
             </div>
           </section>

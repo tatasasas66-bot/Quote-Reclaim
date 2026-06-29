@@ -38,12 +38,16 @@ const NAMES: Array<{ firstName: string; contractor: string }> = [
 ];
 
 // followupNumber the validator expects for each calendar day.
-const DAY_TO_FOLLOWUP: Record<1 | 3 | 7 | 14 | 30, 1 | 2 | 3 | 4 | 5> = {
+const DAY_TO_FOLLOWUP: Record<
+  1 | 5 | 10 | 14 | 21 | 60,
+  1 | 2 | 3 | 4 | 5 | 6
+> = {
   1: 1,
-  3: 2,
-  7: 3,
+  5: 2,
+  10: 3,
   14: 4,
-  30: 5,
+  21: 5,
+  60: 6,
 };
 
 function makeVars(firstName: string, contractor: string, trade: string): VariantVars {
@@ -66,7 +70,7 @@ function makeVars(firstName: string, contractor: string, trade: string): Variant
 describe("pickVariant", () => {
   it("is deterministic: same seed + day always yields the same index", () => {
     const id = "11111111-2222-3333-4444-555555555555";
-    for (const day of [1, 3, 7, 14, 30] as const) {
+    for (const day of [1, 5, 10, 14, 21, 60] as const) {
       const a = pickVariant(id, day);
       const b = pickVariant(id, day);
       expect(a).toBe(b);
@@ -77,10 +81,10 @@ describe("pickVariant", () => {
 
   it("returns 0 (canonical template) for an empty/missing seed", () => {
     expect(pickVariant("", 1)).toBe(0);
-    expect(pickVariant("", 3)).toBe(0);
-    expect(pickVariant("", 7)).toBe(0);
+    expect(pickVariant("", 5)).toBe(0);
+    expect(pickVariant("", 10)).toBe(0);
     expect(pickVariant(null, 1)).toBe(0);
-    expect(pickVariant(undefined, 7)).toBe(0);
+    expect(pickVariant(undefined, 60)).toBe(0);
   });
 
   it("spreads different seeds across more than one variant", () => {
@@ -152,15 +156,13 @@ describe("researchSequenceMessages variant selection", () => {
       trade: "",
       estimateAmount: 0,
     });
-    // firstName falls back to "there"; trade falls back to "the estimate".
-    // No contractor name → the identity clause is omitted entirely. The
-    // "Contractor here" placeholder is banned: it reads like a bot.
     expect(seq.day1).toBe(
-      "Hi there — any question on the estimate I can clear up? Scope, timing, or price — reply with which one and I'll handle that piece. No decision needed yet.",
+      "Any question on the estimate I can clear up? Scope, timing, or price — reply with which one.",
     );
     expect(seq.day1).not.toContain("Contractor here");
-    expect(seq.day3.startsWith("Hi there")).toBe(true);
-    expect(seq.day7).toMatch(/^If /);
+    expect(seq.day5.startsWith("Hi there")).toBe(true);
+    expect(seq.day10).toMatch(/^Should I keep /);
+    expect(seq.day60).toContain("60 seconds");
   });
 
   it("is stable for a given quoteId across repeated calls", () => {
@@ -195,10 +197,11 @@ describe("researchSequenceMessages variant selection", () => {
       });
       if (
         a.day1 !== b.day1 ||
-        a.day3 !== b.day3 ||
-        a.day7 !== b.day7 ||
+        a.day5 !== b.day5 ||
+        a.day10 !== b.day10 ||
         a.day14 !== b.day14 ||
-        a.day30 !== b.day30
+        a.day21 !== b.day21 ||
+        a.day60 !== b.day60
       ) {
         diverged = true;
         break;
@@ -210,14 +213,11 @@ describe("researchSequenceMessages variant selection", () => {
 
 // ---------------------------------------------------------------------------
 // Every variant across the arc passes length / ban / emoji / structure checks.
-// Days 1/3/14/30 expose 4 variants; Day 7 carries 5 (calm contractor-native
-// close-the-loop asks — the earlier verbatim Voss "Have you given up on…?"
-// variant was removed in the message-tone safety pass). Total ≥20 variants
-// across the sequence.
+// Every scheduled day exposes at least four contractor-native variants.
 // ---------------------------------------------------------------------------
 
 describe("all message variants pass validation", () => {
-  for (const day of [1, 3, 7, 14, 30] as const) {
+  for (const day of [1, 5, 10, 14, 21, 60] as const) {
     const builders = SEQUENCE_VARIANTS[day];
 
     it(`day ${day} exposes at least 4 variants`, () => {
@@ -244,9 +244,12 @@ describe("all message variants pass validation", () => {
             expect(message).not.toMatch(
               /[\uD83C-\uD83E][\uDC00-\uDFFF]|[☀-➿]/,
             );
-            // Day 30 (Final Closeout) is declarative — 0 questions by design.
-            const expectedQuestions = day === 30 ? 0 : 1;
-            expect((message.match(/\?/g) ?? []).length).toBe(expectedQuestions);
+            const questionCount = (message.match(/\?/g) ?? []).length;
+            if (day === 21 || day === 60) {
+              expect(questionCount).toBe(0);
+            } else {
+              expect(questionCount).toBeLessThanOrEqual(1);
+            }
             expect(message).not.toMatch(/\bbid\b/i);
           });
         }
@@ -256,14 +259,14 @@ describe("all message variants pass validation", () => {
 });
 
 // ---------------------------------------------------------------------------
-// Cadence: schedule is 1/3/7/14/30 days (5 reminders per sequence)
+// Cadence: schedule is 1/5/10/14/21/60 days.
 // ---------------------------------------------------------------------------
 
-describe("schedule is the 5-touch cadence", () => {
+describe("schedule is the 6-touch cadence", () => {
   const actionsSrc = readSource("../lib/quotes/actions.ts");
   const recoveryLogicSrc = readSource("../lib/recovery/recovery-logic.ts");
 
-  it("actions.ts CADENCE_DAYS uses +1/+3/+7/+14/+30", () => {
+  it("actions.ts uses the centralized cadence", () => {
     expect(actionsSrc).toMatch(
       /CADENCE_DAYS/,
     );
@@ -273,23 +276,23 @@ describe("schedule is the 5-touch cadence", () => {
     expect(recoveryLogicSrc).toMatch(/CADENCE_DAYS/);
   });
 
-  it("createQuoteAction now inserts 5 reminders (not 3) via the shared writer", () => {
-    // The 5-step gate moved into the shared recovery-plan writer;
+  it("createQuoteAction inserts 6 reminders via the shared writer", () => {
+    // The 6-step gate lives in the shared recovery-plan writer;
     // createQuoteAction delegates to it and the writer enforces a complete plan.
     expect(actionsSrc).toContain("persistRecoveryPlan");
     const writer = readSource("../lib/quotes/recovery-plan-write.ts");
-    expect(writer).toMatch(/chosen\.length\s*!==\s*5/);
+    expect(writer).toMatch(/chosen\.length\s*!==\s*6/);
   });
 });
 
 // ---------------------------------------------------------------------------
 // Day 14 — Open, Revise, or Close: active / paused / closed, never discounting
-// Day 30 — Clean Closeout: respectful, declarative closeout signal
+// Day 21 — Clean Closeout: respectful, declarative closeout signal
 // ---------------------------------------------------------------------------
 
-describe("Day 14 stays on active/pause/close decisions (NO price drop) and Day 30 closes out cleanly", () => {
+describe("Day 14 stays on open/revise/close decisions and Day 21 closes cleanly", () => {
   const day14 = SEQUENCE_VARIANTS[14];
-  const day30 = SEQUENCE_VARIANTS[30];
+  const day21 = SEQUENCE_VARIANTS[21];
   const sampleVars = makeVars("Jane", "Mike", "Roofing");
 
   it("Day 14 offers a clear decision without any discount language", () => {
@@ -308,18 +311,18 @@ describe("Day 14 stays on active/pause/close decisions (NO price drop) and Day 3
     }
   });
 
-  it("Day 30 carries a clear closeout signal (close out / mark closed / step back)", () => {
-    for (let i = 0; i < day30.length; i++) {
-      const msg = day30[i](sampleVars).toLowerCase();
+  it("Day 21 carries a clear closeout signal", () => {
+    for (let i = 0; i < day21.length; i++) {
+      const msg = day21[i](sampleVars).toLowerCase();
       expect(
-        /close .*out|close out|mark .* closed|step back|going to close/.test(msg),
+        /close .*out|close out|mark .* closed|closing|leave .* closed/.test(msg),
       ).toBe(true);
     }
   });
 
-  it("Day 30 is declarative (no question mark)", () => {
-    for (let i = 0; i < day30.length; i++) {
-      expect((day30[i](sampleVars).match(/\?/g) ?? []).length).toBe(0);
+  it("Day 21 is declarative (no question mark)", () => {
+    for (let i = 0; i < day21.length; i++) {
+      expect((day21[i](sampleVars).match(/\?/g) ?? []).length).toBe(0);
     }
   });
 });
@@ -331,33 +334,39 @@ describe("Day 14 stays on active/pause/close decisions (NO price drop) and Day 3
 describe("v0 of every day stays verbatim — AI exact-match gate intact", () => {
   const vars = makeVars("Jane", "Mike", "Roofing");
 
-  it("Day 1 v0 is the new contractor-native Estimate Check", () => {
+  it("Day 1 v0 is the warm decision-friction check", () => {
     expect(SEQUENCE_VARIANTS[1][0](vars)).toBe(
-      "Hey Jane — Mike here. I looked back over the roofing estimate. Was there a number, timing question, or detail you wanted me to break down?",
+      "Any question on the roofing estimate I can clear up? Scope, timing, or price — reply with which one.",
     );
   });
 
-  it("Day 3 v0 is the new Decision Friction (no fake slot scarcity)", () => {
-    expect(SEQUENCE_VARIANTS[3][0](vars)).toBe(
-      "Jane, I'm lining up the roofing schedule. Should I keep your estimate active, or move it off my list?",
+  it("Day 5 v0 gives a shame-free scope rescue", () => {
+    expect(SEQUENCE_VARIANTS[5][0](vars)).toBe(
+      "Hi Jane — no pressure on the roofing estimate. If it's timing, budget, or scope, reply with which one and I'll sharpen it. If it's a pass, 'no' works too.",
     );
   });
 
-  it("Day 7 v0 is the new Scope Rescue", () => {
-    expect(SEQUENCE_VARIANTS[7][0](vars)).toBe(
-      "If the roofing estimate feels too big as written, I can split it into must-do, optional, and later. Want that version?",
+  it("Day 10 v0 is the soft decision check", () => {
+    expect(SEQUENCE_VARIANTS[10][0](vars)).toBe(
+      "Should I keep the roofing estimate on my active list, or close it out? Either is fine — just tell me which.",
     );
   });
 
   it("Day 14 v0 is the new Open, Revise, or Close (no discounting)", () => {
     expect(SEQUENCE_VARIANTS[14][0](vars)).toBe(
-      "Jane, should I keep the roofing estimate active, pause it for later, or close it out for now?",
+      "I can keep the roofing estimate open, revise it, or close it out. Which helps most?",
     );
   });
 
-  it("Day 30 v0 is the new Clean Closeout (reply-here reopen — lowest-effort door back in)", () => {
-    expect(SEQUENCE_VARIANTS[30][0](vars)).toBe(
-      "Jane, I'll close out the roofing estimate after this. All good either way. If you want to revisit it later, just reply here and I'll pick it back up.",
+  it("Day 21 v0 is the Clean Closeout", () => {
+    expect(SEQUENCE_VARIANTS[21][0](vars)).toBe(
+      "I'll close out the roofing estimate on my side so it's off your plate. If the timing changes later, text me here and I'll send a fresh number — no re-quote needed.",
+    );
+  });
+
+  it("Day 60 v0 is the one-time reopen-later touch", () => {
+    expect(SEQUENCE_VARIANTS[60][0](vars)).toBe(
+      "Saw the roofing estimate from a while back. If the timing is better now, I can send a fresh number in 60 seconds. If not, no worries — I'll leave it closed.",
     );
   });
 });
@@ -375,11 +384,12 @@ describe("generate-recovery-plan system prompt enforces the contractor-native re
 
   it("uses the new framework labels in the JSON example", () => {
     for (const label of [
-      "Estimate Check",
       "Decision Friction",
       "Scope Rescue",
+      "Soft Decision Check",
       "Open, Revise, or Close",
       "Clean Closeout",
+      "Reopen Later",
     ]) {
       expect(generatePlan).toContain(label);
     }

@@ -40,7 +40,7 @@ function varsFor(firstName: string, trade: string) {
 
 function everyMessage(): string[] {
   const out: string[] = [];
-  for (const day of [1, 3, 7, 14, 30] as const) {
+  for (const day of [1, 5, 10, 14, 21, 60] as const) {
     for (const builder of SEQUENCE_VARIANTS[day]) {
       for (const trade of TRADES) {
         for (const name of NAMES) {
@@ -53,21 +53,20 @@ function everyMessage(): string[] {
 }
 
 // ---------------------------------------------------------------------------
-// The 5-step arc + per-day variant count are unchanged
+// The 6-step arc + per-day variant count are locked.
 // ---------------------------------------------------------------------------
 
-describe("the 5-step arc + variant counts are unchanged by the tone pass", () => {
-  it("the arc still exposes exactly 5 steps", () => {
+describe("the 6-step arc + variant counts are locked", () => {
+  it("the arc exposes exactly 6 steps", () => {
     expect(Object.keys(SEQUENCE_VARIANTS).map(Number).sort((a, b) => a - b)).toEqual([
-      1, 3, 7, 14, 30,
+      1, 5, 10, 14, 21, 60,
     ]);
   });
 
-  it("each step still exposes at least 4 variants (Day 7 keeps its 5th)", () => {
-    for (const day of [1, 3, 7, 14, 30] as const) {
+  it("each step exposes at least 4 variants", () => {
+    for (const day of [1, 5, 10, 14, 21, 60] as const) {
       expect(SEQUENCE_VARIANTS[day].length).toBeGreaterThanOrEqual(4);
     }
-    expect(SEQUENCE_VARIANTS[7].length).toBe(5);
   });
 });
 
@@ -149,14 +148,18 @@ describe("every variant stays within length limits and still validates", () => {
   });
 
   it("every variant on every day still passes validateMessage for every trade", () => {
-    const DAY_TO_FOLLOWUP: Record<1 | 3 | 7 | 14 | 30, 1 | 2 | 3 | 4 | 5> = {
+    const DAY_TO_FOLLOWUP: Record<
+      1 | 5 | 10 | 14 | 21 | 60,
+      1 | 2 | 3 | 4 | 5 | 6
+    > = {
       1: 1,
-      3: 2,
-      7: 3,
+      5: 2,
+      10: 3,
       14: 4,
-      30: 5,
+      21: 5,
+      60: 6,
     };
-    for (const day of [1, 3, 7, 14, 30] as const) {
+    for (const day of [1, 5, 10, 14, 21, 60] as const) {
       const followupNumber = DAY_TO_FOLLOWUP[day];
       for (const trade of TRADES) {
         for (const name of NAMES) {
@@ -182,17 +185,15 @@ describe("every variant stays within length limits and still validates", () => {
 describe("the specific tone-pass replacements are present in the variant set", () => {
   const sampleVars = varsFor("Jane", "Roofing");
 
-  it("Day 1 v3 reads as a plain contractor ask (no 'in the way' conditional)", () => {
+  it("Day 1 v4 reads as a plain contractor ask", () => {
     const msg = SEQUENCE_VARIANTS[1][3](sampleVars);
-    expect(msg).toMatch(/Is the blocker scope, timing, total, or something else\?/);
+    expect(msg).toMatch(/Which part .*scope, timing, or price\?/);
     expect(msg).not.toMatch(/in the way/i);
   });
 
-  it("Day 7 v4 is the safer scope-phasing ask, no Voss frame", () => {
-    const msg = SEQUENCE_VARIANTS[7][4](sampleVars);
-    expect(msg).toMatch(
-      /If the roofing estimate is more than you want to tackle at once, I can phase it without cutting corners\. Want me to outline it\?/,
-    );
+  it("Day 5 keeps the shame-free no option", () => {
+    const msg = SEQUENCE_VARIANTS[5][0](sampleVars);
+    expect(msg).toContain("If it's a pass, 'no' works too.");
     expect(msg).not.toMatch(/Have you given up on/i);
   });
 });

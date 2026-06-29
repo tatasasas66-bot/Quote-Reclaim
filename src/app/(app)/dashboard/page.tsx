@@ -39,7 +39,6 @@ import {
 } from "@/lib/recovery/daily-loop";
 import {
   ONE_TAP_CHOICES,
-  STILL_COMPARING_MARKER,
 } from "@/lib/quotes/one-tap-choices";
 
 export const metadata: Metadata = { title: "Dashboard – Quote Reclaim" };
@@ -82,11 +81,9 @@ export default async function DashboardPage() {
     if (oneTapByQuote.has(quoteId)) continue;
     const choice = ONE_TAP_CHOICES.find(
       (option) =>
-        (option.answerType === reply.answer_type &&
-          option.answerType !== "question") ||
-        (option.id === "still_comparing" &&
-          reply.answer_type === "question" &&
-          reply.question_text === STILL_COMPARING_MARKER),
+        option.answerType === reply.answer_type &&
+        (option.answerType !== "question" ||
+          option.questionText === reply.question_text),
     );
     if (choice) oneTapByQuote.set(quoteId, choice.label);
   }

@@ -19,8 +19,11 @@ import {
   getRecommendedMessage,
   getRecoveryWindow,
   getRecoveryWindowLabel,
+  getSequenceFamily,
   getWhyThisWorks,
   getWhyThisWorksForStep,
+  SEQUENCE_FAMILIES,
+  type FollowupNumber,
   type MessageFamily,
   type ReplyPlaybookPath,
   type RecoveryWindow,
@@ -38,7 +41,7 @@ export type RecoveryPlanReplyPath = ReplyPlaybookPath;
 
 export type RecoveryPlanAction = {
   reminderId: string;
-  followupNumber: 1 | 2 | 3 | 4 | 5;
+  followupNumber: FollowupNumber;
   messageType: "email" | "sms";
   disabled: boolean;
   showSendToday: boolean;
@@ -78,6 +81,7 @@ export type RecoveryPlanViewModel = {
     displayName: string;
     clientFirstName: string;
     trade: string;
+    projectType: string | null;
     metaLine: string;
     amount: number;
     amountLabel: string;
@@ -112,46 +116,6 @@ export type RecoveryPlanViewModel = {
   oneTapOptions: string[];
   replyPlaybook: RecoveryPlanReplyPath[];
 };
-
-type SequenceDefinition = {
-  family: MessageFamily;
-  sourceStep: 1 | 2 | 3 | 4 | 5;
-};
-
-const SEQUENCE_BY_WINDOW: Record<
-  Exclude<RecoveryWindow, "unknown">,
-  readonly SequenceDefinition[]
-> = {
-  warm: [
-    { family: "Estimate Check", sourceStep: 1 },
-    { family: "Decision Friction", sourceStep: 2 },
-    { family: "Scope Rescue", sourceStep: 3 },
-    { family: "Open, Revise, or Close", sourceStep: 4 },
-    { family: "Clean Closeout", sourceStep: 5 },
-  ],
-  cooling: [
-    { family: "Decision Friction", sourceStep: 2 },
-    { family: "Scope Rescue", sourceStep: 3 },
-    { family: "Open, Revise, or Close", sourceStep: 4 },
-    { family: "Clean Closeout", sourceStep: 5 },
-  ],
-  cold: [
-    { family: "Open, Revise, or Close", sourceStep: 4 },
-    { family: "Clean Closeout", sourceStep: 5 },
-  ],
-  closeout: [{ family: "Clean Closeout", sourceStep: 5 }],
-};
-
-const SEQUENCE_HEADING: Record<Exclude<RecoveryWindow, "unknown">, string> = {
-  warm: "5-message recovery plan",
-  cooling: "4-message remaining plan",
-  cold: "2-message remaining plan",
-  closeout: "Clean Closeout plan",
-};
-
-function normalizeWindow(window: RecoveryWindow): Exclude<RecoveryWindow, "unknown"> {
-  return window === "unknown" ? "warm" : window;
-}
 
 function computeStatus(
   quote: RecoveryPlanQuote,
@@ -200,6 +164,13 @@ function currentFirst(reminders: ReminderRow[]): ReminderRow[] {
 
 function messageKey(family: MessageFamily): string {
   return family.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+}
+
+function familyForReminder(reminder: ReminderRow): MessageFamily {
+  const stored = reminder.framework_used as MessageFamily | null;
+  return stored && SEQUENCE_FAMILIES.includes(stored)
+    ? stored
+    : getSequenceFamily(reminder.followup_number);
 }
 
 function buildInstruction(input: {
@@ -290,8 +261,6 @@ export function buildRecoveryPlanViewModel({
   const nowMs = now instanceof Date ? now.getTime() : now;
   const daysQuiet = effectiveDaysSilent(quote, nowMs);
   const recoveryWindow = getRecoveryWindow(daysQuiet);
-  const normalizedWindow = normalizeWindow(recoveryWindow);
-  const currentMove = getMessageFamily(recoveryWindow);
   const status = computeStatus(quote, reminders);
   const hasReply = Boolean(quote.hasReply);
   const hasEmail = Boolean(quote.client_email);
@@ -311,6 +280,9 @@ export function buildRecoveryPlanViewModel({
 
   const pendingReminders = currentFirst(sortedPendingReminders(reminders));
   const currentReminder = pendingReminders[0] ?? null;
+  const currentMove = currentReminder
+    ? familyForReminder(currentReminder)
+    : getMessageFamily(recoveryWindow);
   const currentScheduledAt = currentReminder?.send_at ?? null;
   const currentScheduledLabel = currentScheduledAt
     ? formatScheduleDateTime(currentScheduledAt)
@@ -319,9 +291,12 @@ export function buildRecoveryPlanViewModel({
     daysQuiet,
     firstName: quote.client_name,
     trade: quote.trade,
+    projectType: quote.project_type,
   });
-  const currentMessage = recommended.message;
-  const currentWhyThisWorks = getWhyThisWorks(recoveryWindow);
+  const currentMessage = currentReminder?.message_text ?? recommended.message;
+  const currentWhyThisWorks = currentReminder
+    ? getWhyThisWorksForStep(currentReminder.followup_number)
+    : getWhyThisWorks(recoveryWindow);
   const currentAction = buildAction({
     reminder: currentReminder,
     status,
@@ -331,26 +306,18 @@ export function buildRecoveryPlanViewModel({
     move,
   });
 
-  const messageContext = {
-    firstName: quote.client_name,
-    trade: quote.trade,
-  };
-  const sequenceDefinition = SEQUENCE_BY_WINDOW[normalizedWindow];
-  const sequenceCards = sequenceDefinition
-    .slice(0, pendingReminders.length)
-    .map((definition, index): RecoveryPlanSequenceCard => {
-      const reminder = pendingReminders[index]!;
+  const sequenceCards = pendingReminders.map(
+    (reminder, index): RecoveryPlanSequenceCard => {
       const isCurrent = index === 0;
-      const message = getRecommendedMessage(definition.family, messageContext);
-      const scheduledAt = isCurrent
-        ? currentScheduledAt
-        : reminder.send_at;
+      const family = familyForReminder(reminder);
+      const message = reminder.message_text;
+      const scheduledAt = reminder.send_at;
       return {
-        key: messageKey(definition.family),
+        key: `${reminder.id}-${messageKey(family)}`,
         anchorId: isCurrent
           ? "current-recovery-move"
-          : `recovery-${messageKey(definition.family)}`,
-        family: definition.family,
+          : `recovery-${reminder.followup_number}-${messageKey(family)}`,
+        family,
         statusLabel: isCurrent ? "Current move" : "Queued after current move",
         statusTone: isCurrent ? "brand" : "neutral",
         helperLabel: isCurrent ? null : "Queued after current move",
@@ -362,14 +329,15 @@ export function buildRecoveryPlanViewModel({
         message,
         whyThisWorks: isCurrent
           ? currentWhyThisWorks
-          : getWhyThisWorksForStep(definition.sourceStep),
+          : getWhyThisWorksForStep(reminder.followup_number),
         copyMessage: message,
         smsMessage: message,
         whatsappMessage: message,
         isCurrent,
-        action: null,
+        action: isCurrent ? currentAction : null,
       };
-    });
+    },
+  );
 
   const centralizedQuietSignal = getQuietSignal(recoveryWindow);
   const quietSignal =
@@ -420,6 +388,7 @@ export function buildRecoveryPlanViewModel({
       displayName,
       clientFirstName,
       trade: quote.trade,
+      projectType: quote.project_type ?? null,
       metaLine: tradeLocationLine(quote.trade, quote.city, quote.state),
       amount: quote.estimate_amount,
       amountLabel,
@@ -456,12 +425,19 @@ export function buildRecoveryPlanViewModel({
     copyMessage: currentMessage,
     smsMessage: currentMessage,
     whatsappMessage: currentMessage,
-    sequenceHeading: SEQUENCE_HEADING[normalizedWindow],
+    sequenceHeading:
+      pendingReminders.length === 6
+        ? "6-message recovery plan"
+        : `${pendingReminders.length}-message remaining plan`,
     sequenceIntro,
     sequenceScheduleLabel,
     sequenceCards,
     quietSignal,
     oneTapOptions: getOneTapOptions(recoveryWindow),
-    replyPlaybook: getReplyPlaybook(quote.trade, quote.estimate_amount),
+    replyPlaybook: getReplyPlaybook(
+      quote.trade,
+      quote.estimate_amount,
+      quote.project_type,
+    ),
   };
 }

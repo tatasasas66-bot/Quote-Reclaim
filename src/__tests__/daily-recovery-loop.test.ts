@@ -100,8 +100,8 @@ describe("daily recovery loop", () => {
       "high",
       "low",
     ]);
-    expect(moves[0]?.message).not.toBe("stale stored copy");
-    expect(moves[0]?.family).toBe("Decision Friction");
+    expect(moves[0]?.message).toBe("stale stored copy");
+    expect(moves[0]?.family).toBe("Scope Rescue");
   });
 
   it("returns an empty queue when no reminder is due", () => {

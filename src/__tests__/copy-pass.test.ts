@@ -233,7 +233,7 @@ describe("Recovery plan product framing", () => {
     expect(quoteForm).not.toMatch(/schedule follow-ups automatically/);
     expect(quoteForm).not.toMatch(/We'll send these follow-ups on schedule/);
     expect(quoteForm).not.toMatch(/Approve & Schedule Recovery/);
-    expect(quoteForm).toMatch(/Build 5-message recovery plan/);
+    expect(quoteForm).toMatch(/Build 6-message recovery plan/);
     expect(quoteForm).toMatch(/ready to copy or send manually/);
   });
 
@@ -302,12 +302,13 @@ describe("AI system prompt — contractor-native voice and labels", () => {
     expect(aiPrompt).toMatch(/not a sales coach, not an AI assistant/);
   });
 
-  it("locks the five contractor-native framework labels (plain English, no psychology jargon)", () => {
-    expect(aiPrompt).toMatch(/Estimate Check/);
+  it("locks the six contractor-native framework labels", () => {
     expect(aiPrompt).toMatch(/Decision Friction/);
     expect(aiPrompt).toMatch(/Scope Rescue/);
+    expect(aiPrompt).toMatch(/Soft Decision Check/);
     expect(aiPrompt).toMatch(/Open, Revise, or Close/);
     expect(aiPrompt).toMatch(/Clean Closeout/);
+    expect(aiPrompt).toMatch(/Reopen Later/);
   });
 
   it("no longer exposes the old psychology framework names to the AI", () => {
@@ -322,47 +323,35 @@ describe("AI system prompt — contractor-native voice and labels", () => {
     expect(aiPrompt).toMatch(/No exclamation marks/);
   });
 
-  it("Day 7 anchors on scope rescue with a calm lower-commitment ask", () => {
+  it("Day 5 anchors on scope rescue with a shame-free answer path", () => {
     expect(aiPrompt).toMatch(/Scope Rescue/);
-    expect(aiPrompt).toMatch(/separate must-do work from later pieces/);
+    expect(aiPrompt).toMatch(/Name timing, budget, and scope/);
+    expect(aiPrompt).toMatch(/allow a simple "no"/);
   });
 });
 
 // ---------------------------------------------------------------------------
-// Fallback messages — Day 7 Takeaway frame (Phase 4.6)
+// Fallback messages — corrected six-touch sequence (Phase 4.6)
 // ---------------------------------------------------------------------------
 
 describe("Fallback messages use the uploaded SMS research sequence", () => {
-  it("Day 1 uses Hey + contractor-name pattern interrupt", () => {
-    // Identity clause renders only when the contractor's name is known —
-    // an unknown sender omits it instead of falling back to "Contractor here".
-    expect(aiFallbacks).toMatch(/Hey \$\{firstName\} — \$\{identity\}I looked back over/);
-    expect(aiFallbacks).toMatch(/contractorFirstName \? contractorFirstName \+ " here\. " : ""/);
+  it("Day 1 asks which decision detail needs clarification", () => {
+    expect(aiFallbacks).toMatch(
+      /Any question on \$\{projectDetail\} I can clear up/,
+    );
+    expect(aiFallbacks).toMatch(/Scope, timing, or price/);
   });
 
-  it("Day 3 uses the active-list / schedule framing (no fake slot scarcity)", () => {
-    expect(aiFallbacks).toMatch(/lining up the \$\{tradeWord\} schedule/);
-    // Polish pass: Day 3 v0 was sharpened from "this on the active list" to
-    // "your estimate active"; v2 still carries the "list" framing. Either
-    // shape is valid as long as the schedule-check intent is preserved.
-    expect(aiFallbacks).toMatch(/active list|estimate active|keep .* on my list/);
-    // No fake-scarcity phrases the rewrite outlawed.
-    expect(aiFallbacks).not.toMatch(/let the slot go/);
-    expect(aiFallbacks).not.toMatch(/locking the schedule today/);
-    expect(aiFallbacks).not.toMatch(/releasing it/);
+  it("Day 5 gives timing, budget, scope, and a clean no as reply paths", () => {
+    expect(aiFallbacks).toMatch(/timing, budget, or scope/);
+    expect(aiFallbacks).toMatch(/If it's a pass, 'no' works too/);
   });
 
-  it("Day 7 carries only calm contractor-native Scope Rescue variants", () => {
-    // The primary lower-commitment frames remain (v0 is canonical).
-    expect(aiFallbacks).toMatch(/split it into must-do, optional, and later/);
-    expect(aiFallbacks).toMatch(/separate what matters now from what can wait/);
-    expect(aiFallbacks).toMatch(/phase it without cutting corners/);
-    // Tone safety: the verbatim Voss "Have you given up on…?" form was
-    // removed — it tested high but read too sharp under a contractor's own
-    // name. No variant references it now.
-    expect(aiFallbacks).not.toMatch(/Have you given up on/);
-    // The blunt, pressuring "Just need a yes or no" phrasing stays banned.
-    expect(aiFallbacks).not.toMatch(/Just need a yes or no/);
+  it("Day 10 uses a low-pressure active-or-closed decision check", () => {
+    expect(aiFallbacks).toMatch(
+      /Should I keep \$\{project\} on my active list, or close it out/,
+    );
+    expect(aiFallbacks).toMatch(/Either is fine/);
   });
 
   it("no fallback message string literal contains an exclamation mark", () => {

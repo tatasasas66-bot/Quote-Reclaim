@@ -40,8 +40,12 @@ export type MessageFamily =
   | "Estimate Check"
   | "Decision Friction"
   | "Scope Rescue"
+  | "Soft Decision Check"
   | "Open, Revise, or Close"
-  | "Clean Closeout";
+  | "Clean Closeout"
+  | "Reopen Later";
+
+export type FollowupNumber = 1 | 2 | 3 | 4 | 5 | 6;
 
 export type QuietSignalLabel = "Early" | "Waiting" | "Cooling off" | "Closeout";
 
@@ -53,8 +57,10 @@ export type ReplyPlaybookPath = {
     | "scope_question"
     | "still_comparing"
     | "need_to_talk"
+    | "spouse_approval"
     | "went_another_way"
     | "close_for_now"
+    | "no_response_breakup"
     | "financing"
     | "do_it_for_less";
   label: string;
@@ -66,6 +72,7 @@ export type ReplyPlaybookPath = {
 export type RecoveryMessageContext = {
   firstName?: string | null;
   trade?: string | null;
+  projectType?: string | null;
 };
 
 // ---------------------------------------------------------------------------
@@ -150,33 +157,34 @@ export function getPriorityLabel(
 }
 
 // ---------------------------------------------------------------------------
-// Message family — maps recovery window to the 5-step sequence family
+// Message family — maps recovery window to the sequence family
 // ---------------------------------------------------------------------------
 
 export function getMessageFamily(window: RecoveryWindow): MessageFamily {
   switch (window) {
-    case "warm": return "Estimate Check";
-    case "cooling": return "Decision Friction";
+    case "warm": return "Decision Friction";
+    case "cooling": return "Soft Decision Check";
     case "cold": return "Open, Revise, or Close";
     case "closeout": return "Clean Closeout";
-    default: return "Estimate Check";
+    default: return "Decision Friction";
   }
 }
 
 /**
- * The 5-message sequence family names (by step number, 1-5).
+ * The 6-message sequence family names (by step number, 1-6).
  * This is the single source of truth for the sequence — fallback-messages.ts
  * and generate-recovery-plan.ts should import from here.
  */
 export const SEQUENCE_FAMILIES: readonly MessageFamily[] = [
-  "Estimate Check",
   "Decision Friction",
   "Scope Rescue",
+  "Soft Decision Check",
   "Open, Revise, or Close",
   "Clean Closeout",
+  "Reopen Later",
 ] as const;
 
-export function getSequenceFamily(step: 1 | 2 | 3 | 4 | 5): MessageFamily {
+export function getSequenceFamily(step: FollowupNumber): MessageFamily {
   return SEQUENCE_FAMILIES[step - 1]!;
 }
 
@@ -196,19 +204,22 @@ export function getWhyThisWorksForFamily(family: MessageFamily): string {
       "Homeowners stall because deciding feels like work. Named categories make replying cheap. If it's a pass, giving them permission to say 'no' makes them more likely to reply at all.",
     "Scope Rescue":
       "The full project can feel like too much. A trimmed scope unlocks a smaller yes.",
+    "Soft Decision Check":
+      "A direct keep-or-close choice lets homeowners answer without having to explain or reject you.",
     "Open, Revise, or Close":
       "At this age they need an exit ramp. Three one-word options remove the awkwardness.",
     "Clean Closeout":
       "Old estimates become mental clutter. A clean close frees both sides and leaves the door open.",
+    "Reopen Later":
+      "One later check catches changed timing without restarting a chase. No reply leaves the estimate closed.",
   };
   return explanations[family];
 }
 
 /**
- * Per-step why-this-works for the 5-message sequence (used in the Recovery Plan page).
- * Step 3 (Scope Rescue) is not window-specific — it always uses the scope-rescue explanation.
+ * Per-step why-this-works for the 6-message sequence.
  */
-export function getWhyThisWorksForStep(step: 1 | 2 | 3 | 4 | 5): string {
+export function getWhyThisWorksForStep(step: FollowupNumber): string {
   return getWhyThisWorksForFamily(getSequenceFamily(step));
 }
 
@@ -224,6 +235,7 @@ export function getOneTapOptions(window: RecoveryWindow): string[] {
         "Price is the hold-up",
         "Timing's off",
         "Still comparing",
+        "Need to talk it over",
         "Can we talk?",
         "Went another way",
       ];
@@ -315,6 +327,7 @@ type WindowRecommendationInput = {
   daysQuiet: number | null;
   firstName?: string | null;
   trade?: string | null;
+  projectType?: string | null;
 };
 
 type WindowRecommendation = {
@@ -338,18 +351,24 @@ export function getRecommendedMessage(
 ): string | WindowRecommendation {
   if (typeof familyOrInput === "string") {
     const name = cleanFirstName(context?.firstName);
-    const noun = getProjectNoun(context?.trade);
+    const noun = getProjectNoun(context?.trade, context?.projectType);
+    const estimateReference =
+      noun === "estimate" ? "estimate" : `${noun} estimate`;
     const messages: Record<MessageFamily, string> = {
       "Estimate Check":
-        `Hi ${name} — any question on the ${noun} I can clear up? Scope, timing, or price — reply with which one and I'll handle that piece. No decision needed yet.`,
+        `Any question on the ${noun} I can clear up? Scope, timing, or price — reply with which one.`,
       "Decision Friction":
-        `Hi ${name} — no pressure on the ${noun}. If it's timing, budget, or one part of the scope that's holding it up, reply with which one and I'll sharpen that piece. If it's a pass, 'no' works too — no awkward follow-up from me.`,
+        `Any question on the ${noun} I can clear up? Scope, timing, or price — reply with which one.`,
       "Scope Rescue":
-        `If the ${noun} is close but the total's holding it up, I can trim it to just the must-do piece — same quality, smaller number. Want me to send that version?`,
+        `Hi ${name} — no pressure on the ${noun}. If it's timing, budget, or scope, reply with which one and I'll sharpen it. If it's a pass, 'no' works too.`,
+      "Soft Decision Check":
+        `Should I keep the ${noun} on my active list, or close it out? Either is fine — just tell me which.`,
       "Open, Revise, or Close":
-        `${name} — I can keep this ${noun} open, revise it, or close it out. Which helps most? One word is enough.`,
+        `I can keep the ${noun} open, revise it, or close it out. Which helps most?`,
       "Clean Closeout":
-        `${name} — I'll close out the ${noun} on my side so it's off your plate. If the timing changes later, text me here and I'll send a fresh number — no restart, no re-quote, no awkward conversation.`,
+        `I'll close out the ${noun} on my side so it's off your plate. If the timing changes later, text me here and I'll send a fresh number — no re-quote needed.`,
+      "Reopen Later":
+        `Saw this ${estimateReference} from a while back. If the timing is better now, I can send a fresh number in 60 seconds. If not, no worries — I'll leave it closed.`,
     };
     return messages[familyOrInput];
   }
@@ -398,7 +417,32 @@ export const PROJECT_NOUNS: ReadonlyMap<string, string> = new Map<string, string
   ["other", "estimate"],
 ]);
 
-export function getProjectNoun(trade: string | null | undefined): string {
+export const PROJECT_TYPE_OPTIONS: Readonly<Record<string, readonly string[]>> = {
+  concrete: ["Driveway", "Patio", "Slab", "Repair", "Resurfacing", "Walkway"],
+  roofing: ["Roof", "Roof repair", "Roof replacement"],
+  hvac: ["AC replacement", "AC repair", "Furnace", "System"],
+  painting: ["Exterior", "Interior", "Cabinet refinish", "Trim"],
+  landscaping: ["Backyard", "Front yard", "Patio", "Turf", "Planting"],
+  fencing: ["Fence", "Gate", "Repair", "Replacement"],
+  plumbing: ["Repair", "Install", "Replacement"],
+  electrical: ["Panel", "Wiring", "Fixture", "Repair"],
+  remodeling: ["Kitchen", "Bathroom", "Basement", "Addition"],
+  other: ["Project", "Estimate"],
+} as const;
+
+export function getProjectTypeOptions(
+  trade: string | null | undefined,
+): readonly string[] {
+  const key = trade?.trim().toLowerCase() ?? "other";
+  return PROJECT_TYPE_OPTIONS[key] ?? PROJECT_TYPE_OPTIONS.other;
+}
+
+export function getProjectNoun(
+  trade: string | null | undefined,
+  projectType?: string | null,
+): string {
+  const specific = projectType?.trim().replace(/^the\s+/i, "");
+  if (specific) return specific.toLowerCase();
   if (!trade) return "estimate";
   const key = trade.trim().toLowerCase();
   return PROJECT_NOUNS.get(key) ?? "estimate";
@@ -407,8 +451,9 @@ export function getProjectNoun(trade: string | null | undefined): string {
 export function getReplyPlaybook(
   trade: string | null | undefined,
   estimateAmount?: number | null,
+  projectType?: string | null,
 ): ReplyPlaybookPath[] {
-  const noun = getProjectNoun(trade);
+  const noun = getProjectNoun(trade, projectType);
   const paths: ReplyPlaybookPath[] = [
     {
       id: "still_interested",
@@ -451,6 +496,13 @@ export function getReplyPlaybook(
         "Absolutely. I can call when it works for you. Send me a good time and I'll keep it short.",
     },
     {
+      id: "spouse_approval",
+      label: "Need spouse or partner approval",
+      trigger: "Need to talk it over",
+      response:
+        "Makes sense — it's a big decision. Want me to send a quick summary you can forward to them? Just the scope, the total, and what's included.",
+    },
+    {
       id: "went_another_way",
       label: "Went another way",
       trigger: "Went another way",
@@ -463,6 +515,12 @@ export function getReplyPlaybook(
       response: `No problem — I'll close it out on my side. If the timing changes later, text me here and I'll pull the ${noun} back up. No re-quote needed.`,
     },
     {
+      id: "no_response_breakup",
+      label: "No response",
+      trigger: "Persistent silence",
+      response: `I'll stop following up on this one so it's not cluttering your inbox. If the ${noun} comes back to mind, text me here anytime — no awkward restart.`,
+    },
+    {
       id: "do_it_for_less",
       label: "Can you do it for less?",
       trigger: "Can you do it for less?",
@@ -473,7 +531,7 @@ export function getReplyPlaybook(
     },
   ];
   if (Number(estimateAmount ?? 0) > 5_000) {
-    paths.splice(8, 0, {
+    paths.splice(paths.length - 1, 0, {
       id: "financing",
       label: "Financing",
       trigger: "Payment timing",
@@ -487,8 +545,9 @@ export function getReplyPlaybook(
 
 export function buildPaymentPlanMessage(
   trade: string | null | undefined,
+  projectType?: string | null,
 ): string {
-  const noun = getProjectNoun(trade);
+  const noun = getProjectNoun(trade, projectType);
   return `Here's how we can split the ${noun}: 30% deposit to start, 40% at midpoint, 30% on completion. That keeps the total from hitting all at once. Want me to set that up?`;
 }
 
@@ -552,9 +611,22 @@ export function buildScopeComparisonMessage(
 export const BANNED_PHRASES: readonly string[] = [
   "any update",
   "just checking in",
-  "circling back",
-  "touching base",
   "are you still interested",
+  "wanted to follow up",
+  "touching base",
+  "circling back",
+  "hope you're doing well",
+  "let me know if you have any questions",
+  "following up on my previous email",
+  "did you get my last message",
+  "just wanted to see if you had a chance to review",
+  "reaching out to see where you're at",
+  "feel free to reach out",
+  "sorry to bother you",
+  "i'd love to earn your business",
+  "special discount",
+  "limited time offer",
+  "match the other bid",
   "following up again",
   "last chance",
   "have you given up",
@@ -571,13 +643,14 @@ export function containsBannedPhrase(message: string): boolean {
 }
 
 // ---------------------------------------------------------------------------
-// Cadence — the 5-message sequence schedule (single source of truth)
+// Cadence — the 6-message sequence schedule (single source of truth)
 // ---------------------------------------------------------------------------
 
-export const CADENCE_DAYS: Readonly<Record<1 | 2 | 3 | 4 | 5, number>> = {
+export const CADENCE_DAYS: Readonly<Record<FollowupNumber, number>> = {
   1: 1,
-  2: 3,
-  3: 7,
+  2: 5,
+  3: 10,
   4: 14,
-  5: 30,
+  5: 21,
+  6: 60,
 } as const;

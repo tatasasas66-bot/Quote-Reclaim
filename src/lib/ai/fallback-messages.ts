@@ -2,42 +2,28 @@ import type { RecoveryMessage, RecoveryContext } from "./generate-recovery-plan"
 import {
   getRecommendedMessage,
   getSequenceFamily,
+  type FollowupNumber,
 } from "@/lib/recovery/recovery-logic";
 
 /**
  * Deterministic fallback templates. Voice target: a real, experienced
  * contractor — calm, direct, specific, no sales psychology language in the
- * message itself. The labels surfaced to the user are plain English
- * (Estimate Check / Decision Friction / Scope Rescue / Open, Revise, or Close /
- * Clean Closeout). Variation is seeded from the quote so the same quote
+ * message itself. The labels surfaced to the user are plain English.
+ * Variation is seeded from the quote so the same quote
  * always renders the same phrasing while different quotes spread across
  * the variants per day (4–5 per day).
  *
- * Cadence rationale (1 / 3 / 7 / 14 / 30) — research-locked:
- *   Day 1  — 97% of homeowners expect a contractor response within a week;
- *            54% within 1–2 days (Roofing Contractor 2024/2025 survey). A
- *            first follow-up inside 24h captures the highest reply yield
- *            (~25%) per cold-email benchmarks (Belkins 2025).
- *   Day 3  — Hits the documented 2–3 day inter-touch optimum (Belkins,
- *            Martal). Closer is intrusive; further dilutes momentum.
- *   Day 7  — One-week mental anchor; matches the 1–3 week quote-to-job
- *            window homeowners describe (Roofing Contractor 2025).
- *   Day 14 — Lets price-shoppers finish the 2–3 bid comparison window the
- *            same survey reports. Aligns with the takeaway after a multi-
- *            week stall.
- *   Day 30 — Wide tail spacing. Spam complaints triple after 4+ rapid
- *            follow-ups (Belkins). The end-of-month closeout matches the
- *            mental model contractors actually use.
+ * Cadence: Day 1 / 5 / 10 / 14 / 21 / 60. The wider early spacing avoids
+ * pestering, Day 21 closes cleanly, and Day 60 is one final reopen-later touch.
  *
  * Strategic arc per touch (every message is a real-contractor sentence
  * disguising the intent — never naming the psychology):
- *   1 Estimate Check  — surface a confusion the homeowner hid (clarity).
- *   2 Decision Friction  — operational seriousness without fake scarcity.
- *   3 Scope Rescue    — give a lower-commitment path when full scope, timing,
- *                       or total may be too much to approve as-is.
- *   4 Open, Revise, or Close  — turn silence into a simple active / paused / closed
- *                       choice without demanding a yes.
- *   5 Clean Closeout  — respectful withdrawal; declarative; door open.
+ *   1 Decision Friction — clear up scope, timing, or price.
+ *   2 Scope Rescue — make budget, timing, scope, or a clean no easy to say.
+ *   3 Soft Decision Check — keep active or close without pressure.
+ *   4 Open, Revise, or Close — three simple paths.
+ *   5 Clean Closeout — respectful withdrawal; declarative; door open.
+ *   6 Reopen Later — one later check, then no further chase.
  */
 
 const ALIASES: Record<string, string> = {
@@ -110,7 +96,7 @@ const TRADE_WORDS: Record<string, string> = {
 };
 
 /** Delegates to the centralized recovery-logic module SEQUENCE_FAMILIES. */
-function FRAMEWORKS(n: 1 | 2 | 3 | 4 | 5): RecoveryMessage["framework"] {
+function FRAMEWORKS(n: FollowupNumber): RecoveryMessage["framework"] {
   return getSequenceFamily(n);
 }
 
@@ -287,7 +273,7 @@ export type VariantVars = {
   /**
    * Detail-aware project phrase: "the X estimate for the {job noun}" when the
    * job is known, otherwise identical to `project`. Used on the touches where
-   * job specificity converts (Day 1, Day 14, Day 30).
+   * job specificity converts (Day 1, Day 14, Day 60).
    */
   projectDetail: string;
   /** Bare trade modifier ("roofing", "HVAC", "project", "concrete"). */
@@ -312,89 +298,93 @@ export type VariantVars = {
 // there is no "Contractor here" placeholder. Unknown sender = no identity
 // clause at all, which still reads like a natural text.
 const DAY1_VARIANTS: ReadonlyArray<(v: VariantVars) => string> = [
-  ({ firstName, contractorFirstName, projectDetail }) => {
-    const identity = contractorFirstName ? contractorFirstName + " here. " : "";
-    return `Hey ${firstName} — ${identity}I looked back over ${projectDetail}. Was there a number, timing question, or detail you wanted me to break down?`;
-  },
-  ({ firstName, projectDetail }) =>
-    `Hey ${firstName} — I went back through ${projectDetail}. Anything in the scope, timing, or total you want me to clarify?`,
-  ({ firstName, projectDetail }) =>
-    `Hey ${firstName}, I reviewed ${projectDetail} again. Was the question scope, timing, total, or something else?`,
-  ({ firstName, projectDetail }) =>
-    `Hey ${firstName}, I had another look at ${projectDetail}. Is the blocker scope, timing, total, or something else?`,
+  ({ projectDetail }) =>
+    `Any question on ${projectDetail} I can clear up? Scope, timing, or price — reply with which one.`,
+  ({ projectDetail }) =>
+    `Is there one question on ${projectDetail} I can clear up — scope, timing, or price?`,
+  ({ projectDetail }) =>
+    `Was anything unclear in ${projectDetail}: scope, timing, or price?`,
+  ({ projectDetail }) =>
+    `Which part of ${projectDetail} needs a clearer answer — scope, timing, or price?`,
 ];
 
-// DAY 3 — Decision Friction. "{FirstName}, ..." opener, no greeting word.
-// Operational, never claims the contractor is releasing or holding a slot.
-const DAY3_VARIANTS: ReadonlyArray<(v: VariantVars) => string> = [
-  ({ firstName, tradeWord }) =>
-    `${firstName}, I'm lining up the ${tradeWord} schedule. Should I keep your estimate active, or move it off my list?`,
-  ({ firstName, tradeWord }) =>
-    `${firstName}, I'm sorting the next round of ${tradeWord} work. Should I keep your estimate active, or set it aside?`,
+// DAY 10 — Soft Decision Check.
+const DAY10_VARIANTS: ReadonlyArray<(v: VariantVars) => string> = [
+  ({ project }) =>
+    `Should I keep ${project} on my active list, or close it out? Either is fine — just tell me which.`,
+  ({ project }) =>
+    `Should ${project} stay active, or should I close it out for now? Either answer is fine.`,
+  ({ project }) =>
+    `Do you want me to keep ${project} open, or close it out on my side?`,
+  ({ project }) =>
+    `Should I leave ${project} active, or mark it closed for now?`,
+];
+
+// DAY 5 — Scope Rescue and a shame-free exit.
+const DAY5_VARIANTS: ReadonlyArray<(v: VariantVars) => string> = [
   ({ firstName, project }) =>
-    `${firstName}, should I keep ${project} on my list for the next opening, or pause it?`,
-  ({ firstName, tradeWord }) =>
-    `${firstName}, I'm organizing upcoming ${tradeWord} work. Should I keep your estimate active, or take it off my list?`,
-];
-
-// DAY 7 — Scope Rescue. No greeting word. Name omitted. This is the moment
-// that makes the system feel useful instead of repetitive: if the full
-// estimate is too much to approve as-is, offer a smaller decision path without
-// discounting or inventing urgency.
-const DAY7_VARIANTS: ReadonlyArray<(v: VariantVars) => string> = [
-  ({ project }) =>
-    `If ${project} feels too big as written, I can split it into must-do, optional, and later. Want that version?`,
-  ({ project }) =>
-    `If ${project} needs a simpler path, I can separate what matters now from what can wait. Want me to send that breakdown?`,
-  ({ project }) =>
-    `If one part of ${project} is holding things up, I can isolate that piece and leave the rest alone. Want me to map it out?`,
-  ({ project }) =>
-    `If ${project} is close but not quite right, I can show the smallest clean adjustment. Want me to do that?`,
-  ({ project }) =>
-    `If ${project} is more than you want to tackle at once, I can phase it without cutting corners. Want me to outline it?`,
+    `Hi ${firstName} — no pressure on ${project}. If it's timing, budget, or scope, reply with which one and I'll sharpen it. If it's a pass, 'no' works too.`,
+  ({ firstName, project }) =>
+    `Hi ${firstName} — if ${project} is stuck on timing, budget, or scope, tell me which one and I'll tighten that piece. If it's a no, that's fine too.`,
+  ({ firstName, project }) =>
+    `Hi ${firstName} — no pressure on ${project}. Is the hold-up timing, budget, or scope? A simple no works too.`,
+  ({ firstName, project }) =>
+    `Hi ${firstName} — if ${project} needs a change, is it timing, budget, or scope? If it's a pass, just say no.`,
 ];
 
 // DAY 14 — Open, Revise, or Close. Useful, never discounting. The point is not another
 // "any update?" — it gives the customer a fast active / paused / closed choice.
 // Job-aware via projectDetail so the estimate still feels remembered.
 const DAY14_VARIANTS: ReadonlyArray<(v: VariantVars) => string> = [
-  ({ firstName, projectDetail }) =>
-    `${firstName}, should I keep ${projectDetail} active, pause it for later, or close it out for now?`,
-  ({ firstName, projectDetail }) =>
-    `${firstName}, where should I put ${projectDetail}: active, paused for later, or closed out?`,
-  ({ firstName, projectDetail }) =>
-    `${firstName}, I can keep ${projectDetail} active or take it off my board for now. Which is better?`,
-  ({ firstName, projectDetail }) =>
-    `${firstName}, if ${projectDetail} is still worth discussing, I can walk through just the part holding it up. Want me to?`,
+  ({ projectDetail }) =>
+    `I can keep ${projectDetail} open, revise it, or close it out. Which helps most?`,
+  ({ projectDetail }) =>
+    `Should I keep ${projectDetail} open, revise one part, or close it out?`,
+  ({ projectDetail }) =>
+    `Which helps most with ${projectDetail}: keep it open, revise it, or close it?`,
+  ({ projectDetail }) =>
+    `Do you want ${projectDetail} left open, revised, or closed out?`,
 ];
 
-// DAY 30 — Clean Closeout. Respectful, detached. Declarative. No question.
+// DAY 21 — Clean Closeout. Respectful, detached. Declarative. No question.
 // Job-aware via projectDetail so the final touch still names the exact job.
-const DAY30_VARIANTS: ReadonlyArray<(v: VariantVars) => string> = [
-  ({ firstName, projectDetail }) =>
-    `${firstName}, I'll close out ${projectDetail} after this. All good either way. If you want to revisit it later, just reply here and I'll pick it back up.`,
-  ({ firstName, projectDetail }) =>
-    `${firstName}, I'm going to close ${projectDetail} on my end. If you want me to keep it open, just let me know.`,
-  ({ firstName, projectDetail }) =>
-    `${firstName}, I'll mark ${projectDetail} closed for now. No problem either way — if it comes back up later, I can reopen it.`,
-  ({ firstName, projectDetail }) =>
-    `${firstName}, I'll step back on ${projectDetail} after this. If the timing changes down the road, I'm happy to pick it back up.`,
+const DAY21_VARIANTS: ReadonlyArray<(v: VariantVars) => string> = [
+  ({ projectDetail }) =>
+    `I'll close out ${projectDetail} on my side so it's off your plate. If the timing changes later, text me here and I'll send a fresh number — no re-quote needed.`,
+  ({ projectDetail }) =>
+    `I'll mark ${projectDetail} closed for now. If timing changes later, text me here and I'll pull it back up — no awkward restart.`,
+  ({ projectDetail }) =>
+    `I'm closing ${projectDetail} on my side. If it comes back to mind later, text me here and I'll send a fresh number.`,
+  ({ projectDetail }) =>
+    `I'll leave ${projectDetail} closed after this. If the timing changes, text me here and we can reopen it without starting over.`,
+];
+
+// DAY 60 — one reopen-later touch, then no further chase.
+const DAY60_VARIANTS: ReadonlyArray<(v: VariantVars) => string> = [
+  ({ projectDetail }) =>
+    `Saw ${projectDetail} from a while back. If the timing is better now, I can send a fresh number in 60 seconds. If not, no worries — I'll leave it closed.`,
+  ({ projectDetail }) =>
+    `I came across ${projectDetail} from a while back. If timing is better now, I can refresh the number quickly. Otherwise, I'll leave it closed.`,
+  ({ projectDetail }) =>
+    `This is the one later check on ${projectDetail}. If timing changed, I can send a fresh number quickly. If not, it stays closed.`,
+  ({ projectDetail }) =>
+    `I saw ${projectDetail} from earlier. If the timing works now, I can refresh the number quickly. Otherwise, no worries — it stays closed.`,
 ];
 
 /**
  * All variant builders keyed by day. Exported so tests can enumerate and
- * validate all 21 (Days 1/3/14/30 carry 4 variants each; Day 7 carries 5,
- * the extra being the Voss no-oriented form).
+ * validate all 24 variants (four for each cadence day).
  */
 export const SEQUENCE_VARIANTS: Record<
-  1 | 3 | 7 | 14 | 30,
+  1 | 5 | 10 | 14 | 21 | 60,
   ReadonlyArray<(v: VariantVars) => string>
 > = {
   1: DAY1_VARIANTS,
-  3: DAY3_VARIANTS,
-  7: DAY7_VARIANTS,
+  5: DAY5_VARIANTS,
+  10: DAY10_VARIANTS,
   14: DAY14_VARIANTS,
-  30: DAY30_VARIANTS,
+  21: DAY21_VARIANTS,
+  60: DAY60_VARIANTS,
 };
 
 export type CadenceDay = keyof typeof SEQUENCE_VARIANTS;
@@ -436,7 +426,7 @@ export function variantSeed(ctx: RecoveryContext): string {
  * An empty seed returns 0 — the canonical template — which keeps server-side
  * previews and the locked exact-match tests stable. The modulus uses the
  * actual variant count per day (not a hard-coded 4) so adding evidence-backed
- * variants like the Voss no-oriented form on Day 7 doesn't drift selection.
+ * future variant-count changes do not drift selection.
  */
 export function pickVariant(
   seed: string | null | undefined,
@@ -449,35 +439,42 @@ export function pickVariant(
 
 export function researchSequenceMessages(ctx: RecoveryContext): {
   day1: string;
-  day3: string;
-  day7: string;
+  day5: string;
+  day10: string;
   day14: string;
-  day30: string;
+  day21: string;
+  day60: string;
 } {
-  const messageContext = { firstName: ctx.firstName, trade: ctx.trade };
+  const messageContext = {
+    firstName: ctx.firstName,
+    trade: ctx.trade,
+    projectType: ctx.projectType,
+  };
   return {
-    day1: getRecommendedMessage("Estimate Check", messageContext),
-    day3: getRecommendedMessage("Decision Friction", messageContext),
-    day7: getRecommendedMessage("Scope Rescue", messageContext),
+    day1: getRecommendedMessage("Decision Friction", messageContext),
+    day5: getRecommendedMessage("Scope Rescue", messageContext),
+    day10: getRecommendedMessage("Soft Decision Check", messageContext),
     day14: getRecommendedMessage("Open, Revise, or Close", messageContext),
-    day30: getRecommendedMessage("Clean Closeout", messageContext),
+    day21: getRecommendedMessage("Clean Closeout", messageContext),
+    day60: getRecommendedMessage("Reopen Later", messageContext),
   };
 }
 
 export function fallbackMessages(ctx: RecoveryContext): RecoveryMessage[] {
   const seq = researchSequenceMessages(ctx);
-  const rows: Array<[1 | 2 | 3 | 4 | 5, string]> = [
+  const rows: Array<[FollowupNumber, string]> = [
     [1, seq.day1],
-    [2, seq.day3],
-    [3, seq.day7],
+    [2, seq.day5],
+    [3, seq.day10],
     [4, seq.day14],
-    [5, seq.day30],
+    [5, seq.day21],
+    [6, seq.day60],
   ];
   return rows.map(([n, message]) => ({
     followup_number: n,
     framework: FRAMEWORKS(n),
     message,
-    cta_type: n === 5 ? "statement" : "question",
+    cta_type: n >= 5 ? "statement" : "question",
     source: "fallback",
     score: 0,
   }));

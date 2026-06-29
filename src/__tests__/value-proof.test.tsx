@@ -174,14 +174,14 @@ describe("Sequence detail 'Why this works' rationale", () => {
     expect(detailPage).toContain("Why this works:");
   });
 
-  it("provides distinct rationale for all five follow-up steps", () => {
+  it("provides distinct rationale for all six follow-up steps", () => {
     expect(viewModel).toContain("getWhyThisWorksForStep");
     expect(viewModel).not.toMatch(/stall on price/i);
   });
 
-  it("keys the rationale by the ViewModel sequence definition", () => {
+  it("keys the rationale by each persisted reminder step", () => {
     expect(viewModel).toMatch(
-      /getWhyThisWorksForStep\(definition\.sourceStep\)/,
+      /getWhyThisWorksForStep\(reminder\.followup_number\)/,
     );
     expect(detailPage).toContain("card.whyThisWorks");
   });

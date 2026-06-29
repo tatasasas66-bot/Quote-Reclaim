@@ -16,7 +16,7 @@ import { PaddleCheckoutButton } from "@/components/billing/PaddleCheckoutButton"
 export const metadata: Metadata = {
   title: "Paste more quotes — Quote Reclaim",
   description:
-    "Audit and import another batch of silent estimates. Same parser, same ranking, same 5-message recovery plan.",
+    "Audit and import another batch of silent estimates. Same parser, same ranking, same 6-message recovery plan.",
 };
 
 export const dynamic = "force-dynamic";

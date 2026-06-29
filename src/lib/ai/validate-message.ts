@@ -7,7 +7,8 @@
 export type ValidationContext = {
   firstName?: string;
   trade?: string;
-  followupNumber?: 1 | 2 | 3 | 4 | 5;
+  projectType?: string | null;
+  followupNumber?: 1 | 2 | 3 | 4 | 5 | 6;
 };
 
 export type ValidationResult = {
@@ -30,15 +31,27 @@ export const MAX_MESSAGE_CHARS = 320;
 // "automate your sales").
 export const BANNED_PHRASES: readonly string[] = [
   "hi {name}, just checking in",
-  "just following up",
   "just checking in",
-  "following up",
-  "checking back",
+  "any update",
+  "any update?",
+  "are you still interested",
+  "are you still interested?",
   "touching base",
   "circle back",
   "circling back",
   "wanted to follow up",
-  "checking in to see",
+  "hope you're doing well",
+  "let me know if you have any questions",
+  "following up on my previous email",
+  "did you get my last message",
+  "just wanted to see if you had a chance to review",
+  "reaching out to see where you're at",
+  "feel free to reach out",
+  "sorry to bother you",
+  "i'd love to earn your business",
+  "special discount",
+  "limited time offer",
+  "match the other bid",
   "quick reminder",
   "final reminder",
   "one final follow-up",
@@ -249,15 +262,15 @@ export function validateMessage(
 
   // CTA / question count
   const questions = (trimmed.match(/\?/g) ?? []).length;
-  // Day 30 (followupNumber 5) is the Final Breakup — intentionally a
-  // declarative withdrawal of the offer with no question. Every other day
-  // still requires exactly one.
-  if (ctx.followupNumber === 5) {
+  // Closeout and reopen-later are declarative. Earlier steps ask one question.
+  if (ctx.followupNumber === 5 || ctx.followupNumber === 6) {
     if (questions !== 0) {
-      reasons.push(`day 30 must be declarative (no question, got ${questions})`);
+      reasons.push(
+        `closeout must be declarative (no question, got ${questions})`,
+      );
     }
-  } else if (questions !== 1) {
-    reasons.push(`must have exactly one question (${questions})`);
+  } else if (questions > 1) {
+    reasons.push(`must have at most one question (${questions})`);
   }
 
   // Exclamations
@@ -287,23 +300,19 @@ export function validateMessage(
   const firstName = (ctx.firstName ?? "").trim();
   const firstNameLower = normalizeForScan(firstName);
 
-  if (ctx.followupNumber === 3) {
-    // Day 7 (Voss Takeaway). The canonical v0 omits the name entirely; v1/v3
-    // lead with the name. Both are valid — the rule is "no greeting", not
-    // "no name".
-    if (/^(hi|hey)\b/i.test(trimmed)) {
-      reasons.push("day 3 must not start with a greeting");
-    }
-  } else if (firstNameLower && !containsWholeWord(lower, firstNameLower)) {
+  if (
+    ctx.followupNumber === 2 &&
+    firstNameLower &&
+    !containsWholeWord(lower, firstNameLower)
+  ) {
     reasons.push("missing client first name");
   }
 
-  // Trade / context anchor — every day (Day 1 through Day 30) must reference
-  // the trade or its synonym. Day 3 previously slipped this check because it
-  // leaned on a generic "slot" frame; the rewrite anchors it on the actual
-  // trade (e.g., "the roofing schedule", "upcoming HVAC work") so the rule
-  // now applies uniformly.
-  if (ctx.trade && ctx.trade.length > 0) {
+  // Prefer an explicit project type. Legacy quotes keep trade-noun fallback.
+  const projectType = (ctx.projectType ?? "").trim().toLowerCase();
+  if (projectType) {
+    if (!lower.includes(projectType)) reasons.push("missing project type");
+  } else if (ctx.trade && ctx.trade.length > 0) {
     const kws = tradeKeywords(ctx.trade);
     const hasAny = kws.some(
       (k) =>

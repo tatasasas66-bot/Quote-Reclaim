@@ -101,6 +101,7 @@ export default async function QuoteDetailPage({
           suggestion: suggestResponse({
             intent: replyEvent.reply_intent,
             trade: quote.trade,
+            projectType: quote.project_type ?? null,
             estimateAmount: quote.estimate_amount,
             clientName: quote.client_name,
           }),
@@ -156,6 +157,7 @@ export default async function QuoteDetailPage({
         quoteId={viewModel.quote.id}
         clientFirstName={viewModel.quote.clientFirstName}
         trade={quote.trade}
+        projectType={quote.project_type ?? null}
         latestReply={latestOneTapReply}
       />
       <QuoteSummary
@@ -287,6 +289,7 @@ function CommandActionPanel({
           <ReplyPlaybook
             paths={viewModel.replyPlaybook}
             trade={viewModel.quote.trade}
+            projectType={viewModel.quote.projectType}
             quoteId={viewModel.quote.id}
           />
         </div>
@@ -351,7 +354,10 @@ function QuoteSummary({
         : viewModel.scoreTone === "danger"
           ? "danger"
           : "neutral";
-  const projectNoun = getProjectNoun(viewModel.quote.trade);
+  const projectNoun = getProjectNoun(
+    viewModel.quote.trade,
+    viewModel.quote.projectType,
+  );
   const opportunityMultiple = Math.floor(
     viewModel.quote.amount / MONTHLY_PRICE_USD,
   );
@@ -402,6 +408,12 @@ function QuoteSummary({
         <IntelligenceField label="Priority" value={viewModel.priorityLabel} />
         <IntelligenceField label="Next move" value={viewModel.currentMove} />
         <IntelligenceField label="Status" value={viewModel.statusLabel} />
+        {viewModel.quote.projectType ? (
+          <IntelligenceField
+            label="Project type"
+            value={viewModel.quote.projectType}
+          />
+        ) : null}
         {viewModel.quote.email ? (
           <IntelligenceField
             label="Email"
@@ -650,7 +662,10 @@ function messageTracking(
     quote_id: viewModel.quote.id,
     message_type: messageType,
     trade: viewModel.quote.trade,
-    project_noun: getProjectNoun(viewModel.quote.trade),
+    project_noun: getProjectNoun(
+      viewModel.quote.trade,
+      viewModel.quote.projectType,
+    ),
     recovery_window: viewModel.recoveryWindow,
     quote_amount: viewModel.quote.amount,
     days_quiet: viewModel.quote.daysQuiet,

@@ -61,7 +61,7 @@ describe("UI ↔ cron effective quiet-age alignment", () => {
     expect(days).toBeLessThanOrEqual(13);
     expect(getRecoveryWindow(days)).toBe("cooling");
     const rec = getRecommendedMessage({ daysQuiet: days, trade: "roofing" });
-    expect(rec.messageFamily).toBe("Decision Friction");
+    expect(rec.messageFamily).toBe("Soft Decision Check");
   });
 
   it("Case D: entered today, days_silent=52, no quote_sent_at → 52 → Closeout", () => {

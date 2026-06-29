@@ -1,6 +1,7 @@
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
+import { fallbackMessages } from "@/lib/ai/fallback-messages";
 import type { QuoteRow, ReminderRow } from "@/lib/quotes/repo";
 import {
   buildRecoveryPlanViewModel,
@@ -15,6 +16,7 @@ function quote(daysQuiet: number): QuoteRow {
     id: `quote-${daysQuiet}`,
     user_id: "user-1",
     trade: "Roofing",
+    project_type: "Roof replacement",
     city: "Austin",
     state: "TX",
     estimate_amount: 12_500,
@@ -34,15 +36,21 @@ function quote(daysQuiet: number): QuoteRow {
 }
 
 function reminders(): ReminderRow[] {
-  return ([1, 3, 7, 14, 30] as const).map((offset, index) => ({
+  const plan = fallbackMessages({
+    firstName: "Jordan",
+    trade: "Roofing",
+    projectType: "Roof replacement",
+    estimateAmount: 12_500,
+  });
+  return ([1, 5, 10, 14, 21, 60] as const).map((offset, index) => ({
     id: `reminder-${index + 1}`,
     user_id: "user-1",
     quote_id: "quote",
-    followup_number: (index + 1) as 1 | 2 | 3 | 4 | 5,
+    followup_number: plan[index]!.followup_number,
     message_type: "email",
-    message_text: `STALE persisted follow-up ${index + 1}`,
-    framework_used: "STALE family",
-    cta_type: "question",
+    message_text: plan[index]!.message,
+    framework_used: plan[index]!.framework,
+    cta_type: plan[index]!.cta_type,
     send_at: new Date(NOW + offset * DAY).toISOString(),
     sent: false,
     sent_at: null,
@@ -74,25 +82,26 @@ function expectTopMatchesFirstCard(viewModel: RecoveryPlanViewModel) {
 }
 
 describe("buildRecoveryPlanViewModel", () => {
-  it("Warm, 2 days quiet: Estimate Check is current and every top field matches the first card", () => {
+  it("Warm, 2 days quiet: the stored Day 1 move leads the six-step plan", () => {
     const viewModel = build(2);
 
     expect(viewModel.recoveryWindow).toBe("warm");
-    expect(viewModel.currentMove).toBe("Estimate Check");
-    expect(viewModel.sequenceHeading).toBe("5-message recovery plan");
+    expect(viewModel.currentMove).toBe("Decision Friction");
+    expect(viewModel.sequenceHeading).toBe("6-message recovery plan");
     expect(viewModel.sequenceCards.map((card) => card.family)).toEqual([
-      "Estimate Check",
       "Decision Friction",
       "Scope Rescue",
+      "Soft Decision Check",
       "Open, Revise, or Close",
       "Clean Closeout",
+      "Reopen Later",
     ]);
     expect(viewModel.quietSignal?.signal).toBe("Early");
     expect(viewModel.quietSignal?.stallReason).toBe("Normal early silence");
     expectTopMatchesFirstCard(viewModel);
   });
 
-  it("Cooling, 14 days quiet: Decision Friction is current with no Estimate Check leakage", () => {
+  it("Cooling age does not replace the queued sequence step", () => {
     const viewModel = build(14);
     const visibleText = [
       viewModel.currentMove,
@@ -113,26 +122,32 @@ describe("buildRecoveryPlanViewModel", () => {
 
     expect(viewModel.recoveryWindow).toBe("cooling");
     expect(viewModel.currentMove).toBe("Decision Friction");
-    expect(viewModel.sequenceHeading).toBe("4-message remaining plan");
+    expect(viewModel.sequenceHeading).toBe("6-message recovery plan");
     expect(viewModel.sequenceCards.map((card) => card.family)).toEqual([
       "Decision Friction",
       "Scope Rescue",
+      "Soft Decision Check",
       "Open, Revise, or Close",
       "Clean Closeout",
+      "Reopen Later",
     ]);
     expect(visibleText).not.toContain("Estimate Check");
     expectTopMatchesFirstCard(viewModel);
   });
 
-  it("Cold, 30 days quiet: Open, Revise, or Close is current with only two remaining cards", () => {
+  it("Cold age keeps the actual queued six-step plan intact", () => {
     const viewModel = build(30);
 
     expect(viewModel.recoveryWindow).toBe("cold");
-    expect(viewModel.currentMove).toBe("Open, Revise, or Close");
-    expect(viewModel.sequenceHeading).toBe("2-message remaining plan");
+    expect(viewModel.currentMove).toBe("Decision Friction");
+    expect(viewModel.sequenceHeading).toBe("6-message recovery plan");
     expect(viewModel.sequenceCards.map((card) => card.family)).toEqual([
+      "Decision Friction",
+      "Scope Rescue",
+      "Soft Decision Check",
       "Open, Revise, or Close",
       "Clean Closeout",
+      "Reopen Later",
     ]);
     expect(JSON.stringify(viewModel.sequenceCards)).not.toContain(
       "Estimate Check",
@@ -140,14 +155,16 @@ describe("buildRecoveryPlanViewModel", () => {
     expectTopMatchesFirstCard(viewModel);
   });
 
-  it("Closeout, 52 days quiet: Clean Closeout is the only card and matches the command", () => {
+  it("Closeout age still leaves the one-time Day 60 row visible", () => {
     const viewModel = build(52);
 
     expect(viewModel.recoveryWindow).toBe("closeout");
-    expect(viewModel.currentMove).toBe("Clean Closeout");
-    expect(viewModel.sequenceHeading).toBe("Clean Closeout plan");
-    expect(viewModel.sequenceCards).toHaveLength(1);
-    expect(viewModel.sequenceCards[0]?.family).toBe("Clean Closeout");
+    expect(viewModel.currentMove).toBe("Decision Friction");
+    expect(viewModel.sequenceHeading).toBe("6-message recovery plan");
+    expect(viewModel.sequenceCards).toHaveLength(6);
+    expect(
+      viewModel.sequenceCards.filter((card) => card.family === "Reopen Later"),
+    ).toHaveLength(1);
     expect(JSON.stringify(viewModel.sequenceCards)).not.toContain(
       "Estimate Check",
     );
@@ -163,23 +180,25 @@ describe("buildRecoveryPlanViewModel", () => {
     }
   });
 
-  it("ships all ten reply paths and window-aware One-Tap choices", () => {
-    expect(build(2).replyPlaybook).toHaveLength(10);
+  it("ships all twelve reply paths and window-aware One-Tap choices", () => {
+    expect(build(2).replyPlaybook).toHaveLength(12);
     expect(build(2).oneTapOptions).toHaveLength(4);
     expect(build(14).oneTapOptions).toContain("Still comparing");
-    expect(build(14).oneTapOptions).toHaveLength(6);
+    expect(build(14).oneTapOptions).toHaveLength(7);
     expect(build(30).oneTapOptions).toHaveLength(4);
     expect(build(52).oneTapOptions).toHaveLength(4);
   });
 
-  it("never leaks stale persisted reminder copy into customer-facing messages", () => {
+  it("renders the persisted canonical reminder copy", () => {
     for (const daysQuiet of [2, 14, 30, 52]) {
       const viewModel = build(daysQuiet);
       const messages = [
         viewModel.currentMessage,
         ...viewModel.sequenceCards.map((card) => card.message),
       ].join(" ");
-      expect(messages).not.toContain("STALE persisted");
+      expect(messages).toContain("roof replacement");
+      expect(messages).toContain("active list");
+      expect(messages).toContain("60 seconds");
     }
   });
 

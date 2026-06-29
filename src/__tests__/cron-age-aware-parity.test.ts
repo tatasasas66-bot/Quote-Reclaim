@@ -1,9 +1,8 @@
 /**
- * Age-aware scheduled email send parity tests.
+ * Scheduled sequence-step parity tests.
  *
- * Verifies that the cron send path generates the correct age-aware message
- * at send time — NOT the persisted message_text that was written at plan
- * creation time.
+ * Verifies that the cron sends the persisted message for the claimed sequence
+ * step, so age-window logic cannot replace Day 10 or Day 60 copy at send time.
  *
  * Source-level tests that assert on the cron route's code structure,
  * since we can't run the actual cron without a database.
@@ -24,19 +23,18 @@ function readSource(rel: string): string {
 const cronSrc = readSource("../app/api/cron/send/route.ts");
 const migrationSrc = readSource("../../supabase/migrations/014_cron_days_silent.sql");
 
-describe("cron send route — age-aware message generation", () => {
-  it("imports getRecommendedMessage from centralized recovery-logic", () => {
-    expect(cronSrc).toMatch(/import.*getRecommendedMessage.*from.*recovery-logic/);
+describe("cron send route — persisted sequence-step delivery", () => {
+  it("does not regenerate a different age-window message", () => {
+    expect(cronSrc).not.toMatch(
+      /import.*getRecommendedMessage.*from.*recovery-logic/,
+    );
   });
 
-  it("regenerates the message at send time using days_silent + trade + client_name", () => {
-    expect(cronSrc).toMatch(/getRecommendedMessage\(\{[^}]*daysQuiet.*r\.days_silent/s);
-    expect(cronSrc).toMatch(/firstName.*r\.client_name/s);
-    expect(cronSrc).toMatch(/trade.*r\.trade/s);
+  it("uses the claimed reminder's stored message", () => {
+    expect(cronSrc).toMatch(/const baseMessage = r\.message_text/);
   });
 
-  it("uses the age-aware message as the base for the email body", () => {
-    expect(cronSrc).toMatch(/const baseMessage = ageAware\.message \|\| r\.message_text/);
+  it("uses the stored step as the base for the email body", () => {
     expect(cronSrc).toMatch(/\$\{baseMessage\}\\n\\nQuick reply/);
   });
 
@@ -44,17 +42,16 @@ describe("cron send route — age-aware message generation", () => {
     expect(cronSrc).not.toMatch(/\$\{r\.message_text\}\\n\\nQuick reply/);
   });
 
-  it("stores the age-aware message in outbound_messages", () => {
+  it("stores the sent message in outbound_messages", () => {
     expect(cronSrc).toMatch(/message_text: messageBodyForSend/);
   });
 
-  it("stores the age-aware framework in outbound_messages", () => {
-    expect(cronSrc).toMatch(/framework_used: ageAware\.messageFamily/);
+  it("stores the claimed step framework in outbound_messages", () => {
+    expect(cronSrc).toMatch(/framework_used: r\.framework_used/);
   });
 
-  it("also generates age-aware messages for SMS sends", () => {
-    expect(cronSrc).toMatch(/smsAgeAware.*getRecommendedMessage/);
-    expect(cronSrc).toMatch(/smsBaseMessage/);
+  it("uses the same persisted step for SMS sends", () => {
+    expect(cronSrc).toMatch(/const smsBaseMessage = r\.message_text/);
   });
 
   it("ClaimedReminder type includes days_silent", () => {
@@ -94,18 +91,17 @@ describe("migration 014 — correct effective days_silent calculation", () => {
 // would generate for the same inputs
 // ---------------------------------------------------------------------------
 
-describe("age-aware message parity — cron matches UI for each window", () => {
-  it("12-day Cooling quote generates Decision Friction message", () => {
+describe("window recommendation parity for unscheduled fallbacks", () => {
+  it("12-day Cooling quote generates the Soft Decision Check", () => {
     const rec = getRecommendedMessage({
       daysQuiet: 12,
       firstName: "Josh",
       trade: "roofing",
     });
     expect(rec.window).toBe("cooling");
-    expect(rec.messageFamily).toBe("Decision Friction");
-    expect(rec.message).toContain("timing");
-    expect(rec.message).toContain("budget");
-    expect(rec.message).toContain("scope");
+    expect(rec.messageFamily).toBe("Soft Decision Check");
+    expect(rec.message).toContain("active list");
+    expect(rec.message).toContain("Either is fine");
     expect(rec.message).not.toContain("quick check");
     expect(rec.message).not.toContain("still fresh");
   });
@@ -134,21 +130,21 @@ describe("age-aware message parity — cron matches UI for each window", () => {
     expect(rec.window).toBe("closeout");
     expect(rec.messageFamily).toBe("Clean Closeout");
     expect(rec.message).toContain("close out");
-    expect(rec.message).toContain("no restart, no re-quote");
+    expect(rec.message).toContain("no re-quote needed");
     expect(rec.message).not.toContain("quick check");
     expect(rec.message).not.toContain("timing, budget");
     expect(rec.message).not.toContain("Which helps most");
   });
 
-  it("3-day Warm quote generates Estimate Check message", () => {
+  it("3-day Warm quote generates the Decision Friction message", () => {
     const rec = getRecommendedMessage({
       daysQuiet: 3,
       firstName: "Ali",
       trade: "electrical",
     });
     expect(rec.window).toBe("warm");
-    expect(rec.messageFamily).toBe("Estimate Check");
-    expect(rec.message).toContain("any question on the work I can clear up?");
+    expect(rec.messageFamily).toBe("Decision Friction");
+    expect(rec.message).toContain("Any question on the work I can clear up?");
   });
 });
 
@@ -227,7 +223,7 @@ describe("golden cases: old quotes entered today keep their quiet age", () => {
     const window = getRecoveryWindow(rpcDays);
     expect(window).toBe("cooling");
     const rec = getRecommendedMessage({ daysQuiet: rpcDays, trade: "roofing" });
-    expect(rec.messageFamily).toBe("Decision Friction");
+    expect(rec.messageFamily).toBe("Soft Decision Check");
   });
 
   it("Case D: quote with quote_sent_at 45 days ago → 45 days → Closeout", () => {

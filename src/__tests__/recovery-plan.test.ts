@@ -9,6 +9,7 @@ function readSource(relative: string): string {
 const detailPage = readSource("../app/(app)/quotes/[id]/page.tsx");
 const viewModel = readSource("../lib/recovery/recovery-plan-view-model.ts");
 const actions = readSource("../lib/quotes/actions.ts");
+const recoveryLogic = readSource("../lib/recovery/recovery-logic.ts");
 const quoteActions = readSource("../components/quotes/QuoteActions.tsx");
 const copyBtn = readSource("../components/quotes/CopyButton.tsx");
 const barrel = readSource("../components/quotes/index.ts");
@@ -187,9 +188,9 @@ describe("updateQuoteAction: reminder reconciliation", () => {
     expect(reconcileCall).not.toMatch(/newQuoteSentAt/);
   });
 
-  it("uses the 5-touch cadence (1, 3, 7, 14, 30 days)", () => {
-    expect(actions).toMatch(
-      /CADENCE_DAYS\s*:\s*Record<1 \| 2 \| 3 \| 4 \| 5,\s*number>\s*=\s*\{[\s\S]*?1:\s*1,[\s\S]*?2:\s*3,[\s\S]*?3:\s*7,[\s\S]*?4:\s*14,[\s\S]*?5:\s*30/,
+  it("uses the 6-touch cadence (1, 5, 10, 14, 21, 60 days)", () => {
+    expect(recoveryLogic).toMatch(
+      /CADENCE_DAYS[\s\S]*?1:\s*1,[\s\S]*?2:\s*5,[\s\S]*?3:\s*10,[\s\S]*?4:\s*14,[\s\S]*?5:\s*21,[\s\S]*?6:\s*60/,
     );
   });
 });
@@ -200,19 +201,18 @@ describe("reconcileReminders behavior", () => {
     actions.indexOf("export async function createQuoteAction"),
   );
 
-  it("preserves sent reminders (only updates unsent send_at when anySent)", () => {
-    expect(fn).toMatch(/anySent[\s\S]*?\.filter\(\(x\)\s*=>\s*!x\.sent\)/);
+  it("preserves sent reminders while refreshing unsent rows", () => {
+    expect(fn).toMatch(/if \(!target \|\| target\.sent\) continue/);
   });
 
   it("never updates send_at for sent reminders", () => {
     // The filter on the update loop must require !sent
-    expect(fn).toMatch(/\.filter\(\(x\)\s*=>\s*!x\.sent\)/);
+    expect(fn).toMatch(/if \(!target \|\| target\.sent\) continue/);
   });
 
-  it("regenerates message text only when no reminders are sent", () => {
+  it("regenerates only unsent message text while preserving sent rows", () => {
     expect(fn).toContain("generateRecoveryPlan");
-    // The regenerate branch is reached only after the anySent early return
-    expect(fn).toMatch(/anySent[\s\S]*?return;[\s\S]*?generateRecoveryPlan/);
+    expect(fn).toMatch(/target\.sent\) continue/);
   });
 
   it("final-validates regenerated messages via validateMessage", () => {
@@ -223,44 +223,43 @@ describe("reconcileReminders behavior", () => {
     expect(fn).toMatch(/find\(\s*\(r\)\s*=>\s*r\.followup_number/);
   });
 
-  it("only inserts when no rows existed (legacy path)", () => {
+  it("inserts a complete legacy plan when no rows exist", () => {
     expect(fn).toMatch(/existing\.length\s*===\s*0[\s\S]*?\.insert\(rows\)/);
+  });
+
+  it("adds only missing later steps to an existing legacy plan", () => {
+    expect(fn).toContain("existingSteps");
+    expect(fn).toContain("lastSentStep");
+    expect(fn).toContain("missingRows");
   });
 });
 
 // ---------------------------------------------------------------------------
-// 5-reminder maximum / no duplicate followup_number guarantee
+// 6-reminder maximum / no duplicate followup_number guarantee
 // ---------------------------------------------------------------------------
 
-describe("5-reminder maximum invariant", () => {
-  it("the shared recovery-plan writer only inserts a complete 5-step plan", () => {
-    // The 5-message gate moved into the single shared writer that BOTH the
+describe("6-reminder maximum invariant", () => {
+  it("the shared recovery-plan writer only inserts a complete 6-step plan", () => {
+    // The 6-message gate lives in the single shared writer that BOTH the
     // single-quote create flow and the bulk import use. createQuoteAction
     // delegates to it; the writer never persists a partial plan.
     const writer = readSource("../lib/quotes/recovery-plan-write.ts");
-    expect(writer).toMatch(/chosen\.length\s*!==\s*5/);
+    expect(writer).toMatch(/chosen\.length\s*!==\s*6/);
     expect(writer).toContain('from("reminders")');
     expect(actions).toContain("persistRecoveryPlan");
   });
 
-  it("CADENCE_DAYS table has exactly 5 entries: 1, 2, 3, 4, 5", () => {
-    const m = actions.match(/CADENCE_DAYS\s*:[^=]*=\s*(\{[^}]*\})/);
-    expect(m).not.toBeNull();
-    if (m) {
-      const literal = m[1];
-      const keys = (literal.match(/[12345]:/g) ?? []).length;
-      expect(keys).toBe(5);
-    }
+  it("CADENCE_DAYS table has exactly 6 entries", () => {
+    expect(recoveryLogic).toMatch(/6:\s*60/);
   });
 
-  it("reconcileReminders never .insert()s into reminders when rows already exist", () => {
+  it("reconcileReminders inserts only legacy or missing-step rows", () => {
     const fn = actions.slice(
       actions.indexOf("async function reconcileReminders"),
       actions.indexOf("export async function createQuoteAction"),
     );
-    // Single guarded insert in the legacy (length===0) branch.
     const inserts = fn.match(/\.from\("reminders"\)\s*\.insert/g) ?? [];
-    expect(inserts.length).toBe(1);
+    expect(inserts.length).toBe(2);
   });
 });
 

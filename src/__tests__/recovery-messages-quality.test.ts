@@ -55,7 +55,7 @@ function vars(firstName: string, contractor: string, trade: string): VariantVars
 
 function everyMessage(): string[] {
   const out: string[] = [];
-  for (const day of [1, 3, 7, 14, 30] as const) {
+  for (const day of [1, 5, 10, 14, 21, 60] as const) {
     for (let i = 0; i < SEQUENCE_VARIANTS[day].length; i++) {
       for (const trade of TRADES) {
         for (const name of NAMES) {
@@ -68,11 +68,11 @@ function everyMessage(): string[] {
 }
 
 // ---------------------------------------------------------------------------
-// 1. Five follow-up messages exist
+// 1. Six follow-up messages exist
 // ---------------------------------------------------------------------------
 
-describe("1. five follow-ups exist", () => {
-  it("generateRecoveryPlan returns exactly 5 messages", async () => {
+describe("1. six follow-ups exist", () => {
+  it("generateRecoveryPlan returns exactly 6 messages", async () => {
     const plan = await generateRecoveryPlan({
       firstName: "Jane",
       contractorFirstName: "Mike",
@@ -80,8 +80,8 @@ describe("1. five follow-ups exist", () => {
       estimateAmount: 8500,
       quoteId: "q-1",
     });
-    expect(plan).toHaveLength(5);
-    expect(plan.map((m) => m.followup_number)).toEqual([1, 2, 3, 4, 5]);
+    expect(plan).toHaveLength(6);
+    expect(plan.map((m) => m.followup_number)).toEqual([1, 2, 3, 4, 5, 6]);
   });
 });
 
@@ -116,7 +116,7 @@ describe("2-4. deterministic variation by seed", () => {
   });
 
   it("4. different quoteIds spread across more than one variant per day", () => {
-    for (const day of [1, 3, 7, 14, 30] as const) {
+    for (const day of [1, 5, 10, 14, 21, 60] as const) {
       const seen = new Set<number>();
       for (let i = 0; i < 100; i++) {
         seen.add(pickVariant(`q-${i}`, day));
@@ -200,25 +200,22 @@ describe("21-25. each day fulfils its strategic role", () => {
     }
   });
 
-  it("22. Day 3 is an active-list / schedule check with no fake slot scarcity", () => {
-    for (const builder of SEQUENCE_VARIANTS[3]) {
+  it("22. Day 5 gives easy scope/timing/budget categories and a clean no", () => {
+    for (const builder of SEQUENCE_VARIANTS[5]) {
       const msg = builder(sampleVars).toLowerCase();
-      expect(/active list|active|schedule|set it aside|pause it|move it off/.test(msg)).toBe(
-        true,
-      );
-      expect(msg).not.toMatch(/locking the schedule today|releasing it|let the slot go/);
+      expect(msg).toMatch(/timing/);
+      expect(msg).toMatch(/budget/);
+      expect(msg).toMatch(/scope/);
+      expect(msg).toMatch(/\bno\b/);
     }
   });
 
-  it("23. Day 7 is a scope rescue ask (smaller path, no discounting)", () => {
-    for (const builder of SEQUENCE_VARIANTS[7]) {
+  it("23. Day 10 is an active-or-close decision", () => {
+    for (const builder of SEQUENCE_VARIANTS[10]) {
       const msg = builder(sampleVars).toLowerCase();
-      expect(
-        /separate|break it into|phase|must-do|later pieces|holding things up|simpler path|not quite right/.test(
-          msg,
-        ),
-      ).toBe(true);
-      expect(msg).not.toMatch(/\b(discount|sale|deal|cheaper|coupon|promo)\b/);
+      expect(msg).toMatch(/active|open/);
+      expect(msg).toMatch(/close/);
+      expect(msg).not.toMatch(/locking the schedule today|releasing it|let the slot go/);
     }
   });
 
@@ -235,58 +232,59 @@ describe("21-25. each day fulfils its strategic role", () => {
     }
   });
 
-  it("25. Day 30 closes out respectfully (no hard feelings, door open)", () => {
-    for (const builder of SEQUENCE_VARIANTS[30]) {
+  it("25. Day 21 closes out respectfully with the door open", () => {
+    for (const builder of SEQUENCE_VARIANTS[21]) {
       const msg = builder(sampleVars).toLowerCase();
-      expect(/close .*out|close out|mark .* closed|step back|going to close/.test(msg)).toBe(
+      expect(/close .*out|close out|mark .* closed|closing|leave .* closed/.test(msg)).toBe(
         true,
       );
-      // No question — declarative breakup signal.
       expect((builder(sampleVars).match(/\?/g) ?? []).length).toBe(0);
-      // No begging or guilt language.
       expect(msg).not.toMatch(/please|sorry|begging|last chance|final notice/);
+    }
+  });
+
+  it("26. Day 60 reopens once and leaves the estimate closed", () => {
+    for (const builder of SEQUENCE_VARIANTS[60]) {
+      const msg = builder(sampleVars).toLowerCase();
+      expect(msg).toMatch(/fresh number|refresh the number/);
+      expect(msg).toMatch(/closed|stays closed/);
+      expect((builder(sampleVars).match(/\?/g) ?? []).length).toBe(0);
     }
   });
 });
 
 // ---------------------------------------------------------------------------
-// Day 7 tone safety — every variant is a calm contractor-native
-// scope-rescue ask. The earlier verbatim Chris Voss "Have you given up
-// on…?" frame was research-backed but read too sharp under a contractor's
-// own name and is removed.
+// Day 10 tone safety.
 // ---------------------------------------------------------------------------
 
-describe("Day 7 — every variant is calm contractor-native scope rescue, no 'Have you given up'", () => {
+describe("Day 10 — every variant is a calm soft decision check", () => {
   const sampleVars = vars("Jane", "Mike", "Roofing");
 
-  it("NO Day 7 variant opens with the sharp 'Have you given up on…' frame", () => {
-    const rendered = SEQUENCE_VARIANTS[7].map((b) => b(sampleVars));
+  it("no Day 10 variant opens with the sharp 'Have you given up on…' frame", () => {
+    const rendered = SEQUENCE_VARIANTS[10].map((b) => b(sampleVars));
     for (const msg of rendered) {
       expect(msg).not.toMatch(/^Have you given up on /);
       expect(msg).not.toMatch(/given up on/i);
     }
   });
 
-  it("every Day 7 variant carries no name, no greeting, exactly one question, trade keyword", () => {
-    for (const builder of SEQUENCE_VARIANTS[7]) {
+  it("every Day 10 variant carries exactly one question and a trade keyword", () => {
+    for (const builder of SEQUENCE_VARIANTS[10]) {
       const msg = builder(sampleVars);
       expect(msg).not.toMatch(/^(Hi|Hey)\b/);
       expect(msg).not.toContain("Jane");
       expect((msg.match(/\?/g) ?? []).length).toBe(1);
       expect(msg.toLowerCase()).toContain("roofing");
       expect(msg.length).toBeLessThanOrEqual(220);
-      expect(
-        /separate|break it into|phase|must-do|later pieces|holding things up|simpler path|not quite right/.test(
-          msg.toLowerCase(),
-        ),
-      ).toBe(true);
+      expect(msg.toLowerCase()).toMatch(/active|open/);
+      expect(msg.toLowerCase()).toMatch(/close/);
     }
   });
 
-  it("every Day 7 variant validates for every supported trade", () => {
+  it("every Day 10 variant validates for every supported trade", () => {
     for (const trade of TRADES) {
       const v = vars("Jane", "Mike", trade);
-      for (const builder of SEQUENCE_VARIANTS[7]) {
+      for (const builder of SEQUENCE_VARIANTS[10]) {
         const msg = builder(v);
         const res = validateMessage(msg, {
           firstName: "Jane",
@@ -300,24 +298,41 @@ describe("Day 7 — every variant is calm contractor-native scope rescue, no 'Ha
 });
 
 // ---------------------------------------------------------------------------
-// 26. Trade/project keyword appears in EVERY message (Day 1-30)
+// Trade/project keyword appears in every message.
 // ---------------------------------------------------------------------------
 
 describe("26. trade/project keyword in every message", () => {
   for (const trade of TRADES) {
-    it(`trade keyword present in all 5 days for ${trade}`, () => {
+    it(`trade keyword present in all 6 days for ${trade}`, () => {
       const seq = researchSequenceMessages({
         firstName: "Jane",
         contractorFirstName: "Mike",
         trade,
         estimateAmount: 5000,
       });
-      for (const day of ["day1", "day3", "day7", "day14", "day30"] as const) {
+      for (const day of [
+        "day1",
+        "day5",
+        "day10",
+        "day14",
+        "day21",
+        "day60",
+      ] as const) {
         const result = validateMessage(seq[day], {
           firstName: "Jane",
           trade,
           followupNumber:
-            day === "day1" ? 1 : day === "day3" ? 2 : day === "day7" ? 3 : day === "day14" ? 4 : 5,
+            day === "day1"
+              ? 1
+              : day === "day5"
+                ? 2
+                : day === "day10"
+                  ? 3
+                  : day === "day14"
+                    ? 4
+                    : day === "day21"
+                      ? 5
+                      : 6,
         });
         // The trade check is part of validateMessage now; if a message is
         // missing the trade keyword, this reason fires.
@@ -340,23 +355,40 @@ describe("27-29. asymmetric structure across the sequence", () => {
     quoteId: "asym-seed",
   });
 
-  it("27. the 5 messages are NOT all structurally identical (different openings/shapes)", () => {
-    const opens = [seq.day1, seq.day3, seq.day7, seq.day14, seq.day30].map((m) =>
-      m.split(/[\s,—]/)[0],
-    );
+  it("27. the 6 messages are not all structurally identical", () => {
+    const opens = [
+      seq.day1,
+      seq.day5,
+      seq.day10,
+      seq.day14,
+      seq.day21,
+      seq.day60,
+    ].map((m) => m.split(/[\s,—]/)[0]);
     // First-token diversity is a proxy for structural variation across the arc.
     expect(new Set(opens).size).toBeGreaterThanOrEqual(3);
   });
 
-  it("28. not ALL messages start with the client name (Day 1 leads with Hey, Day 7 omits)", () => {
-    const startsWithName = [seq.day1, seq.day3, seq.day7, seq.day14, seq.day30].map((m) =>
-      m.startsWith("Jane,"),
-    );
+  it("28. not all messages start with the client name", () => {
+    const startsWithName = [
+      seq.day1,
+      seq.day5,
+      seq.day10,
+      seq.day14,
+      seq.day21,
+      seq.day60,
+    ].map((m) => m.startsWith("Jane,"));
     expect(startsWithName.every((b) => b)).toBe(false);
   });
 
-  it("29. not ALL messages start with 'Hey' (Day 1 leads with Hey, the rest do not)", () => {
-    for (const m of [seq.day3, seq.day7, seq.day14, seq.day30]) {
+  it("29. messages do not use a repetitive Hey opener", () => {
+    for (const m of [
+      seq.day1,
+      seq.day5,
+      seq.day10,
+      seq.day14,
+      seq.day21,
+      seq.day60,
+    ]) {
       expect(m).not.toMatch(/^Hey\b/i);
     }
   });
@@ -367,7 +399,7 @@ describe("27-29. asymmetric structure across the sequence", () => {
 // ---------------------------------------------------------------------------
 
 describe("30. visible framework labels", () => {
-  it("uses Estimate Check / Decision Friction / Scope Rescue / Open, Revise, or Close / Clean Closeout", async () => {
+  it("uses the six corrected sequence labels", async () => {
     const plan = await generateRecoveryPlan({
       firstName: "Jane",
       contractorFirstName: "Mike",
@@ -376,11 +408,12 @@ describe("30. visible framework labels", () => {
       quoteId: "labels-1",
     });
     expect(plan.map((m) => m.framework)).toEqual([
-      "Estimate Check",
       "Decision Friction",
       "Scope Rescue",
+      "Soft Decision Check",
       "Open, Revise, or Close",
       "Clean Closeout",
+      "Reopen Later",
     ]);
   });
 });
@@ -416,7 +449,7 @@ describe("31-32. WHY_THIS_WORKS rationale is contractor-native (no psychology ja
 
   it("the rationale is keyed by the ViewModel sequence definition", () => {
     expect(viewModel).toMatch(
-      /getWhyThisWorksForStep\(definition\.sourceStep\)/,
+      /getWhyThisWorksForStep\(reminder\.followup_number\)/,
     );
   });
 
@@ -504,11 +537,13 @@ describe("job-aware specificity (jobDetail)", () => {
       const noun = getProjectNoun(trade);
       expect(seq.day1.toLowerCase()).toContain(noun);
       expect(seq.day14.toLowerCase()).toContain(noun);
-      expect(seq.day30.toLowerCase()).toContain(noun);
+      expect(seq.day21.toLowerCase()).toContain(noun);
+      expect(seq.day60.toLowerCase()).toContain(noun);
       for (const [n, msg] of [
         [1, seq.day1],
         [4, seq.day14],
-        [5, seq.day30],
+        [5, seq.day21],
+        [6, seq.day60],
       ] as const) {
         const res = validateMessage(msg, {
           firstName: "Jane",
@@ -535,10 +570,11 @@ describe("job-aware specificity (jobDetail)", () => {
       expect(jobDetail(trade, "custom unrecognized scope text")).toBeNull();
       for (const [n, msg] of [
         [1, seq.day1],
-        [2, seq.day3],
-        [3, seq.day7],
+        [2, seq.day5],
+        [3, seq.day10],
         [4, seq.day14],
-        [5, seq.day30],
+        [5, seq.day21],
+        [6, seq.day60],
       ] as const) {
         const res = validateMessage(msg, {
           firstName: "Jane",
@@ -576,11 +612,25 @@ describe("job-aware specificity (jobDetail)", () => {
       jobDescription: "Replace 3-ton AC + furnace",
       quoteId: "hvac-clean-1",
     });
-    for (const day of ["day1", "day7", "day14", "day30"] as const) {
+    for (const day of [
+      "day1",
+      "day5",
+      "day10",
+      "day14",
+      "day21",
+      "day60",
+    ] as const) {
       expect(seq[day]).toContain("system");
     }
     // No awkward equipment-noun stack on ANY touch.
-    for (const day of ["day1", "day3", "day7", "day14", "day30"] as const) {
+    for (const day of [
+      "day1",
+      "day5",
+      "day10",
+      "day14",
+      "day21",
+      "day60",
+    ] as const) {
       expect(seq[day]).not.toMatch(
         /estimate for the (furnace|ac|heat pump|mini-split|ductwork)/i,
       );

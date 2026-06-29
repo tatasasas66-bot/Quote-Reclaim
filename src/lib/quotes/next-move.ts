@@ -1,10 +1,13 @@
 import type { ReminderRow } from "@/lib/quotes/repo";
 import { formatScheduleDateTime } from "@/lib/quotes/business-hours";
-import { getSequenceFamily } from "@/lib/recovery/recovery-logic";
+import {
+  getSequenceFamily,
+  type FollowupNumber,
+} from "@/lib/recovery/recovery-logic";
 
 /** Map follow-up number → family name from centralized recovery-logic. */
 function familyName(n: number): string {
-  return getSequenceFamily(n as 1 | 2 | 3 | 4 | 5);
+  return getSequenceFamily(n as FollowupNumber);
 }
 
 /**

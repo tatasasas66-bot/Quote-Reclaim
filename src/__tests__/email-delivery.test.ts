@@ -93,11 +93,10 @@ describe("selectChannel", () => {
 
 describe("recoveryEmailSubject", () => {
   it("uses trade in the subject ('Quote' or 'Estimate' framing, never 'Bid')", () => {
-    expect(recoveryEmailSubject("Roofing")).toBe(
-      "Following up on your Roofing estimate",
-    );
-    expect(recoveryEmailSubject("HVAC")).toBe(
-      "Following up on your HVAC estimate",
+    expect(recoveryEmailSubject("Roofing")).toBe("re: your roof estimate");
+    expect(recoveryEmailSubject("HVAC")).toBe("re: your system estimate");
+    expect(recoveryEmailSubject("Concrete", "Patio")).toBe(
+      "re: your patio estimate",
     );
   });
 });

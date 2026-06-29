@@ -15,6 +15,7 @@ import { PAYWALL_PRICE_LABEL } from "@/lib/payments/entitlement";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { createServiceSupabaseClient } from "@/lib/supabase/service";
 import { titleCaseName } from "@/lib/utils/title-case";
+import { CADENCE_DAYS } from "@/lib/recovery/recovery-logic";
 import { persistRecoveryPlan, scheduleSendAt } from "./recovery-plan-write";
 import { quoteInputSchema, quoteUpdateSchema } from "./schema";
 
@@ -23,14 +24,6 @@ export type ActionResult =
   | { ok: false; error: string; fieldErrors?: Record<string, string[]> };
 
 type RawForm = Record<string, FormDataEntryValue>;
-
-const CADENCE_DAYS: Record<1 | 2 | 3 | 4 | 5, number> = {
-  1: 1,
-  2: 3,
-  3: 7,
-  4: 14,
-  5: 30,
-};
 
 function readForm(formData: FormData): RawForm {
   return Object.fromEntries(formData.entries());
@@ -45,6 +38,7 @@ function toCandidate(raw: RawForm) {
   return {
     client_name: String(raw.client_name ?? ""),
     trade: String(raw.trade ?? ""),
+    project_type: String(raw.project_type ?? ""),
     estimate_amount: num(raw.estimate_amount),
     days_silent: num(raw.days_silent),
     client_email: String(raw.client_email ?? ""),
@@ -99,6 +93,7 @@ type RecoveryInput = {
   firstName: string;
   contractorFirstName?: string | null;
   trade: string;
+  projectType: string | null;
   estimateAmount: number;
   jobDescription: string | null;
   city: string | null;
@@ -110,7 +105,7 @@ type RecoveryInput = {
  *
  * The recovery schedule re-anchors to NOW (the moment of the edit), never to
  * the estimate date. Days Quiet still tracks quote_sent_at — that column is
- * updated by the caller — but the 1/3/7/14/30-day cadence restarts from the
+ * updated by the caller — but the 1/5/10/14/21/60-day cadence restarts from the
  * edit so an unsent reminder can never be pushed into the past when the
  * contractor bumps a quote's age.
  *
@@ -144,33 +139,20 @@ async function reconcileReminders(params: {
   if (error) return;
   const existing: ReminderShape[] = (data ?? []) as ReminderShape[];
 
-  const anySent = existing.some((r) => r.sent);
-
-  if (anySent) {
-    for (const r of existing.filter((x) => !x.sent)) {
-      const fn = r.followup_number as 1 | 2 | 3 | 4 | 5;
-      if (!CADENCE_DAYS[fn]) continue;
-      const sendAt = scheduleSendAt(scheduleStartMs, CADENCE_DAYS[fn]);
-      await serviceClient
-        .from("reminders")
-        .update({ send_at: sendAt })
-        .eq("id", r.id);
-    }
-    return;
-  }
-
-  // No reminders sent — regenerate message text + schedule. Seed variant
-  // selection with the quote id so phrasing stays stable for this quote.
+  // Preserve sent rows, refresh every unsent row, and add any newly introduced
+  // later step exactly once. The unique quote/step index remains the final
+  // duplicate guard.
   const plan = await generateRecoveryPlan({ ...recovery, quoteId });
   const valid = plan.filter(
     (m) =>
       validateMessage(m.message, {
         firstName: recovery.firstName,
         trade: recovery.trade,
+        projectType: recovery.projectType,
         followupNumber: m.followup_number,
       }).ok,
   );
-  if (valid.length !== 5) return;
+  if (valid.length !== 6) return;
 
   if (existing.length === 0) {
     const rows = valid.map((m) => ({
@@ -191,7 +173,7 @@ async function reconcileReminders(params: {
     const target = existing.find(
       (r) => r.followup_number === m.followup_number,
     );
-    if (!target) continue;
+    if (!target || target.sent) continue;
     await serviceClient
       .from("reminders")
       .update({
@@ -202,6 +184,34 @@ async function reconcileReminders(params: {
         send_at: scheduleSendAt(scheduleStartMs, CADENCE_DAYS[m.followup_number]),
       })
       .eq("id", target.id);
+  }
+
+  const existingSteps = new Set(existing.map((row) => row.followup_number));
+  const lastSentStep = existing.reduce(
+    (max, row) => (row.sent ? Math.max(max, row.followup_number) : max),
+    0,
+  );
+  const missingRows = valid
+    .filter(
+      (message) =>
+        !existingSteps.has(message.followup_number) &&
+        message.followup_number > lastSentStep,
+    )
+    .map((message) => ({
+      user_id: userId,
+      quote_id: quoteId,
+      followup_number: message.followup_number,
+      message_type: channel,
+      message_text: message.message,
+      framework_used: message.framework,
+      cta_type: message.cta_type,
+      send_at: scheduleSendAt(
+        scheduleStartMs,
+        CADENCE_DAYS[message.followup_number],
+      ),
+    }));
+  if (missingRows.length > 0) {
+    await serviceClient.from("reminders").insert(missingRows);
   }
 }
 
@@ -255,6 +265,7 @@ export async function createQuoteAction(
     .insert({
       user_id: userData.user.id,
       trade: input.trade,
+      project_type: input.project_type || null,
       city: normalizedCity,
       state: input.state,
       estimate_amount: input.estimate_amount,
@@ -284,7 +295,7 @@ export async function createQuoteAction(
   const firstName = firstNameOf(normalizedClientName);
   const contractorFirstName = contractorFirstNameOf(userData.user);
 
-  // Generate + persist the 5-step plan through the ONE shared writer that the
+  // Generate + persist the 6-step plan through the ONE shared writer that the
   // bulk-import flow also uses, so reminder shape can never diverge between the
   // two paths again. The schedule starts NOW (default scheduleStartAt) — never
   // the original estimate date — so an old/imported quote can never produce a
@@ -298,6 +309,7 @@ export async function createQuoteAction(
       firstName,
       contractorFirstName,
       trade: input.trade,
+      projectType: input.project_type || null,
       estimateAmount: input.estimate_amount,
       jobDescription: input.job_description || null,
       city: input.city || null,
@@ -364,6 +376,7 @@ export async function updateQuoteAction(
     .from("quotes")
     .update({
       trade: input.trade,
+      project_type: input.project_type || null,
       city: input.city ? titleCaseName(input.city) : "",
       state: input.state,
       estimate_amount: input.estimate_amount,
@@ -402,6 +415,7 @@ export async function updateQuoteAction(
       firstName: firstNameOf(input.client_name),
       contractorFirstName: contractorFirstNameOf(userData.user),
       trade: input.trade,
+      projectType: input.project_type || null,
       estimateAmount: input.estimate_amount,
       jobDescription: input.job_description || null,
       city: input.city || null,
@@ -724,6 +738,7 @@ type QuoteForEmailSend = {
   client_email: string | null;
   client_opted_out: boolean;
   trade: string;
+  project_type: string | null;
 };
 
 /**
@@ -761,7 +776,9 @@ export async function sendReminderManualEmailAction(
 
   const { data: quoteData, error: quoteError } = await serviceClient
     .from("quotes")
-    .select("id, user_id, outcome, client_email, client_opted_out, trade")
+    .select(
+      "id, user_id, outcome, client_email, client_opted_out, trade, project_type",
+    )
     .eq("id", reminder.quote_id)
     .eq("user_id", userId)
     .maybeSingle();
@@ -818,7 +835,7 @@ export async function sendReminderManualEmailAction(
 
   const emailResult = await sendRecoveryEmail({
     to: quote.client_email,
-    subject: recoveryEmailSubject(quote.trade),
+    subject: recoveryEmailSubject(quote.trade, quote.project_type),
     body: reminder.message_text,
     from: recoveryFromHeader({ contractorEmail: senderProfile?.email ?? null }),
   });

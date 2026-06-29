@@ -41,9 +41,12 @@ describe("ReplyForm playbook alignment", () => {
     ["Went another way", "went_another_way"],
   ] as const;
 
-  it("renders exactly the six customer choices", () => {
+  it("renders the seven customer choices including spouse approval", () => {
     render(<ReplyForm token="token-123" />);
-    expect(screen.getAllByRole("button")).toHaveLength(6);
+    expect(screen.getAllByRole("button")).toHaveLength(7);
+    expect(
+      screen.getByRole("button", { name: "Need to talk it over" }),
+    ).toBeTruthy();
     for (const [label] of choices) {
       expect(screen.getByRole("button", { name: label })).toBeTruthy();
     }

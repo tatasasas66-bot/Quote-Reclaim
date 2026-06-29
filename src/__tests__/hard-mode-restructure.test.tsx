@@ -298,8 +298,8 @@ describe("quote detail command panel (unified next-move source of truth)", () =>
     expect(quoteDetail).toContain('source="quote_command"');
   });
 
-  it("future follow-ups are collapsed but still rendered in the 5-message plan", () => {
-    expect(recoveryViewModel).toContain("5-message recovery plan");
+  it("future follow-ups are collapsed but still rendered in the 6-message plan", () => {
+    expect(recoveryViewModel).toContain("6-message recovery plan");
     expect(quoteDetail).toContain('data-followup-collapsed="true"');
     expect(quoteDetail).toContain("<details");
     expect(quoteDetail).toMatch(/viewModel\.sequenceCards\.map/);
@@ -319,26 +319,37 @@ const VARS: VariantVars = {
 };
 
 describe("follow-up message upgrades", () => {
-  it("Day 30 closes neutral — the guilt-adjacent 'No hard feelings' is gone", () => {
-    const allDay30 = SEQUENCE_VARIANTS[30].map((b) => b(VARS)).join(" ");
-    expect(allDay30).not.toMatch(/No hard feelings/i);
-    expect(SEQUENCE_VARIANTS[30][0](VARS)).toContain("All good either way.");
+  it("Day 21 closes neutral without guilt language", () => {
+    const allDay21 = SEQUENCE_VARIANTS[21].map((b) => b(VARS)).join(" ");
+    expect(allDay21).not.toMatch(/No hard feelings/i);
+    expect(SEQUENCE_VARIANTS[21][0](VARS)).toContain("no re-quote needed");
   });
 
   it("Day 14 v3 is tightened to one concrete decision-bridge offer", () => {
     expect(SEQUENCE_VARIANTS[14][3](VARS)).toBe(
-      "Jane, if the roofing estimate is still worth discussing, I can walk through just the part holding it up. Want me to?",
+      "Do you want the roofing estimate left open, revised, or closed out?",
     );
   });
 
   it("every variant on every day still passes the validator after the upgrades", () => {
-    for (const day of [1, 3, 7, 14, 30] as const) {
+    for (const day of [1, 5, 10, 14, 21, 60] as const) {
       SEQUENCE_VARIANTS[day].forEach((build, i) => {
         const msg = build(VARS);
         const res = validateMessage(msg, {
           firstName: VARS.firstName,
           trade: "Roofing",
-          followupNumber: day === 1 ? 1 : day === 3 ? 2 : day === 7 ? 3 : day === 14 ? 4 : 5,
+          followupNumber:
+            day === 1
+              ? 1
+              : day === 5
+                ? 2
+                : day === 10
+                  ? 3
+                  : day === 14
+                    ? 4
+                    : day === 21
+                      ? 5
+                      : 6,
         });
         expect(res.ok, `day ${day} v${i}: ${msg}`).toBe(true);
       });
@@ -346,7 +357,7 @@ describe("follow-up message upgrades", () => {
   });
 
   it("no weak/banned phrases anywhere in the sequence", () => {
-    const all = ([1, 3, 7, 14, 30] as const)
+    const all = ([1, 5, 10, 14, 21, 60] as const)
       .flatMap((d) => SEQUENCE_VARIANTS[d].map((b) => b(VARS)))
       .join(" ");
     expect(all).not.toMatch(/just checking in|checking in|touching base|circling back/i);

@@ -72,7 +72,7 @@ function reminder(over: Partial<MoveReminder> & { id: string }): MoveReminder {
   };
 }
 
-/** A standard imported 5-step plan: #1 due 2 days ago … #5 in 27 days. */
+/** A standard imported 6-step plan: #1 due 2 days ago … #6 in 60 days. */
 function importedPlan(messageType: "email" | "sms" = "email"): MoveReminder[] {
   return [
     reminder({ id: "r1", followup_number: 1, send_at: new Date(NOW - 2 * DAY).toISOString(), message_type: messageType }),
@@ -80,6 +80,7 @@ function importedPlan(messageType: "email" | "sms" = "email"): MoveReminder[] {
     reminder({ id: "r3", followup_number: 3, send_at: new Date(NOW + 3 * DAY).toISOString(), message_type: messageType }),
     reminder({ id: "r4", followup_number: 4, send_at: new Date(NOW + 10 * DAY).toISOString(), message_type: messageType }),
     reminder({ id: "r5", followup_number: 5, send_at: new Date(NOW + 27 * DAY).toISOString(), message_type: messageType }),
+    reminder({ id: "r6", followup_number: 6, send_at: new Date(NOW + 60 * DAY).toISOString(), message_type: messageType }),
   ];
 }
 
@@ -196,9 +197,10 @@ describe("next-move wording contract", () => {
     return [
       reminder({ id: "f1", followup_number: 1, send_at: new Date(NOW + 1 * DAY).toISOString() }),
       reminder({ id: "f2", followup_number: 2, send_at: new Date(NOW + 3 * DAY).toISOString() }),
-      reminder({ id: "f3", followup_number: 3, send_at: new Date(NOW + 7 * DAY).toISOString() }),
+      reminder({ id: "f3", followup_number: 3, send_at: new Date(NOW + 10 * DAY).toISOString() }),
       reminder({ id: "f4", followup_number: 4, send_at: new Date(NOW + 14 * DAY).toISOString() }),
-      reminder({ id: "f5", followup_number: 5, send_at: new Date(NOW + 30 * DAY).toISOString() }),
+      reminder({ id: "f5", followup_number: 5, send_at: new Date(NOW + 21 * DAY).toISOString() }),
+      reminder({ id: "f6", followup_number: 6, send_at: new Date(NOW + 60 * DAY).toISOString() }),
     ];
   }
 
@@ -209,7 +211,7 @@ describe("next-move wording contract", () => {
     expect(move.dueNow).toBe(false);
     expect(move.canSendEarly).toBe(true);
     const line = nextMoveInstruction(move)!;
-    expect(line).toMatch(/^Estimate Check is queued for /);
+    expect(line).toMatch(/^Decision Friction is queued for /);
     expect(line).toContain("Want to move now? Send it today.");
   });
 
@@ -223,7 +225,11 @@ describe("next-move wording contract", () => {
     expect(move.dueNow).toBe(false);
     expect(move.canSendEarly).toBe(false);
     const line = nextMoveInstruction(move)!;
-    expect(line).toBe("Scope Rescue is queued for the next send window — " + move.sendAtLabel + ".");
+    expect(line).toBe(
+      "Soft Decision Check is queued for the next send window — " +
+        move.sendAtLabel +
+        ".",
+    );
     expect(line).not.toContain("Want to move now");
     expect(line).not.toContain("Send it today");
   });
@@ -252,19 +258,21 @@ describe("next-move wording contract", () => {
     const move = computeNextMove({ status: "running", reminders: base, hasEmail: true, hasReply: false, now: NOW });
     const line = nextMoveInstruction(move)!;
     expect(line).toBe(
-      "Estimate Check is due now and queued for email. You can let it send, or send it today if you want to move now.",
+      "Decision Friction is due now and queued for email. You can let it send, or send it today if you want to move now.",
     );
-    expect(nextMoveSummaryLabel(move)).toBe("Estimate Check due — sends by email today");
+    expect(nextMoveSummaryLabel(move)).toBe(
+      "Decision Friction due — sends by email today",
+    );
   });
 
   it("manual-ready: copy/manual send named explicitly — never 'nothing to send by hand'", () => {
     const move = computeNextMove({ status: "running", reminders: importedPlan("sms"), hasEmail: false, hasReply: false, now: NOW });
     const line = nextMoveInstruction(move)!;
     expect(line).toBe(
-      "Estimate Check is ready to copy. Send it from your phone or email today.",
+      "Decision Friction is ready to copy. Send it from your phone or email today.",
     );
     expect(line).not.toContain("Nothing to send by hand");
-    expect(nextMoveSummaryLabel(move)).toBe("Copy & send Estimate Check");
+    expect(nextMoveSummaryLabel(move)).toBe("Copy & send Decision Friction");
   });
 });
 
@@ -295,7 +303,9 @@ describe("send-button safety on the quote detail page", () => {
     // The render gate folds r.sent / paused / status into sendEarlyDisabled
     // AND requires isNextActionable, so a sent or later-sequence card cannot
     // render the button at all (not merely disabled — absent).
-    expect(viewModelSrc).toContain("action: null");
+    expect(viewModelSrc).toContain(
+      "action: isCurrent ? currentAction : null",
+    );
     expect(detailPage).toContain("text={card.copyMessage}");
     expect(detailPage).toContain(
       "source={`recovery_sequence_${card.key}`}",
@@ -398,7 +408,7 @@ describe("queued-behind state keeps scheduled date primary", () => {
     const display = computeStepDisplay(second, all, false);
     expect(display.status).toBe("scheduled");
     expect(display.label).toMatch(/^Scheduled /);
-    expect(display.helperLabel).toBe("Queued after Estimate Check");
+    expect(display.helperLabel).toBe("Queued after Decision Friction");
   });
 
   it("the earliest overdue step still reads Due now", () => {
@@ -410,7 +420,7 @@ describe("queued-behind state keeps scheduled date primary", () => {
     const third = all.find((r) => r.followup_number === 3)!;
     const display = computeStepDisplay(third, all, false);
     expect(display.label).toMatch(/^Scheduled /);
-    expect(display.helperLabel).toBe("Queued after Estimate Check");
+    expect(display.helperLabel).toBe("Queued after Decision Friction");
   });
 });
 
@@ -443,7 +453,7 @@ function varsFor(trade: string, contractor: string): VariantVars {
 
 describe("follow-up copy bans", () => {
   it("no variant on any day ever renders 'Contractor here' — identity is omitted when unknown", () => {
-    for (const day of [1, 3, 7, 14, 30] as const) {
+    for (const day of [1, 5, 10, 14, 21, 60] as const) {
       for (const build of SEQUENCE_VARIANTS[day]) {
         for (const trade of ALL_TRADES) {
           // Unknown contractor name → empty string, the placeholder path.
@@ -464,7 +474,7 @@ describe("follow-up copy bans", () => {
       trade: "Roofing",
       estimateAmount: 12_000,
     });
-    expect(seq.day1).toMatch(/^Hi Chris\b/);
+    expect(seq.day1).toMatch(/^Any question\b/);
     expect(seq.day1).not.toContain("Contractor here");
     // The canonical v0 path (empty seed) omits the identity clause cleanly.
     const v0 = researchSequenceMessages({
@@ -474,26 +484,26 @@ describe("follow-up copy bans", () => {
       estimateAmount: 0,
     });
     expect(v0.day1).toBe(
-      "Hi there — any question on the estimate I can clear up? Scope, timing, or price — reply with which one and I'll handle that piece. No decision needed yet.",
+      "Any question on the estimate I can clear up? Scope, timing, or price — reply with which one.",
     );
   });
 
-  it("Day 7 no longer weakens the ask with 'No rush on my end'", () => {
-    for (const build of SEQUENCE_VARIANTS[7]) {
+  it("Day 5 does not weaken the ask with 'No rush on my end'", () => {
+    for (const build of SEQUENCE_VARIANTS[5]) {
       const msg = build(varsFor("Roofing", "Mike"));
       expect(msg).not.toMatch(/no rush/i);
     }
     expect(fallbacksSrc).not.toContain("No rush on my end");
   });
 
-  it("Day 30 closes respectfully with the lowest-effort reopen: 'just reply here'", () => {
-    const v0 = SEQUENCE_VARIANTS[30][0](varsFor("Roofing", "Mike"));
-    expect(v0).toContain("I'll close out the roofing estimate after this.");
-    expect(v0).toContain("just reply here and I'll pick it back up");
+  it("Day 21 closes respectfully with a text-back reopen path", () => {
+    const v0 = SEQUENCE_VARIANTS[21][0](varsFor("Roofing", "Mike"));
+    expect(v0).toContain("I'll close out the roofing estimate");
+    expect(v0).toContain("text me here");
   });
 
   it("every variant on every day passes the banned-phrase scan", () => {
-    for (const day of [1, 3, 7, 14, 30] as const) {
+    for (const day of [1, 5, 10, 14, 21, 60] as const) {
       for (const build of SEQUENCE_VARIANTS[day]) {
         const msg = build(varsFor("Plumbing", "Luis"));
         expect(containsBannedPhrase(msg), msg).toBeNull();
@@ -507,7 +517,7 @@ describe("follow-up copy bans", () => {
   it("no variant claims price is the reason the homeowner went quiet", () => {
     // Conditional offers ("if it's the number…") are allowed; assertions of
     // cause ("price is what's stopping you") are not.
-    for (const day of [1, 3, 7, 14, 30] as const) {
+    for (const day of [1, 5, 10, 14, 21, 60] as const) {
       for (const build of SEQUENCE_VARIANTS[day]) {
         const msg = build(varsFor("Concrete", "Pat"));
         expect(msg).not.toMatch(/price is (the|what|why)/i);

@@ -1,5 +1,6 @@
 import type { ReplyIntent } from "./classify-reply";
 import { titleCaseName } from "@/lib/utils/title-case";
+import { getProjectNoun } from "@/lib/recovery/recovery-logic";
 
 export type SuggestTone = "success" | "warning" | "neutral" | "danger" | "brand";
 
@@ -20,6 +21,7 @@ export type SuggestedResponse = {
 export type SuggestResponseInput = {
   intent: ReplyIntent;
   trade: string;
+  projectType?: string | null;
   estimateAmount?: number | null;
   clientName?: string | null;
 };
@@ -81,7 +83,9 @@ const META: Record<
 function buildMessage(input: SuggestResponseInput): string {
   const name = firstNameOf(input.clientName);
   const nameComma = name ? `, ${name}` : "";
-  const tl = tradeLabel(input.trade);
+  const tl = input.projectType
+    ? getProjectNoun(input.trade, input.projectType)
+    : tradeLabel(input.trade);
 
   switch (input.intent) {
     case "positive":

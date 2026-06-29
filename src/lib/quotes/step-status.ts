@@ -3,7 +3,10 @@ import {
   formatScheduleDateTime,
   formatScheduleTime,
 } from "@/lib/quotes/business-hours";
-import { getSequenceFamily } from "@/lib/recovery/recovery-logic";
+import {
+  getSequenceFamily,
+  type FollowupNumber,
+} from "@/lib/recovery/recovery-logic";
 
 export type StepStatus =
   | "scheduled"
@@ -55,7 +58,7 @@ export function computeStepDisplay(
     .sort((a, b) => +new Date(a.send_at) - +new Date(b.send_at))[0];
   const queuedBehind =
     nextUp && nextUp.id !== reminder.id
-      ? `Queued after ${getSequenceFamily(nextUp.followup_number as 1 | 2 | 3 | 4 | 5)}`
+      ? `Queued after ${getSequenceFamily(nextUp.followup_number as FollowupNumber)}`
       : nextUp && nextUp.id === reminder.id
         ? "Current move"
         : undefined;

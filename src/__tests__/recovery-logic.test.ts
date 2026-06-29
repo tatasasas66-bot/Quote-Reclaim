@@ -139,11 +139,11 @@ describe("priority labels are contractor-friendly, not raw window names", () => 
 // ---------------------------------------------------------------------------
 
 describe("message families match recovery windows", () => {
-  it("warm → Estimate Check", () => {
-    expect(getMessageFamily("warm")).toBe("Estimate Check");
+  it("warm → Decision Friction", () => {
+    expect(getMessageFamily("warm")).toBe("Decision Friction");
   });
-  it("cooling → Decision Friction", () => {
-    expect(getMessageFamily("cooling")).toBe("Decision Friction");
+  it("cooling → Soft Decision Check", () => {
+    expect(getMessageFamily("cooling")).toBe("Soft Decision Check");
   });
   it("cold → Open, Revise, or Close", () => {
     expect(getMessageFamily("cold")).toBe("Open, Revise, or Close");
@@ -151,9 +151,9 @@ describe("message families match recovery windows", () => {
   it("closeout → Clean Closeout", () => {
     expect(getMessageFamily("closeout")).toBe("Clean Closeout");
   });
-  it("sequence has 5 distinct families", () => {
-    expect(SEQUENCE_FAMILIES).toHaveLength(5);
-    expect(new Set(SEQUENCE_FAMILIES).size).toBe(5);
+  it("sequence has 6 distinct families", () => {
+    expect(SEQUENCE_FAMILIES).toHaveLength(6);
+    expect(new Set(SEQUENCE_FAMILIES).size).toBe(6);
   });
 });
 
@@ -167,11 +167,11 @@ describe("why-this-works varies by window", () => {
     const explanations = windows.map((w) => getWhyThisWorks(w));
     expect(new Set(explanations).size).toBe(4);
   });
-  it("warm mentions early silence", () => {
-    expect(getWhyThisWorks("warm").toLowerCase()).toContain("early silence");
+  it("warm removes decision friction", () => {
+    expect(getWhyThisWorks("warm").toLowerCase()).toContain("replying cheap");
   });
-  it("cooling mentions 'categories'", () => {
-    expect(getWhyThisWorks("cooling").toLowerCase()).toContain("categories");
+  it("cooling makes a keep-or-close answer safe", () => {
+    expect(getWhyThisWorks("cooling").toLowerCase()).toContain("keep-or-close");
   });
   it("cold mentions an exit ramp", () => {
     expect(getWhyThisWorks("cold").toLowerCase()).toContain("exit ramp");
@@ -188,8 +188,9 @@ describe("why-this-works varies by window", () => {
 describe("one-tap options match recovery window", () => {
   it("uses the window-aware option sets", () => {
     expect(getOneTapOptions("warm")).toHaveLength(4);
-    expect(getOneTapOptions("cooling")).toHaveLength(6);
+    expect(getOneTapOptions("cooling")).toHaveLength(7);
     expect(getOneTapOptions("cooling")).toContain("Still comparing");
+    expect(getOneTapOptions("cooling")).toContain("Need to talk it over");
     expect(getOneTapOptions("cold")).toHaveLength(4);
     expect(getOneTapOptions("closeout")).toHaveLength(4);
   });
@@ -230,16 +231,15 @@ describe("recommended message matches recovery window", () => {
   it("warm message asks a clear question", () => {
     const rec = getRecommendedMessage({ daysQuiet: 3, firstName: "Ali", trade: "concrete" });
     expect(rec.window).toBe("warm");
-    expect(rec.messageFamily).toBe("Estimate Check");
-    expect(rec.message).toContain("any question on the driveway I can clear up?");
+    expect(rec.messageFamily).toBe("Decision Friction");
+    expect(rec.message).toContain("Any question on the driveway I can clear up?");
   });
-  it("cooling message diagnoses timing/budget/scope", () => {
+  it("cooling message asks for a soft keep-or-close decision", () => {
     const rec = getRecommendedMessage({ daysQuiet: 14, firstName: "Ali", trade: "electrical" });
     expect(rec.window).toBe("cooling");
-    expect(rec.message).toContain("timing");
-    expect(rec.message).toContain("budget");
-    expect(rec.message).toContain("scope");
-    expect(rec.message).toContain("no awkward follow-up from me");
+    expect(rec.messageFamily).toBe("Soft Decision Check");
+    expect(rec.message).toContain("active list");
+    expect(rec.message).toContain("Either is fine");
   });
   it("cold message offers open/revise/close", () => {
     const rec = getRecommendedMessage({ daysQuiet: 30, trade: "electrical" });
@@ -252,9 +252,7 @@ describe("recommended message matches recovery window", () => {
     const rec = getRecommendedMessage({ daysQuiet: 50, trade: "electrical" });
     expect(rec.window).toBe("closeout");
     expect(rec.message).toContain("close out");
-    expect(rec.message).toContain(
-      "no restart, no re-quote, no awkward conversation",
-    );
+    expect(rec.message).toContain("no re-quote needed");
   });
   it("concrete trade uses 'driveway' noun", () => {
     const rec = getRecommendedMessage({ daysQuiet: 14, trade: "concrete" });
@@ -291,12 +289,13 @@ describe("no banned phrases in generated messages", () => {
 // ---------------------------------------------------------------------------
 
 describe("cadence is centralized", () => {
-  it("has 5 steps with correct day offsets", () => {
+  it("has 6 steps with correct day offsets", () => {
     expect(CADENCE_DAYS[1]).toBe(1);
-    expect(CADENCE_DAYS[2]).toBe(3);
-    expect(CADENCE_DAYS[3]).toBe(7);
+    expect(CADENCE_DAYS[2]).toBe(5);
+    expect(CADENCE_DAYS[3]).toBe(10);
     expect(CADENCE_DAYS[4]).toBe(14);
-    expect(CADENCE_DAYS[5]).toBe(30);
+    expect(CADENCE_DAYS[5]).toBe(21);
+    expect(CADENCE_DAYS[6]).toBe(60);
   });
 });
 
@@ -323,6 +322,10 @@ describe("project nouns are trade-specific", () => {
     expect(getProjectNoun("drywall")).toBe("work");
     expect(getProjectNoun("tree service")).toBe("removal");
   });
+  it("prefers the selected project type over the trade fallback", () => {
+    expect(getProjectNoun("concrete", "Patio")).toBe("patio");
+    expect(getProjectNoun("concrete", "Driveway")).toBe("driveway");
+  });
 });
 
 describe("trade-native reply playbook", () => {
@@ -341,5 +344,13 @@ describe("trade-native reply playbook", () => {
     expect(paths.find((path) => path.id === "bad_timing")?.response).toContain(
       "the driveway",
     );
+  });
+  it("adds spouse approval and persistent no-response branches", () => {
+    expect(paths.find((path) => path.id === "spouse_approval")?.response).toContain(
+      "send a quick summary",
+    );
+    expect(
+      paths.find((path) => path.id === "no_response_breakup")?.response,
+    ).toContain("no awkward restart");
   });
 });

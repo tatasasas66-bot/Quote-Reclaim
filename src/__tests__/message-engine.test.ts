@@ -159,21 +159,21 @@ describe("warm message", () => {
 
 describe("cooling message", () => {
   const gen = generateFollowupMessage({ daysSilent: 14 });
-  it("diagnoses timing, budget, or scope", () => {
-    expect(gen.message).toMatch(/timing/i);
-    expect(gen.message).toMatch(/budget/i);
-    expect(gen.message).toMatch(/scope/i);
+  it("offers a soft active-or-close decision", () => {
+    expect(gen.message).toMatch(/active list/i);
+    expect(gen.message).toMatch(/close it out/i);
+    expect(gen.message).toMatch(/either is fine/i);
   });
   it("has friction_diagnosis family", () => {
     expect(gen.messageFamily).toBe("friction_diagnosis");
   });
-  it("has the six cooling one-tap options", () => {
-    expect(gen.oneTapOptions).toHaveLength(6);
+  it("has the seven cooling one-tap options", () => {
+    expect(gen.oneTapOptions).toHaveLength(7);
     expect(gen.oneTapOptions).toContain("Timing's off");
     expect(gen.oneTapOptions).toContain("Can we talk?");
   });
-  it("whyThisMessage mentions timing, budget, or scope", () => {
-    expect(gen.whyThisMessage.toLowerCase()).toMatch(/timing|budget|scope/);
+  it("whyThisMessage makes either decision safe", () => {
+    expect(gen.whyThisMessage.toLowerCase()).toMatch(/keep|close|safe/);
   });
 });
 
@@ -208,9 +208,7 @@ describe("closeout message", () => {
   const gen = generateFollowupMessage({ daysSilent: 60 });
   it("closes cleanly without guilt", () => {
     expect(gen.message).toMatch(/close out/i);
-    expect(gen.message).toContain(
-      "no restart, no re-quote, no awkward conversation",
-    );
+    expect(gen.message).toContain("no re-quote needed");
   });
   it("does not sound desperate", () => {
     expect(gen.message.toLowerCase()).not.toMatch(/desperate|please|beg|last/);
@@ -238,7 +236,7 @@ describe("concrete trade uses driveway language", () => {
   });
   it("cold message says driveway", () => {
     const gen = generateFollowupMessage({ daysSilent: 30, trade: "concrete" });
-    expect(gen.message).toContain("this driveway");
+    expect(gen.message).toContain("the driveway");
   });
   it("closeout message says driveway", () => {
     const gen = generateFollowupMessage({ daysSilent: 60, trade: "concrete" });
@@ -253,6 +251,15 @@ describe("concrete trade uses driveway language", () => {
     expect(gen.message).toContain("estimate");
     expect(gen.message).not.toContain("driveway");
   });
+  it("uses a selected concrete project type instead of driveway", () => {
+    const gen = generateFollowupMessage({
+      daysSilent: 14,
+      trade: "concrete",
+      projectType: "Patio",
+    });
+    expect(gen.message).toContain("the patio");
+    expect(gen.message).not.toContain("driveway");
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -260,14 +267,14 @@ describe("concrete trade uses driveway language", () => {
 // ---------------------------------------------------------------------------
 
 describe("first name handling", () => {
-  it("warm message includes first name when provided", () => {
+  it("warm message stays direct when a first name is provided", () => {
     const gen = generateFollowupMessage({ daysSilent: 3, firstName: "Jane" });
-    expect(gen.message).toContain("Hi Jane");
+    expect(gen.message).toMatch(/^Any question/i);
   });
   it("warm message works without first name", () => {
     const gen = generateFollowupMessage({ daysSilent: 3, firstName: null });
     expect(gen.message).not.toContain("Hi Jane");
-    expect(gen.message).toMatch(/^Hi there/i);
+    expect(gen.message).toMatch(/^Any question/i);
   });
   it("cold message does not use first name (direct opener)", () => {
     const gen = generateFollowupMessage({ daysSilent: 30, firstName: "Jane" });

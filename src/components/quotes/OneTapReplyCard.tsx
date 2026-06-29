@@ -5,7 +5,6 @@ import { createOneTapLinkForQuote } from "@/app/(app)/quotes/[id]/one-tap-action
 import type { LatestOneTapReply } from "@/lib/quotes/one-tap-reply-server";
 import {
   ONE_TAP_CHOICES,
-  STILL_COMPARING_MARKER,
 } from "@/lib/quotes/one-tap-choices";
 import { getReplyPlaybook } from "@/lib/recovery/recovery-logic";
 
@@ -13,6 +12,7 @@ type OneTapReplyCardProps = {
   quoteId: string;
   clientFirstName: string;
   trade: string;
+  projectType?: string | null;
   latestReply: LatestOneTapReply | null;
 };
 
@@ -28,6 +28,7 @@ export function OneTapReplyCard({
   quoteId,
   clientFirstName,
   trade,
+  projectType,
   latestReply,
 }: OneTapReplyCardProps) {
   const [linkCopied, setLinkCopied] = React.useState(false);
@@ -102,6 +103,7 @@ export function OneTapReplyCard({
         latestReply={latestReply}
         clientFirstName={clientFirstName}
         trade={trade}
+        projectType={projectType}
       />
     </section>
   );
@@ -110,10 +112,12 @@ function LatestReplyPanel({
   latestReply,
   clientFirstName,
   trade,
+  projectType,
 }: {
   latestReply: LatestOneTapReply | null;
   clientFirstName: string;
   trade: string;
+  projectType?: string | null;
 }) {
   if (!latestReply) {
     return (
@@ -131,15 +135,21 @@ function LatestReplyPanel({
     need_to_talk: "need_to_talk",
     went_another_way: "went_another_way",
   } as const;
-  const branchId =
-    latestReply.answerType === "question" &&
-    latestReply.questionText === STILL_COMPARING_MARKER
-      ? "still_comparing"
-      : latestReply.answerType in branchMap
+  const markedChoice =
+    latestReply.answerType === "question"
+      ? ONE_TAP_CHOICES.find(
+          (choice) => choice.questionText === latestReply.questionText,
+        )
+      : null;
+  const branchId = markedChoice
+    ? markedChoice.playbookBranch
+    : latestReply.answerType in branchMap
       ? branchMap[latestReply.answerType as keyof typeof branchMap]
       : null;
   const branch = branchId
-    ? getReplyPlaybook(trade).find((path) => path.id === branchId)
+    ? getReplyPlaybook(trade, null, projectType).find(
+        (path) => path.id === branchId,
+      )
     : null;
 
   if (branch) {

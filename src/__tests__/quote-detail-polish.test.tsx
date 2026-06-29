@@ -101,10 +101,10 @@ describe("quote detail command-center hierarchy", () => {
     expect(recoveryLogicSrc).toContain("must-do, optional, and later");
   });
 
-  it("keeps the 5-message sequence intact behind the active command", () => {
-    expect(viewModelSrc).toContain("5-message recovery plan");
+  it("keeps the 6-message sequence intact behind the active command", () => {
+    expect(viewModelSrc).toContain("6-message recovery plan");
     expect(detailPage).toMatch(/viewModel\.sequenceCards\.map/);
-    expect(viewModelSrc).toContain("SEQUENCE_BY_WINDOW");
+    expect(viewModelSrc).toContain("pendingReminders.map");
   });
 
   it("adds manual SMS and WhatsApp actions to the command message and sequence messages", () => {
@@ -206,10 +206,10 @@ describe("send_at is anchored to 09:00 America/Chicago", () => {
   it("a chain of generated send_ats from a 3 AM UTC baseline never displays at 3 AM", () => {
     // Simulate the production chain: the plan-start instant comes from a click
     // at an off-hour moment, scheduleSendAt adds N days, then
-    // normalizeToBusinessHour rounds. Day 1/3/7/14/30 outputs must all land at
+    // normalizeToBusinessHour rounds. All six outputs must land at
     // 09:00 Central.
     const base = new Date("2026-06-10T03:00:00Z");
-    for (const days of [1, 3, 7, 14, 30]) {
+    for (const days of [1, 5, 10, 14, 21, 60]) {
       const d = new Date(base);
       d.setUTCDate(d.getUTCDate() + days);
       const normalized = normalizeToBusinessHour(d);
@@ -517,39 +517,37 @@ describe("polished message wordings", () => {
     tradeWord: tradeWord("Roofing"),
   };
 
-  it("Day 3 v0 — 'keep your estimate active' (was vague 'this on the active list')", () => {
-    const msg = SEQUENCE_VARIANTS[3][0](sample);
-    expect(msg).toContain("Should I keep your estimate active");
-    expect(msg).not.toContain("Should I keep this on the active list");
+  it("Day 10 v0 uses the active-or-close decision", () => {
+    const msg = SEQUENCE_VARIANTS[10][0](sample);
+    expect(msg).toContain("on my active list");
+    expect(msg).toContain("close it out");
   });
 
-  it("NO Day 3 variant contains the weak 'this one active' phrasing (audit all variants)", () => {
-    for (let i = 0; i < SEQUENCE_VARIANTS[3].length; i++) {
-      const msg = SEQUENCE_VARIANTS[3][i](sample);
+  it("no Day 10 variant contains weak generic active phrasing", () => {
+    for (let i = 0; i < SEQUENCE_VARIANTS[10].length; i++) {
+      const msg = SEQUENCE_VARIANTS[10][i](sample);
       expect(msg).not.toContain("this one active");
       expect(msg).not.toContain("keep this one");
     }
   });
 
-  it("Day 3 v3 is now a concrete estimate-active / take-it-off-my-list ask", () => {
-    const msg = SEQUENCE_VARIANTS[3][3](sample);
-    expect(msg).toContain("keep your estimate active");
-    expect(msg).toContain("take it off my list");
+  it("Day 10 v4 is a concrete open-or-closed ask", () => {
+    const msg = SEQUENCE_VARIANTS[10][3](sample);
+    expect(msg).toContain("leave the roofing estimate active");
+    expect(msg).toContain("mark it closed");
   });
 
   it("Day 14 v3 — tightened decision-bridge offer (was the wordy 'what you're looking at')", () => {
     const msg = SEQUENCE_VARIANTS[14][3](sample);
-    expect(msg).toContain("I can walk through just the part holding it up. Want me to?");
+    expect(msg).toContain("left open, revised, or closed out?");
     expect(msg).not.toContain("what you're looking at");
     expect(msg).not.toContain("where it stands");
   });
 
-  it("Day 30 v1 — 'If you want me to keep it open, just let me know.'", () => {
-    const msg = SEQUENCE_VARIANTS[30][1](sample);
-    expect(msg).toContain(
-      "If you want me to keep it open, just let me know.",
-    );
-    expect(msg).not.toMatch(/If you decide to revisit it later/);
+  it("Day 21 v2 leaves a no-awkward-restart path", () => {
+    const msg = SEQUENCE_VARIANTS[21][1](sample);
+    expect(msg).toContain("no awkward restart");
+    expect(msg).not.toMatch(/last chance/i);
   });
 
   it("every polished variant still validates with no banned phrases", () => {
@@ -564,7 +562,7 @@ describe("polished message wordings", () => {
       /urgent/i,
       /last chance/i,
     ];
-    for (const day of [1, 3, 7, 14, 30] as const) {
+    for (const day of [1, 5, 10, 14, 21, 60] as const) {
       for (const builder of SEQUENCE_VARIANTS[day]) {
         const msg = builder(sample);
         for (const pat of BANNED) expect(msg).not.toMatch(pat);
@@ -603,11 +601,12 @@ describe("Lock rails — pricing / One-Tap / schema untouched by this pass", () 
     expect(detailPage).not.toMatch(/lemonsqueezy/i);
   });
 
-  it("CADENCE_DAYS pinned at 1 / 3 / 7 / 14 / 30 (no cadence change in this pass)", () => {
+  it("CADENCE_DAYS is pinned at 1 / 5 / 10 / 14 / 21 / 60", () => {
     expect(recoveryLogicSrc).toMatch(/1:\s*1/);
-    expect(recoveryLogicSrc).toMatch(/2:\s*3/);
-    expect(recoveryLogicSrc).toMatch(/3:\s*7/);
+    expect(recoveryLogicSrc).toMatch(/2:\s*5/);
+    expect(recoveryLogicSrc).toMatch(/3:\s*10/);
     expect(recoveryLogicSrc).toMatch(/4:\s*14/);
-    expect(recoveryLogicSrc).toMatch(/5:\s*30/);
+    expect(recoveryLogicSrc).toMatch(/5:\s*21/);
+    expect(recoveryLogicSrc).toMatch(/6:\s*60/);
   });
 });

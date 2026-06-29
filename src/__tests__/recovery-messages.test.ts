@@ -18,11 +18,11 @@ describe("recovery fallback contract", () => {
     jobDescription: "Re-roof main house",
   };
 
-  it("persists five deterministic messages in sequence order", () => {
+  it("persists six deterministic messages in sequence order", () => {
     const plan = fallbackMessages(context);
-    expect(plan.map((item) => item.followup_number)).toEqual([1, 2, 3, 4, 5]);
+    expect(plan.map((item) => item.followup_number)).toEqual([1, 2, 3, 4, 5, 6]);
     expect(plan.map((item) => item.message)).toEqual(
-      ([1, 2, 3, 4, 5] as const).map((step) =>
+      ([1, 2, 3, 4, 5, 6] as const).map((step) =>
         getRecommendedMessage(getSequenceFamily(step), context),
       ),
     );
@@ -47,14 +47,15 @@ describe("recovery fallback contract", () => {
     }
   });
 
-  it("uses estimate and 'there' fallbacks without inventing identity", () => {
+  it("uses estimate fallbacks without inventing identity", () => {
     const sequence = researchSequenceMessages({
       firstName: "",
       contractorFirstName: null,
       trade: "Other",
       estimateAmount: 1000,
     });
-    expect(sequence.day1.startsWith("Hi there")).toBe(true);
+    expect(sequence.day1.startsWith("Any question")).toBe(true);
     expect(Object.values(sequence).every((message) => message.includes("estimate"))).toBe(true);
+    expect(sequence.day60).not.toContain("estimate estimate");
   });
 });

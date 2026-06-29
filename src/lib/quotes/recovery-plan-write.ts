@@ -2,7 +2,10 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { generateRecoveryPlan } from "@/lib/ai/generate-recovery-plan";
 import { validateMessage } from "@/lib/ai/validate-message";
 import { normalizeToBusinessHour } from "./business-hours";
-import { CADENCE_DAYS as centralizedCadenceDays } from "@/lib/recovery/recovery-logic";
+import {
+  CADENCE_DAYS as centralizedCadenceDays,
+  type FollowupNumber,
+} from "@/lib/recovery/recovery-logic";
 
 /** Delegates to the centralized recovery-logic module. */
 export const CADENCE_DAYS = centralizedCadenceDays;
@@ -11,6 +14,7 @@ export type RecoveryWriteContext = {
   firstName: string;
   contractorFirstName?: string | null;
   trade: string;
+  projectType?: string | null;
   estimateAmount: number;
   jobDescription: string | null;
   city: string | null;
@@ -30,7 +34,7 @@ export type RecoveryWriteContext = {
 export type ReminderInsertRow = {
   user_id: string;
   quote_id: string;
-  followup_number: 1 | 2 | 3 | 4 | 5;
+  followup_number: FollowupNumber;
   message_type: "email" | "sms";
   message_text: string;
   framework_used: string;
@@ -39,7 +43,7 @@ export type ReminderInsertRow = {
 };
 
 export type PersistRecoveryPlanResult = {
-  /** Reminder rows actually written: 5 on success, 0 on failure. */
+  /** Reminder rows actually written: 6 on success, 0 on failure. */
   inserted: number;
   /** True when deterministic fallback templates were used (AI unavailable). */
   fallbackUsed: boolean;
@@ -58,7 +62,7 @@ export type PersistRecoveryPlanResult = {
  * (FU1 yesterday-of-a-month-ago, etc.). The detail page then read "due now /
  * sends today" while displaying a date in May, and the cron saw all five
  * reminders as overdue at once. The schedule must start when the plan is
- * created, so every send_at lands in the future on a 1/3/7/14/30-day cadence.
+ * created, so every send_at lands in the future on a 1/5/10/14/21/60 cadence.
  *
  * `startMs` is the plan-creation instant (Date.now() in production, a frozen
  * clock in tests). A defensive floor guarantees no send_at is ever at or
@@ -80,7 +84,7 @@ export function scheduleSendAt(startMs: number, daysAfter: number): string {
 }
 
 /**
- * Generate AND persist the 5-message recovery plan for a single quote.
+ * Generate AND persist the 6-message recovery plan for a single quote.
  *
  * This is the ONE shared writer used by both the single-quote create flow
  * (createQuoteAction) and the Silent Money Reveal bulk import
@@ -95,7 +99,7 @@ export function scheduleSendAt(startMs: number, daysAfter: number): string {
  *     is built from trade/amount/name, not the email address.
  *   - Rows carry ONLY columns that exist on public.reminders — never
  *     sequence_id.
- *   - Inserts a complete 5-step plan or nothing (length-gated), keyed by
+ *   - Inserts a complete 6-step plan or nothing (length-gated), keyed by
  *     (quote_id, followup_number) to match the unique index.
  */
 export async function persistRecoveryPlan(params: {
@@ -104,7 +108,7 @@ export async function persistRecoveryPlan(params: {
   quoteId: string;
   channel: "email" | "sms";
   /**
-   * When the recovery plan STARTS — i.e. now. The 1/3/7/14/30-day cadence is
+   * When the recovery plan STARTS — i.e. now. The six-touch cadence is
    * measured from here, never from the original estimate date. Defaults to
    * the current instant; tests inject a frozen clock. Quote age / Days Quiet
    * is a separate concept driven by quote_sent_at and is unaffected.
@@ -124,6 +128,7 @@ export async function persistRecoveryPlan(params: {
       validateMessage(m.message, {
         firstName: context.firstName,
         trade: context.trade,
+        projectType: context.projectType,
         followupNumber: m.followup_number,
       }).ok,
   );
@@ -133,11 +138,11 @@ export async function persistRecoveryPlan(params: {
   // is a belt-and-braces path), use the plan's deterministic 5 so a full
   // sequence is still written — no quote is ever left with "No recovery plan
   // generated" unless generation itself produced fewer than 5.
-  const chosen = valid.length === 5 ? valid : plan;
+  const chosen = valid.length === 6 ? valid : plan;
   const fallbackUsed =
     chosen.length > 0 && chosen.every((m) => m.source === "fallback");
 
-  if (chosen.length !== 5) {
+  if (chosen.length !== 6) {
     return {
       inserted: 0,
       fallbackUsed,

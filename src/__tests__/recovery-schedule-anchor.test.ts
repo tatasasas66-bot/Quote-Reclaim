@@ -5,12 +5,12 @@
  * never from the original estimate date.
  *
  * The launch-blocking bug: persistRecoveryPlan (and reconcileReminders)
- * anchored the 1/3/7/14/30-day cadence to the estimate date. An OLD quote
+ * anchored the cadence to the estimate date. An OLD quote
  * — e.g. 28 days quiet, estimate dated May 15 with "today" = June 12 —
  * produced a recovery schedule entirely in the PAST:
  *   FU1 May 16, FU2 May 18, FU3 May 22, FU4 May 29, FU5 Jun 14.
  * The detail page then read "Estimate Check is due now / sends by email today"
- * while displaying May dates, and the cron saw all five reminders as overdue
+ * while displaying May dates, and the cron saw every reminder as overdue
  * at once.
  *
  * Two concepts had been conflated and are now separated:
@@ -63,14 +63,14 @@ function monthInTz(iso: string): string {
 
 describe("scheduleSendAt anchors the cadence to the plan-start time, not the estimate date", () => {
   it("every follow-up lands strictly after the start instant (no past dates)", () => {
-    for (const fu of [1, 2, 3, 4, 5] as const) {
+    for (const fu of [1, 2, 3, 4, 5, 6] as const) {
       const at = scheduleSendAt(NOW_MS, CADENCE_DAYS[fu]);
       expect(Date.parse(at)).toBeGreaterThan(NOW_MS);
     }
   });
 
-  it("produces the 1/3/7/14/30 ladder in ascending order", () => {
-    const ladder = ([1, 2, 3, 4, 5] as const).map((fu) =>
+  it("produces the 1/5/10/14/21/60 ladder in ascending order", () => {
+    const ladder = ([1, 2, 3, 4, 5, 6] as const).map((fu) =>
       Date.parse(scheduleSendAt(NOW_MS, CADENCE_DAYS[fu])),
     );
     for (let i = 1; i < ladder.length; i++) {
@@ -141,11 +141,13 @@ async function writeOldQuotePlan() {
 }
 
 describe("old imported quotes start recovery schedule from plan creation, not estimate date", () => {
-  it("writes a complete 5-step plan", async () => {
+  it("writes a complete 6-step plan", async () => {
     const { result, rows } = await writeOldQuotePlan();
-    expect(result.inserted).toBe(5);
-    expect(rows).toHaveLength(5);
-    expect(rows.map((r) => r.followup_number).sort()).toEqual([1, 2, 3, 4, 5]);
+    expect(result.inserted).toBe(6);
+    expect(rows).toHaveLength(6);
+    expect(rows.map((r) => r.followup_number).sort()).toEqual([
+      1, 2, 3, 4, 5, 6,
+    ]);
   });
 
   it("EVERY generated send_at is June 12 or later — never a past May date", async () => {
@@ -165,13 +167,13 @@ describe("old imported quotes start recovery schedule from plan creation, not es
     expect(monthInTz(String(fu1.send_at))).toBe("Jun");
   });
 
-  it("Follow-ups 2–5 are each scheduled after Follow-up 1", async () => {
+  it("Follow-ups 2–6 are each scheduled after Follow-up 1", async () => {
     const { rows } = await writeOldQuotePlan();
     const byFu = new Map(
       rows.map((r) => [r.followup_number as number, Date.parse(String(r.send_at))]),
     );
     const fu1 = byFu.get(1)!;
-    for (const fu of [2, 3, 4, 5]) {
+    for (const fu of [2, 3, 4, 5, 6]) {
       expect(byFu.get(fu)!).toBeGreaterThan(fu1);
     }
   });
@@ -356,7 +358,7 @@ describe("manual Send today override for an old quiet quote (June 12, sent May 1
     expect(line).not.toContain("Nothing to send by hand");
   });
 
-  it("Follow-ups 2–5 do NOT show Send today while Follow-up 1 is unsent", async () => {
+  it("Follow-ups 2–6 do NOT show Send today while Follow-up 1 is unsent", async () => {
     const reminders = await emailReminders();
     const move = computeNextMove({
       status: "running",
@@ -365,7 +367,7 @@ describe("manual Send today override for an old quiet quote (June 12, sent May 1
       hasReply: false,
       now: NOW_MS,
     });
-    for (const fu of [2, 3, 4, 5]) {
+    for (const fu of [2, 3, 4, 5, 6]) {
       const r = reminders.find((x) => x.followup_number === fu)!;
       expect(showSendTodayFor(r, move, { hasEmail: true, hasPhone: false, status: "running" })).toBe(false);
     }
@@ -374,7 +376,7 @@ describe("manual Send today override for an old quiet quote (June 12, sent May 1
   it("after Follow-up 1 is sent, Follow-up 2 (still future) does NOT show Send today — no rapid-fire", async () => {
     // This is the rapid-fire bug. FU1 is the next actionable and future-queued,
     // so it has the first-touch override. The moment FU1 is sent, FU2 becomes
-    // the next move but it is still days away (Jun 15) — the override is gone,
+    // the next move but it is still days away (Jun 17) — the override is gone,
     // FU2 shows Copy only and the banner states the window with no "send today".
     const reminders = await emailReminders();
     const afterFu1 = reminders.map((r) =>
@@ -407,7 +409,7 @@ describe("manual Send today override for an old quiet quote (June 12, sent May 1
   });
 
   it("Follow-up 2 CAN be sent once it is actually due by send_at <= now", async () => {
-    // Advance time to after FU2's send window (FU2 = Jun 15). Now FU2 is
+    // Advance time to after FU2's send window (FU2 = Jun 17). Now FU2 is
     // genuinely due — email-due — and the normal send action is allowed even
     // though an earlier email already went out.
     const reminders = await emailReminders();
@@ -425,8 +427,9 @@ describe("manual Send today override for an old quiet quote (June 12, sent May 1
       hasReply: false,
       now: laterNow,
     });
-    expect(move.followupNumber).toBe(2);
     expect(move.kind).toBe("email-due");
+    if (move.kind === "none") throw new Error("expected a due move");
+    expect(move.followupNumber).toBe(2);
     expect(canManualSendToday(move)).toBe(true);
     const fu2 = afterFu1.find((r) => r.followup_number === 2)!;
     // The page gate would render the send button (status running, has email).
@@ -537,7 +540,7 @@ describe("cron never sends a backlog of old follow-ups (no past send_at to claim
       (r) => Date.parse(String(r.send_at)) <= NOW_MS,
     );
     // With the fix, NOTHING is overdue for a freshly written plan — the first
-    // touch is tomorrow. The old bug had all five overdue at once.
+    // touch is tomorrow. The old bug had the full sequence overdue at once.
     expect(dueNow.length).toBe(0);
   });
 

@@ -7,6 +7,7 @@ import { VoiceButton } from "@/components/voice/VoiceButton";
 import type { VoicePrefill } from "@/lib/voice/parse-transcript";
 import type { ActionResult } from "@/lib/quotes/actions";
 import type { QuoteRow } from "@/lib/quotes/repo";
+import { getProjectTypeOptions } from "@/lib/recovery/recovery-logic";
 import { TRADES, US_STATES } from "@/lib/utils/normalize";
 
 type FormAction = (
@@ -39,8 +40,12 @@ export function QuoteForm({ mode, initial, defaultTrade, action }: Props) {
   // defaultValues — anything voice could not parse stays blank for typing.
   const [voice, setVoice] = React.useState<VoicePrefill | null>(null);
   const [formKey, setFormKey] = React.useState(0);
+  const [selectedTrade, setSelectedTrade] = React.useState(
+    initial?.trade || defaultTrade || "",
+  );
   const applyVoice = React.useCallback((parsed: VoicePrefill) => {
     setVoice(parsed);
+    if (parsed.trade) setSelectedTrade(parsed.trade);
     setFormKey((k) => k + 1);
   }, []);
 
@@ -79,7 +84,16 @@ export function QuoteForm({ mode, initial, defaultTrade, action }: Props) {
         autoComplete="off"
         autoFocus={mode === "create"}
       />
-      <TradeSelect defaultValue={trade} error={fieldError("trade")} />
+      <TradeSelect
+        defaultValue={trade}
+        error={fieldError("trade")}
+        onChange={setSelectedTrade}
+      />
+      <ProjectTypeField
+        trade={selectedTrade}
+        defaultValue={initial?.project_type ?? ""}
+        error={fieldError("project_type")}
+      />
       <div className="grid gap-4 sm:grid-cols-2">
         <Input
           label="Estimate amount (USD)"
@@ -205,9 +219,10 @@ function JobDescriptionField({ defaultValue, error }: JobDescriptionFieldProps) 
 type TradeSelectProps = {
   defaultValue?: string;
   error?: string;
+  onChange?: (trade: string) => void;
 };
 
-function TradeSelect({ defaultValue, error }: TradeSelectProps) {
+function TradeSelect({ defaultValue, error, onChange }: TradeSelectProps) {
   const id = React.useId();
   return (
     <div className="flex flex-col gap-1.5">
@@ -219,6 +234,7 @@ function TradeSelect({ defaultValue, error }: TradeSelectProps) {
         name="trade"
         required
         defaultValue={defaultValue ?? ""}
+        onChange={(event) => onChange?.(event.target.value)}
         aria-invalid={error ? true : undefined}
         className={
           "h-11 rounded-lg border border-line-subtle bg-surface-2 px-3 text-base font-medium text-ink-strong shadow-inner shadow-black/10 focus:border-brand focus:outline-none focus:ring-2 focus:ring-focus/40 disabled:cursor-not-allowed disabled:opacity-50" +
@@ -239,6 +255,55 @@ function TradeSelect({ defaultValue, error }: TradeSelectProps) {
           {error}
         </p>
       ) : null}
+    </div>
+  );
+}
+
+function ProjectTypeField({
+  trade,
+  defaultValue,
+  error,
+}: {
+  trade: string;
+  defaultValue?: string;
+  error?: string;
+}) {
+  const id = React.useId();
+  const listId = `${id}-options`;
+  const options = getProjectTypeOptions(trade);
+
+  return (
+    <div className="flex flex-col gap-1.5">
+      <label htmlFor={id} className="text-sm font-medium text-ink">
+        Project type <span className="text-ink-muted">(recommended)</span>
+      </label>
+      <input
+        id={id}
+        name="project_type"
+        list={listId}
+        defaultValue={defaultValue ?? ""}
+        maxLength={80}
+        placeholder={options[0] ?? "Project"}
+        aria-invalid={error ? true : undefined}
+        className={
+          "h-11 rounded-lg border border-line-subtle bg-surface-2 px-3 text-base text-ink-strong shadow-inner shadow-black/10 focus:border-brand focus:outline-none focus:ring-2 focus:ring-focus/40" +
+          (error ? " border-danger focus:border-danger focus:ring-danger/30" : "")
+        }
+      />
+      <datalist id={listId}>
+        {options.map((option) => (
+          <option key={option} value={option} />
+        ))}
+      </datalist>
+      {error ? (
+        <p className="text-xs text-danger" role="alert">
+          {error}
+        </p>
+      ) : (
+        <p className="text-xs text-ink-muted">
+          Choose a suggestion or type the homeowner&apos;s actual project.
+        </p>
+      )}
     </div>
   );
 }
@@ -296,7 +361,7 @@ function SubmitButton({ mode }: { mode: "create" | "edit" }) {
           ? "Saving…"
           : "Updating…"
         : mode === "create"
-          ? "Build 5-message recovery plan"
+          ? "Build 6-message recovery plan"
           : "Save changes"}
     </Button>
   );

@@ -508,7 +508,7 @@ describe("Silent Money Reveal bulk import — recovery plan is generated for eve
   it("guarantees a deterministic fallback plan — generation never leaves 0 messages", () => {
     expect(writerSrc).toContain("generateRecoveryPlan");
     // If validation drops AI rows, fall back to the deterministic 5 from the plan.
-    expect(writerSrc).toMatch(/valid\.length === 5 \? valid : plan/);
+    expect(writerSrc).toMatch(/valid\.length === 6 \? valid : plan/);
     // generateRecoveryPlan itself is contracted to always return 5 (fallback).
     const gen = readSource("../lib/ai/generate-recovery-plan.ts");
     expect(gen).toMatch(/return fallbackPlan\(ctx\)/);

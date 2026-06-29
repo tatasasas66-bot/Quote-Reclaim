@@ -15,10 +15,16 @@ import { recordQuoteAuditAction } from "@/app/(app)/quotes/[id]/reply-playbook-a
 type ReplyPlaybookProps = {
   paths: RecoveryPlanReplyPath[];
   trade: string;
+  projectType?: string | null;
   quoteId?: string;
 };
 
-export function ReplyPlaybook({ paths, trade, quoteId }: ReplyPlaybookProps) {
+export function ReplyPlaybook({
+  paths,
+  trade,
+  projectType,
+  quoteId,
+}: ReplyPlaybookProps) {
   const [showMarginProtector, setShowMarginProtector] = React.useState(false);
   const [showPaymentPlan, setShowPaymentPlan] = React.useState(false);
 
@@ -115,14 +121,22 @@ export function ReplyPlaybook({ paths, trade, quoteId }: ReplyPlaybookProps) {
       </div>
 
       {showMarginProtector ? <MarginProtector trade={trade} /> : null}
-      {showPaymentPlan ? <PaymentPlanTemplate trade={trade} /> : null}
+      {showPaymentPlan ? (
+        <PaymentPlanTemplate trade={trade} projectType={projectType} />
+      ) : null}
     </div>
   );
 }
 
-function PaymentPlanTemplate({ trade }: { trade: string }) {
+function PaymentPlanTemplate({
+  trade,
+  projectType,
+}: {
+  trade: string;
+  projectType?: string | null;
+}) {
   const [message, setMessage] = React.useState(() =>
-    buildPaymentPlanMessage(trade),
+    buildPaymentPlanMessage(trade, projectType),
   );
 
   return (

@@ -9,7 +9,6 @@ import { recoveryEmailSubject } from "@/lib/messaging/select-channel";
 import { getMessagingService } from "@/lib/messaging/service";
 import { normalizePhone } from "@/lib/messaging/phone";
 import type { SmsProvider, SmsResult } from "@/lib/messaging/types";
-import { getRecommendedMessage } from "@/lib/recovery/recovery-logic";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -208,6 +207,21 @@ async function handleSend(request: NextRequest): Promise<NextResponse> {
     }
   }
 
+  const projectTypeByQuote = new Map<string, string | null>();
+  const distinctQuoteIds = Array.from(new Set(claimed.map((r) => r.quote_id)));
+  if (distinctQuoteIds.length > 0) {
+    const { data: quoteProjects } = await supabase
+      .from("quotes")
+      .select("id, project_type")
+      .in("id", distinctQuoteIds);
+    for (const quote of quoteProjects ?? []) {
+      projectTypeByQuote.set(
+        String(quote.id),
+        quote.project_type ? String(quote.project_type) : null,
+      );
+    }
+  }
+
   let sent = 0;
   let failed = 0;
   let skipped = 0;
@@ -252,16 +266,8 @@ async function handleSend(request: NextRequest): Promise<NextResponse> {
       // follow-up still goes out, the homeowner just lacks the quick link.
       const oneTapLink = await issueOneTapLink(supabase, r.quote_id, null);
 
-      // Age-aware message: regenerate the message from centralized recovery
-      // logic using the quote's CURRENT days quiet — NOT the persisted
-      // message_text (which was written at plan-creation time and may be
-      // stale if the quote has aged into a different recovery window).
-      const ageAware = getRecommendedMessage({
-        daysQuiet: r.days_silent,
-        firstName: r.client_name,
-        trade: r.trade,
-      });
-      const baseMessage = ageAware.message || r.message_text;
+      // The persisted row is the source of truth for its sequence step.
+      const baseMessage = r.message_text;
 
       const messageBodyForSend = oneTapLink
         ? `${baseMessage}\n\nQuick reply: ${oneTapLink.url}`
@@ -269,7 +275,10 @@ async function handleSend(request: NextRequest): Promise<NextResponse> {
 
       const emailResult = await sendRecoveryEmail({
         to,
-        subject: recoveryEmailSubject(r.trade ?? "your"),
+        subject: recoveryEmailSubject(
+          r.trade ?? "other",
+          projectTypeByQuote.get(r.quote_id),
+        ),
         body: messageBodyForSend,
         from: recoveryFromHeader({
           contractorEmail: senderEmailByUser.get(r.user_id) ?? null,
@@ -292,7 +301,7 @@ async function handleSend(request: NextRequest): Promise<NextResponse> {
           failure_reason: emailResult.ok ? null : emailResult.error,
           sent_at: emailResult.ok ? now : null,
           idempotency_key: `cron:${r.reminder_id}:${cronRunId}`,
-          framework_used: ageAware.messageFamily,
+          framework_used: r.framework_used,
         })
         .select("id")
         .single();
@@ -330,7 +339,7 @@ async function handleSend(request: NextRequest): Promise<NextResponse> {
         estimate_amount: r.estimate_amount,
         channel: "email",
         message_text: baseMessage,
-        framework_used: ageAware.messageFamily,
+        framework_used: r.framework_used,
         cta_type: r.cta_type,
         followup_number: r.followup_number,
         message_type: r.message_type,
@@ -342,7 +351,7 @@ async function handleSend(request: NextRequest): Promise<NextResponse> {
         );
       }
 
-      if (r.followup_number === 5) {
+      if (r.followup_number === 6) {
         const { error: closedErr } = await supabase
           .from("recovery_events")
           .insert({
@@ -384,13 +393,7 @@ async function handleSend(request: NextRequest): Promise<NextResponse> {
       continue;
     }
 
-    // Age-aware message for SMS too — same centralized logic as email.
-    const smsAgeAware = getRecommendedMessage({
-      daysQuiet: r.days_silent,
-      firstName: r.client_name,
-      trade: r.trade,
-    });
-    const smsBaseMessage = smsAgeAware.message || r.message_text;
+    const smsBaseMessage = r.message_text;
 
     // Per-user send cap: release excess so the next tick picks them up.
     const attempts = perUserAttempts.get(r.user_id) ?? 0;
@@ -468,7 +471,7 @@ async function handleSend(request: NextRequest): Promise<NextResponse> {
       );
     }
 
-    if (r.followup_number === 3) {
+    if (r.followup_number === 6) {
       const { error: closedErr } = await supabase.from("recovery_events").insert({
         user_id: r.user_id,
         sequence_id: r.sequence_id,

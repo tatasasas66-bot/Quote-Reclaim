@@ -3,10 +3,12 @@ export type OneTapBranchAnswer =
   | "price_concern"
   | "bad_timing"
   | "still_comparing"
+  | "spouse_approval"
   | "need_to_talk"
   | "went_another_way";
 
 export const STILL_COMPARING_MARKER = "[One-tap] Still comparing";
+export const SPOUSE_APPROVAL_MARKER = "[One-tap] Need spouse or partner approval";
 
 export const ONE_TAP_CHOICES: ReadonlyArray<{
   id: OneTapBranchAnswer;
@@ -24,6 +26,7 @@ export const ONE_TAP_CHOICES: ReadonlyArray<{
     | "price_concern"
     | "bad_timing"
     | "still_comparing"
+    | "spouse_approval"
     | "need_to_talk"
     | "went_another_way";
 }> = [
@@ -51,6 +54,13 @@ export const ONE_TAP_CHOICES: ReadonlyArray<{
     questionText: STILL_COMPARING_MARKER,
     label: "Still comparing",
     playbookBranch: "still_comparing",
+  },
+  {
+    id: "spouse_approval",
+    answerType: "question",
+    questionText: SPOUSE_APPROVAL_MARKER,
+    label: "Need to talk it over",
+    playbookBranch: "spouse_approval",
   },
   {
     id: "need_to_talk",

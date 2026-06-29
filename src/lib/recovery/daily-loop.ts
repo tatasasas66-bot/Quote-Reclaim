@@ -3,7 +3,6 @@ import { normalizePhone } from "@/lib/messaging/phone";
 import type { QuoteRow, ReminderRow } from "@/lib/quotes/repo";
 import {
   getExpectedRecoveryValue,
-  getRecommendedMessage,
   getRecoveryWindow,
   getRecoveryWindowLabel,
   getSequenceFamily,
@@ -62,12 +61,13 @@ export function selectTodaysMoves(input: {
   return Array.from(firstDueByQuote.values())
     .map((reminder) => {
       const quote = quoteById.get(reminder.quote_id)!;
-      const step = Math.min(5, Math.max(1, reminder.followup_number)) as
+      const step = Math.min(6, Math.max(1, reminder.followup_number)) as
         | 1
         | 2
         | 3
         | 4
-        | 5;
+        | 5
+        | 6;
       const family = getSequenceFamily(step);
       const daysQuiet = Math.max(0, quote.days_silent);
       return {
@@ -79,10 +79,7 @@ export function selectTodaysMoves(input: {
         windowLabel: getRecoveryWindowLabel(getRecoveryWindow(daysQuiet)),
         family,
         step,
-        message: getRecommendedMessage(family, {
-          firstName: quote.client_name,
-          trade: quote.trade,
-        }),
+        message: reminder.message_text,
         sendAt: reminder.send_at,
         overdue: Date.parse(reminder.send_at) < startOfUtcDay(now).getTime(),
         expectedRecoveryValue: getExpectedRecoveryValue(
