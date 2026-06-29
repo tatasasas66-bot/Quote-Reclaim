@@ -117,7 +117,11 @@ describe("quote detail command-center hierarchy", () => {
     expect(manualActions).toContain("Open WhatsApp");
     expect(manualActions).toContain("Copy SMS message");
     expect(manualActions).toContain("Copy WhatsApp message");
-    expect(manualActions).toContain("sms:?body=");
+    expect(manualActions).toContain(
+      "`sms:${recipient}?body=${encodeURIComponent(message)}`",
+    );
+    expect(manualActions).toContain("normalizePhone(phone)");
+    expect(detailPage).toContain("phone={viewModel.quote.phone}");
     expect(manualActions).toContain("https://wa.me/?text=");
     expect(manualActions).toContain("Nothing sends until you tap send");
     expect(manualActions).toContain("grid min-w-0 grid-cols-1 gap-2 sm:grid-cols-2");

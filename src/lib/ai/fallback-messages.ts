@@ -1,6 +1,7 @@
 import type { RecoveryMessage, RecoveryContext } from "./generate-recovery-plan";
 import {
   getRecommendedMessage,
+  getProjectNoun,
   getSequenceFamily,
   type FollowupNumber,
 } from "@/lib/recovery/recovery-logic";
@@ -124,7 +125,13 @@ function resolveTrade(
   return fallback;
 }
 
-export function projectLabel(trade: string): string {
+export function projectLabel(
+  trade: string,
+  projectType?: string | null,
+): string {
+  if (projectType?.trim()) {
+    return `the ${getProjectNoun(trade, projectType)} estimate`;
+  }
   const lower = trade.trim().toLowerCase();
   if (!lower) return "the estimate";
   return resolveTrade(trade, PROJECT_LABELS, `the ${lower} estimate`);

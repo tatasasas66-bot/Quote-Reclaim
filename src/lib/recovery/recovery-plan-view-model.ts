@@ -426,7 +426,9 @@ export function buildRecoveryPlanViewModel({
     smsMessage: currentMessage,
     whatsappMessage: currentMessage,
     sequenceHeading:
-      pendingReminders.length === 6
+      pendingReminders.length === 0
+        ? "Recovery plan"
+        : pendingReminders.length === 6
         ? "6-message recovery plan"
         : `${pendingReminders.length}-message remaining plan`,
     sequenceIntro,

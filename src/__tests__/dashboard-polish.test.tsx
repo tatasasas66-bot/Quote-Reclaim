@@ -172,7 +172,7 @@ describe("describeActivity copy + tone per event type", () => {
       ev({ event_type: "estimate_created", estimate_amount: 8500 }),
     );
     // Folds the hidden plan-built line into one useful line.
-    expect(text).toBe("Tom added · 5 follow-ups scheduled");
+    expect(text).toBe("Tom added · 6 follow-ups scheduled");
     expect(tone).toBe("neutral");
   });
 
@@ -201,6 +201,23 @@ describe("describeActivity copy + tone per event type", () => {
     expect(describeActivity(ev({ event_type: "reply_received" })).tone).toBe(
       "success",
     );
+  });
+
+  it("shows the specific One-Tap option instead of a generic question label", () => {
+    expect(
+      describeActivity(
+        ev({
+          event_type: "reply_received",
+          channel: "one_tap",
+          reply_intent: "question",
+          reply_text:
+            "[One-tap] The customer tapped: Need to talk it over",
+        }),
+      ),
+    ).toEqual({
+      text: "Tom tapped 'Need to talk it over' via One-Tap Reply",
+      tone: "success",
+    });
   });
 
   it("win_recorded is success and includes the recovered amount", () => {

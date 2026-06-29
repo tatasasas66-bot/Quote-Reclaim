@@ -114,9 +114,9 @@ type RecoveryInput = {
  *     re-anchor unsent rows' send_at from now.
  *   - If no reminders are sent yet: regenerate messages and send_at via
  *     generateRecoveryPlan() and update existing rows by followup_number.
- *   - If no reminders exist at all (legacy quote): insert the 5 fresh rows.
+ *   - If no reminders exist at all (legacy quote): insert the 6 fresh rows.
  *   - The (quote_id, followup_number) unique index in the DB enforces the
- *     5-row maximum and prevents duplication on update.
+ *     6-row maximum and prevents duplication on update.
  */
 async function reconcileReminders(params: {
   serviceClient: ReturnType<typeof createServiceSupabaseClient>;
@@ -300,7 +300,7 @@ export async function createQuoteAction(
   // two paths again. The schedule starts NOW (default scheduleStartAt) — never
   // the original estimate date — so an old/imported quote can never produce a
   // recovery schedule in the past. Returns the written rows for activity events.
-  const { rows: reminderRows } = await persistRecoveryPlan({
+  const planResult = await persistRecoveryPlan({
     serviceClient,
     userId: userData.user.id,
     quoteId,
@@ -317,6 +317,17 @@ export async function createQuoteAction(
       quoteId,
     },
   });
+  if (planResult.inserted !== 6) {
+    console.error(
+      `[quotes:create] recovery plan insert failed code=${planResult.insertError ?? "unknown"}`,
+    );
+    return {
+      ok: false,
+      error:
+        "Quote saved, but its recovery plan could not be created. Open the quote and save it again.",
+    };
+  }
+  const reminderRows = planResult.rows;
 
   // Recovery Graph telemetry — emit estimate_created + one followup_generated
   // per reminder. Fire-and-forget; failures must not break quote creation.

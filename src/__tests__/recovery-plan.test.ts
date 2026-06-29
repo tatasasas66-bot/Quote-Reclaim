@@ -10,6 +10,9 @@ const detailPage = readSource("../app/(app)/quotes/[id]/page.tsx");
 const viewModel = readSource("../lib/recovery/recovery-plan-view-model.ts");
 const actions = readSource("../lib/quotes/actions.ts");
 const recoveryLogic = readSource("../lib/recovery/recovery-logic.ts");
+const cadenceMigration = readSource(
+  "../../supabase/migrations/20260629160053_allow_six_recovery_steps.sql",
+);
 const quoteActions = readSource("../components/quotes/QuoteActions.tsx");
 const copyBtn = readSource("../components/quotes/CopyButton.tsx");
 const barrel = readSource("../components/quotes/index.ts");
@@ -22,6 +25,11 @@ describe("Recovery Plan UI: /quotes/[id]", () => {
   it("renders the recovery plan list (reads listRemindersForQuote)", () => {
     expect(detailPage).toContain("listRemindersForQuote");
     expect(detailPage).toMatch(/viewModel\.sequenceCards\.map/);
+  });
+
+  it("never labels an active empty state as a 0-message plan", () => {
+    expect(viewModel).not.toContain("0-message remaining plan");
+    expect(viewModel).toContain('? "Recovery plan"');
   });
 
   it("uses plainer status copy after the command panel", () => {
@@ -231,6 +239,27 @@ describe("reconcileReminders behavior", () => {
     expect(fn).toContain("existingSteps");
     expect(fn).toContain("lastSentStep");
     expect(fn).toContain("missingRows");
+  });
+});
+
+describe("six-step persistence guard", () => {
+  it("widens the confirmed followup_number constraint to steps 1 through 6", () => {
+    expect(cadenceMigration).toMatch(
+      /constraint reminders_followup_number_check[\s\S]*?followup_number in \(1, 2, 3, 4, 5, 6\)/i,
+    );
+    expect(cadenceMigration).not.toMatch(/information_schema|pg_constraint|raise exception/i);
+  });
+
+  it("does not redirect after a silent or partial plan insert failure", () => {
+    const createSlice = actions.slice(
+      actions.indexOf("export async function createQuoteAction"),
+      actions.indexOf("export async function updateQuoteAction"),
+    );
+    expect(createSlice).toContain("planResult.inserted !== 6");
+    expect(createSlice).toContain("recovery plan could not be created");
+    expect(createSlice.indexOf("planResult.inserted !== 6")).toBeLessThan(
+      createSlice.indexOf("redirect(`/quotes/${quoteId}`)"),
+    );
   });
 });
 

@@ -30,7 +30,7 @@ export function describeActivity(e: ActivityEvent): {
       // Folds the now-hidden "Recovery plan built" line into one useful line:
       // every added quote gets the fixed 5-touch cadence scheduled.
       return {
-        text: `${client} added · 5 follow-ups scheduled`,
+        text: `${client} added · 6 follow-ups scheduled`,
         tone: "neutral",
       };
     case "followup_generated":
@@ -46,6 +46,13 @@ export function describeActivity(e: ActivityEvent): {
       return { text: `Message delivered to ${client}`, tone: "neutral" };
     case "reply_received":
       if (e.channel === "one_tap") {
+        const optionLabel = oneTapOptionLabel(e.reply_text);
+        if (optionLabel) {
+          return {
+            text: `${client} tapped '${optionLabel}' via One-Tap Reply`,
+            tone: "success",
+          };
+        }
         const intent = e.reply_intent;
         const phrase =
           intent === "positive"
@@ -78,10 +85,19 @@ export function describeActivity(e: ActivityEvent): {
   }
 }
 
+export function oneTapOptionLabel(
+  replyText: string | null | undefined,
+): string | null {
+  const prefix = "[One-tap] The customer tapped:";
+  const trimmed = replyText?.trim() ?? "";
+  if (!trimmed.startsWith(prefix)) return null;
+  return trimmed.slice(prefix.length).trim().replace(/\.$/, "") || null;
+}
+
 /**
  * Render-time cleanup so the feed reads like field updates, not system logs.
  * Hides internal mechanics — the "Recovery plan built for X" plan-build events
- * (their value is folded into the "X added · 5 follow-ups scheduled" line) and
+ * (their value is folded into the "X added · 6 follow-ups scheduled" line) and
  * raw "Message delivered" rows (covered by the "follow-up sent" line). Pure
  * filter: NO data is deleted, NO event storage changes — only the visible list
  * is condensed. Replaces the earlier collapse-to-one approach.

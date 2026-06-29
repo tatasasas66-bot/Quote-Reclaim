@@ -1,7 +1,11 @@
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
-import { fallbackMessages, researchSequenceMessages } from "@/lib/ai/fallback-messages";
+import {
+  fallbackMessages,
+  projectLabel,
+  researchSequenceMessages,
+} from "@/lib/ai/fallback-messages";
 import {
   BANNED_PHRASES,
   CADENCE_DAYS,
@@ -83,6 +87,10 @@ describe("homeowner message engine v2", () => {
     expect(getProjectNoun("Concrete", "Driveway")).toBe("driveway");
     expect(getProjectNoun("Concrete", null)).toBe("driveway");
     expect(getProjectTypeOptions("Concrete")).toContain("Patio");
+    expect(projectLabel("Concrete", "Driveway")).toBe(
+      "the driveway estimate",
+    );
+    expect(projectLabel("Concrete", null)).toBe("the concrete estimate");
   });
 
   it("adds spouse approval and manual persistent-silence branches", () => {

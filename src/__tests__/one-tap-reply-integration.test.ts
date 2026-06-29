@@ -32,6 +32,7 @@ const homepage = readSource("../app/page.tsx");
 const activityFeed = readSource(
   "../components/dashboard/ActivityFeedView.tsx",
 );
+const recentEvents = readSource("../lib/intelligence/list-recent-events.ts");
 const fallbackMsgs = readSource("../lib/ai/fallback-messages.ts");
 const recoveryViewModel = readSource(
   "../lib/recovery/recovery-plan-view-model.ts",
@@ -254,6 +255,17 @@ describe("reply pipeline reuse (Quiet Signal + Reply Radar)", () => {
   it("activity feed branches on channel='one_tap' for the reply phrase", () => {
     expect(activityFeed).toMatch(/e\.channel === "one_tap"/);
     expect(activityFeed).toMatch(/replied in one tap/);
+  });
+
+  it("carries the selected One-Tap label into the activity feed", () => {
+    expect(serverHelpers).toContain("selectedChoice.label");
+    expect(serverHelpers).toContain(
+      "[One-tap] The customer tapped: ${selectedChoice.label}",
+    );
+    expect(recentEvents).toMatch(/reply_intent, reply_text, channel/);
+    expect(activityFeed).toContain(
+      "tapped '${optionLabel}' via One-Tap Reply",
+    );
   });
 });
 

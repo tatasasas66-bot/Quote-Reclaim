@@ -7,6 +7,7 @@ export interface ActivityEvent {
   estimate_amount: number | null;
   followup_number: number | null;
   reply_intent: string | null;
+  reply_text?: string | null;
   /** sms | email | one_tap | null. Lets the feed distinguish reply channels. */
   channel?: string | null;
   created_at: string;
@@ -27,7 +28,7 @@ export async function listRecentEvents(
   const { data } = await supabase
     .from("recovery_events")
     .select(
-      "id, event_type, trade, estimate_amount, followup_number, reply_intent, channel, created_at, quote_id",
+      "id, event_type, trade, estimate_amount, followup_number, reply_intent, reply_text, channel, created_at, quote_id",
     )
     .eq("user_id", userId)
     .order("created_at", { ascending: false })
@@ -58,6 +59,7 @@ export async function listRecentEvents(
       e.estimate_amount == null ? null : Number(e.estimate_amount),
     followup_number: e.followup_number ?? null,
     reply_intent: e.reply_intent ?? null,
+    reply_text: e.reply_text ?? null,
     channel: e.channel ?? null,
     created_at: String(e.created_at),
     quote_id: e.quote_id ?? null,

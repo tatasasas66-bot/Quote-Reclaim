@@ -4,17 +4,23 @@ import * as React from "react";
 import { Check, Copy, MessageSquareText, Send } from "lucide-react";
 import { Button } from "@/components/ui";
 import { track, type TrackProps } from "@/lib/analytics/track";
+import { normalizePhone } from "@/lib/messaging/phone";
 import { cn } from "@/lib/utils/cn";
 
 type Props = {
   message: string;
+  phone?: string | null;
   source: string;
   className?: string;
   tracking?: TrackProps;
 };
 
-function smsHref(message: string): string {
-  return `sms:?body=${encodeURIComponent(message)}`;
+export function buildManualSmsHref(
+  phone: string | null | undefined,
+  message: string,
+): string {
+  const recipient = normalizePhone(phone) ?? "";
+  return `sms:${recipient}?body=${encodeURIComponent(message)}`;
 }
 
 function whatsappHref(message: string): string {
@@ -23,6 +29,7 @@ function whatsappHref(message: string): string {
 
 export function ManualMessageActions({
   message,
+  phone,
   source,
   className,
   tracking = {},
@@ -66,7 +73,7 @@ export function ManualMessageActions({
       </p>
       <div className="mt-3 grid min-w-0 grid-cols-1 gap-2 sm:grid-cols-2">
         <a
-          href={smsHref(message)}
+          href={buildManualSmsHref(phone, message)}
           onClick={() => {
             track("sms_opened", { surface: source, ...tracking });
             trackSundayResetAction("sms_opened");

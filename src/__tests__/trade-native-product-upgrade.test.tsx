@@ -96,17 +96,33 @@ describe("Margin Protector", () => {
 });
 
 describe("manual channel actions", () => {
-  it("encodes SMS and WhatsApp without a recipient or auto-send", () => {
+  it("encodes the SMS recipient and body without auto-sending", () => {
     render(
-      <ManualMessageActions message="Price & scope?" source="test_surface" />,
+      <ManualMessageActions
+        message="Price & scope?"
+        phone="(555) 123-4567"
+        source="test_surface"
+      />,
     );
     const sms = screen.getByRole("link", { name: /Open SMS/i });
     const whatsapp = screen.getByRole("link", { name: /Open WhatsApp/i });
-    expect(sms.getAttribute("href")).toBe("sms:?body=Price%20%26%20scope%3F");
+    expect(sms.getAttribute("href")).toBe(
+      "sms:+15551234567?body=Price%20%26%20scope%3F",
+    );
     expect(whatsapp.getAttribute("href")).toBe(
       "https://wa.me/?text=Price%20%26%20scope%3F",
     );
+    expect(sms.tagName).toBe("A");
     expect(sms.getAttribute("href")).not.toMatch(/(?:to|phone|recipient)=/i);
+  });
+
+  it("keeps the recipient picker fallback when no phone is available", () => {
+    render(
+      <ManualMessageActions message="Price & scope?" source="test_surface" />,
+    );
+    expect(
+      screen.getByRole("link", { name: /Open SMS/i }).getAttribute("href"),
+    ).toBe("sms:?body=Price%20%26%20scope%3F");
   });
 
   it("makes SMS primary, email the fallback, and copy the no-contact path", () => {

@@ -236,11 +236,17 @@ describe("[7] invalid/tampered/missing links render the same 'unavailable' page"
 
 describe("[8] public reply page leaks no contractor or customer private data", () => {
   it("renders only: trade label, dollar amount, and contractor first name", () => {
-    // Trade label is computed through projectLabel (a stable trade phrase).
+    // The current project type is preferred, with the trade phrase retained
+    // for legacy quotes where project_type is null.
     // Dollar amount comes from estimate_amount via formatCurrency.
     // Contractor first name comes from the email LOCAL PART only (never the
     // full email), via pickContractorName.
-    expect(publicPage).toContain("projectLabel(quote.trade)");
+    expect(publicPage).toContain(
+      "projectLabel(quote.trade, quote.project_type)",
+    );
+    expect(publicPage).toMatch(
+      /select\([\s\S]*?project_type[\s\S]*?\)\s*\.eq\("id", link\.quoteId\)/,
+    );
     expect(publicPage).toContain("formatCurrency(Number(quote.estimate_amount");
     expect(publicPage).toContain("pickContractorName(profile?.email)");
   });

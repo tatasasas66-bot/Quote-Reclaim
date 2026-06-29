@@ -13,6 +13,7 @@ import {
   mapAnswerTypeToReplyIntent,
   type OneTapAnswerType,
 } from "./one-tap-reply";
+import { ONE_TAP_CHOICES } from "./one-tap-choices";
 import { recordAuditEvent } from "@/lib/audit-events";
 
 export type IssuedLink = {
@@ -219,23 +220,25 @@ export async function recordOneTapReply(
 }
 
 function buildReplyTextFor(input: RecordReplyInput): string {
+  const selectedChoice = ONE_TAP_CHOICES.find(
+    (choice) =>
+      choice.answerType === input.answerType &&
+      (choice.answerType !== "question" ||
+        choice.questionText === input.questionText),
+  );
+  if (selectedChoice) {
+    return `[One-tap] The customer tapped: ${selectedChoice.label}`;
+  }
+
   switch (input.answerType) {
-    case "interested":
-      return "[One-tap] The customer tapped: Let's do it — what's next?";
-    case "price_concern":
-      return "[One-tap] The customer tapped: Price is the hold-up.";
-    case "bad_timing":
-      return "[One-tap] The customer tapped: Timing's off.";
-    case "need_to_talk":
-      return "[One-tap] The customer tapped: Can we talk?";
-    case "went_another_way":
-      return "[One-tap] The customer tapped: Went another way.";
     case "question":
       return (input.questionText ?? "").trim() || "[One-tap] (no question text)";
     case "not_now":
       return "[One-tap] The customer tapped: Not right now.";
     case "option_selected":
       return "[One-tap] The customer chose an approved option.";
+    default:
+      return `[One-tap] The customer tapped: ${input.answerType}`;
   }
 }
 

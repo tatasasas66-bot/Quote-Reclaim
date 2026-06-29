@@ -36,7 +36,7 @@ export default async function PublicReplyPage({ params }: PageParams) {
   const { data: quote } = await supabase
     .from("quotes")
     .select(
-      "id, user_id, sequence_id, client_name, trade, estimate_amount, outcome, client_opted_out",
+      "id, user_id, sequence_id, client_name, trade, project_type, estimate_amount, outcome, client_opted_out",
     )
     .eq("id", link.quoteId)
     .maybeSingle();
@@ -83,7 +83,7 @@ export default async function PublicReplyPage({ params }: PageParams) {
             Estimate
           </p>
           <p className="mt-2 text-lg font-bold leading-7 text-ink-strong">
-            {projectLabel(quote.trade)}
+            {projectLabel(quote.trade, quote.project_type)}
           </p>
           <p className="mt-1 text-3xl font-black tabular-nums text-ink-strong">
             {formatCurrency(Number(quote.estimate_amount ?? 0))}

@@ -250,7 +250,7 @@ describe("Activity feed — system-log events are hidden, not shown as spam", ()
       }),
     ];
     render(React.createElement(ActivityFeedView, { events }));
-    expect(screen.getByText(/Jasmine added · 5 follow-ups scheduled/)).toBeTruthy();
+    expect(screen.getByText(/Jasmine added · 6 follow-ups scheduled/)).toBeTruthy();
     expect(screen.getByText(/Day 1 follow-up sent to Jasmine/)).toBeTruthy();
     expect(
       screen.getByText(/Jasmine replied in one tap: interested/),

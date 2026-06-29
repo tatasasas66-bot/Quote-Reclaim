@@ -247,6 +247,7 @@ function CommandActionPanel({
           {viewModel.quote.phone ? (
             <ManualMessageActions
               message={viewModel.smsMessage}
+              phone={viewModel.quote.phone}
               source="quote_command"
               tracking={messageTracking(viewModel, viewModel.currentMove)}
               className="mt-4"
@@ -290,6 +291,7 @@ function CommandActionPanel({
             paths={viewModel.replyPlaybook}
             trade={viewModel.quote.trade}
             projectType={viewModel.quote.projectType}
+            phone={viewModel.quote.phone}
             quoteId={viewModel.quote.id}
           />
         </div>
@@ -568,6 +570,7 @@ function ReminderCard({
       {viewModel.quote.phone ? (
         <ManualMessageActions
           message={card.smsMessage}
+          phone={viewModel.quote.phone}
           source={`recovery_sequence_${card.key}`}
           tracking={messageTracking(viewModel, card.family)}
           className="mx-4 mt-4"

@@ -16,6 +16,7 @@ type ReplyPlaybookProps = {
   paths: RecoveryPlanReplyPath[];
   trade: string;
   projectType?: string | null;
+  phone?: string | null;
   quoteId?: string;
 };
 
@@ -23,6 +24,7 @@ export function ReplyPlaybook({
   paths,
   trade,
   projectType,
+  phone,
   quoteId,
 }: ReplyPlaybookProps) {
   const [showMarginProtector, setShowMarginProtector] = React.useState(false);
@@ -120,9 +122,15 @@ export function ReplyPlaybook({
         ))}
       </div>
 
-      {showMarginProtector ? <MarginProtector trade={trade} /> : null}
+      {showMarginProtector ? (
+        <MarginProtector trade={trade} phone={phone} />
+      ) : null}
       {showPaymentPlan ? (
-        <PaymentPlanTemplate trade={trade} projectType={projectType} />
+        <PaymentPlanTemplate
+          trade={trade}
+          projectType={projectType}
+          phone={phone}
+        />
       ) : null}
     </div>
   );
@@ -131,9 +139,11 @@ export function ReplyPlaybook({
 function PaymentPlanTemplate({
   trade,
   projectType,
+  phone,
 }: {
   trade: string;
   projectType?: string | null;
+  phone?: string | null;
 }) {
   const [message, setMessage] = React.useState(() =>
     buildPaymentPlanMessage(trade, projectType),
@@ -172,6 +182,7 @@ function PaymentPlanTemplate({
       </div>
       <ManualMessageActions
         message={message}
+        phone={phone}
         source="payment_plan"
         className="mt-3"
       />
@@ -179,7 +190,13 @@ function PaymentPlanTemplate({
   );
 }
 
-function MarginProtector({ trade }: { trade: string }) {
+function MarginProtector({
+  trade,
+  phone,
+}: {
+  trade: string;
+  phone?: string | null;
+}) {
   const scopeItems = getScopeComparisonItems(trade);
   const [message, setMessage] = React.useState(() =>
     buildScopeComparisonMessage(trade),
@@ -228,6 +245,7 @@ function MarginProtector({ trade }: { trade: string }) {
       </div>
       <ManualMessageActions
         message={message}
+        phone={phone}
         source="margin_protector"
         className="mt-3"
       />
