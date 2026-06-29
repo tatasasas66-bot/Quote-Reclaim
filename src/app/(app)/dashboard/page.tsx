@@ -154,50 +154,49 @@ export default async function DashboardPage() {
   return (
     <main className="mx-auto flex min-h-screen w-full max-w-7xl flex-col gap-8 bg-canvas px-4 pt-8 pb-[calc(6rem+env(safe-area-inset-bottom))] sm:px-6 sm:pb-8 lg:px-8">
       <PwaInstallHint />
-      <TodaysMoves moves={todaysMoves} streak={streak} />
       <header
-        id="silent-quote-command"
-        className="scroll-mt-4 border-b border-line-subtle/80 pb-5"
+        data-testid="dashboard-top-header"
+        className="flex min-w-0 flex-col gap-3 border-b border-line-subtle/80 pb-5 sm:flex-row sm:items-center sm:justify-between"
       >
-        <div className="flex items-center justify-between gap-3">
-          <p className="whitespace-nowrap text-xs font-semibold uppercase tracking-widest text-brand">
-            QUOTE RECLAIM
-          </p>
-          {/* shrink-0 keeps the action group at its natural width so the
-              Upgrade label and Sign out never compress + wrap at 375px. */}
-          <div className="flex shrink-0 items-center gap-3">
-            <UpgradeButton
-              userId={user.id}
-              userEmail={user.email ?? null}
-              isPaid={isPaid}
-              paddleAvailable={paddleClientConfigured()}
-            />
-            <Link
-              href="/recovery-report"
+        <p className="whitespace-nowrap text-xs font-semibold uppercase tracking-widest text-brand">
+          QUOTE RECLAIM
+        </p>
+        <div
+          data-testid="dashboard-header-actions"
+          className="flex w-full flex-wrap items-center gap-x-3 gap-y-2 sm:w-auto sm:justify-end"
+        >
+          <UpgradeButton
+            userId={user.id}
+            userEmail={user.email ?? null}
+            isPaid={isPaid}
+            paddleAvailable={paddleClientConfigured()}
+          />
+          <Link
+            href="/recovery-report"
+            className="whitespace-nowrap rounded text-xs font-medium text-ink-muted hover:text-ink-strong focus:outline-none focus-visible:ring-2 focus-visible:ring-focus"
+          >
+            Report
+          </Link>
+          <form action="/api/auth/sign-out" method="post">
+            <button
+              type="submit"
               className="whitespace-nowrap rounded text-xs font-medium text-ink-muted hover:text-ink-strong focus:outline-none focus-visible:ring-2 focus-visible:ring-focus"
             >
-              Report
-            </Link>
-            <form action="/api/auth/sign-out" method="post">
-              <button
-                type="submit"
-                className="whitespace-nowrap rounded text-xs font-medium text-ink-muted hover:text-ink-strong focus:outline-none focus-visible:ring-2 focus-visible:ring-focus"
-              >
-                Sign out
-              </button>
-            </form>
-          </div>
-        </div>
-        <div className="mt-4 min-w-0">
-          <h1 className="text-3xl font-black leading-tight text-ink-strong sm:text-4xl">
-            Silent Quote Command
-          </h1>
-          <p className="mt-2 max-w-2xl text-base leading-7 text-ink">
-            Every quiet estimate has a dollar value, a risk level, and a next
-            move.
-          </p>
+              Sign out
+            </button>
+          </form>
         </div>
       </header>
+      <TodaysMoves moves={todaysMoves} streak={streak} />
+      <section id="silent-quote-command" className="scroll-mt-4">
+        <h1 className="text-3xl font-black leading-tight text-ink-strong sm:text-4xl">
+          Silent Quote Command
+        </h1>
+        <p className="mt-2 max-w-2xl text-base leading-7 text-ink">
+          Every quiet estimate has a dollar value, a risk level, and a next
+          move.
+        </p>
+      </section>
 
       {showFirstRecoveryCommand ? (
         <FirstRecoveryCommand

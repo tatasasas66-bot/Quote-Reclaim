@@ -70,13 +70,21 @@ describe("Mobile header — Upgrade button does not wrap at 375px", () => {
 // Sign out + brand eyebrow — no wrap, no squeeze, at 375px
 // ---------------------------------------------------------------------------
 
-describe("Mobile header — Sign out and brand never wrap or squeeze", () => {
+describe("Dashboard header actions", () => {
   it("Sign out is whitespace-nowrap (no 'Sign' / 'out' two-line wrap)", () => {
     expect(dashboard).toMatch(/whitespace-nowrap[\s\S]*?>\s*Sign out/);
   });
 
-  it("the header action group is shrink-0 (keeps natural width at 375px)", () => {
-    expect(dashboard).toMatch(/flex shrink-0 items-center gap-3/);
+  it("stacks on mobile and aligns left/right on desktop", () => {
+    expect(dashboard).toMatch(
+      /data-testid="dashboard-top-header"[\s\S]*?flex min-w-0 flex-col[\s\S]*?sm:flex-row sm:items-center sm:justify-between/,
+    );
+  });
+
+  it("lets the action group wrap without horizontal overflow", () => {
+    expect(dashboard).toMatch(
+      /data-testid="dashboard-header-actions"[\s\S]*?flex w-full flex-wrap items-center[\s\S]*?sm:w-auto sm:justify-end/,
+    );
   });
 
   it("the QUOTE RECLAIM eyebrow is whitespace-nowrap (brand not squeezed)", () => {
@@ -85,11 +93,22 @@ describe("Mobile header — Sign out and brand never wrap or squeeze", () => {
     );
   });
 
-  it("header actions still render Upgrade then a subtle Sign out (order preserved)", () => {
+  it("header actions render Upgrade, Report, then Sign out", () => {
     const upgradeIdx = dashboard.indexOf("<UpgradeButton");
-    // Anchor on the sign-out form action (unambiguous; not the comment text).
+    const reportIdx = dashboard.indexOf('href="/recovery-report"');
     const signOutFormIdx = dashboard.indexOf('action="/api/auth/sign-out"');
     expect(upgradeIdx).toBeGreaterThan(0);
-    expect(signOutFormIdx).toBeGreaterThan(upgradeIdx);
+    expect(reportIdx).toBeGreaterThan(upgradeIdx);
+    expect(signOutFormIdx).toBeGreaterThan(reportIdx);
+  });
+
+  it("keeps the PWA hint first, then the header, moves, and command section", () => {
+    const pwaIdx = dashboard.indexOf("<PwaInstallHint");
+    const headerIdx = dashboard.indexOf('data-testid="dashboard-top-header"');
+    const movesIdx = dashboard.indexOf("<TodaysMoves");
+    const commandIdx = dashboard.indexOf('id="silent-quote-command"');
+    expect(headerIdx).toBeGreaterThan(pwaIdx);
+    expect(movesIdx).toBeGreaterThan(headerIdx);
+    expect(commandIdx).toBeGreaterThan(movesIdx);
   });
 });

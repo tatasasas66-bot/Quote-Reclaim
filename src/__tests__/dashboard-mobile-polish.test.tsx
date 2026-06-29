@@ -95,15 +95,15 @@ describe("Sticky '+ Add Silent Quote' CTA", () => {
 // ---------------------------------------------------------------------------
 
 describe("Mobile header — Upgrade dominant, Sign out subtle", () => {
-  it("eyebrow + actions share the top row; H1 sits below", () => {
-    // The QUOTE RECLAIM eyebrow appears before the H1 block, and the actions
-    // wrapper (Upgrade + Sign out) sits in the same row as the eyebrow.
+  it("puts the app header and actions above Today's Moves and the command", () => {
     const eyebrowIdx = dashboard.indexOf("QUOTE RECLAIM");
     const upgradeIdx = dashboard.indexOf("<UpgradeButton");
+    const movesIdx = dashboard.indexOf("<TodaysMoves");
     const h1Idx = dashboard.indexOf("Silent Quote Command");
     expect(eyebrowIdx).toBeGreaterThan(0);
     expect(upgradeIdx).toBeGreaterThan(eyebrowIdx);
-    expect(h1Idx).toBeGreaterThan(upgradeIdx);
+    expect(movesIdx).toBeGreaterThan(upgradeIdx);
+    expect(h1Idx).toBeGreaterThan(movesIdx);
   });
 
   it("Upgrade remains visible", () => {
