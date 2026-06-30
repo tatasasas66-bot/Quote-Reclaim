@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { useRouter } from "next/navigation";
 import { useFormState, useFormStatus } from "react-dom";
 import { Button, Input } from "@/components/ui";
 import { VoiceButton } from "@/components/voice/VoiceButton";
@@ -23,10 +24,16 @@ type Props = {
 };
 
 export function QuoteForm({ mode, initial, defaultTrade, action }: Props) {
+  const router = useRouter();
   const [state, formAction] = useFormState<ActionResult | null, FormData>(
     action,
     null,
   );
+  React.useEffect(() => {
+    if (mode === "edit" && state?.ok && initial?.id) {
+      router.push(`/quotes/${initial.id}`);
+    }
+  }, [initial?.id, mode, router, state]);
 
   const isError = state && state.ok === false;
   const fieldError = (key: string): string | undefined => {

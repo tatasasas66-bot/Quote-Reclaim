@@ -21,6 +21,10 @@ vi.mock("@/hooks/useSpeechRecognition", () => ({
   friendlySpeechError: (code: string) => code,
 }));
 
+vi.mock("next/navigation", () => ({
+  useRouter: () => ({ push: vi.fn() }),
+}));
+
 // useFormState / useFormStatus are experimental react-dom hooks that the
 // happy-dom test renderer does not wire up. QuoteForm uses them only for
 // server-action plumbing; stub them so the form renders. These tests cover

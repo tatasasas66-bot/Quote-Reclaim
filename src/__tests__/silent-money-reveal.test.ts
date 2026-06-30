@@ -228,11 +228,8 @@ describe("importSilentQuotesAction — security contract", () => {
   });
 
   it("persists the selected project type into quotes and recovery plans", () => {
-    expect(actionSrc).toContain(
-      'effectiveProjectType = projectType || (auditImport ? "Estimate" : null)',
-    );
-    expect(actionSrc).toContain("project_type: effectiveProjectType");
-    expect(actionSrc).toContain("projectType: effectiveProjectType");
+    expect(actionSrc).toContain("project_type: projectType || null");
+    expect(actionSrc).toContain("projectType");
   });
 
   it("sorts cleaned rows by amount DESC so the top-value quotes get the trial slots", () => {
@@ -332,13 +329,17 @@ describe("RevealClient — copy, CTAs, and brand guardrails", () => {
     expect(revealClientSrc).toContain("What kind of estimate is this?");
     expect(revealClientSrc).toContain('id="audit-trade"');
     expect(revealClientSrc).toContain('id="audit-project-type"');
+    expect(revealClientSrc).toContain('name="project_type"');
     expect(revealClientSrc).toContain("getProjectTypeOptions(trade)");
+    expect(revealClientSrc).toContain('formData.get("project_type")');
     expect(revealClientSrc).toMatch(/disabled=\{!trade\}/);
   });
 
   it("passes audit origin, trade, and project type to the server action", () => {
-    expect(revealClientSrc).toMatch(
-      /importSilentQuotesAction\(\{[\s\S]*?trade,[\s\S]*?projectType,[\s\S]*?origin: fromAudit \? "audit" : "bulk"/,
+    expect(revealClientSrc).toContain("trade: submittedTrade");
+    expect(revealClientSrc).toContain("projectType: submittedProjectType");
+    expect(revealClientSrc).toContain(
+      'origin: fromAudit ? "audit" : "bulk"',
     );
   });
 

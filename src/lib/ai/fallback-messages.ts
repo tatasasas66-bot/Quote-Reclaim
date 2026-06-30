@@ -123,7 +123,7 @@ export function projectLabel(
   trade: string,
   projectType?: string | null,
 ): string {
-  if (projectType?.trim()) {
+  if (projectType != null) {
     const noun = getProjectNoun(trade, projectType);
     return noun === "estimate" ? "the estimate" : `the ${noun} estimate`;
   }

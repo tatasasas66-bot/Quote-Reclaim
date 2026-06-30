@@ -443,6 +443,7 @@ export function getProjectNoun(
 ): string {
   const specific = projectType?.trim().replace(/^the\s+/i, "");
   if (specific) return specific.toLowerCase();
+  if (projectType === "") return "estimate";
   if (!trade) return "estimate";
   const key = trade.trim().toLowerCase();
   return PROJECT_NOUNS.get(key) ?? "estimate";

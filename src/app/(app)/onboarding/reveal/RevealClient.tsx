@@ -205,17 +205,22 @@ export function RevealClient({
     setStep(reduceMotion ? "reveal" : "transitioning");
   }
 
-  async function handleStartRecovering() {
+  async function handleStartRecovering(values?: {
+    trade: string;
+    projectType: string;
+  }) {
     if (!parsed) return;
-    if (!trade) {
+    const submittedTrade = values?.trade.trim() ?? trade;
+    const submittedProjectType = values?.projectType.trim() ?? projectType;
+    if (!submittedTrade) {
       setError("Choose a trade before saving the plan.");
       return;
     }
     setStep("submitting");
     setError(null);
     const result = await importSilentQuotesAction({
-      trade,
-      projectType,
+      trade: submittedTrade,
+      projectType: submittedProjectType,
       rows: parsed.rows,
       origin: fromAudit ? "audit" : "bulk",
     });
@@ -234,6 +239,15 @@ export function RevealClient({
         ? `/quotes/${result.priorityQuoteId}`
         : "/dashboard",
     );
+  }
+
+  function handleAuditSubmit(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const formData = new FormData(event.currentTarget);
+    void handleStartRecovering({
+      trade: String(formData.get("trade") ?? ""),
+      projectType: String(formData.get("project_type") ?? ""),
+    });
   }
 
   async function handleSkip() {
@@ -293,7 +307,10 @@ export function RevealClient({
                 </p>
               );
             })()}
-            <div className="mt-7 rounded-lg border border-line-subtle bg-surface-1 p-5">
+            <form
+              onSubmit={handleAuditSubmit}
+              className="mt-7 rounded-lg border border-line-subtle bg-surface-1 p-5"
+            >
               <h2 className="text-lg font-black text-ink-strong">
                 What kind of estimate is this?
               </h2>
@@ -308,6 +325,7 @@ export function RevealClient({
               </label>
               <select
                 id="audit-trade"
+                name="trade"
                 value={trade}
                 onChange={(event) => {
                   setTrade(event.target.value);
@@ -334,6 +352,7 @@ export function RevealClient({
               </label>
               <input
                 id="audit-project-type"
+                name="project_type"
                 list="audit-project-type-options"
                 value={projectType}
                 onChange={(event) =>
@@ -356,25 +375,20 @@ export function RevealClient({
                   {error}
                 </p>
               ) : null}
-            </div>
-            <div className="mt-6 flex flex-col gap-3 sm:flex-row">
-              <Button
-                type="button"
-                size="lg"
-                disabled={!trade}
-                onClick={() => void handleStartRecovering()}
-              >
-                Save and open the plan →
-              </Button>
-              <Button
-                type="button"
-                size="lg"
-                variant="ghost"
-                onClick={() => setStep("input")}
-              >
-                Add more estimates
-              </Button>
-            </div>
+              <div className="mt-6 flex flex-col gap-3 sm:flex-row">
+                <Button type="submit" size="lg" disabled={!trade}>
+                  Save and open the plan →
+                </Button>
+                <Button
+                  type="button"
+                  size="lg"
+                  variant="ghost"
+                  onClick={() => setStep("input")}
+                >
+                  Add more estimates
+                </Button>
+              </div>
+            </form>
           </section>
         ) : null}
 

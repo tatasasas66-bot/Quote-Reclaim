@@ -309,7 +309,7 @@ export async function createQuoteAction(
       firstName,
       contractorFirstName,
       trade: input.trade,
-      projectType: input.project_type || null,
+      projectType: input.project_type,
       estimateAmount: input.estimate_amount,
       jobDescription: input.job_description || null,
       city: input.city || null,
@@ -426,7 +426,7 @@ export async function updateQuoteAction(
       firstName: firstNameOf(input.client_name),
       contractorFirstName: contractorFirstNameOf(userData.user),
       trade: input.trade,
-      projectType: input.project_type || null,
+      projectType: input.project_type,
       estimateAmount: input.estimate_amount,
       jobDescription: input.job_description || null,
       city: input.city || null,
@@ -436,7 +436,7 @@ export async function updateQuoteAction(
 
   revalidatePath("/dashboard");
   revalidatePath(`/quotes/${id}`);
-  redirect(`/quotes/${id}`);
+  return { ok: true };
 }
 
 export async function markQuoteWonAction(id: string): Promise<ActionResult> {

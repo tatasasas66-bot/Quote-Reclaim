@@ -75,7 +75,6 @@ export async function importSilentQuotesAction(input: {
   const trade = String(input.trade ?? "").trim();
   const projectType = String(input.projectType ?? "").trim().slice(0, 80);
   const auditImport = input.origin === "audit";
-  const effectiveProjectType = projectType || (auditImport ? "Estimate" : null);
   if (!ALLOWED_TRADES.has(trade)) {
     return { ok: false, error: "Unrecognized trade" };
   }
@@ -156,7 +155,7 @@ export async function importSilentQuotesAction(input: {
       .insert({
         user_id: userId,
         trade,
-        project_type: effectiveProjectType,
+        project_type: projectType || null,
         city: "",
         state: "",
         estimate_amount: row.amount,
@@ -201,7 +200,7 @@ export async function importSilentQuotesAction(input: {
         firstName: normalizedName.split(/\s+/)[0] || "there",
         contractorFirstName: null,
         trade,
-        projectType: effectiveProjectType,
+        projectType,
         estimateAmount: row.amount,
         jobDescription: null,
         city: null,
