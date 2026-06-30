@@ -3,7 +3,13 @@
 import * as React from "react";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import {
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { QuoteForm } from "@/components/quotes/QuoteForm";
 import type { ActionResult } from "@/lib/quotes/actions";
@@ -31,7 +37,7 @@ const quote: QuoteRow = {
   id: "quote-123",
   user_id: "user-1",
   trade: "Concrete",
-  project_type: "Driveway",
+  project_type: "Patio",
   city: "",
   state: "",
   estimate_amount: 7200,
@@ -63,6 +69,21 @@ beforeEach(() => {
 afterEach(cleanup);
 
 describe("quote edit redirect", () => {
+  it("serializes the changed project type and phone for the update action", () => {
+    render(<QuoteForm mode="edit" initial={quote} action={action} />);
+
+    const projectType = screen.getByLabelText(/Project type/i);
+    const phone = screen.getByLabelText(/Client phone/i);
+    fireEvent.change(projectType, { target: { value: "Driveway" } });
+    fireEvent.change(phone, { target: { value: "+16025550123" } });
+
+    const form = projectType.closest("form");
+    expect(form).not.toBeNull();
+    const formData = new FormData(form!);
+    expect(formData.get("project_type")).toBe("Driveway");
+    expect(formData.get("client_phone")).toBe("+16025550123");
+  });
+
   it("persists the edited project type, refreshes messages, then reports success", () => {
     const updateSlice = quoteActionsSource.slice(
       quoteActionsSource.indexOf("export async function updateQuoteAction"),

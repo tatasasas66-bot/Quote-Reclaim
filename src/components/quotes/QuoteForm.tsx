@@ -50,6 +50,9 @@ export function QuoteForm({ mode, initial, defaultTrade, action }: Props) {
   const [selectedTrade, setSelectedTrade] = React.useState(
     initial?.trade || defaultTrade || "",
   );
+  const [projectType, setProjectType] = React.useState(
+    initial?.project_type ?? "",
+  );
   const applyVoice = React.useCallback((parsed: VoicePrefill) => {
     setVoice(parsed);
     if (parsed.trade) setSelectedTrade(parsed.trade);
@@ -98,7 +101,8 @@ export function QuoteForm({ mode, initial, defaultTrade, action }: Props) {
       />
       <ProjectTypeField
         trade={selectedTrade}
-        defaultValue={initial?.project_type ?? ""}
+        value={projectType}
+        onChange={setProjectType}
         error={fieldError("project_type")}
       />
       <div className="grid gap-4 sm:grid-cols-2">
@@ -268,11 +272,13 @@ function TradeSelect({ defaultValue, error, onChange }: TradeSelectProps) {
 
 function ProjectTypeField({
   trade,
-  defaultValue,
+  value,
+  onChange,
   error,
 }: {
   trade: string;
-  defaultValue?: string;
+  value: string;
+  onChange: (value: string) => void;
   error?: string;
 }) {
   const id = React.useId();
@@ -288,7 +294,8 @@ function ProjectTypeField({
         id={id}
         name="project_type"
         list={listId}
-        defaultValue={defaultValue ?? ""}
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
         maxLength={80}
         placeholder={options[0] ?? "Project"}
         aria-invalid={error ? true : undefined}
