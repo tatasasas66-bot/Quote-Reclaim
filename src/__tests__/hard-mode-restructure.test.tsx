@@ -74,9 +74,8 @@ it("primary CTA routes to the public audit doorway", () => {
   it("trust line and price stay clear", () => {
     expect(homepage).toContain("PAYWALL_PRICE_LABEL");
     expect(homepage).toMatch(/No names/);
-    expect(homepage).toMatch(/No phone numbers/);
-    expect(homepage).toMatch(/No card/);
-    expect(homepage).toMatch(/Result first/);
+    expect(homepage).toMatch(/<TrustStrip/);
+    expect(homepage).toMatch(/result first/i);
   });
 
   it("homepage shows the paid recovery system behind the free audit", () => {

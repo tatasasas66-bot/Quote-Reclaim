@@ -70,7 +70,7 @@ export function QuoteForm({ mode, initial, defaultTrade, action }: Props) {
     <form
       key={formKey}
       action={formAction}
-      className="space-y-5 rounded-lg border border-line-subtle bg-surface-1 p-5 shadow-[0_22px_70px_rgba(0,0,0,0.3)] sm:p-6"
+      className="space-y-5 rounded-2xl border border-line-subtle bg-white p-5 shadow-premium sm:p-6"
       noValidate
     >
       {topLevelError ? (
@@ -212,7 +212,7 @@ function JobDescriptionField({ defaultValue, error }: JobDescriptionFieldProps) 
         rows={3}
         aria-invalid={error ? true : undefined}
         className={
-          "rounded-lg border border-line-subtle bg-surface-2 px-3 py-2 text-base text-ink-strong shadow-inner shadow-black/10 focus:border-brand focus:outline-none focus:ring-2 focus:ring-focus/40 disabled:cursor-not-allowed disabled:opacity-50" +
+          "rounded-xl border border-line-subtle bg-white px-4 py-3 text-base text-ink-strong shadow-premium focus:border-brand focus:outline-none focus:ring-2 focus:ring-focus/25 disabled:cursor-not-allowed disabled:opacity-50" +
           (error ? " border-danger focus:border-danger focus:ring-danger/30" : "")
         }
       />
@@ -248,7 +248,7 @@ function TradeSelect({ defaultValue, error, onChange }: TradeSelectProps) {
         onChange={(event) => onChange?.(event.target.value)}
         aria-invalid={error ? true : undefined}
         className={
-          "h-11 rounded-lg border border-line-subtle bg-surface-2 px-3 text-base font-medium text-ink-strong shadow-inner shadow-black/10 focus:border-brand focus:outline-none focus:ring-2 focus:ring-focus/40 disabled:cursor-not-allowed disabled:opacity-50" +
+          "h-[52px] rounded-xl border border-line-subtle bg-white px-4 text-base font-medium text-ink-strong shadow-premium focus:border-brand focus:outline-none focus:ring-2 focus:ring-focus/25 disabled:cursor-not-allowed disabled:opacity-50" +
           (error ? " border-danger focus:border-danger focus:ring-danger/30" : "")
         }
       >
@@ -300,7 +300,7 @@ function ProjectTypeField({
         placeholder={options[0] ?? "Project"}
         aria-invalid={error ? true : undefined}
         className={
-          "h-11 rounded-lg border border-line-subtle bg-surface-2 px-3 text-base text-ink-strong shadow-inner shadow-black/10 focus:border-brand focus:outline-none focus:ring-2 focus:ring-focus/40" +
+          "h-[52px] rounded-xl border border-line-subtle bg-white px-4 text-base text-ink-strong shadow-premium focus:border-brand focus:outline-none focus:ring-2 focus:ring-focus/25" +
           (error ? " border-danger focus:border-danger focus:ring-danger/30" : "")
         }
       />
@@ -340,7 +340,7 @@ function StateSelect({ defaultValue, error }: StateSelectProps) {
         defaultValue={defaultValue ?? ""}
         aria-invalid={error ? true : undefined}
         className={
-          "h-11 rounded-lg border border-line-subtle bg-surface-2 px-3 text-base font-medium text-ink-strong shadow-inner shadow-black/10 focus:border-brand focus:outline-none focus:ring-2 focus:ring-focus/40 disabled:cursor-not-allowed disabled:opacity-50" +
+          "h-[52px] rounded-xl border border-line-subtle bg-white px-4 text-base font-medium text-ink-strong shadow-premium focus:border-brand focus:outline-none focus:ring-2 focus:ring-focus/25 disabled:cursor-not-allowed disabled:opacity-50" +
           (error ? " border-danger focus:border-danger focus:ring-danger/30" : "")
         }
       >
@@ -368,7 +368,7 @@ function SubmitButton({ mode }: { mode: "create" | "edit" }) {
       fullWidth
       size="lg"
       loading={pending}
-      className="shadow-[0_0_42px_rgba(217,111,50,0.24)]"
+      className="shadow-premium"
     >
       {pending
         ? mode === "create"

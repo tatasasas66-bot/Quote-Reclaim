@@ -65,7 +65,7 @@ describe("AuthShell mobile-safe layout", () => {
   });
 
   it("form card has w-full min-w-0 so it never exceeds the section", () => {
-    expect(authShell).toMatch(/w-full min-w-0 rounded-lg/);
+    expect(authShell).toMatch(/w-full min-w-0 rounded-2xl/);
   });
 
   it("hidden desktop column uses min-w-0", () => {

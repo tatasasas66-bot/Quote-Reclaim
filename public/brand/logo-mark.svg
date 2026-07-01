@@ -1,9 +1,9 @@
 <svg viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg" fill="none" role="img" aria-label="Quote Reclaim">
   <title>Quote Reclaim</title>
   <!-- Q bowl — brand rust ring -->
-  <circle cx="14" cy="14" r="10" stroke="#d96f32" stroke-width="4" />
+  <circle cx="14" cy="14" r="10" stroke="#1E5128" stroke-width="4" />
   <!-- Tail — short bold stroke exiting the bowl at lower-right -->
-  <line x1="21" y1="21" x2="27" y2="27" stroke="#d96f32" stroke-width="4" stroke-linecap="round" />
+  <line x1="21" y1="21" x2="27" y2="27" stroke="#1E5128" stroke-width="4" stroke-linecap="round" />
   <!-- Reclaim arrowhead — gold triangle pointing back toward the bowl center -->
-  <polygon points="14.5,14.5 22,16 16,22" fill="#d4a63a" />
+  <polygon points="14.5,14.5 22,16 16,22" fill="#0F1115" />
 </svg>

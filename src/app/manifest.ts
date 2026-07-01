@@ -7,8 +7,8 @@ export default function manifest(): MetadataRoute.Manifest {
     description: "Work quiet contractor quotes from one daily recovery queue.",
     start_url: "/dashboard?focus=today",
     display: "standalone",
-    background_color: "#0b0d0f",
-    theme_color: "#059669",
+    background_color: "#FAFAF7",
+    theme_color: "#1E5128",
     icons: [
       {
         src: "/icon.svg",

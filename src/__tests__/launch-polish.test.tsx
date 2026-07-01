@@ -108,7 +108,7 @@ describe("FIX 2 — ROI equation lives in exactly two places product-wide", () =
     // and both paragraphs break-words so nothing escapes at 125% zoom.
     expect(meterSrc).toContain("that&apos;s");
     expect(meterSrc).not.toMatch(/that covers/);
-    expect(meterSrc).toMatch(/min-w-0 rounded-lg border border-money\/30/);
+    expect(meterSrc).toMatch(/min-w-0 rounded-2xl border border-brand\/20/);
     expect(meterSrc).toMatch(/break-words text-2xl/);
     expect(meterSrc).not.toMatch(/whitespace-nowrap text-money/);
   });

@@ -87,9 +87,8 @@ describe("Homepage hero copy (honest conversion rewrite)", () => {
     expect(homepage).toMatch(/Built for US home-service contractors\./);
     expect(homepage).toContain("PAYWALL_PRICE_LABEL");
     expect(homepage).toMatch(/No names/);
-    expect(homepage).toMatch(/No phone numbers/);
-    expect(homepage).toMatch(/No card/);
-    expect(homepage).toMatch(/Result first/);
+    expect(homepage).toMatch(/<TrustStrip/);
+    expect(homepage).toMatch(/result first/i);
   });
 
   it("homepage shows product depth beyond the audit form", () => {
@@ -173,8 +172,8 @@ describe("Recovery Window Alert copy (Value Proof v0.5)", () => {
 // ---------------------------------------------------------------------------
 
 describe("Recovery Ledger eyebrow contrast + color discipline (v0.4)", () => {
-  it("MONEY STILL QUIET keeps the softer warning/80 token", () => {
-    expect(heroMetric).toMatch(/text-warning\/80/);
+  it("MONEY STILL QUIET uses the calm primary token", () => {
+    expect(heroMetric).toMatch(/text-brand/);
   });
 
   it("Recovered-this-month keeps the success token for the won state", () => {

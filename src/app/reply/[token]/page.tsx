@@ -63,7 +63,7 @@ export default async function PublicReplyPage({ params }: PageParams) {
   // Minimal estimate summary. Deliberately does NOT include the homeowner's
   // own contact info, location, job description, or any internal IDs.
   return (
-    <main className="min-h-screen bg-canvas px-4 py-8 sm:px-6 sm:py-12">
+    <main className="min-h-screen bg-canvas px-4 py-10 sm:px-6 sm:py-16">
       <div className="mx-auto w-full max-w-md">
         <header className="text-center">
           <p className="text-xs font-black uppercase tracking-widest text-brand">
@@ -79,7 +79,7 @@ export default async function PublicReplyPage({ params }: PageParams) {
 
         <section
           aria-label="Estimate summary"
-          className="mt-6 rounded-lg border border-line-subtle bg-surface-1 p-5"
+          className="mt-8 rounded-2xl border border-line-subtle bg-white p-6 shadow-premium"
         >
           <p className="text-xs font-semibold uppercase tracking-widest text-ink-muted">
             Estimate
@@ -101,6 +101,12 @@ export default async function PublicReplyPage({ params }: PageParams) {
           contractorEmail={profile?.email ?? null}
           contractorPhone={profile?.contractor_phone ?? null}
         />
+        <footer className="mt-6 text-center text-xs leading-5 text-ink-muted">
+          Your reply is shared only with your contractor.
+          <span className="mt-1 block font-semibold text-ink">
+            Powered by Quote Reclaim
+          </span>
+        </footer>
       </div>
     </main>
   );

@@ -87,10 +87,8 @@ describe("Dashboard header actions", () => {
     );
   });
 
-  it("the QUOTE RECLAIM eyebrow is whitespace-nowrap (brand not squeezed)", () => {
-    expect(dashboard).toMatch(
-      /whitespace-nowrap text-xs font-semibold uppercase tracking-widest text-brand/,
-    );
+  it("the Quote Reclaim wordmark wrapper is whitespace-nowrap (brand not squeezed)", () => {
+    expect(dashboard).toMatch(/className="whitespace-nowrap"[\s\S]*?<LogoFull/);
   });
 
   it("header actions render Upgrade, Report, then Sign out", () => {

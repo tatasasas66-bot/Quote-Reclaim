@@ -4,12 +4,12 @@ import { cn } from "@/lib/utils/cn";
 type BadgeVariant = "neutral" | "success" | "warning" | "danger" | "brand" | "money";
 
 const variantClasses: Record<BadgeVariant, string> = {
-  neutral: "bg-surface-3 text-ink",
-  success: "bg-success/15 text-success",
-  warning: "bg-warning/15 text-warning",
-  danger: "bg-danger/15 text-danger",
-  brand: "bg-brand/15 text-brand",
-  money: "bg-money/15 text-money",
+  neutral: "border-line-subtle bg-surface-2 text-ink",
+  success: "border-success/25 bg-success/10 text-success",
+  warning: "border-warning/25 bg-warning/10 text-warning",
+  danger: "border-danger/25 bg-danger/10 text-danger",
+  brand: "border-brand/25 bg-brand/10 text-brand",
+  money: "border-brand/25 bg-brand/10 text-brand",
 };
 
 type BadgeProps = {
@@ -22,7 +22,7 @@ export function Badge({ variant = "neutral", className, children }: BadgeProps) 
   return (
     <span
       className={cn(
-        "inline-flex items-center rounded-md px-2 py-0.5 text-xs font-medium",
+        "inline-flex items-center rounded-md border px-2.5 py-1 text-xs font-semibold",
         variantClasses[variant],
         className,
       )}

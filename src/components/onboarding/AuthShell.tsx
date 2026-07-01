@@ -44,14 +44,14 @@ const COPY = {
 
 function PreviewCard() {
   return (
-    <div className="rounded-lg border border-line-subtle bg-surface-1 shadow-[0_28px_90px_rgba(0,0,0,0.38)]">
+    <div className="overflow-hidden rounded-2xl border border-line-subtle bg-white shadow-premium">
       <div className="flex items-center justify-between gap-3 border-b border-line-subtle px-4 py-3">
         <Badge variant="money">EXAMPLE PREVIEW · NOT YOUR DATA</Badge>
         <span className="text-xs font-semibold uppercase tracking-widest text-ink-muted">
           Silent Quote Command
         </span>
       </div>
-      <div className="grid gap-4 p-4">
+      <div className="grid gap-4 p-5">
         <div className="rounded-lg border border-warning/35 bg-warning/10 p-5">
           <p className="text-xs font-bold uppercase tracking-widest text-warning">
             Money Still Quiet
@@ -181,7 +181,7 @@ export function AuthShell({ mode }: AuthShellProps) {
         </section>
 
         <section className="mx-auto flex w-full min-w-0 max-w-md items-start lg:mx-0">
-          <div className="w-full min-w-0 rounded-lg border border-line-subtle bg-surface-1 p-6 shadow-[0_28px_90px_rgba(0,0,0,0.36)] sm:p-8">
+          <div className="w-full min-w-0 rounded-2xl border border-line-subtle bg-white p-6 shadow-premium sm:p-8">
             <div className="mb-6">
               <h2 className="text-2xl font-black text-ink-strong">{title}</h2>
               <p className="mt-1 text-sm text-ink-muted">{subtitle}</p>

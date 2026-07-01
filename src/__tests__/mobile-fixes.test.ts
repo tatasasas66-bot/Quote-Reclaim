@@ -79,7 +79,7 @@ describe("Bug 2: sticky add-quote bar no longer covers Jobs Won Back", () => {
     expect(dashboard).toMatch(/px-4/);
     expect(dashboard).toMatch(/sm:px-6/);
     expect(dashboard).toMatch(/lg:px-8/);
-    expect(dashboard).toMatch(/pt-8/);
+    expect(dashboard).toMatch(/pt-5/);
   });
 
   it("'Jobs Won Back' section sits inside the padded main, above the fixed bar", () => {

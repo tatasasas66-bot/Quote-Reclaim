@@ -87,12 +87,12 @@ export function FirstRecoveryCommand({
   return (
     <section
       aria-labelledby="first-recovery-heading"
-      className="relative overflow-hidden rounded-xl border border-brand/40 bg-surface-1 p-6 shadow-[0_0_60px_rgba(217,111,50,0.16)] sm:p-8"
+      className="relative overflow-hidden rounded-2xl border border-brand/25 bg-white p-6 shadow-premium sm:p-8"
     >
       {/* Amber top edge — the command-center signature, not decoration. */}
       <div
         aria-hidden="true"
-        className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-brand/70 to-transparent"
+        className="pointer-events-none absolute inset-x-0 top-0 h-1 bg-brand"
       />
 
       <p className="text-xs font-black uppercase tracking-widest text-brand">
@@ -125,7 +125,7 @@ export function FirstRecoveryCommand({
         <Link href={importHref} className="w-full sm:w-auto">
           <Button
             size="lg"
-            className="w-full shadow-[0_0_42px_rgba(217,111,50,0.28)] sm:w-auto"
+            className="w-full sm:w-auto"
           >
             {importCta}
           </Button>

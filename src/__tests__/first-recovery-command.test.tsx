@@ -167,9 +167,10 @@ describe("FirstRecoveryCommand — honest, no dark patterns", () => {
     expect(componentSrc).toMatch(/w-full[^"]*sm:w-auto/);
   });
 
-  it("uses the dark command-center treatment: amber brand edge + glow, not rainbow", () => {
-    expect(componentSrc).toMatch(/border-brand\/40/);
-    expect(componentSrc).toMatch(/shadow-\[0_0_60px_rgba\(217,111,50/);
+  it("uses the light command-center treatment: brand edge + premium shadow", () => {
+    expect(componentSrc).toMatch(/border-brand\/25/);
+    expect(componentSrc).toMatch(/bg-white[\s\S]*?shadow-premium/);
+    expect(componentSrc).not.toMatch(/shadow-\[0_0_/);
     expect(componentSrc).not.toMatch(/text-blue-\d|text-purple-\d|text-pink-\d/);
   });
 });

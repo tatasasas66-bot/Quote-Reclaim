@@ -21,7 +21,7 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(
 
     return (
       <div className="flex flex-col gap-1.5">
-        <label htmlFor={inputId} className="text-sm font-medium text-ink">
+        <label htmlFor={inputId} className="text-sm font-semibold text-ink-strong">
           {label}
           {required ? <span aria-hidden="true" className="text-brand"> *</span> : null}
         </label>
@@ -32,9 +32,9 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(
           aria-invalid={error ? true : undefined}
           aria-describedby={describedBy}
           className={cn(
-            "h-11 rounded-lg border border-line-subtle bg-surface-2 px-3 text-base text-ink-strong",
+            "min-h-[52px] rounded-xl border border-line-subtle bg-white px-5 py-3 text-base text-ink-strong shadow-premium",
             "placeholder:text-ink-muted",
-            "focus:border-brand focus:outline-none focus:ring-2 focus:ring-focus/40",
+            "focus:border-brand focus:outline-none focus:ring-2 focus:ring-focus/25",
             "disabled:cursor-not-allowed disabled:opacity-50",
             error && "border-danger focus:border-danger focus:ring-danger/30",
             className,

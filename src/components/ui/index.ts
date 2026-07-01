@@ -2,6 +2,8 @@ export { Button } from "./button";
 export { Input } from "./input";
 export { Select, type SelectOption } from "./select";
 export { Badge } from "./badge";
+export { Card, CardContent, CardHeader } from "./card";
+export { TrustStrip } from "./trust-strip";
 export { Spinner } from "./spinner";
 export { ErrorBoundary } from "./error-boundary";
 export { Logo } from "./logo";

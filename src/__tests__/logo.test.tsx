@@ -53,7 +53,7 @@ describe("logo uses design-system tokens, not invented colors", () => {
   it("colors come from brand tokens via currentColor", () => {
     expect(logoSource).toContain("currentColor");
     expect(logoSource).toContain("text-brand");
-    expect(logoSource).toContain("text-money");
+    expect(logoSource).toContain("text-ink-strong");
   });
 
   it("the React mark hardcodes no hex color", () => {
@@ -80,9 +80,9 @@ describe("favicon icon.svg", () => {
     expect(icon).toContain("<polygon");
   });
 
-  it("uses the brand rust + money-gold hex from the design system", () => {
-    expect(icon.toLowerCase()).toContain("#d96f32"); // --qr-brand-primary
-    expect(icon.toLowerCase()).toContain("#d4a63a"); // --qr-money-gold
+  it("uses the forest-green + near-black hex from the design system", () => {
+    expect(icon.toLowerCase()).toContain("#1e5128");
+    expect(icon.toLowerCase()).toContain("#0f1115");
   });
 });
 

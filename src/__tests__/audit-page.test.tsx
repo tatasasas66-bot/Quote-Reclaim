@@ -170,8 +170,8 @@ describe("/audit static landing page shell", () => {
 
 describe("/audit mobile responsiveness guardrails", () => {
   it("keeps the public shell from using desktop-only widths on mobile", () => {
-    expect(pageSrc).toMatch(/max-w-\[100dvw\]/);
-    expect(pageSrc).toMatch(/overflow-x-hidden/);
+    expect(pageSrc).toMatch(/w-full max-w-full/);
+    expect(pageSrc).not.toMatch(/max-w-\[100dvw\]|overflow-x-hidden/);
     expect(pageSrc).toMatch(/min-w-0/);
     expect(pageSrc).toMatch(/break-words/);
     expect(pageSrc).toMatch(/grid-cols-2[\s\S]*sm:grid-cols-4/);
@@ -183,7 +183,7 @@ describe("/audit mobile responsiveness guardrails", () => {
     expect(clientSrc).toMatch(
       /grid min-w-0 grid-cols-1 gap-3 sm:grid-cols-\[minmax\(0,1fr\)_minmax\(8rem,0\.6fr\)\] lg:grid-cols-1/,
     );
-    expect(clientSrc).toMatch(/h-12 w-full max-w-full min-w-0 rounded-lg/);
+    expect(clientSrc).toMatch(/h-\[52px\] w-full max-w-full min-w-0 rounded-xl/);
   });
 
   it("allows long audit CTAs, examples, and result cards to wrap instead of clipping", () => {
@@ -764,7 +764,7 @@ describe("copy and positioning guardrails", () => {
     expect(both).toMatch(/no customer names/);
     expect(both).toMatch(/no phone numbers/);
     expect(both).toMatch(/no card/);
-    expect(both).toMatch(/no signup before result/);
+    expect(pageSrc).toMatch(/<TrustStrip compact/);
     expect(both).toMatch(/not a crm/);
     expect(both).toMatch(/not lead generation/);
   });

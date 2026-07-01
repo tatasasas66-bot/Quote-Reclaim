@@ -20,7 +20,7 @@ type Props = {
 type View = "listening" | "review" | "unsupported" | "error";
 
 const fieldClass =
-  "h-11 w-full rounded-lg border border-line-subtle bg-surface-2 px-3 text-base text-ink-strong shadow-inner shadow-black/10 focus:border-brand focus:outline-none focus:ring-2 focus:ring-focus/40";
+  "h-[52px] w-full rounded-xl border border-line-subtle bg-white px-4 text-base text-ink-strong shadow-premium focus:border-brand focus:outline-none focus:ring-2 focus:ring-focus/25";
 
 export function VoiceModal({ open, onClose, onComplete }: Props) {
   const { transcript, isListening, isSupported, error, start, stop, reset } =
@@ -79,7 +79,7 @@ export function VoiceModal({ open, onClose, onComplete }: Props) {
       aria-label="Add a quote by voice"
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4"
     >
-      <div className="relative w-full max-w-md rounded-lg border border-line-subtle bg-surface-1 p-6 shadow-[0_28px_90px_rgba(0,0,0,0.45)]">
+      <div className="relative w-full max-w-md rounded-2xl border border-line-subtle bg-white p-6 shadow-premium">
         <button
           type="button"
           onClick={onClose}

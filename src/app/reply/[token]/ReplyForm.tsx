@@ -45,7 +45,7 @@ export function ReplyForm({
     return (
       <p
         role="status"
-        className="mt-6 rounded-lg border border-line-subtle bg-surface-1 p-5 text-center text-sm text-ink-muted"
+        className="mt-6 rounded-2xl border border-line-subtle bg-white p-6 text-center text-sm text-ink-muted shadow-premium"
       >
         Sending your reply…
       </p>
@@ -67,7 +67,7 @@ export function ReplyForm({
     return (
       <p
         role="alert"
-        className="mt-6 rounded-lg border border-line-subtle bg-surface-1 p-5 text-center text-sm text-ink-muted"
+        className="mt-6 rounded-2xl border border-line-subtle bg-white p-6 text-center text-sm text-ink-muted shadow-premium"
       >
         {view.message}
       </p>
@@ -76,7 +76,7 @@ export function ReplyForm({
 
   // view.kind === "choose"
   return (
-    <div className="mt-6 space-y-4">
+    <div className="mt-6 space-y-4 rounded-2xl border border-line-subtle bg-white p-5 shadow-premium sm:p-6">
       <p className="text-center text-sm leading-6 text-ink-muted">
         Tap one option. No message to write. {contractorFirstName} will know
         what to do next.
@@ -119,7 +119,7 @@ function PrimaryButton({
 }) {
   const cls =
     tone === "success"
-      ? "bg-brand text-canvas shadow-[0_0_36px_rgba(217,111,50,0.35)] active:scale-[0.99]"
+      ? "bg-brand text-white shadow-premium hover:bg-brand-dark active:scale-[0.99]"
       : tone === "brand"
         ? "border border-brand/60 bg-surface-1 text-ink-strong hover:bg-brand/10"
         : "border border-line-subtle bg-surface-1 text-ink hover:text-ink-strong";
@@ -127,7 +127,7 @@ function PrimaryButton({
     <button
       type="button"
       onClick={onClick}
-      className={`inline-flex min-h-14 w-full items-center justify-center rounded-md px-5 py-4 text-base font-bold ${cls}`}
+      className={`inline-flex min-h-14 w-full items-center justify-center rounded-[10px] px-5 py-4 text-base font-bold transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-focus ${cls}`}
     >
       {children}
     </button>
@@ -165,7 +165,7 @@ function ThanksPanel({
   return (
     <section
       aria-label="Reply sent"
-      className="mt-6 rounded-lg border-2 border-success/40 bg-surface-1 p-6 text-center"
+      className="mt-6 rounded-2xl border border-success/30 bg-white p-6 text-center shadow-premium"
     >
       <p className="text-xs font-black uppercase tracking-widest text-success">
         Reply sent

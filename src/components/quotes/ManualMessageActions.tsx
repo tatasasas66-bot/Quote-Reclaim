@@ -63,7 +63,7 @@ export function ManualMessageActions({
     <div
       data-testid="manual-message-actions"
       className={cn(
-        "rounded-lg border border-line-subtle bg-canvas/35 p-3",
+        "rounded-xl border border-line-subtle bg-surface-2 p-3",
         className,
       )}
     >
@@ -78,7 +78,7 @@ export function ManualMessageActions({
             track("sms_opened", { surface: source, ...tracking });
             trackSundayResetAction("sms_opened");
           }}
-          className="inline-flex min-h-10 min-w-0 items-center justify-center gap-2 rounded-lg border border-brand bg-brand px-3 py-2 text-center text-sm font-semibold text-canvas transition hover:bg-brand-dark focus:outline-none focus-visible:ring-2 focus-visible:ring-focus"
+          className="inline-flex min-h-10 min-w-0 items-center justify-center gap-2 rounded-[10px] border border-brand bg-brand px-3 py-2 text-center text-sm font-semibold text-white shadow-premium transition hover:bg-brand-dark focus:outline-none focus-visible:ring-2 focus-visible:ring-focus"
         >
           <MessageSquareText className="h-4 w-4 shrink-0" aria-hidden="true" />
           <span className="min-w-0 break-words">Open SMS</span>
@@ -91,7 +91,7 @@ export function ManualMessageActions({
             track("whatsapp_opened", { surface: source, ...tracking });
             trackSundayResetAction("whatsapp_opened");
           }}
-          className="inline-flex min-h-10 min-w-0 items-center justify-center gap-2 rounded-lg border border-line-strong bg-surface-2 px-3 py-2 text-center text-sm font-semibold text-ink-strong transition hover:bg-surface-3 focus:outline-none focus-visible:ring-2 focus-visible:ring-focus"
+          className="inline-flex min-h-10 min-w-0 items-center justify-center gap-2 rounded-[10px] border border-line-subtle bg-white px-3 py-2 text-center text-sm font-semibold text-ink-strong shadow-premium transition hover:bg-surface-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-focus"
         >
           <Send className="h-4 w-4 shrink-0" aria-hidden="true" />
           <span className="min-w-0 break-words">Open WhatsApp</span>

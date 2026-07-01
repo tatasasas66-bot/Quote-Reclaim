@@ -45,7 +45,7 @@ export function TodaysMoves({
     <section
       id="today"
       aria-labelledby="todays-moves-title"
-      className="border-y border-line-subtle bg-surface-1"
+      className="overflow-hidden rounded-2xl border border-line-subtle bg-white shadow-premium"
     >
       <div className="flex flex-wrap items-start justify-between gap-3 border-b border-line-subtle px-4 py-4 sm:px-6">
         <div>
@@ -98,7 +98,7 @@ export function TodaysMoves({
               return (
                 <li
                   key={move.reminderId}
-                  className="grid gap-3 px-4 py-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center sm:px-6"
+                  className="grid gap-3 px-4 py-4 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center sm:px-6"
                 >
                   <div className="min-w-0">
                     <p className="break-words text-base font-black text-ink-strong">
@@ -118,7 +118,7 @@ export function TodaysMoves({
                         type="button"
                         aria-label={`Tap to text ${move.clientName}`}
                         onClick={() => void openSms(move, smsHref)}
-                        className="inline-flex min-h-11 items-center justify-center gap-2 rounded-md bg-brand px-4 py-2 text-sm font-black text-canvas focus:outline-none focus-visible:ring-2 focus-visible:ring-focus"
+                        className="inline-flex min-h-11 items-center justify-center gap-2 rounded-[10px] bg-brand px-4 py-2 text-sm font-bold text-white shadow-premium focus:outline-none focus-visible:ring-2 focus-visible:ring-focus"
                       >
                         <MessageSquareText
                           className="h-4 w-4"
@@ -132,7 +132,7 @@ export function TodaysMoves({
                           type="button"
                           aria-label={`Copy message for ${move.clientName}`}
                           onClick={() => void copyMessage(move)}
-                          className="inline-flex min-h-11 items-center justify-center gap-2 rounded-md border border-line-strong px-4 py-2 text-sm font-black text-ink-strong focus:outline-none focus-visible:ring-2 focus-visible:ring-focus"
+                          className="inline-flex min-h-11 items-center justify-center gap-2 rounded-[10px] border border-line-subtle bg-white px-4 py-2 text-sm font-bold text-ink-strong shadow-premium focus:outline-none focus-visible:ring-2 focus-visible:ring-focus"
                         >
                           {copiedId === move.reminderId ? (
                             <Check
@@ -160,7 +160,7 @@ export function TodaysMoves({
             })}
           </ol>
           {remainingCount > 0 ? (
-            <div className="flex flex-wrap items-center justify-between gap-3 border-t border-line-subtle bg-canvas/35 px-4 py-3 sm:px-6">
+            <div className="flex flex-wrap items-center justify-between gap-3 border-t border-line-subtle bg-surface-2 px-4 py-3 sm:px-6">
               <p className="text-sm font-bold text-ink-muted">
                 {remainingCount} more move
                 {remainingCount === 1 ? "" : "s"} today

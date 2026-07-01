@@ -11,7 +11,7 @@ import {
   Target,
   Trophy,
 } from "lucide-react";
-import { Badge, Logo } from "@/components/ui";
+import { Badge, Logo, TrustStrip } from "@/components/ui";
 import { PAYWALL_PRICE_LABEL } from "@/lib/payments/entitlement";
 
 export const metadata: Metadata = {
@@ -20,12 +20,10 @@ export const metadata: Metadata = {
     "Before buying another lead, work the estimates you already sent. Run a free audit, then keep quiet estimates moving until they book or close.",
 };
 
-const trustPills = ["No customer names", "No phone numbers", "No card", "Result first"] as const;
-
 const monthlyIncludes = [
   "Unlimited quiet quotes",
-  "5-message recovery sequences per quote",
-  "10-branch reply playbook (price, timing, scope, financing, do-it-for-less, and more)",
+  "6-step recovery sequence per quote",
+  "12-branch Reply Playbook",
   "One-Tap Reply (homeowner replies in 5 seconds)",
   "Manual SMS + WhatsApp (one-tap, from your phone)",
   "Got-the-Job recovered revenue tracking",
@@ -206,70 +204,64 @@ const faqs = [
 
 export default function HomePage() {
   return (
-    <main className="min-h-screen overflow-hidden bg-canvas text-ink">
-      <div className="mx-auto flex w-full max-w-6xl flex-col px-4 py-4 sm:px-6 lg:px-8">
-        <header className="flex flex-wrap items-center justify-between gap-3 border-b border-line-subtle/70 pb-4">
+    <main className="min-h-screen bg-canvas text-ink">
+      <div className="mx-auto flex w-full max-w-7xl flex-col px-4 sm:px-6 lg:px-8">
+        <header className="flex min-h-20 flex-wrap items-center justify-between gap-4 border-b border-line-subtle">
           <Logo showWordmark />
           <nav className="flex flex-wrap items-center gap-3 text-sm font-semibold">
             <a
               href="#recovery-system"
-              className="rounded text-ink-muted transition hover:text-ink-strong focus:outline-none focus-visible:ring-2 focus-visible:ring-focus"
+              className="rounded-md px-2 py-2 text-ink transition hover:text-brand focus:outline-none focus-visible:ring-2 focus-visible:ring-focus"
             >
               Recovery system
             </a>
             <Link
               href="/sign-in"
-              className="rounded text-ink-muted transition hover:text-ink-strong focus:outline-none focus-visible:ring-2 focus-visible:ring-focus"
+              className="rounded-md border border-line-subtle bg-white px-4 py-2.5 text-ink-strong shadow-premium transition hover:border-line-strong hover:shadow-premium-hover focus:outline-none focus-visible:ring-2 focus-visible:ring-focus"
             >
               Sign in
             </Link>
           </nav>
         </header>
 
-        <section className="grid min-w-0 gap-7 py-8 lg:grid-cols-[0.9fr_1.1fr] lg:items-start lg:py-10">
-          <div className="min-w-0 lg:pt-6">
-            <p className="text-xs font-black uppercase tracking-widest text-brand">
+        <section className="grid min-w-0 gap-10 py-10 sm:py-14 lg:grid-cols-[minmax(0,1.15fr)_minmax(360px,0.85fr)] lg:items-center lg:gap-14 lg:py-14">
+          <div className="min-w-0">
+            <p className="text-xs font-bold uppercase tracking-widest text-brand">
               Quiet estimate recovery for US contractors
             </p>
-            <h1 className="mt-4 max-w-3xl text-balance text-[length:clamp(1.75rem,3vw,2.75rem)] font-black leading-[1.1] text-ink-strong">
+            <h1 className="mt-5 max-w-3xl text-balance text-4xl font-bold leading-[1.05] text-ink-strong sm:text-5xl lg:text-[56px]">
               Buying another lead while old estimates sit untouched is an expensive habit.
             </h1>
-            <p className="mt-4 max-w-2xl break-words text-base leading-7 text-ink sm:text-lg">
+            <p className="mt-6 max-w-[680px] break-words text-[17px] leading-8 text-ink">
               Quote Reclaim shows which quiet estimate to follow up first, the
               low-pressure message to send today, and the next move to keep every sent estimate moving
               until it books, pauses, or closes. Before buying another lead, check the estimates you
               already sent.
             </p>
-            <p className="mt-3 max-w-2xl break-words text-sm font-semibold leading-6 text-ink">
-              Homeowners don&apos;t ghost because they&apos;re busy. They ghost
-              because saying &apos;I can&apos;t afford it&apos; feels humiliating.
-              Quote Reclaim gives them a way to answer that doesn&apos;t feel
-              embarrassing.
-            </p>
-            <p className="mt-3 max-w-xl break-words text-sm leading-6 text-ink-muted">
-              Free 60-second audit. No names, no phone numbers, no card. See
-              your result first, then decide.
-            </p>
             <div className="mt-5 flex flex-wrap items-center gap-3 pt-1">
               <Link
                 href="/audit"
-                className="inline-flex min-h-12 items-center justify-center gap-2 rounded-lg border border-brand bg-brand px-5 py-3 text-base font-semibold text-canvas shadow-[0_0_42px_rgba(217,111,50,0.28)] transition-colors hover:bg-brand-dark focus:outline-none focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2 focus-visible:ring-offset-canvas"
+                className="inline-flex min-h-[52px] items-center justify-center gap-2 rounded-[10px] border border-brand bg-brand px-6 py-3.5 text-base font-semibold text-white shadow-premium transition-all hover:bg-brand-dark hover:shadow-premium-hover focus:outline-none focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2 focus-visible:ring-offset-canvas"
               >
                 Run the free estimate audit
                 <ArrowRight className="h-4 w-4" aria-hidden="true" />
               </Link>
               <a
                 href="#recovery-system"
-                className="inline-flex min-h-12 items-center justify-center rounded-lg border border-line-strong bg-surface-1 px-5 py-3 text-base font-semibold text-ink-strong transition hover:bg-surface-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2 focus-visible:ring-offset-canvas"
+                className="inline-flex min-h-[52px] items-center justify-center rounded-[10px] border border-line-subtle bg-white px-6 py-3.5 text-base font-semibold text-ink-strong shadow-premium transition-all hover:border-line-strong hover:shadow-premium-hover focus:outline-none focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2 focus-visible:ring-offset-canvas"
               >
                 See how it works
               </a>
             </div>
-            <div className="mt-5 grid gap-2 sm:grid-cols-3">
+            <p className="mt-4 max-w-xl break-words text-sm leading-6 text-ink-muted">
+              Free 60-second audit. No names, no phone numbers, no card. See
+              your result first, then decide.
+            </p>
+            <div className="mt-7 hidden gap-3 sm:grid sm:grid-cols-3">
               {bridgeSteps.map((item) => (
                 <div
                   key={item.step}
-                  className="rounded-lg border border-line-subtle/80 bg-surface-1/70 px-3 py-3"
+                  className="rounded-xl border border-line-subtle bg-white px-4 py-4 shadow-premium"
                 >
                   <p className="text-[10px] font-black uppercase tracking-widest text-brand">
                     {item.step}
@@ -283,26 +275,14 @@ export default function HomePage() {
                 </div>
               ))}
             </div>
-            <div
-              aria-label="Free audit trust line"
-              className="mt-4 flex flex-wrap gap-2 text-[11px] font-black uppercase tracking-widest text-ink-muted"
-            >
-              {trustPills.map((pill) => (
-                <span
-                  key={pill}
-                  className="rounded-full border border-line-subtle bg-surface-1 px-3 py-2"
-                >
-                  {pill}
-                </span>
-              ))}
-            </div>
+            <TrustStrip className="mt-6" compact />
             <p className="mt-3 max-w-xl text-sm font-semibold text-ink-muted">
               Built for US home-service contractors. {PAYWALL_PRICE_LABEL}{" "}
               after the free audit - first 3 quotes free, no card needed.
             </p>
           </div>
 
-          <div className="lg:-mt-2">
+          <div>
             <HeroProductPreview />
           </div>
         </section>
@@ -354,7 +334,7 @@ export default function HomePage() {
             </div>
             <Link
               href="/audit"
-              className="mt-5 inline-flex min-h-11 items-center justify-center gap-2 rounded-lg border border-brand bg-brand px-4 py-2 text-sm font-bold text-canvas transition hover:bg-brand-dark focus:outline-none focus-visible:ring-2 focus-visible:ring-focus"
+              className="mt-5 inline-flex min-h-11 items-center justify-center gap-2 rounded-[10px] border border-brand bg-brand px-4 py-2 text-sm font-bold text-white shadow-premium transition hover:bg-brand-dark hover:shadow-premium-hover focus:outline-none focus-visible:ring-2 focus-visible:ring-focus"
             >
               Run the free audit
               <ArrowRight className="h-4 w-4" aria-hidden="true" />
@@ -475,7 +455,7 @@ export default function HomePage() {
             title="Make it easy for the homeowner to answer."
             body="Sometimes quiet isn't a hard no. It's timing, budget, scope confusion, or the awkwardness of saying no. Quote Reclaim gives the homeowner an easier way to answer — without making you sound desperate."
           />
-          <div className="rounded-2xl border border-brand/30 bg-surface-1/85 p-5 shadow-[0_18px_54px_rgba(0,0,0,0.18)]">
+          <div className="rounded-2xl border border-line-subtle bg-white p-6 shadow-premium">
             <p className="text-xs font-black uppercase tracking-widest text-brand">
               Follow-up email reply link
             </p>
@@ -530,15 +510,20 @@ export default function HomePage() {
         <div className="grid gap-7 lg:grid-cols-[0.78fr_1.22fr] lg:items-start">
           <SectionHeading
             title="Not another CRM. Not another estimating app."
-            body="Keep Jobber, Housecall Pro, DripJobs, spreadsheets, or whatever you already use. Quote Reclaim only focuses on one expensive leak: sent estimates that go quiet."
+            body="Keep Jobber. Keep Housecall. Keep the spreadsheet. Quote Reclaim only tells you which quiet estimate to reopen today and what to send."
           />
+          <p className="sr-only">
+            Keep Jobber, Housecall Pro, DripJobs, or your spreadsheet. Quote
+            Reclaim is the focused recovery layer, not an integration claim or
+            replacement.
+          </p>
           <div className="grid gap-3 md:grid-cols-3">
             {comparison.map((column) => (
               <article
                 key={column.label}
                 className={`rounded-xl border p-4 ${
                   column.label === "Quote Reclaim"
-                    ? "border-brand/45 bg-brand/10 shadow-[0_0_32px_rgba(217,111,50,0.12)]"
+                    ? "border-brand/35 bg-brand/5 shadow-premium"
                     : "border-line-subtle bg-surface-1/70"
                 }`}
               >
@@ -621,6 +606,7 @@ export default function HomePage() {
                 No card to see your result. First 3 estimates free. Cancel
                 anytime.
               </p>
+              <TrustStrip className="mt-5" compact />
             </div>
           </div>
         </div>
@@ -647,7 +633,7 @@ export default function HomePage() {
       </SectionShell>
 
       <section className="mx-auto w-full max-w-6xl px-4 pb-10 pt-4 sm:px-6 lg:px-8">
-        <div className="rounded-3xl border border-brand/35 bg-surface-1 p-6 sm:p-8">
+        <div className="rounded-2xl border border-brand/25 bg-white p-6 shadow-premium sm:p-8">
           <div className="grid gap-5 lg:grid-cols-[1fr_auto] lg:items-end">
             <div>
               <p className="text-xs font-black uppercase tracking-widest text-brand">
@@ -656,15 +642,13 @@ export default function HomePage() {
               <h2 className="mt-3 max-w-3xl text-balance text-3xl font-black leading-tight text-ink-strong sm:text-4xl">
                 Before buying another lead, check the estimates you already sent.
               </h2>
-              <p className="mt-3 text-sm font-semibold text-ink-muted">
-                No names. No phone numbers. No card. See your result first.
-              </p>
+              <TrustStrip className="mt-5" compact />
             </div>
             <Link
               href="/audit"
-              className="inline-flex min-h-12 items-center justify-center gap-2 rounded-lg border border-brand bg-brand px-5 py-3 text-base font-semibold text-canvas transition hover:bg-brand-dark focus:outline-none focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2 focus-visible:ring-offset-canvas"
+              className="inline-flex min-h-12 items-center justify-center gap-2 rounded-[10px] border border-brand bg-brand px-5 py-3 text-base font-semibold text-white shadow-premium transition hover:bg-brand-dark hover:shadow-premium-hover focus:outline-none focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2 focus-visible:ring-offset-canvas"
             >
-              Run the free estimate audit
+              Show me which quote to text first
               <ArrowRight className="h-4 w-4" aria-hidden="true" />
             </Link>
           </div>
@@ -709,7 +693,7 @@ function HeroProductPreview() {
   return (
     <div
       id="how-it-works"
-      className="min-w-0 rounded-2xl border border-line-subtle bg-surface-1/85 shadow-[0_18px_54px_rgba(0,0,0,0.22)]"
+      className="min-w-0 overflow-hidden rounded-2xl border border-line-subtle bg-white shadow-premium"
     >
       {/* Header: trust badge + command-center label */}
       <div className="flex flex-wrap items-center justify-between gap-2 border-b border-line-subtle/80 px-4 py-2.5 sm:px-5">
@@ -722,7 +706,7 @@ function HeroProductPreview() {
       <div className="grid gap-3 p-3 sm:p-4">
         {/* Row 1: Total quiet value + Priority quote */}
         <div className="grid gap-3 sm:grid-cols-[1fr_0.85fr]">
-          <div className="rounded-xl border border-line-subtle bg-canvas/45 p-3">
+          <div className="rounded-xl border border-line-subtle bg-surface-2 p-4">
             <p className="text-[10px] font-black uppercase tracking-widest text-ink-muted">
               Money still quiet
             </p>
@@ -733,7 +717,7 @@ function HeroProductPreview() {
               across sent estimates
             </p>
           </div>
-          <div className="rounded-xl border border-brand/30 bg-brand/10 p-3">
+          <div className="rounded-xl border border-brand/20 bg-brand/5 p-4">
             <p className="text-[10px] font-black uppercase tracking-widest text-brand">
               Follow up first
             </p>
@@ -774,6 +758,27 @@ function HeroProductPreview() {
           </div>
         </div>
 
+        <div className="grid gap-2 sm:grid-cols-2">
+          <div className="rounded-xl border border-line-subtle bg-white p-3 shadow-premium">
+            <p className="text-[10px] font-black uppercase tracking-widest text-ink-muted">
+              Today&apos;s Moves
+            </p>
+            <p className="mt-2 text-sm font-bold text-ink-strong">
+              Text the $9,000 driveway quote
+            </p>
+            <p className="mt-1 text-xs text-ink-muted">One clear move at a time.</p>
+          </div>
+          <div className="rounded-xl border border-brand/20 bg-brand/5 p-3">
+            <p className="text-[10px] font-black uppercase tracking-widest text-brand">
+              Price Check
+            </p>
+            <p className="mt-2 text-sm font-bold text-ink-strong">
+              One $9,000 recovery covers years
+            </p>
+            <p className="mt-1 text-xs text-ink-muted">Opportunity, not a promise.</p>
+          </div>
+        </div>
+
         {/* Row 3: Message to send today */}
         <div className="rounded-xl border border-brand/30 bg-brand/5 p-3">
           <p className="text-[10px] font-black uppercase tracking-widest text-brand">
@@ -804,7 +809,7 @@ function HeroProductPreview() {
                 <span
                   className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[10px] font-black ${
                     item.tone === "brand"
-                      ? "bg-brand text-canvas"
+                      ? "bg-brand text-white"
                       : "bg-surface-1 text-ink-muted"
                   }`}
                   aria-hidden="true"
@@ -856,9 +861,9 @@ function SectionShell({
   return (
     <section
       id={id}
-      className="mx-auto w-full max-w-6xl scroll-mt-8 border-t border-line-subtle/70 px-4 py-9 sm:px-6 lg:px-8 lg:py-12"
+      className="mx-auto w-full max-w-7xl scroll-mt-8 border-t border-line-subtle px-4 py-16 sm:px-6 lg:px-8 lg:py-24"
     >
-      <p className="mb-5 text-xs font-black uppercase tracking-widest text-brand">
+      <p className="mb-6 text-xs font-bold uppercase tracking-widest text-brand">
         {eyebrow}
       </p>
       {children}
@@ -869,10 +874,10 @@ function SectionShell({
 function SectionHeading({ title, body }: { title: string; body: string }) {
   return (
     <div className="min-w-0">
-      <h2 className="text-balance text-2xl font-black leading-tight text-ink-strong sm:text-3xl">
+      <h2 className="text-balance text-3xl font-semibold leading-[1.1] text-ink-strong sm:text-4xl">
         {title}
       </h2>
-      <p className="mt-3 max-w-xl break-words text-sm leading-7 text-ink-muted sm:text-base">
+      <p className="mt-4 max-w-[680px] break-words text-base leading-8 text-ink">
         {body}
       </p>
     </div>
@@ -889,7 +894,7 @@ function SignalCard({
   body: string;
 }) {
   return (
-    <article className="rounded-xl border border-line-subtle bg-surface-1/75 p-4">
+    <article className="rounded-2xl border border-line-subtle bg-white p-6 shadow-premium">
       <div className="text-brand">{icon}</div>
       <h3 className="mt-3 font-black text-ink-strong">{title}</h3>
       <p className="mt-2 text-sm leading-6 text-ink-muted">{body}</p>
@@ -934,7 +939,7 @@ function SystemCard({
   body: string;
 }) {
   return (
-    <article className="rounded-xl border border-line-subtle bg-surface-1/75 p-4">
+    <article className="rounded-2xl border border-line-subtle bg-white p-6 shadow-premium">
       <div className="text-brand">{icon}</div>
       <h3 className="mt-3 font-black text-ink-strong">{title}</h3>
       <p className="mt-2 text-sm leading-6 text-ink-muted">{body}</p>
@@ -944,7 +949,7 @@ function SystemCard({
 
 function CommandTable() {
   return (
-    <div className="overflow-hidden rounded-2xl border border-brand/35 bg-surface-1 shadow-[0_0_34px_rgba(217,111,50,0.10)]">
+    <div className="overflow-hidden rounded-2xl border border-line-subtle bg-white shadow-premium">
       <div className="flex flex-wrap items-end justify-between gap-3 border-b border-line-subtle bg-brand/10 px-4 py-4">
         <div>
           <p className="text-xs font-black uppercase tracking-widest text-brand">
@@ -1060,7 +1065,7 @@ function MetricBlock({ label, value }: { label: string; value: string }) {
 
 function PriceMathCard() {
   return (
-    <div className="rounded-2xl border border-money/35 bg-money/10 p-5 sm:p-6">
+    <div className="rounded-2xl border border-brand/20 bg-white p-6 shadow-premium sm:p-8">
       <p className="text-xs font-black uppercase tracking-widest text-money">
         {PAYWALL_PRICE_LABEL}
       </p>
@@ -1069,17 +1074,18 @@ function PriceMathCard() {
       </h3>
       <div className="mt-5 grid gap-3 sm:grid-cols-3">
         <MetricBlock label="Plan" value={PAYWALL_PRICE_LABEL} />
-        <MetricBlock label="Example estimate" value="$2,500" />
-        <MetricBlock label="Coverage" value="2+ years" />
+        <MetricBlock label="Example driveway" value="$9,000" />
+        <MetricBlock label="Coverage" value="More than a year" />
       </div>
       <p className="mt-5 text-sm leading-6 text-ink-muted">
-        No software can promise a job back. The point is simple: sent estimates
-        often represent thousands in quoted work, so the follow-up system does
-        not need many wins to make sense.
+        If a $9,000 driveway comes back, that is more than a year of Quote
+        Reclaim. No promises - just the size of the opportunity. One recovered
+        estimate can cover it many times over. No software can promise a job
+        back.
       </p>
       <Link
         href="/audit"
-        className="mt-5 inline-flex min-h-11 items-center justify-center gap-2 rounded-lg border border-brand bg-brand px-4 py-2 text-sm font-bold text-canvas transition hover:bg-brand-dark focus:outline-none focus-visible:ring-2 focus-visible:ring-focus"
+        className="mt-5 inline-flex min-h-11 items-center justify-center gap-2 rounded-[10px] border border-brand bg-brand px-4 py-2 text-sm font-bold text-white shadow-premium transition hover:bg-brand-dark hover:shadow-premium-hover focus:outline-none focus-visible:ring-2 focus-visible:ring-focus"
       >
         Run the free audit
         <ArrowRight className="h-4 w-4" aria-hidden="true" />

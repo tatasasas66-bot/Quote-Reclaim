@@ -44,7 +44,7 @@ export function ReplyRadarCard({ reply }: { reply: ReplyRadarData | null }) {
   return (
     <section
       aria-label="Reply Radar"
-      className={`space-y-4 rounded-lg border-2 bg-surface-1 p-5 shadow-[0_16px_46px_rgba(0,0,0,0.2)] sm:p-6 ${toneCard[suggestion.tone]}`}
+      className={`space-y-4 rounded-2xl border bg-white p-5 shadow-premium sm:p-6 ${toneCard[suggestion.tone]}`}
     >
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="min-w-0">
@@ -67,7 +67,7 @@ export function ReplyRadarCard({ reply }: { reply: ReplyRadarData | null }) {
         “{replyText}”
       </blockquote>
 
-      <div className="rounded-lg border border-line-subtle bg-canvas/40 p-4">
+      <div className="rounded-xl border border-line-subtle bg-surface-2 p-4">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <p className="text-xs font-black uppercase tracking-widest text-ink-muted">
             Suggested response

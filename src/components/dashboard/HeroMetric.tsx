@@ -58,14 +58,14 @@ export function HeroMetric({
   const showToday = pendingCount > 0;
 
   return (
-    <section className="rounded-lg border border-line-subtle bg-surface-1 shadow-[0_26px_80px_rgba(0,0,0,0.34)]">
+    <section className="overflow-hidden rounded-2xl border border-line-subtle bg-white shadow-premium">
       <div className="grid gap-0 lg:grid-cols-[1.3fr_0.7fr]">
         <div className="flex flex-col border-b border-line-subtle lg:border-b-0 lg:border-r">
           <div className="p-5 sm:p-7">
-            <p className="text-xs font-black uppercase tracking-widest text-warning/80">
+            <p className="text-xs font-bold uppercase tracking-widest text-brand">
               {heading}
             </p>
-            <p className="mt-4 text-6xl font-black tracking-tight text-ink-strong tabular-nums sm:text-7xl lg:text-8xl">
+            <p className="mt-4 text-5xl font-bold tracking-normal text-ink-strong tabular-nums sm:text-6xl lg:text-7xl">
               <CountUp value={stillBleeding} />
             </p>
             <p className="mt-3 max-w-xl text-base leading-7 text-ink">{subtext}</p>

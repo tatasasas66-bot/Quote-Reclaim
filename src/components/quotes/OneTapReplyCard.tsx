@@ -53,7 +53,7 @@ export function OneTapReplyCard({
   return (
     <section
       aria-label="One-Tap Reply"
-      className="space-y-4 rounded-lg border border-brand/40 bg-surface-1 p-5 shadow-[0_0_28px_rgba(217,111,50,0.10)] sm:p-6"
+      className="space-y-4 rounded-2xl border border-brand/25 bg-white p-5 shadow-premium sm:p-6"
     >
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
@@ -77,7 +77,7 @@ export function OneTapReplyCard({
             {ONE_TAP_CHOICES.map((option) => (
               <span
                 key={option.id}
-                className="rounded-full border border-line-subtle bg-canvas/45 px-3 py-1 text-xs font-semibold text-ink"
+                className="rounded-lg border border-line-subtle bg-surface-2 px-3 py-1.5 text-xs font-semibold text-ink"
               >
                 {option.label}
               </span>
@@ -87,7 +87,7 @@ export function OneTapReplyCard({
         <button
           type="button"
           onClick={copyLink}
-          className="inline-flex min-h-10 items-center rounded border border-line-subtle px-3 py-1.5 text-xs font-bold uppercase tracking-wider text-ink hover:text-ink-strong focus:outline-none focus-visible:ring-2 focus-visible:ring-focus"
+          className="inline-flex min-h-10 items-center rounded-[10px] border border-line-subtle bg-white px-3 py-1.5 text-xs font-bold text-brand shadow-premium hover:border-brand/40 focus:outline-none focus-visible:ring-2 focus-visible:ring-focus"
         >
           {linkCopied ? "Link copied" : "Copy One-Tap Reply link"}
         </button>

@@ -20,17 +20,17 @@ function read(rel: string): string {
   return readFileSync(join(process.cwd(), rel), "utf8");
 }
 
-const BRAND_RUST = "#d96f32";
-const BRAND_GOLD = "#d4a63a";
+const BRAND_GREEN = "#1E5128";
+const BRAND_INK = "#0F1115";
 
 describe("Public brand assets — Quote Reclaim mark + lockup", () => {
   it("public/logo-mark.svg exists with the canonical Q+tail+arrowhead geometry", () => {
     const svg = read("public/logo-mark.svg");
     expect(svg).toMatch(/<svg[^>]+viewBox="0 0 32 32"/);
     expect(svg).toContain("<title>Quote Reclaim</title>");
-    expect(svg).toMatch(/<circle[^/]+stroke="#d96f32"/);
-    expect(svg).toMatch(/<line[^/]+stroke="#d96f32"/);
-    expect(svg).toMatch(/<polygon[^/]+fill="#d4a63a"/);
+    expect(svg).toMatch(/<circle[^/]+stroke="#1E5128"/);
+    expect(svg).toMatch(/<line[^/]+stroke="#1E5128"/);
+    expect(svg).toMatch(/<polygon[^/]+fill="#0F1115"/);
   });
 
   it("public/brand/logo-mark.svg matches the canonical mark (no orphan drift)", () => {
@@ -44,9 +44,9 @@ describe("Public brand assets — Quote Reclaim mark + lockup", () => {
     expect(svg).toMatch(/<svg[^>]+viewBox="0 0 240 60"/);
     expect(svg).toContain("<title>Quote Reclaim</title>");
     // Mark inside the lockup must reuse the same primitives + brand tokens.
-    expect(svg).toMatch(/<circle[^/]+stroke="#d96f32"/);
-    expect(svg).toMatch(/<line[^/]+stroke="#d96f32"/);
-    expect(svg).toMatch(/<polygon[^/]+fill="#d4a63a"/);
+    expect(svg).toMatch(/<circle[^/]+stroke="#1E5128"/);
+    expect(svg).toMatch(/<line[^/]+stroke="#1E5128"/);
+    expect(svg).toMatch(/<polygon[^/]+fill="#0F1115"/);
     // Wordmark text is split across two tspans so the rust/ink-strong colors
     // can never drift apart in editor finds-and-replaces.
     expect(svg).toContain("<tspan");
@@ -57,17 +57,15 @@ describe("Public brand assets — Quote Reclaim mark + lockup", () => {
   it("the in-app React mark uses the SAME brand tokens (via Tailwind text- classes)", () => {
     const reactMark = read("src/components/brand/Logo.tsx");
     expect(reactMark).toContain('className="text-brand"');
-    expect(reactMark).toContain('className="text-money"');
-    // The Tailwind tokens text-brand / text-money map to the same rust/gold
-    // hex values used by the public SVG assets (verified in tailwind.config).
-    expect(BRAND_RUST.toLowerCase()).toBe("#d96f32");
-    expect(BRAND_GOLD.toLowerCase()).toBe("#d4a63a");
+    expect(reactMark).toContain('className="text-ink-strong"');
+    expect(BRAND_GREEN.toLowerCase()).toBe("#1e5128");
+    expect(BRAND_INK.toLowerCase()).toBe("#0f1115");
   });
 
   it("the Next.js favicon (src/app/icon.svg) carries the SAME tokens", () => {
     const icon = read("src/app/icon.svg");
-    expect(icon).toContain("#d96f32");
-    expect(icon).toContain("#d4a63a");
+    expect(icon).toContain("#1E5128");
+    expect(icon).toContain("#0F1115");
     expect(icon).toMatch(/<svg[^>]+viewBox="0 0 32 32"/);
   });
 });

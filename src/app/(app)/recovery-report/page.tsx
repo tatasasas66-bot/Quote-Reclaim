@@ -31,7 +31,7 @@ export default async function RecoveryReportPage() {
       : null;
 
   return (
-    <main className="min-h-screen bg-canvas px-4 py-8 text-ink sm:px-6">
+    <main className="min-h-screen bg-canvas px-4 py-6 text-ink sm:px-6 lg:px-8">
       <div className="mx-auto w-full max-w-6xl">
         <header className="flex flex-wrap items-center justify-between gap-4 border-b border-line-subtle pb-5">
           <Logo showWordmark />
@@ -43,11 +43,11 @@ export default async function RecoveryReportPage() {
           </Link>
         </header>
 
-        <section className="border-b border-line-subtle py-8">
+        <section className="py-12 sm:py-16">
           <p className="text-xs font-black uppercase tracking-widest text-brand">
             Recovery Report
           </p>
-          <h1 className="mt-2 text-3xl font-black text-ink-strong sm:text-4xl">
+          <h1 className="mt-3 text-4xl font-bold leading-tight text-ink-strong sm:text-5xl">
             {report.monthLabel} Recovery Report
           </h1>
           <p className="mt-3 max-w-3xl text-sm leading-6 text-ink-muted">
@@ -56,7 +56,7 @@ export default async function RecoveryReportPage() {
           </p>
         </section>
 
-        <section aria-label="Recovery funnel" className="border-b border-line-subtle py-7">
+        <section aria-label="Recovery funnel" className="rounded-2xl border border-line-subtle bg-white p-5 shadow-premium sm:p-7">
           <div className="grid gap-3 md:grid-cols-[1fr_auto_1fr_auto_1fr_auto_1fr] md:items-center">
             <Metric label="Follow-ups sent" value={String(report.followupsSentThisMonth)} />
             <ArrowRight className="hidden h-5 w-5 text-ink-muted md:block" aria-hidden="true" />
@@ -71,7 +71,7 @@ export default async function RecoveryReportPage() {
         {subscriptionMultiple != null ? (
           <section
             data-testid="recovery-subscription-value"
-            className="border-b border-success/30 bg-success/5 px-0 py-7"
+            className="mt-6 rounded-2xl border border-success/25 bg-success/5 p-6"
           >
             <p className="text-xs font-black uppercase tracking-widest text-success">
               Tracked value
@@ -85,7 +85,7 @@ export default async function RecoveryReportPage() {
         ) : null}
 
         <div className="grid gap-8 py-8 lg:grid-cols-2">
-          <section aria-labelledby="next-priority-title">
+          <section aria-labelledby="next-priority-title" className="rounded-2xl border border-line-subtle bg-white p-6 shadow-premium">
             <p className="text-xs font-black uppercase tracking-widest text-brand">
               Next week&apos;s #1 priority
             </p>
@@ -119,7 +119,7 @@ export default async function RecoveryReportPage() {
             )}
           </section>
 
-          <section aria-labelledby="message-performance-title">
+          <section aria-labelledby="message-performance-title" className="rounded-2xl border border-line-subtle bg-white p-6 shadow-premium">
             <div className="flex items-center gap-2 text-money">
               <BarChart3 className="h-5 w-5" aria-hidden="true" />
               <p className="text-xs font-black uppercase tracking-widest">
@@ -153,8 +153,8 @@ export default async function RecoveryReportPage() {
           </section>
         </div>
 
-        <section className="grid gap-8 border-t border-line-subtle py-8 lg:grid-cols-2">
-          <div>
+        <section className="grid gap-6 py-8 lg:grid-cols-2">
+          <div className="rounded-2xl border border-line-subtle bg-white p-6 shadow-premium">
             <p className="text-xs font-black uppercase tracking-widest text-brand">
               Top recovered trade
             </p>
@@ -164,7 +164,7 @@ export default async function RecoveryReportPage() {
                 : "Not enough data yet"}
             </p>
           </div>
-          <div>
+          <div className="rounded-2xl border border-line-subtle bg-white p-6 shadow-premium">
             <p className="text-xs font-black uppercase tracking-widest text-brand">
               Quotes still at risk
             </p>
@@ -208,7 +208,7 @@ export default async function RecoveryReportPage() {
 
 function Metric({ label, value }: { label: string; value: string }) {
   return (
-    <div className="min-w-0 py-3">
+    <div className="min-w-0 rounded-xl bg-surface-2 p-4">
       <p className="text-xs font-black uppercase tracking-widest text-ink-muted">
         {label}
       </p>

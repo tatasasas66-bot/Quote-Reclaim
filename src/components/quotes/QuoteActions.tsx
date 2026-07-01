@@ -78,7 +78,7 @@ export function QuoteActions({
           variant="success"
           loading={pending === "won"}
           disabled={busy}
-          className="shadow-[0_0_30px_rgba(31,169,113,0.2)]"
+          className="shadow-premium"
           onClick={() =>
             run(
               "won",

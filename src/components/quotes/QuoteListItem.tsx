@@ -53,7 +53,7 @@ export function QuoteListItem({
   const barFillPct = priorityBarFill(score.score);
 
   return (
-    <li className="overflow-hidden rounded-lg border border-line-subtle bg-surface-1 shadow-[0_16px_46px_rgba(0,0,0,0.22)]">
+    <li className="overflow-hidden rounded-2xl border border-line-subtle bg-white shadow-premium transition-shadow hover:shadow-premium-hover">
       {oneTapLabel ? (
         <Link
           href={`/quotes/${quote.id}?reply=one-tap#reply-rescue-paths`}

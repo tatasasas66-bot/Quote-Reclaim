@@ -120,7 +120,7 @@ export default async function QuoteDetailPage({
   });
 
   return (
-    <main className="mx-auto flex min-h-screen w-full max-w-5xl flex-col gap-8 bg-canvas px-4 py-8 sm:px-6">
+    <main className="mx-auto flex min-h-screen w-full max-w-6xl flex-col gap-8 bg-canvas px-4 py-6 sm:px-6 lg:px-8">
       {searchParams?.source === "sunday-reset" ? (
         <SundayResetTracker quoteId={quote.id} />
       ) : null}
@@ -181,7 +181,7 @@ function CommandActionPanel({
       id="quote-command-panel"
       data-testid="quote-command-panel"
       aria-labelledby="quote-command-heading"
-      className="rounded-xl border border-brand/45 bg-surface-1 shadow-[0_28px_86px_rgba(0,0,0,0.34)]"
+      className="overflow-hidden rounded-2xl border border-brand/25 bg-white shadow-premium"
     >
       <div className="grid gap-5 border-b border-line-subtle p-5 sm:p-6 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-start">
         <div className="min-w-0">
@@ -225,7 +225,7 @@ function CommandActionPanel({
           <CommandChip accent label={`Next move: ${viewModel.currentMove}`} />
         </div>
 
-        <div className="mt-4 rounded-lg border border-line-subtle bg-canvas/40 p-4">
+        <div className="mt-4 rounded-xl border border-line-subtle bg-surface-2 p-5">
           <p className="text-xs font-black uppercase tracking-widest text-brand">
             Message to send
           </p>
@@ -365,7 +365,7 @@ function QuoteSummary({
   );
 
   return (
-    <section className="rounded-lg border border-line-subtle bg-surface-1 shadow-[0_24px_74px_rgba(0,0,0,0.32)]">
+    <section className="overflow-hidden rounded-2xl border border-line-subtle bg-white shadow-premium">
       <div className="grid gap-5 border-b border-line-subtle p-5 sm:p-6 lg:grid-cols-[1fr_auto] lg:items-start">
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2">
@@ -383,10 +383,10 @@ function QuoteSummary({
         </div>
 
         <div className="lg:text-right">
-          <p className="text-xs font-black uppercase tracking-widest text-warning">
+          <p className="text-xs font-black uppercase tracking-widest text-brand">
             Amount still sitting quiet
           </p>
-          <p className="mt-2 text-5xl font-black text-ink-strong tabular-nums">
+          <p className="mt-2 text-5xl font-bold text-ink-strong tabular-nums">
             {viewModel.quote.amountLabel}
           </p>
         </div>
@@ -487,7 +487,7 @@ function IntelligenceField({
       ? "mt-1 truncate text-sm font-bold text-ink-strong"
       : "mt-1 break-words text-sm font-bold text-ink-strong";
   return (
-    <div className="min-w-0 rounded-lg border border-line-subtle bg-canvas/35 p-3">
+    <div className="min-w-0 rounded-xl border border-line-subtle bg-surface-2 p-3">
       <dt className="text-[10px] font-black uppercase tracking-widest text-ink-muted">
         {label}
       </dt>
@@ -528,7 +528,7 @@ function RecoveryPlanSection({
       ) : null}
 
       {viewModel.sequenceCards.length === 0 ? (
-        <p className="rounded-lg border border-line-subtle bg-surface-1 p-5 text-sm text-ink-muted">
+        <p className="rounded-2xl border border-line-subtle bg-white p-6 text-sm text-ink-muted shadow-premium">
           No recovery plan generated.
         </p>
       ) : (
@@ -633,7 +633,7 @@ function ReminderCard({
       <li
         id={card.anchorId}
         data-followup-collapsed="true"
-        className="scroll-mt-20 rounded-lg border border-line-subtle bg-surface-1 shadow-[0_10px_30px_rgba(0,0,0,0.16)]"
+        className="scroll-mt-20 overflow-hidden rounded-2xl border border-line-subtle bg-white shadow-premium"
       >
         <details>
           <summary className="list-none cursor-pointer [&::-webkit-details-marker]:hidden">
@@ -649,7 +649,7 @@ function ReminderCard({
     <li
       id={card.anchorId}
       data-next-actionable="true"
-      className="scroll-mt-20 rounded-lg border border-brand/50 bg-surface-1 shadow-[0_16px_46px_rgba(0,0,0,0.2)]"
+      className="scroll-mt-20 overflow-hidden rounded-2xl border border-brand/35 bg-white shadow-premium"
     >
       {header}
       {messageBody}

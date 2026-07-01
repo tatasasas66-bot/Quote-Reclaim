@@ -433,7 +433,7 @@ describe("Reveal CTA stays above the fold (sticky on mobile/short, in-flow on ta
     // `hidden … sm:[@media(min-height:760px)]:inline-flex` — same idiom as
     // Tailwind's `hidden sm:flex`, so exactly one primary CTA is ever visible.
     expect(revealClientSrc).toMatch(
-      /hidden shadow-\[0_0_42px[\s\S]*?sm:\[@media\(min-height:760px\)\]:inline-flex/,
+      /className="hidden sm:\[@media\(min-height:760px\)\]:inline-flex"/,
     );
   });
 

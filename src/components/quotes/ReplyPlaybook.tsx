@@ -33,7 +33,7 @@ export function ReplyPlaybook({
   return (
     <div
       data-testid="reply-rescue-paths"
-      className="mt-4 rounded-lg border border-brand/25 bg-brand/5 p-3"
+      className="mt-5 rounded-2xl border border-brand/20 bg-brand/5 p-5"
     >
       <div className="flex flex-wrap items-center justify-between gap-2">
         <p className="text-xs font-black uppercase tracking-widest text-brand">
@@ -51,7 +51,7 @@ export function ReplyPlaybook({
         {paths.map((path) => (
           <div
             key={path.id}
-            className="flex min-h-full flex-col rounded-md border border-line-subtle bg-canvas/45 p-3"
+            className="flex min-h-full flex-col rounded-xl border border-line-subtle bg-white p-4 shadow-premium"
           >
             <p className="text-[10px] font-black uppercase tracking-widest text-ink-muted">
               {path.trigger}

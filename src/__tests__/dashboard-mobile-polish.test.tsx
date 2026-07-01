@@ -44,11 +44,11 @@ describe("Sticky '+ Add Silent Quote' CTA", () => {
     expect(dashboard).not.toMatch(/Add Quiet Quote/);
   });
 
-  it("stays mobile-only, fixed at the bottom, rust/orange primary", () => {
+  it("stays mobile-only, fixed at the bottom, forest-green primary", () => {
     expect(dashboard).toMatch(/fixed inset-x-3 bottom-3 z-30 sm:hidden/);
-    // Brand-primary styling (rust/orange) intact on the sticky CTA.
+    // Brand-primary styling stays intact on the sticky CTA.
     expect(dashboard).toMatch(/border-brand bg-brand/);
-    expect(dashboard).toMatch(/text-canvas/);
+    expect(dashboard).toMatch(/text-white/);
     // Thumb-target: min-h-12.
     expect(dashboard).toMatch(/min-h-12/);
   });

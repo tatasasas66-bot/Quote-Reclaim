@@ -24,7 +24,7 @@ export function QuietSignalCard({
   return (
     <section
       aria-label="Quiet Signal"
-      className="space-y-5 rounded-lg border-2 border-brand/30 bg-surface-1 p-5 shadow-[0_16px_46px_rgba(0,0,0,0.2)] sm:p-6"
+      className="space-y-5 rounded-2xl border border-brand/25 bg-white p-5 shadow-premium sm:p-6"
     >
       <p className="text-xs font-black uppercase tracking-widest text-brand">
         Quiet Signal
@@ -65,7 +65,7 @@ export function QuietSignalCard({
         </ul>
       </div>
 
-      <div className="rounded-lg border border-line-subtle bg-canvas/40 p-4">
+      <div className="rounded-xl border border-line-subtle bg-surface-2 p-4">
         <p className="text-xs font-semibold uppercase tracking-widest text-ink-muted">
           Best next move
         </p>

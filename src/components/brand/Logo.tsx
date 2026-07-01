@@ -57,7 +57,7 @@ export function LogoMark({ className, decorative = false }: MarkProps) {
       <polygon
         points="16.3,16.3 22.4,17.6 17.6,22.4"
         fill="currentColor"
-        className="text-money"
+        className="text-ink-strong"
       />
     </svg>
   );
@@ -65,7 +65,7 @@ export function LogoMark({ className, decorative = false }: MarkProps) {
 
 function Wordmark({ className }: WordmarkProps) {
   return (
-    <span className={cn("font-black tracking-tight", className)}>
+    <span className={cn("font-black tracking-normal", className)}>
       <span className="text-ink-strong">Quote</span>
       <span className="text-brand"> Reclaim</span>
     </span>

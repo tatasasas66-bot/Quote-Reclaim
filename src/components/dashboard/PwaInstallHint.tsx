@@ -54,7 +54,7 @@ export function PwaInstallHint() {
   }
 
   return (
-    <aside className="flex flex-wrap items-center justify-between gap-3 border border-line-subtle bg-surface-1 px-4 py-3 text-sm">
+    <aside className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-line-subtle bg-white px-4 py-3 text-sm shadow-premium">
       <p className="flex items-center gap-2 font-semibold text-ink">
         {isIos ? (
           <Share className="h-4 w-4" aria-hidden="true" />

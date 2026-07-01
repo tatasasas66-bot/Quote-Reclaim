@@ -9,23 +9,23 @@ type ButtonSize = "sm" | "md" | "lg";
 
 const variantClasses: Record<ButtonVariant, string> = {
   primary:
-    "bg-brand text-canvas shadow-sm shadow-brand/20 hover:bg-brand-dark active:bg-brand-dark disabled:bg-brand/40 disabled:text-canvas/70",
+    "border border-brand bg-brand text-white shadow-premium hover:bg-brand-dark hover:shadow-premium-hover active:bg-brand-dark disabled:border-brand/40 disabled:bg-brand/40 disabled:text-white/80",
   secondary:
-    "bg-surface-2 text-ink-strong border border-line-strong hover:bg-surface-3 disabled:opacity-50",
+    "border border-line-subtle bg-white text-ink-strong shadow-premium hover:border-line-strong hover:bg-surface-2 disabled:opacity-50",
   ghost:
-    "bg-transparent text-ink hover:bg-surface-2 hover:text-ink-strong disabled:opacity-50",
+    "bg-transparent text-brand hover:bg-brand/5 hover:text-brand-dark disabled:opacity-50",
   danger:
-    "bg-danger text-ink-strong hover:bg-danger/90 disabled:opacity-50",
+    "bg-danger text-white hover:bg-danger/90 disabled:opacity-50",
   success:
-    "bg-success text-canvas hover:bg-success/90 disabled:opacity-50",
+    "bg-success text-white hover:bg-success/90 disabled:opacity-50",
   google:
     "bg-white text-zinc-900 hover:bg-zinc-100 border border-zinc-200 disabled:opacity-50",
 };
 
 const sizeClasses: Record<ButtonSize, string> = {
-  sm: "h-9 px-3 text-sm",
-  md: "h-11 px-4 text-base",
-  lg: "h-12 px-6 text-lg",
+  sm: "min-h-10 px-4 py-2 text-sm",
+  md: "min-h-11 px-5 py-2.5 text-base",
+  lg: "min-h-[52px] px-6 py-3.5 text-base",
 };
 
 type ButtonProps = React.ButtonHTMLAttributes<HTMLButtonElement> & {
@@ -56,7 +56,7 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
         type={type}
         disabled={disabled || loading}
         className={cn(
-          "inline-flex items-center justify-center gap-2 rounded-lg font-semibold transition-colors",
+          "inline-flex items-center justify-center gap-2 rounded-[10px] font-semibold transition-all",
           "focus:outline-none focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2 focus-visible:ring-offset-canvas",
           "disabled:cursor-not-allowed",
           variantClasses[variant],

@@ -495,9 +495,9 @@ describe("Quote action buttons lead with Got the Job", () => {
     expect(closeIdx).toBeGreaterThan(pauseIdx);
   });
 
-  it("Got the Job keeps the success variant + green shadow", () => {
+  it("Got the Job keeps the success variant + premium shadow", () => {
     expect(quoteActions).toMatch(
-      /variant="success"[\s\S]*?shadow-\[0_0_30px_rgba\(31,169,113/,
+      /variant="success"[\s\S]*?shadow-premium/,
     );
   });
 

@@ -60,7 +60,7 @@ export function PaidForItselfMeter({
   return (
     <section
       aria-labelledby="paid-for-itself-heading"
-      className="min-w-0 rounded-lg border border-money/30 bg-surface-1 p-5 shadow-[0_16px_46px_rgba(0,0,0,0.2)]"
+      className="min-w-0 rounded-2xl border border-brand/20 bg-white p-5 shadow-premium"
     >
       <p
         id="paid-for-itself-heading"

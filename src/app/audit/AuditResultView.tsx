@@ -137,9 +137,9 @@ export function AuditResultView({
       data-testid="audit-result"
       role="region"
       aria-label="Your silent quote recovery diagnostic"
-      className="w-full max-w-full min-w-0 border border-brand/45 bg-surface-2 shadow-[0_28px_90px_rgba(0,0,0,0.34)]"
+      className="w-full max-w-full min-w-0 overflow-hidden rounded-2xl border border-line-subtle bg-white shadow-premium"
     >
-      <header className="border-b border-line-strong bg-canvas px-4 py-6 sm:px-7">
+      <header className="border-b border-line-subtle bg-brand/5 px-5 py-7 sm:px-8">
         <div className="flex min-w-0 flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
           <div className="min-w-0">
             <p className="text-xs font-black uppercase tracking-widest text-success">
@@ -384,7 +384,7 @@ export function AuditResultView({
             </div>
           </div>
 
-          <div className="mt-5 border-l-4 border-brand bg-canvas px-4 py-5 sm:px-6">
+          <div className="mt-5 rounded-xl border border-brand/20 bg-brand/5 px-4 py-5 sm:px-6">
             <p className="text-[10px] font-black uppercase tracking-widest text-ink-muted">
               Paste this into your text thread:
             </p>
@@ -478,7 +478,7 @@ export function AuditResultView({
                 href={followUpHref}
                 data-testid="audit-follow-up-unlock"
                 onClick={onFollowUpUnlock}
-                className="mt-4 inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-lg border border-brand bg-brand px-4 py-2 text-center text-sm font-black text-canvas transition hover:bg-brand-dark focus:outline-none focus-visible:ring-2 focus-visible:ring-focus sm:w-auto"
+                className="mt-4 inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-[10px] border border-brand bg-brand px-4 py-2 text-center text-sm font-bold text-white shadow-premium transition hover:bg-brand-dark hover:shadow-premium-hover focus:outline-none focus-visible:ring-2 focus-visible:ring-focus sm:w-auto"
               >
                 Get the day-3 text &mdash; free, no card
                 <ArrowRight className="h-4 w-4" aria-hidden="true" />
@@ -579,7 +579,7 @@ export function AuditResultView({
                     daysUntilCold: resultCta.daysUntilCold,
                   });
                 }}
-                className="inline-flex min-h-12 w-full max-w-md shrink-0 items-center justify-center gap-2 rounded-lg border border-brand bg-brand px-5 py-3 text-center text-base font-black leading-tight text-canvas transition-colors hover:bg-brand-dark focus:outline-none focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2 focus-visible:ring-offset-canvas lg:w-auto"
+                className="inline-flex min-h-12 w-full max-w-md shrink-0 items-center justify-center gap-2 rounded-[10px] border border-brand bg-brand px-5 py-3 text-center text-base font-bold leading-tight text-white shadow-premium transition-all hover:bg-brand-dark hover:shadow-premium-hover focus:outline-none focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2 focus-visible:ring-offset-canvas lg:w-auto"
               >
                 {resultCta.button}
                 <ArrowRight className="h-4 w-4" aria-hidden="true" />

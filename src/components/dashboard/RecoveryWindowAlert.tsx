@@ -39,7 +39,7 @@ export function RecoveryWindowAlert({
     <aside
       id="recovery-window-alert"
       role="alert"
-      className="scroll-mt-8 rounded-lg border border-warning/45 bg-warning/10 shadow-[0_20px_60px_rgba(226,166,59,0.12)]"
+      className="scroll-mt-8 overflow-hidden rounded-2xl border border-brand/25 bg-white shadow-premium"
     >
       <div className="grid gap-4 p-5 sm:grid-cols-[auto_1fr_auto] sm:items-center sm:p-6">
         <div className="flex h-12 w-12 items-center justify-center rounded-lg border border-warning/40 bg-warning/15 text-warning">
@@ -64,7 +64,7 @@ export function RecoveryWindowAlert({
 
         <Link
           href={`/quotes/${quoteId}`}
-          className="inline-flex min-h-11 items-center justify-center rounded-lg bg-warning px-4 py-2 text-sm font-black text-canvas shadow-[0_0_34px_rgba(226,166,59,0.24)] transition-colors hover:bg-warning/90 focus:outline-none focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2 focus-visible:ring-offset-canvas"
+          className="inline-flex min-h-11 items-center justify-center rounded-[10px] bg-brand px-4 py-2 text-sm font-bold text-white shadow-premium transition-all hover:bg-brand-dark hover:shadow-premium-hover focus:outline-none focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2 focus-visible:ring-offset-canvas"
         >
           Work this quote →
         </Link>

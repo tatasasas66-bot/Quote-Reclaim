@@ -309,7 +309,7 @@ export function RevealClient({
             })()}
             <form
               onSubmit={handleAuditSubmit}
-              className="mt-7 rounded-lg border border-line-subtle bg-surface-1 p-5"
+              className="mt-7 rounded-2xl border border-line-subtle bg-white p-6 shadow-premium"
             >
               <h2 className="text-lg font-black text-ink-strong">
                 What kind of estimate is this?
@@ -332,7 +332,7 @@ export function RevealClient({
                   setProjectType("");
                   setError(null);
                 }}
-                className="mt-2 h-12 w-full rounded-md border border-line-strong bg-surface-2 px-3 text-base font-semibold text-ink-strong focus:outline-none focus-visible:ring-2 focus-visible:ring-focus"
+                className="mt-2 h-[52px] w-full rounded-xl border border-line-subtle bg-white px-5 text-base font-semibold text-ink-strong shadow-premium focus:outline-none focus-visible:ring-2 focus-visible:ring-focus"
               >
                 <option value="">Select a trade</option>
                 {TRADES.map((option) => (
@@ -363,7 +363,7 @@ export function RevealClient({
                   getProjectTypeOptions(trade)[0] ??
                   "Driveway, patio, repair..."
                 }
-                className="mt-2 h-12 w-full rounded-md border border-line-strong bg-surface-2 px-3 text-base text-ink-strong focus:outline-none focus-visible:ring-2 focus-visible:ring-focus"
+                className="mt-2 h-[52px] w-full rounded-xl border border-line-subtle bg-white px-5 text-base text-ink-strong shadow-premium focus:outline-none focus-visible:ring-2 focus-visible:ring-focus"
               />
               <datalist id="audit-project-type-options">
                 {getProjectTypeOptions(trade).map((option) => (
@@ -549,7 +549,7 @@ function InputStep({
         ) : null}
       </div>
 
-      <div className="rounded-xl border border-line-subtle bg-surface-1 p-5 shadow-[0_24px_70px_rgba(0,0,0,0.24)] sm:p-6">
+      <div className="rounded-2xl border border-line-subtle bg-white p-5 shadow-premium sm:p-6">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
             <p className="text-xs font-black uppercase tracking-widest text-brand">
@@ -967,7 +967,7 @@ function RevealStep({
           onClick={onStart}
           loading={submitting}
           disabled={submitting || willImport === 0}
-          className="hidden shadow-[0_0_42px_rgba(217,111,50,0.28)] sm:[@media(min-height:760px)]:inline-flex"
+          className="hidden sm:[@media(min-height:760px)]:inline-flex"
         >
           {ctaLabel}
         </Button>
@@ -997,7 +997,7 @@ function RevealStep({
             onClick={onStart}
             loading={submitting}
             disabled={submitting || willImport === 0}
-            className="shadow-[0_0_36px_rgba(217,111,50,0.32)]"
+            className="shadow-premium"
           >
             {ctaLabel}
           </Button>

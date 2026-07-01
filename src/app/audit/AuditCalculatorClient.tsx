@@ -348,7 +348,7 @@ export function AuditCalculatorClient() {
       <section
         data-testid="audit-form-card"
         aria-labelledby="audit-form-title"
-        className="w-full max-w-full min-w-0 border border-line-strong bg-canvas shadow-[0_24px_70px_rgba(0,0,0,0.24)]"
+        className="w-full max-w-full min-w-0 overflow-hidden rounded-2xl border border-line-subtle bg-white shadow-premium"
       >
         <header className="border-b border-line-strong px-4 py-5 sm:px-6">
           <div className="flex min-w-0 flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
@@ -400,7 +400,7 @@ export function AuditCalculatorClient() {
               return (
                 <div
                   key={index}
-                  className="w-full max-w-full min-w-0 border border-line-subtle bg-surface-1 p-4"
+                  className="w-full max-w-full min-w-0 rounded-2xl border border-line-subtle bg-white p-5 shadow-premium"
                 >
                   <div className="flex min-h-11 min-w-0 items-start justify-between gap-3">
                     <div className="min-w-0">
@@ -448,7 +448,7 @@ export function AuditCalculatorClient() {
                           onChange={(event) =>
                             updateRow(index, "amount", event.target.value)
                           }
-                          className="h-12 w-full max-w-full min-w-0 rounded-lg border border-line-subtle bg-canvas pl-7 pr-3 font-mono text-base text-ink-strong placeholder:text-ink-muted/70 focus:border-brand focus:outline-none focus:ring-2 focus:ring-focus/40"
+                          className="h-[52px] w-full max-w-full min-w-0 rounded-xl border border-line-subtle bg-white pl-8 pr-4 font-sans text-base text-ink-strong shadow-premium placeholder:text-ink-muted/70 focus:border-brand focus:outline-none focus:ring-2 focus:ring-focus/25"
                         />
                       </div>
                     </div>
@@ -471,7 +471,7 @@ export function AuditCalculatorClient() {
                         onChange={(event) =>
                           updateRow(index, "days", event.target.value)
                         }
-                        className="h-12 w-full max-w-full min-w-0 rounded-lg border border-line-subtle bg-canvas px-3 font-mono text-base text-ink-strong placeholder:text-ink-muted/70 focus:border-brand focus:outline-none focus:ring-2 focus:ring-focus/40"
+                        className="h-[52px] w-full max-w-full min-w-0 rounded-xl border border-line-subtle bg-white px-4 font-sans text-base text-ink-strong shadow-premium placeholder:text-ink-muted/70 focus:border-brand focus:outline-none focus:ring-2 focus:ring-focus/25"
                       />
                     </div>
                   </div>
@@ -484,13 +484,13 @@ export function AuditCalculatorClient() {
             <div
               data-testid="audit-live-total"
               aria-live="polite"
-              className="min-w-0 bg-surface-2 p-4"
+              className="min-w-0 bg-brand/5 p-5"
             >
               <div className="flex items-center gap-2 text-xs font-black uppercase tracking-widest text-ink-muted">
                 <Banknote className="h-4 w-4 text-money" aria-hidden="true" />
                 Money still quiet
               </div>
-              <p className="mt-2 break-words font-mono text-3xl font-black text-money">
+              <p className="mt-2 break-words text-4xl font-bold text-brand">
                 {formatCurrency(liveTotal)}
               </p>
               <p className="mt-1 text-xs text-ink-muted">
@@ -571,7 +571,7 @@ export function AuditCalculatorClient() {
             data-testid="audit-analysis"
             role="status"
             aria-live="polite"
-            className="w-full max-w-full min-w-0 border border-line-strong bg-canvas p-5 sm:p-7"
+            className="w-full max-w-full min-w-0 rounded-2xl border border-line-subtle bg-white p-5 shadow-premium sm:p-7"
           >
             <div className="flex items-center gap-3">
               <Loader2

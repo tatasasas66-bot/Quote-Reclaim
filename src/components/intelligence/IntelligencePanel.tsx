@@ -9,7 +9,7 @@ export function IntelligencePanel({
 }: IntelligencePanelProps) {
   const unlocked = totalSequences >= unlockAt;
   return (
-    <div className="rounded-lg border border-money/25 bg-surface-1 p-5 shadow-[0_18px_54px_rgba(0,0,0,0.22)]">
+    <div className="rounded-2xl border border-line-subtle bg-white p-5 shadow-premium">
       <p className="text-xs font-black uppercase tracking-widest text-money/80">
         RECOVERY PATTERN
       </p>

@@ -26,7 +26,7 @@ function MetricCard({ label, value, hint, tone = "default" }: MetricCardProps) {
           : "text-ink-strong";
 
   return (
-    <div className="rounded-lg border border-line-subtle bg-surface-1 p-4">
+    <div className="rounded-xl border border-line-subtle bg-white p-5 shadow-premium">
       <p className="text-xs font-black uppercase tracking-widest text-ink-muted">
         {label}
       </p>

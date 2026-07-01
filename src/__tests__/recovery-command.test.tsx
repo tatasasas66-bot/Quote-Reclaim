@@ -314,7 +314,7 @@ describe("send-button safety on the quote detail page", () => {
 
   it("the next actionable card is visually highlighted for thumb/scan targeting", () => {
     expect(detailPage).toContain('data-next-actionable="true"');
-    expect(detailPage).toContain("border-brand/50");
+    expect(detailPage).toContain("border-brand/35");
   });
 });
 
@@ -580,9 +580,8 @@ describe("email display and button hierarchy", () => {
     expect(quoteActions).toMatch(/Close this quote\?/);
   });
 
-  it("the page never paints potential math green (success tokens only via status/win paths)", () => {
-    // The amount-quiet hero uses the warning token, not success.
-    expect(detailPage).toMatch(/text-warning[\s\S]{0,80}Amount still sitting quiet/);
+  it("the page uses the primary brand token for opportunity math, not success", () => {
+    expect(detailPage).toMatch(/text-brand[\s\S]{0,80}Amount still sitting quiet/);
     expect(detailPage).not.toMatch(/text-success[^"]*"\s*>\s*\{formatCurrency\(quote\.estimate_amount\)/);
   });
 });

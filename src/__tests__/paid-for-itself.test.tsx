@@ -143,9 +143,9 @@ describe("PaidForItselfMeter — honest, no dark patterns, no checkout claims", 
     expect(meterSrc).not.toMatch(/\b(5000|42500|22000|47200)\b/);
   });
 
-  it("uses money-gold styling, not panic red or generic SaaS blue", () => {
+  it("uses the restrained money token and forest border, not panic red or generic SaaS blue", () => {
     expect(meterSrc).toMatch(/text-money/);
-    expect(meterSrc).toMatch(/border-money\/30/);
+    expect(meterSrc).toMatch(/border-brand\/20/);
     expect(meterSrc).not.toMatch(/text-danger|text-red|text-blue-\d/);
   });
 

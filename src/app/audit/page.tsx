@@ -7,9 +7,9 @@ import {
   Fuel,
   HardHat,
   Ruler,
-  ShieldCheck,
 } from "lucide-react";
 import { LogoFull } from "@/components/brand/Logo";
+import { TrustStrip } from "@/components/ui";
 import { AuditCalculatorClient } from "./AuditCalculatorClient";
 
 export const metadata: Metadata = {
@@ -24,13 +24,6 @@ const SUNK_COSTS = [
   { label: "Measured it", icon: Ruler },
   { label: "Priced the work", icon: HardHat },
   { label: "Sent the quote", icon: FileText },
-] as const;
-
-const TRUST_ITEMS = [
-  "No customer names",
-  "No phone numbers",
-  "No card",
-  "No signup before result",
 ] as const;
 
 const STEPS = [
@@ -53,8 +46,8 @@ const STEPS = [
 
 export default function AuditPage() {
   return (
-    <main className="min-h-screen w-full max-w-[100dvw] overflow-x-hidden bg-canvas text-ink">
-      <header className="border-b border-line-subtle bg-surface-1/80">
+    <main className="min-h-screen w-full max-w-full bg-canvas text-ink">
+      <header className="border-b border-line-subtle bg-white">
         <div className="mx-auto flex min-h-16 w-full max-w-7xl items-center justify-between gap-4 px-4 sm:px-6 lg:px-8">
           <Link
             href="/"
@@ -75,25 +68,26 @@ export default function AuditPage() {
       </header>
 
       <section className="border-b border-line-subtle">
-        <div className="mx-auto w-full max-w-7xl px-4 pb-8 pt-8 sm:px-6 sm:pb-14 sm:pt-14 lg:px-8 lg:pb-16">
+        <div className="mx-auto w-full max-w-7xl px-4 py-16 sm:px-6 lg:px-8 lg:py-24">
           <div className="max-w-5xl">
             <div className="flex items-center gap-2 text-xs font-black uppercase tracking-widest text-brand">
               <ClipboardCheck className="h-4 w-4" aria-hidden="true" />
               Silent Quote Recovery Diagnostic
             </div>
 
-            <h1 className="mt-4 max-w-5xl break-words text-balance text-[2.25rem] font-black leading-[1.02] text-ink-strong sm:mt-5 sm:text-5xl lg:text-6xl">
+            <h1 className="mt-5 max-w-5xl break-words text-balance text-4xl font-bold leading-[1.05] text-ink-strong sm:text-5xl lg:text-[56px]">
               Find the old quote worth texting before you buy another lead.
             </h1>
 
             <p className="mt-5 max-w-3xl break-words text-pretty text-base leading-7 text-ink sm:mt-6 sm:text-xl sm:leading-8">
-              You already drove out, measured it, priced it, and sent the
-              number. The homeowner went quiet. Before paying for another
-              stranger, check the estimates you already sent and paid to
-              create.
+              Enter 3 old estimate amounts + days quiet. No customer names. No
+              phone numbers. No card. See your result first.
+            </p>
+            <p className="mt-3 max-w-3xl text-sm font-semibold leading-6 text-ink-muted">
+              Before buying another lead, check the estimates you already sent.
             </p>
 
-            <p className="mt-5 max-w-4xl border-l-4 border-brand pl-4 text-lg font-black leading-7 text-ink-strong sm:mt-6 sm:text-2xl sm:leading-8">
+            <p className="mt-5 hidden max-w-4xl border-l-4 border-brand pl-4 text-lg font-black leading-7 text-ink-strong sm:mt-6 sm:block sm:text-2xl sm:leading-8">
               Buying another lead while old estimates sit untouched is an
               expensive habit.
             </p>
@@ -117,23 +111,7 @@ export default function AuditPage() {
           </div>
 
           <div className="mt-5 flex max-w-5xl flex-col gap-4 sm:mt-7 sm:gap-5 lg:flex-row lg:items-center lg:justify-between">
-            <div
-              aria-label="Audit privacy promises"
-              className="grid min-w-0 grid-cols-2 gap-x-5 gap-y-3 sm:flex sm:flex-wrap"
-            >
-              {TRUST_ITEMS.map((item) => (
-                <span
-                  key={item}
-                  className="flex min-w-0 items-center gap-2 text-xs font-bold text-ink-muted"
-                >
-                  <ShieldCheck
-                    className="h-4 w-4 shrink-0 text-success"
-                    aria-hidden="true"
-                  />
-                  <span className="break-words">{item}</span>
-                </span>
-              ))}
-            </div>
+            <TrustStrip compact />
             <a
               href="#quote-audit"
               className="inline-flex min-h-11 shrink-0 items-center justify-center gap-2 rounded-lg border border-brand/50 bg-brand/10 px-4 py-2 text-sm font-black text-brand transition hover:bg-brand/15 focus:outline-none focus-visible:ring-2 focus-visible:ring-focus"
@@ -145,8 +123,8 @@ export default function AuditPage() {
         </div>
       </section>
 
-      <section className="border-b border-line-subtle bg-surface-1/45">
-        <div className="mx-auto w-full max-w-7xl px-4 py-10 sm:px-6 sm:py-14 lg:px-8">
+      <section className="border-b border-line-subtle bg-surface-2/50">
+        <div className="mx-auto w-full max-w-7xl px-4 py-16 sm:px-6 lg:px-8 lg:py-24">
           <AuditCalculatorClient />
         </div>
       </section>
@@ -199,9 +177,9 @@ export default function AuditPage() {
               quote worth texting. Before buying another lead, run this check.
             </p>
           </div>
-          <ol className="mt-8 grid gap-px overflow-hidden rounded-lg border border-line-subtle bg-line-subtle lg:grid-cols-3">
+          <ol className="mt-8 grid gap-4 lg:grid-cols-3">
             {STEPS.map((step) => (
-              <li key={step.number} className="min-w-0 bg-surface-1 p-6">
+              <li key={step.number} className="min-w-0 rounded-2xl border border-line-subtle bg-white p-6 shadow-premium">
                 <span className="font-mono text-sm font-black text-money">
                   {step.number}
                 </span>

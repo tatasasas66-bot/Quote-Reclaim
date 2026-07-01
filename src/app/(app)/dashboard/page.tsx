@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { Button } from "@/components/ui";
+import { LogoFull } from "@/components/brand/Logo";
 import { UpgradeButton } from "@/components/billing";
 import { QuoteListItem } from "@/components/quotes";
 import { FirstRecoveryCommand } from "@/components/dashboard/FirstRecoveryCommand";
@@ -152,15 +153,16 @@ export default async function DashboardPage() {
   }, null);
 
   return (
-    <main className="mx-auto flex min-h-screen w-full max-w-7xl flex-col gap-8 bg-canvas px-4 pt-8 pb-[calc(6rem+env(safe-area-inset-bottom))] sm:px-6 sm:pb-8 lg:px-8">
+    <main className="mx-auto flex min-h-screen w-full max-w-7xl flex-col gap-8 bg-canvas px-4 pt-5 pb-[calc(6rem+env(safe-area-inset-bottom))] sm:px-6 sm:pb-8 lg:px-8">
       <PwaInstallHint />
       <header
         data-testid="dashboard-top-header"
         className="flex min-w-0 flex-col gap-3 border-b border-line-subtle/80 pb-5 sm:flex-row sm:items-center sm:justify-between"
       >
-        <p className="whitespace-nowrap text-xs font-semibold uppercase tracking-widest text-brand">
-          QUOTE RECLAIM
-        </p>
+        <div className="whitespace-nowrap">
+          <LogoFull />
+          <span className="sr-only">QUOTE RECLAIM</span>
+        </div>
         <div
           data-testid="dashboard-header-actions"
           className="flex w-full flex-wrap items-center gap-x-3 gap-y-2 sm:w-auto sm:justify-end"
@@ -194,7 +196,7 @@ export default async function DashboardPage() {
         </h1>
         <p className="mt-2 max-w-2xl text-base leading-7 text-ink">
           Every quiet estimate has a dollar value, a risk level, and a next
-          move.
+          move. Your queue is ranked by dollars, risk, age, and next move.
         </p>
       </section>
 
@@ -204,6 +206,17 @@ export default async function DashboardPage() {
           freeRemaining={freeRemaining}
           hasRecoveredBefore={hasRecoveredBefore}
           onboardingDone={Boolean(profile?.onboarding_done)}
+        />
+      ) : null}
+
+      {priorityQuote ? (
+        <RecoveryWindowAlert
+          quoteId={priorityQuote.id}
+          amount={Number(priorityQuote.estimate_amount)}
+          trade={priorityQuote.trade}
+          clientName={priorityQuote.client_name}
+          daysSilent={effectiveDaysSilent(priorityQuote)}
+          score={getRecoveryScore(priorityQuote).score}
         />
       ) : null}
 
@@ -223,22 +236,11 @@ export default async function DashboardPage() {
         priorityQuoteId={priorityQuote?.id ?? null}
       />
 
-      {priorityQuote ? (
-        <RecoveryWindowAlert
-          quoteId={priorityQuote.id}
-          amount={Number(priorityQuote.estimate_amount)}
-          trade={priorityQuote.trade}
-          clientName={priorityQuote.client_name}
-          daysSilent={effectiveDaysSilent(priorityQuote)}
-          score={getRecoveryScore(priorityQuote).score}
-        />
-      ) : null}
-
       {hasPendingQuotes ? (
         <Link
           href="/crew-gap"
           data-testid="crew-gap-dashboard-entry"
-          className="group flex flex-col gap-3 rounded-lg border border-line-subtle bg-surface-1 p-4 shadow-sm transition-colors hover:border-brand/60 focus:outline-none focus-visible:ring-2 focus-visible:ring-focus sm:flex-row sm:items-center sm:justify-between"
+          className="group flex flex-col gap-3 rounded-2xl border border-line-subtle bg-white p-5 shadow-premium transition-all hover:border-brand/40 hover:shadow-premium-hover focus:outline-none focus-visible:ring-2 focus-visible:ring-focus sm:flex-row sm:items-center sm:justify-between"
         >
           <div>
             <p className="text-xs font-black uppercase tracking-widest text-brand">
@@ -306,14 +308,14 @@ export default async function DashboardPage() {
             // Slim, secondary hint — the First Recovery Command panel above is
             // the single focal point on an empty dashboard, so this stays quiet
             // and just explains what will land here.
-            <div className="rounded-lg border border-dashed border-line-subtle bg-surface-1 px-5 py-6">
+            <div className="rounded-2xl border border-dashed border-line-strong bg-white px-6 py-8 shadow-premium">
               <p className="text-sm leading-6 text-ink-muted">
                 No quiet quotes yet. Add your first — amount and days quiet —
                 and we&apos;ll tell you what to text today.
               </p>
               <Link
                 href="/quotes/new"
-                className="mt-3 inline-flex min-h-10 items-center rounded-md bg-brand px-3 py-2 text-sm font-black text-canvas focus:outline-none focus-visible:ring-2 focus-visible:ring-focus"
+                className="mt-4 inline-flex min-h-11 items-center rounded-[10px] bg-brand px-4 py-2 text-sm font-bold text-white shadow-premium focus:outline-none focus-visible:ring-2 focus-visible:ring-focus"
               >
                 Add Silent Quote →
               </Link>
@@ -348,7 +350,7 @@ export default async function DashboardPage() {
             <Link
               href="#recent-quotes"
               data-testid="won-proof-chip"
-              className="group flex items-center justify-between gap-3 rounded-lg border border-success/35 bg-surface-1 px-4 py-3 focus:outline-none focus-visible:ring-2 focus-visible:ring-focus"
+              className="group flex items-center justify-between gap-3 rounded-2xl border border-success/25 bg-white px-5 py-4 shadow-premium focus:outline-none focus-visible:ring-2 focus-visible:ring-focus"
             >
               <div className="min-w-0">
                 <p className="text-[11px] font-black uppercase tracking-widest text-success">
@@ -390,7 +392,7 @@ export default async function DashboardPage() {
       <div className="fixed inset-x-3 bottom-3 z-30 sm:hidden">
         <Link
           href="/quotes/new"
-          className="inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-md border border-brand bg-brand px-4 py-3 text-sm font-semibold text-canvas shadow-[0_0_36px_rgba(217,111,50,0.35)] active:scale-[0.99]"
+          className="inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-[10px] border border-brand bg-brand px-4 py-3 text-sm font-semibold text-white shadow-premium active:scale-[0.99]"
         >
           + Add Silent Quote
         </Link>

@@ -97,7 +97,7 @@ function ImportBlocked({
 
       <section
         data-testid="import-blocked"
-        className="rounded-xl border border-brand/40 bg-surface-1 p-6 shadow-[0_0_60px_rgba(217,111,50,0.16)] sm:p-8"
+        className="rounded-2xl border border-brand/25 bg-white p-6 shadow-premium sm:p-8"
       >
         <p className="text-xs font-black uppercase tracking-widest text-brand">
           Free plan full
@@ -165,7 +165,7 @@ function ImportBlocked({
             <div className="mt-6 flex flex-wrap items-center gap-3">
               <Link
                 href={`mailto:${SUPPORT_EMAIL}?subject=Activate%20more%20quotes`}
-                className="inline-flex min-h-11 items-center justify-center rounded-md border border-brand bg-brand px-4 py-3 text-sm font-semibold text-canvas shadow-[0_0_36px_rgba(217,111,50,0.28)]"
+                className="inline-flex min-h-11 items-center justify-center rounded-[10px] border border-brand bg-brand px-4 py-3 text-sm font-semibold text-white shadow-premium"
               >
                 Email {SUPPORT_EMAIL}
               </Link>
