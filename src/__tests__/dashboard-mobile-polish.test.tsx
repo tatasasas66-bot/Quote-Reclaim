@@ -29,6 +29,7 @@ function readSource(rel: string): string {
 }
 
 const dashboard = readSource("../app/(app)/dashboard/page.tsx");
+const appHeader = readSource("../components/app/AppHeader.tsx");
 const sendEarly = readSource("../components/quotes/SendEarlyButton.tsx");
 const receiptSrc = readSource("../components/dashboard/RecoveryReceipt.tsx");
 
@@ -96,12 +97,12 @@ describe("Sticky '+ Add Silent Quote' CTA", () => {
 
 describe("Mobile header — Upgrade dominant, Sign out subtle", () => {
   it("puts the app header and actions above Today's Moves and the command", () => {
-    const eyebrowIdx = dashboard.indexOf("QUOTE RECLAIM");
+    const headerIdx = dashboard.indexOf("<AppHeader");
     const upgradeIdx = dashboard.indexOf("<UpgradeButton");
     const movesIdx = dashboard.indexOf("<TodaysMoves");
     const h1Idx = dashboard.indexOf("Silent Quote Command");
-    expect(eyebrowIdx).toBeGreaterThan(0);
-    expect(upgradeIdx).toBeGreaterThan(eyebrowIdx);
+    expect(headerIdx).toBeGreaterThan(0);
+    expect(upgradeIdx).toBeGreaterThan(headerIdx);
     expect(movesIdx).toBeGreaterThan(upgradeIdx);
     expect(h1Idx).toBeGreaterThan(movesIdx);
   });
@@ -116,7 +117,7 @@ describe("Mobile header — Upgrade dominant, Sign out subtle", () => {
     expect(dashboard).not.toMatch(
       /<Button[^>]*type="submit"[^>]*>\s*Sign out/,
     );
-    expect(dashboard).toMatch(
+    expect(appHeader).toMatch(
       /<button\s+type="submit"[\s\S]*?text-xs[\s\S]*?text-ink-muted[\s\S]*?>\s*Sign out/,
     );
   });

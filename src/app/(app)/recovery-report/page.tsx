@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { ArrowRight, BarChart3, ShieldCheck } from "lucide-react";
-import { Logo } from "@/components/ui";
+import { AppHeader } from "@/components/app/AppHeader";
 import { requireUser } from "@/lib/auth/require-user";
 import { MONTHLY_PRICE_USD } from "@/lib/payments/entitlement";
 import { getRecoveryReportData } from "@/lib/recovery/recovery-report";
@@ -33,15 +33,7 @@ export default async function RecoveryReportPage() {
   return (
     <main className="min-h-screen bg-canvas px-4 py-6 text-ink sm:px-6 lg:px-8">
       <div className="mx-auto w-full max-w-6xl">
-        <header className="flex flex-wrap items-center justify-between gap-4 border-b border-line-subtle pb-5">
-          <Logo showWordmark />
-          <Link
-            href="/dashboard"
-            className="rounded text-sm font-semibold text-ink-muted hover:text-ink-strong focus:outline-none focus-visible:ring-2 focus-visible:ring-focus"
-          >
-            Back to dashboard
-          </Link>
-        </header>
+        <AppHeader />
 
         <section className="py-12 sm:py-16">
           <p className="text-xs font-black uppercase tracking-widest text-brand">

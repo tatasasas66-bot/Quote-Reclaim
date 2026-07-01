@@ -9,6 +9,7 @@ function readSource(relative: string): string {
 
 const homepage = readSource("../app/page.tsx");
 const dashboard = readSource("../app/(app)/dashboard/page.tsx");
+const appHeader = readSource("../components/app/AppHeader.tsx");
 const quoteDetail = readSource("../app/(app)/quotes/[id]/page.tsx");
 const recoveryViewModel = readSource(
   "../lib/recovery/recovery-plan-view-model.ts",
@@ -115,8 +116,9 @@ describe("Dashboard header (Phase 4.2)", () => {
     );
   });
 
-  it("retains the QUOTE RECLAIM eyebrow", () => {
-    expect(dashboard).toMatch(/QUOTE RECLAIM/);
+  it("retains the Quote Reclaim app identity and daily command line", () => {
+    expect(appHeader).toMatch(/Quote Reclaim/);
+    expect(appHeader).toContain("One quote. One move. Today.");
   });
 });
 

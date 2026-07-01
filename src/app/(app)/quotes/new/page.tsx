@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { Logo } from "@/components/ui";
+import { AppHeader } from "@/components/app/AppHeader";
 import { QuoteForm } from "@/components/quotes";
 import { Paywall } from "@/components/billing";
 import { requireUser } from "@/lib/auth/require-user";
@@ -32,15 +32,7 @@ export default async function NewQuotePage() {
 
   return (
     <main className="mx-auto flex min-h-screen w-full max-w-5xl flex-col gap-8 bg-canvas px-4 py-8 sm:px-6">
-      <header className="flex items-center justify-between border-b border-line-subtle/80 pb-5">
-        <Logo showWordmark />
-        <Link
-          href="/dashboard"
-          className="rounded text-sm font-semibold text-ink-muted hover:text-ink-strong focus:outline-none focus-visible:ring-2 focus-visible:ring-focus"
-        >
-          Back
-        </Link>
-      </header>
+      <AppHeader />
 
       {blocked ? (
         <Paywall

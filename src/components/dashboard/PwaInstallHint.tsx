@@ -15,6 +15,7 @@ export function PwaInstallHint() {
   const [isIos, setIsIos] = React.useState(false);
   const [standalone, setStandalone] = React.useState(true);
   const [dismissed, setDismissed] = React.useState(false);
+  const [storageReady, setStorageReady] = React.useState(false);
 
   React.useEffect(() => {
     try {
@@ -24,6 +25,7 @@ export function PwaInstallHint() {
     } catch {
       // Storage can be unavailable in private browsing; the hint still works.
     }
+    setStorageReady(true);
 
     const mediaStandalone = window.matchMedia(
       "(display-mode: standalone)",
@@ -42,7 +44,9 @@ export function PwaInstallHint() {
     return () => window.removeEventListener("beforeinstallprompt", handler);
   }, []);
 
-  if (dismissed || standalone || (!prompt && !isIos)) return null;
+  if (!storageReady || dismissed || standalone || (!prompt && !isIos)) {
+    return null;
+  }
 
   function dismiss() {
     setDismissed(true);

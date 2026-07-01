@@ -87,10 +87,12 @@ describe("favicon icon.svg", () => {
 });
 
 describe("app header wires the logo to /dashboard", () => {
-  const detailPage = readSource("../app/(app)/quotes/[id]/page.tsx");
+  const appHeader = readSource("../components/app/AppHeader.tsx");
 
   it("wraps the wordmark logo in a link to /dashboard", () => {
-    expect(detailPage).toMatch(/href="\/dashboard"[\s\S]{0,160}<Logo showWordmark/);
+    expect(appHeader).toMatch(
+      /href="\/dashboard"[\s\S]{0,400}<LogoFull/,
+    );
   });
 
   it("layout metadata points the favicon at the brand mark", () => {

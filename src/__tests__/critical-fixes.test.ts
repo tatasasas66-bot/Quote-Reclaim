@@ -12,6 +12,7 @@ function readSource(relative: string): string {
 }
 
 const dashboard = readSource("../app/(app)/dashboard/page.tsx");
+const appHeader = readSource("../components/app/AppHeader.tsx");
 const upgradeButton = readSource("../components/billing/UpgradeButton.tsx");
 const serverClient = readSource("../lib/supabase/server.ts");
 const middleware = readSource("../middleware.ts");
@@ -23,9 +24,10 @@ const signOutRoute = readSource("../app/api/auth/sign-out/route.ts");
 
 describe("A1: Sign out button", () => {
   it("dashboard header posts to the sign-out route", () => {
-    expect(dashboard).toContain('action="/api/auth/sign-out"');
-    expect(dashboard).toContain("Sign out");
-    expect(dashboard).toMatch(/method="post"/);
+    expect(appHeader).toContain('action="/api/auth/sign-out"');
+    expect(appHeader).toContain("Sign out");
+    expect(appHeader).toMatch(/method="post"/);
+    expect(dashboard).toContain("<AppHeader");
   });
 
   it("sign-out route signs out and redirects to /sign-in", () => {
@@ -37,10 +39,10 @@ describe("A1: Sign out button", () => {
     // Mobile polish pass: Sign out is now an even quieter plain `<button>`
     // styled as a tiny text link, never a sized Button that competes with
     // Upgrade for visual weight.
-    expect(dashboard).toMatch(
+    expect(appHeader).toMatch(
       /<button\s+type="submit"[\s\S]*?text-xs[\s\S]*?text-ink-muted[\s\S]*?>\s*Sign out/,
     );
-    expect(dashboard).toContain("text-ink-muted");
+    expect(appHeader).toContain("text-ink-muted");
   });
 });
 

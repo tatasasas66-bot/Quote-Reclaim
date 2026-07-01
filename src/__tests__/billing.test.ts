@@ -53,6 +53,7 @@ const paddleProviderSrc = readSource("../lib/payments/paddle-provider.ts");
 const actions = readSource("../lib/quotes/actions.ts");
 const newQuotePage = readSource("../app/(app)/quotes/new/page.tsx");
 const dashboardPage = readSource("../app/(app)/dashboard/page.tsx");
+const appHeader = readSource("../components/app/AppHeader.tsx");
 
 // ---------------------------------------------------------------------------
 // Provider-agnostic entitlement model — unchanged values
@@ -505,7 +506,8 @@ describe("/quotes/new page paywall integration", () => {
   });
 
   it("dashboard back-link remains so the user never gets trapped", () => {
-    expect(newQuotePage).toContain('href="/dashboard"');
+    expect(newQuotePage).toContain("<AppHeader");
+    expect(appHeader).toContain('href="/dashboard"');
   });
 });
 

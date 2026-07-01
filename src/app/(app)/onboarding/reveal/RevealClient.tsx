@@ -3,7 +3,8 @@
 import * as React from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Badge, Button, Logo } from "@/components/ui";
+import { AppHeader } from "@/components/app/AppHeader";
+import { Badge, Button } from "@/components/ui";
 import {
   MAX_IMPORT_ROWS,
   parseSilentQuotesInput,
@@ -270,16 +271,16 @@ export function RevealClient({
   return (
     <main className="min-h-screen bg-canvas">
       <div className="mx-auto flex min-h-screen w-full max-w-5xl flex-col px-4 py-6 sm:px-6 sm:py-8">
-        <header className="flex flex-wrap items-center justify-between gap-3 border-b border-line-subtle/80 pb-5">
-          <Logo showWordmark />
+        <AppHeader />
+        <div className="flex justify-end pt-3">
           <button
             type="button"
             onClick={handleSkip}
-            className="rounded text-xs font-medium text-ink-muted hover:text-ink-strong focus:outline-none focus-visible:ring-2 focus-visible:ring-focus"
+            className="inline-flex min-h-10 items-center rounded px-2 text-xs font-semibold text-ink-muted hover:text-ink-strong focus:outline-none focus-visible:ring-2 focus-visible:ring-focus"
           >
             {headerSecondaryLabel}
           </button>
-        </header>
+        </div>
 
         {step === "audit-saved" && parsed ? (
           <section className="mx-auto mt-10 w-full max-w-2xl border-y border-line-subtle py-8">

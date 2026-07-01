@@ -162,4 +162,23 @@ describe("PWA install hint", () => {
       ).toBeNull();
     });
   });
+
+  it("stays dismissed after a reload-style remount", async () => {
+    window.localStorage.setItem("qr:pwa-install-dismissed", "1");
+    render(<PwaInstallHint />);
+
+    const installEvent = Object.assign(new Event("beforeinstallprompt"), {
+      prompt: vi.fn().mockResolvedValue(undefined),
+      userChoice: Promise.resolve({ outcome: "dismissed" as const }),
+    });
+    window.dispatchEvent(installEvent);
+
+    await waitFor(() => {
+      expect(
+        screen.queryByRole("button", {
+          name: "Dismiss Add to Home Screen prompt",
+        }),
+      ).toBeNull();
+    });
+  });
 });

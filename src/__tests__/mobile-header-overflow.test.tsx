@@ -23,6 +23,7 @@ function readSource(rel: string): string {
 }
 
 const dashboard = readSource("../app/(app)/dashboard/page.tsx");
+const appHeaderSrc = readSource("../components/app/AppHeader.tsx");
 const upgradeSrc = readSource("../components/billing/UpgradeButton.tsx");
 
 afterEach(cleanup);
@@ -70,39 +71,46 @@ describe("Mobile header — Upgrade button does not wrap at 375px", () => {
 // Sign out + brand eyebrow — no wrap, no squeeze, at 375px
 // ---------------------------------------------------------------------------
 
-describe("Dashboard header actions", () => {
+describe("Authenticated app header actions", () => {
   it("Sign out is whitespace-nowrap (no 'Sign' / 'out' two-line wrap)", () => {
-    expect(dashboard).toMatch(/whitespace-nowrap[\s\S]*?>\s*Sign out/);
+    expect(appHeaderSrc).toMatch(/whitespace-nowrap[\s\S]*?>\s*Sign out/);
   });
 
-  it("stacks on mobile and aligns left/right on desktop", () => {
-    expect(dashboard).toMatch(
-      /data-testid="dashboard-top-header"[\s\S]*?flex min-w-0 flex-col[\s\S]*?sm:flex-row sm:items-center sm:justify-between/,
+  it("is sticky and stacks on mobile while aligning on desktop", () => {
+    expect(appHeaderSrc).toMatch(
+      /data-testid="app-header"[\s\S]*?sticky top-0 z-50[\s\S]*?flex min-w-0 flex-col[\s\S]*?sm:flex-row sm:items-center sm:justify-between/,
     );
   });
 
   it("lets the action group wrap without horizontal overflow", () => {
-    expect(dashboard).toMatch(
-      /data-testid="dashboard-header-actions"[\s\S]*?flex w-full flex-wrap items-center[\s\S]*?sm:w-auto sm:justify-end/,
+    expect(appHeaderSrc).toMatch(
+      /data-testid="app-header-actions"[\s\S]*?flex w-full flex-wrap items-center[\s\S]*?sm:w-auto sm:justify-end/,
     );
   });
 
   it("the Quote Reclaim wordmark wrapper is whitespace-nowrap (brand not squeezed)", () => {
-    expect(dashboard).toMatch(/className="whitespace-nowrap"[\s\S]*?<LogoFull/);
+    expect(appHeaderSrc).toContain(
+      '<LogoFull className="whitespace-nowrap" />',
+    );
   });
 
   it("header actions render Upgrade, Report, then Sign out", () => {
-    const upgradeIdx = dashboard.indexOf("<UpgradeButton");
-    const reportIdx = dashboard.indexOf('href="/recovery-report"');
-    const signOutFormIdx = dashboard.indexOf('action="/api/auth/sign-out"');
+    const upgradeIdx = appHeaderSrc.indexOf("{upgrade}");
+    const reportIdx = appHeaderSrc.indexOf('href="/recovery-report"');
+    const signOutFormIdx = appHeaderSrc.indexOf(
+      'action="/api/auth/sign-out"',
+    );
     expect(upgradeIdx).toBeGreaterThan(0);
     expect(reportIdx).toBeGreaterThan(upgradeIdx);
     expect(signOutFormIdx).toBeGreaterThan(reportIdx);
+    expect(dashboard).toMatch(
+      /<AppHeader[\s\S]*?upgrade=\{[\s\S]*?<UpgradeButton/,
+    );
   });
 
   it("keeps the PWA hint first, then the header, moves, and command section", () => {
     const pwaIdx = dashboard.indexOf("<PwaInstallHint");
-    const headerIdx = dashboard.indexOf('data-testid="dashboard-top-header"');
+    const headerIdx = dashboard.indexOf("<AppHeader");
     const movesIdx = dashboard.indexOf("<TodaysMoves");
     const commandIdx = dashboard.indexOf('id="silent-quote-command"');
     expect(headerIdx).toBeGreaterThan(pwaIdx);

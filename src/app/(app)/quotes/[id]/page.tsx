@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
-import { Badge, Button, Logo } from "@/components/ui";
+import { Badge, Button } from "@/components/ui";
+import { AppHeader } from "@/components/app/AppHeader";
 import {
   CopyButton,
   ManualMessageActions,
@@ -124,21 +125,7 @@ export default async function QuoteDetailPage({
       {searchParams?.source === "sunday-reset" ? (
         <SundayResetTracker quoteId={quote.id} />
       ) : null}
-      <header className="flex items-center justify-between border-b border-line-subtle/80 pb-5">
-        <Link
-          href="/dashboard"
-          aria-label="Quote Reclaim home"
-          className="rounded focus:outline-none focus-visible:ring-2 focus-visible:ring-focus"
-        >
-          <Logo showWordmark />
-        </Link>
-        <Link
-          href="/dashboard"
-          className="rounded text-sm font-semibold text-ink-muted hover:text-ink-strong focus:outline-none focus-visible:ring-2 focus-visible:ring-focus"
-        >
-          Dashboard
-        </Link>
-      </header>
+      <AppHeader />
 
       <div>
         <p className="text-xs font-semibold uppercase tracking-widest text-brand">

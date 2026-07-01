@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { Button } from "@/components/ui";
-import { LogoFull } from "@/components/brand/Logo";
+import { AppHeader } from "@/components/app/AppHeader";
 import { UpgradeButton } from "@/components/billing";
 import { QuoteListItem } from "@/components/quotes";
 import { FirstRecoveryCommand } from "@/components/dashboard/FirstRecoveryCommand";
@@ -155,40 +155,16 @@ export default async function DashboardPage() {
   return (
     <main className="mx-auto flex min-h-screen w-full max-w-7xl flex-col gap-8 bg-canvas px-4 pt-5 pb-[calc(6rem+env(safe-area-inset-bottom))] sm:px-6 sm:pb-8 lg:px-8">
       <PwaInstallHint />
-      <header
-        data-testid="dashboard-top-header"
-        className="flex min-w-0 flex-col gap-3 border-b border-line-subtle/80 pb-5 sm:flex-row sm:items-center sm:justify-between"
-      >
-        <div className="whitespace-nowrap">
-          <LogoFull />
-          <span className="sr-only">QUOTE RECLAIM</span>
-        </div>
-        <div
-          data-testid="dashboard-header-actions"
-          className="flex w-full flex-wrap items-center gap-x-3 gap-y-2 sm:w-auto sm:justify-end"
-        >
+      <AppHeader
+        upgrade={
           <UpgradeButton
             userId={user.id}
             userEmail={user.email ?? null}
             isPaid={isPaid}
             paddleAvailable={paddleClientConfigured()}
           />
-          <Link
-            href="/recovery-report"
-            className="whitespace-nowrap rounded text-xs font-medium text-ink-muted hover:text-ink-strong focus:outline-none focus-visible:ring-2 focus-visible:ring-focus"
-          >
-            Report
-          </Link>
-          <form action="/api/auth/sign-out" method="post">
-            <button
-              type="submit"
-              className="whitespace-nowrap rounded text-xs font-medium text-ink-muted hover:text-ink-strong focus:outline-none focus-visible:ring-2 focus-visible:ring-focus"
-            >
-              Sign out
-            </button>
-          </form>
-        </div>
-      </header>
+        }
+      />
       <TodaysMoves moves={todaysMoves} streak={streak} />
       <section id="silent-quote-command" className="scroll-mt-4">
         <h1 className="text-3xl font-black leading-tight text-ink-strong sm:text-4xl">
