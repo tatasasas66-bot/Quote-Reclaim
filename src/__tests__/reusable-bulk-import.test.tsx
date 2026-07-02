@@ -80,7 +80,7 @@ describe("first-session routing", () => {
 
   it("the homepage CTA opens the public /audit doorway", () => {
     expect(homepageSrc).toMatch(/href="\/audit"/);
-    expect(homepageSrc).toMatch(/Run the free estimate audit/);
+    expect(homepageSrc).toMatch(/Show me which quote to text first/);
   });
 
   it("the /onboarding/reveal page itself uses requireUser + sign-up next= so a homepage clicker lands back here after auth", () => {
@@ -128,13 +128,13 @@ describe("FirstRecoveryCommand routes import CTA by onboarding state", () => {
     expect(link.getAttribute("href")).toBe("/quotes/import");
   });
 
-  it("the secondary 'Add one quote manually' stays present in both states", () => {
+  it("the secondary '+ Add Estimate' stays present in both states", () => {
     for (const onboardingDone of [false, true]) {
       const { unmount } = render(
         React.createElement(FirstRecoveryCommand, { ...baseFresh, onboardingDone }),
       );
       expect(
-        screen.getByRole("link", { name: /Add one quote manually/i }).getAttribute("href"),
+        screen.getByRole("link", { name: /\+ Add Estimate/i }).getAttribute("href"),
       ).toBe("/quotes/new");
       unmount();
     }
@@ -192,14 +192,14 @@ describe("/quotes/import — reusable bulk import, one parser, one action", () =
     expect(labelIdx - testidIdx).toBeLessThan(400);
   });
 
-  it("dashboard primary action stays '+ Add Silent Quote'; bulk import is the SECONDARY entry, not the primary", () => {
+  it("dashboard primary action stays '+ Add Estimate'; bulk import is the SECONDARY entry, not the primary", () => {
     // Order in DOM (skip comments by anchoring on JSX boundary markers):
-    // queue label -> Paste-more testid -> Add Silent Quote button.
+    // queue label -> Paste-more testid -> Add Estimate button.
     const queueIdx = dashboardSrc.indexOf("IN THE QUEUE");
     const pasteIdx = dashboardSrc.indexOf('data-testid="queue-bulk-import-link"');
     // The Button JSX (not the comment that mentions the label).
     const addBtnIdx = dashboardSrc.indexOf(
-      '<Button size="sm">+ Add Silent Quote</Button>',
+      '<Button size="sm">+ Add Estimate</Button>',
     );
     expect(queueIdx).toBeGreaterThan(0);
     expect(pasteIdx).toBeGreaterThan(queueIdx);
@@ -438,7 +438,7 @@ describe("regression — homepage, support email, no Lemon, no dead checkout, no
   });
 
   it("homepage CTA uses the public audit doorway", () => {
-    expect(homepageSrc).toContain("Run the free estimate audit");
+    expect(homepageSrc).toContain("Show me which quote to text first");
     expect(homepageSrc).toContain('href="/audit"');
   });
 

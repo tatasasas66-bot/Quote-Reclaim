@@ -103,14 +103,18 @@ describe("Smartlead campaign ID validation", () => {
 
 describe("Full-Auto Marketing Smartlead mapping control", () => {
   it("shows and saves a mapping for the selected existing campaign", async () => {
-    const fetchMock = vi.fn(async () =>
-      new Response(JSON.stringify({ ok: true, smartleadCampaignId: "3554090" }), {
-        status: 200,
-        headers: { "content-type": "application/json" },
-      }),
+    const fetchMock = vi.fn(
+      (async () =>
+        new Response(
+          JSON.stringify({ ok: true, smartleadCampaignId: "3554090" }),
+          {
+            status: 200,
+            headers: { "content-type": "application/json" },
+          },
+        )) as unknown as typeof fetch,
     );
     vi.stubGlobal("fetch", fetchMock);
-    vi.spyOn(window, "setTimeout").mockImplementation(() => 0);
+    vi.spyOn(window, "setTimeout").mockImplementation((() => 0) as never);
     renderAdmin();
 
     const input = screen.getByLabelText(
@@ -128,7 +132,7 @@ describe("Full-Auto Marketing Smartlead mapping control", () => {
     });
 
     expect(fetchMock).toHaveBeenCalledTimes(1);
-    const request = fetchMock.mock.calls[0]?.[1] as RequestInit;
+    const request = (fetchMock.mock.calls[0]?.[1] ?? {}) as RequestInit;
     expect(JSON.parse(String(request.body))).toEqual({
       action: "set_smartlead_campaign",
       campaignId: "campaign-1",

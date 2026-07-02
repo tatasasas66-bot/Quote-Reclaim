@@ -73,7 +73,7 @@ describe("quote edit redirect", () => {
     render(<QuoteForm mode="edit" initial={quote} action={action} />);
 
     const projectType = screen.getByLabelText(/Project type/i);
-    const phone = screen.getByLabelText(/Client phone/i);
+    const phone = screen.getByLabelText(/Customer phone/i);
     fireEvent.change(projectType, { target: { value: "Driveway" } });
     fireEvent.change(phone, { target: { value: "+16025550123" } });
 

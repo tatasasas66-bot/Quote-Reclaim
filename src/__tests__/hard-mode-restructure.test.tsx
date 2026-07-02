@@ -51,7 +51,7 @@ describe("homepage hero restructure + email/copy honesty", () => {
 
 it("primary CTA routes to the public audit doorway", () => {
   expect(homepage).toMatch(/href="\/audit"/);
-  expect(homepage).toMatch(/Run the free estimate audit/);
+  expect(homepage).toMatch(/Show me which quote to text first/);
 });
 
   it("the decorative See How It Works scroll button is gone", () => {
@@ -372,7 +372,7 @@ describe("follow-up message upgrades", () => {
 
 describe("paywall body channel honesty", () => {
   it("frames the message plan without broad auto-send claims", () => {
-    expect(paywall).toMatch(/message plan for email, phone, SMS, and WhatsApp/);
+    expect(paywall).toMatch(/tells you which quiet estimate to reopen first and\s+hands you the message to send/);
     expect(paywall).toMatch(/No guarantee of recovered revenue/);
     expect(paywall).not.toMatch(/follows\s+up by email automatically\./);
     expect(paywall).not.toMatch(/automatically sends|auto-send|sent by\s+SMS|sent by\s+WhatsApp/i);

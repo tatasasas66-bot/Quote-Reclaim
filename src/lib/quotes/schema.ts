@@ -46,7 +46,10 @@ const optionalState = z
 
 export const quoteInputSchema = z
   .object({
-    client_name: z.string().trim().min(1, "Client name is required").max(120),
+    // Optional by design: the audit promises "no customer names", so the first
+    // in-app estimate must be creatable without one. A blank name gets a
+    // display fallback (e.g. "Driveway estimate") at the action layer.
+    client_name: optionalText(120),
     trade: z.enum(TRADES, {
       errorMap: () => ({ message: "Choose a trade from the list" }),
     }),
@@ -65,12 +68,10 @@ export const quoteInputSchema = z
     city: optionalText(80),
     state: optionalState,
     job_description: optionalText(500),
-  })
-  .refine((v) => v.client_email !== "" || v.client_phone !== "", {
-    message:
-      "Add a phone or email so the recovery plan can reach the customer.",
-    path: ["client_email"],
   });
+// Contact info is intentionally NOT required at creation. The audit promises
+// "no phone numbers"; email/phone get added when the contractor is ready to
+// send. A quote with no contact info can never have anything sent for it.
 
 export type QuoteInput = z.infer<typeof quoteInputSchema>;
 

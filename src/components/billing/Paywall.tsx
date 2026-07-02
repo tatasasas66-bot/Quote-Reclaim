@@ -67,11 +67,18 @@ export function Paywall({
           Don&apos;t let good quotes die quiet.
         </h2>
         <p className="text-sm leading-6 text-ink">
-          Quote Reclaim shows which silent estimates still matter, gives you
-          the follow-up priority, and turns each quiet quote into a ready
-          message plan for email, phone, SMS, and WhatsApp. At{" "}
-          {PAYWALL_PRICE_LABEL}, one recovered estimate can cover it many
-          times over. No guarantee of recovered revenue.
+          {hasSilent
+            ? "That number is work you already drove out, measured, and priced. "
+            : ""}
+          Quote Reclaim tells you which quiet estimate to reopen first and
+          hands you the message to send — for every estimate in your queue,
+          every week. At {PAYWALL_PRICE_LABEL}, one recovered job can cover
+          years of it. No guarantee of recovered revenue — just the math on
+          work you already quoted.
+        </p>
+        <p className="text-sm font-semibold leading-6 text-ink-strong">
+          Before buying another lead, reopen the estimates you already paid
+          to create.
         </p>
       </div>
 

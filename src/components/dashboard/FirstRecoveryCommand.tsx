@@ -121,6 +121,11 @@ export function FirstRecoveryCommand({
         ))}
       </ul>
 
+      <p className="mt-4 max-w-xl text-sm font-semibold leading-6 text-ink-strong">
+        Before buying another lead, work the estimates you already paid to
+        create.
+      </p>
+
       <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center">
         <Link href={importHref} className="w-full sm:w-auto">
           <Button
@@ -132,7 +137,7 @@ export function FirstRecoveryCommand({
         </Link>
         <Link href="/quotes/new" className="w-full sm:w-auto">
           <Button variant="secondary" size="lg" className="w-full sm:w-auto">
-            Add one quote manually
+            + Add Estimate
           </Button>
         </Link>
       </div>

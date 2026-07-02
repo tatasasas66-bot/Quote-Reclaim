@@ -15,6 +15,7 @@ import { PAYWALL_PRICE_LABEL } from "@/lib/payments/entitlement";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { createServiceSupabaseClient } from "@/lib/supabase/service";
 import { titleCaseName } from "@/lib/utils/title-case";
+import { tradeLabel } from "@/lib/quotes/quote-display";
 import { CADENCE_DAYS } from "@/lib/recovery/recovery-logic";
 import { persistRecoveryPlan, scheduleSendAt } from "./recovery-plan-write";
 import { quoteInputSchema, quoteUpdateSchema } from "./schema";
@@ -58,6 +59,19 @@ function quoteSentAtFromDaysSilent(daysSilent: number): string {
 function firstNameOf(fullName: string): string {
   const first = fullName.trim().split(/\s+/)[0] ?? "";
   return first.replace(/[.,]/g, "");
+}
+
+/**
+ * Display label for a quote created without a customer name (the audit
+ * promises "no customer names", so names are optional). Reads naturally in
+ * the queue next to the amount: "Driveway estimate", "HVAC estimate".
+ * Never used as a greeting — message generation greets "there" instead.
+ */
+function fallbackQuoteLabel(projectType: string, trade: string): string {
+  const project = projectType.trim();
+  if (project) return `${titleCaseName(project)} estimate`;
+  const tradeDisplay = tradeLabel(trade).trim();
+  return tradeDisplay ? `${tradeDisplay} estimate` : "Quiet estimate";
 }
 
 function firstStringValue(...values: unknown[]): string | null {
@@ -256,7 +270,13 @@ export async function createQuoteAction(
     };
   }
 
-  const normalizedClientName = titleCaseName(input.client_name);
+  // Name is optional (the audit promises "no customer names"). When blank we
+  // store a readable display fallback like "Driveway Estimate" — never an
+  // empty string (DB column is NOT NULL) and never a fake person name.
+  const hasRealName = input.client_name.trim().length > 0;
+  const normalizedClientName = hasRealName
+    ? titleCaseName(input.client_name)
+    : fallbackQuoteLabel(input.project_type, input.trade);
   const normalizedCity = input.city ? titleCaseName(input.city) : "";
   // State is already uppercased + US-validated by the schema transform.
 
@@ -292,7 +312,9 @@ export async function createQuoteAction(
   // sms reminders that the cron skips — the contractor uses Copy or "Send
   // early" instead.
   const channel: "sms" | "email" = input.client_email ? "email" : "sms";
-  const firstName = firstNameOf(normalizedClientName);
+  // With no real name, greet with "there" ("Hi there —") so generated message
+  // text never reads "Hi Driveway Estimate —".
+  const firstName = hasRealName ? firstNameOf(normalizedClientName) : "there";
   const contractorFirstName = contractorFirstNameOf(userData.user);
 
   // Generate + persist the 6-step plan through the ONE shared writer that the
@@ -382,6 +404,10 @@ export async function updateQuoteAction(
   }
   const input = parsed.data;
   const newQuoteSentAt = quoteSentAtFromDaysSilent(input.days_silent);
+  const hasRealName = input.client_name.trim().length > 0;
+  const updatedClientName = hasRealName
+    ? titleCaseName(input.client_name)
+    : fallbackQuoteLabel(input.project_type, input.trade);
 
   const updateResult = await userClient
     .from("quotes")
@@ -394,7 +420,7 @@ export async function updateQuoteAction(
       job_description: input.job_description || null,
       days_silent: input.days_silent,
       quote_sent_at: newQuoteSentAt,
-      client_name: titleCaseName(input.client_name),
+      client_name: updatedClientName,
       client_email: input.client_email || null,
       client_phone: input.client_phone || null,
     })
@@ -423,7 +449,7 @@ export async function updateQuoteAction(
     quoteId: id,
     channel: input.client_email ? "email" : "sms",
     recovery: {
-      firstName: firstNameOf(input.client_name),
+      firstName: hasRealName ? firstNameOf(input.client_name) : "there",
       contractorFirstName: contractorFirstNameOf(userData.user),
       trade: input.trade,
       projectType: input.project_type,

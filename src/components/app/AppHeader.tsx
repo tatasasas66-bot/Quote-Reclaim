@@ -8,9 +8,19 @@ import { cn } from "@/lib/utils/cn";
 type AppHeaderProps = {
   className?: string;
   upgrade?: ReactNode;
+  /**
+   * The Recovery Report link only earns header space once there is activity
+   * to report (follow-ups sent or jobs won). A brand-new contractor clicking
+   * into a page of zeros learns the wrong lesson about the product.
+   */
+  showReportLink?: boolean;
 };
 
-export function AppHeader({ className, upgrade }: AppHeaderProps) {
+export function AppHeader({
+  className,
+  upgrade,
+  showReportLink = true,
+}: AppHeaderProps) {
   return (
     <header
       data-testid="app-header"
@@ -36,13 +46,15 @@ export function AppHeader({ className, upgrade }: AppHeaderProps) {
       >
         {upgrade}
         <ThemeSelector />
-        <Link
-          href="/recovery-report"
-          className="inline-flex min-h-10 shrink-0 items-center justify-center gap-1.5 whitespace-nowrap rounded-md px-2.5 py-2 text-xs font-semibold text-ink-muted hover:bg-surface-2 hover:text-ink-strong focus:outline-none focus-visible:ring-2 focus-visible:ring-focus"
-        >
-          <BarChart3 className="h-4 w-4" aria-hidden="true" />
-          <span className="hidden md:inline">Recovery </span>Report
-        </Link>
+        {showReportLink ? (
+          <Link
+            href="/recovery-report"
+            className="inline-flex min-h-10 shrink-0 items-center justify-center gap-1.5 whitespace-nowrap rounded-md px-2.5 py-2 text-xs font-semibold text-ink-muted hover:bg-surface-2 hover:text-ink-strong focus:outline-none focus-visible:ring-2 focus-visible:ring-focus"
+          >
+            <BarChart3 className="h-4 w-4" aria-hidden="true" />
+            <span className="hidden md:inline">Recovery </span>Report
+          </Link>
+        ) : null}
         <form action="/api/auth/sign-out" method="post" className="shrink-0">
           <button
             type="submit"

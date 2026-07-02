@@ -133,7 +133,7 @@ export function CrewGapClient({ quotes, isPaid, freeRemaining }: Props) {
             estimates before it can recommend a recovery target.
             <div className="mt-3 flex flex-wrap gap-3">
               <Link href="/quotes/new">
-                <Button size="sm">+ Add Silent Quote</Button>
+                <Button size="sm">+ Add Estimate</Button>
               </Link>
               <Link
                 href="/quotes/import"

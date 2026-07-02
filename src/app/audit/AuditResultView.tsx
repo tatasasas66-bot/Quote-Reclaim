@@ -534,7 +534,7 @@ export function AuditResultView({
           </ol>
           <p className="mt-4 text-sm leading-6 text-ink-muted">
             $79/month after the free audit. First 3 estimates free. No card to
-            see your result.
+            see your result. One reopened job can cover years of it.
           </p>
         </section>
 

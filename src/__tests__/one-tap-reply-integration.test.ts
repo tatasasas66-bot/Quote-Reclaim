@@ -328,7 +328,7 @@ describe("homepage proof block", () => {
 
   it("keeps the existing $79/month / hero / footer chrome", () => {
     expect(homepage).toContain("PAYWALL_PRICE_LABEL");
-    expect(homepage).toContain("Run the free estimate audit");
+    expect(homepage).toContain("Show me which quote to text first");
     expect(homepage).toContain("Terms");
     expect(homepage).toContain("Privacy");
   });

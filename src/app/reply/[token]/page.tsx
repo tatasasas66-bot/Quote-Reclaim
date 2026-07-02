@@ -73,7 +73,8 @@ export default async function PublicReplyPage({ params }: PageParams) {
             Quick update on your estimate
           </h1>
           <p className="mt-3 text-sm leading-6 text-ink-muted">
-            Choose what fits best. This helps us know the right next step.
+            Choose what fits best. Your answer goes straight to{" "}
+            {contractorFirstName} — nothing else to write.
           </p>
         </header>
 

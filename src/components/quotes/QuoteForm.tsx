@@ -85,26 +85,9 @@ export function QuoteForm({ mode, initial, defaultTrade, action }: Props) {
 
       {mode === "create" ? <VoiceButton onComplete={applyVoice} /> : null}
 
-      <Input
-        label="Client name"
-        name="client_name"
-        required
-        defaultValue={clientName}
-        error={fieldError("client_name")}
-        autoComplete="off"
-        autoFocus={mode === "create"}
-      />
-      <TradeSelect
-        defaultValue={trade}
-        error={fieldError("trade")}
-        onChange={setSelectedTrade}
-      />
-      <ProjectTypeField
-        trade={selectedTrade}
-        value={projectType}
-        onChange={setProjectType}
-        error={fieldError("project_type")}
-      />
+      {/* Same two inputs as the free audit — amount + days quiet. Identity
+          comes later, optionally, so the audit's "no customer names" promise
+          holds on the first in-app action. */}
       <div className="grid gap-4 sm:grid-cols-2">
         <Input
           label="Estimate amount (USD)"
@@ -116,6 +99,7 @@ export function QuoteForm({ mode, initial, defaultTrade, action }: Props) {
           required
           defaultValue={amount}
           error={fieldError("estimate_amount")}
+          autoFocus={mode === "create"}
         />
         <Input
           label="Days since you sent the quote"
@@ -130,26 +114,53 @@ export function QuoteForm({ mode, initial, defaultTrade, action }: Props) {
           error={fieldError("days_silent")}
         />
       </div>
-      <div className="grid gap-4 sm:grid-cols-2">
+      <TradeSelect
+        defaultValue={trade}
+        error={fieldError("trade")}
+        onChange={setSelectedTrade}
+      />
+      <ProjectTypeField
+        trade={selectedTrade}
+        value={projectType}
+        onChange={setProjectType}
+        error={fieldError("project_type")}
+      />
+      <div className="space-y-4 rounded-lg border border-line-subtle bg-surface-2 p-4">
+        <p className="text-sm font-semibold text-ink-strong">
+          Customer details <span className="font-medium text-ink-muted">(all optional)</span>
+        </p>
         <Input
-          label="Client email"
-          name="client_email"
-          type="email"
-          inputMode="email"
-          defaultValue={initial?.client_email ?? ""}
-          hint="Email OR phone required so the recovery plan can reach the customer."
-          error={fieldError("client_email")}
+          label="Customer name (optional)"
+          name="client_name"
+          defaultValue={clientName}
+          hint="Works without a name — we'll label it by the job."
+          error={fieldError("client_name")}
           autoComplete="off"
         />
-        <Input
-          label="Client phone"
-          name="client_phone"
-          type="tel"
-          inputMode="tel"
-          defaultValue={initial?.client_phone ?? ""}
-          error={fieldError("client_phone")}
-          autoComplete="off"
-        />
+        <div className="grid gap-4 sm:grid-cols-2">
+          <Input
+            label="Customer email (optional)"
+            name="client_email"
+            type="email"
+            inputMode="email"
+            defaultValue={initial?.client_email ?? ""}
+            error={fieldError("client_email")}
+            autoComplete="off"
+          />
+          <Input
+            label="Customer phone (optional)"
+            name="client_phone"
+            type="tel"
+            inputMode="tel"
+            defaultValue={initial?.client_phone ?? ""}
+            error={fieldError("client_phone")}
+            autoComplete="off"
+          />
+        </div>
+        <p className="text-xs leading-5 text-ink-muted">
+          Add email or phone when you&apos;re ready to send. Leave them blank
+          and nothing can ever go out for this estimate.
+        </p>
       </div>
 
       <details className="group rounded-lg border border-line-subtle bg-surface-2 p-4 open:bg-surface-3">

@@ -38,17 +38,15 @@ describe("quoteInputSchema", () => {
     expect(result.success).toBe(true);
   });
 
-  it("rejects when both email and phone are empty", () => {
+  it("accepts a quote with no email and no phone (contact is optional at creation)", () => {
+    // The audit promises "no phone numbers" — contact info is added when the
+    // contractor is ready to send, never demanded up front.
     const result = quoteInputSchema.safeParse({
       ...valid,
       client_email: "",
       client_phone: "",
     });
-    expect(result.success).toBe(false);
-    if (!result.success) {
-      const paths = result.error.issues.map((i) => i.path.join("."));
-      expect(paths).toContain("client_email");
-    }
+    expect(result.success).toBe(true);
   });
 
   it("rejects a negative estimate_amount", () => {
@@ -72,9 +70,10 @@ describe("quoteInputSchema", () => {
     if (result.success) expect(result.data.state).toBe("TX");
   });
 
-  it("rejects client_name of empty string", () => {
+  it("accepts a blank client_name (names are optional — audit promise)", () => {
     const result = quoteInputSchema.safeParse({ ...valid, client_name: "  " });
-    expect(result.success).toBe(false);
+    expect(result.success).toBe(true);
+    if (result.success) expect(result.data.client_name).toBe("");
   });
 
   it("rejects a malformed email", () => {

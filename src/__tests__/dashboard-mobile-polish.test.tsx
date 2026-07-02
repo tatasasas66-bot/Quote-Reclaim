@@ -2,7 +2,7 @@
  * @vitest-environment happy-dom
  *
  * Mobile dashboard polish guarantees:
- *   - sticky CTA renders the exact "+ Add Silent Quote" label
+ *   - sticky CTA renders the exact "+ Add Estimate" label
  *   - mobile header de-emphasizes Sign out below Upgrade
  *   - activity feed collapses repeated "Recovery plan built" events
  *   - Recovery Pattern (formerly DNA) shows the dynamic "Y to go" copy
@@ -36,12 +36,12 @@ const receiptSrc = readSource("../components/dashboard/RecoveryReceipt.tsx");
 afterEach(cleanup);
 
 // ---------------------------------------------------------------------------
-// Sticky + Add Silent Quote — label is exact, bottom padding sized for the bar
+// Sticky + Add Estimate — label is exact, bottom padding sized for the bar
 // ---------------------------------------------------------------------------
 
-describe("Sticky '+ Add Silent Quote' CTA", () => {
-  it("renders the exact text '+ Add Silent Quote' (no 'Add Quiet Quote' variant)", () => {
-    expect(dashboard).toContain("+ Add Silent Quote");
+describe("Sticky '+ Add Estimate' CTA", () => {
+  it("renders the exact text '+ Add Estimate' (no 'Add Quiet Quote' variant)", () => {
+    expect(dashboard).toContain("+ Add Estimate");
     expect(dashboard).not.toMatch(/Add Quiet Quote/);
   });
 
@@ -61,15 +61,15 @@ describe("Sticky '+ Add Silent Quote' CTA", () => {
     expect(dashboard).toMatch(/sm:pb-8/);
   });
 
-  it("desktop renders a SECOND '+ Add Silent Quote' in the queue header (hidden on mobile)", () => {
+  it("desktop renders a SECOND '+ Add Estimate' in the queue header (hidden on mobile)", () => {
     // The queue-header CTA cluster (Add + Paste more quotes) is desktop-only
     // (hidden sm:flex on the wrapper) so it never competes with the sticky
     // mobile bar. Both use the exact same primary label.
     expect(dashboard).toMatch(
-      /hidden items-center gap-3 sm:flex[\s\S]*?<Link href="\/quotes\/new">[\s\S]*?\+ Add Silent Quote/,
+      /hidden items-center gap-3 sm:flex[\s\S]*?<Link href="\/quotes\/new">[\s\S]*?\+ Add Estimate/,
     );
     // The label appears at least twice (desktop header + sticky mobile bar).
-    const occurrences = dashboard.split("+ Add Silent Quote").length - 1;
+    const occurrences = dashboard.split("+ Add Estimate").length - 1;
     expect(occurrences).toBeGreaterThanOrEqual(2);
   });
 
@@ -86,8 +86,8 @@ describe("Sticky '+ Add Silent Quote' CTA", () => {
     expect(headerAddIdx).toBeLessThan(stickyIdx);
   });
 
-  it("the old bare 'Add Silent Quote' (no '+') queue button is gone", () => {
-    expect(dashboard).not.toMatch(/<Button size="sm">Add Silent Quote<\/Button>/);
+  it("the old bare 'Add Estimate' (no '+') queue button is gone", () => {
+    expect(dashboard).not.toMatch(/<Button size="sm">Add Estimate<\/Button>/);
   });
 });
 

@@ -234,16 +234,16 @@ export default function HomePage() {
             </h1>
             <p className="mt-6 max-w-[680px] break-words text-[17px] leading-8 text-ink">
               Quote Reclaim shows which quiet estimate to follow up first, the
-              low-pressure message to send today, and the next move to keep every sent estimate moving
-              until it books, pauses, or closes. Before buying another lead, check the estimates you
-              already sent.
+              low-pressure message to send today, and the next move to keep
+              every sent estimate moving. Before buying another lead, check
+              the estimates you already sent.
             </p>
             <div className="mt-5 flex flex-wrap items-center gap-3 pt-1">
               <Link
                 href="/audit"
                 className="inline-flex min-h-[52px] items-center justify-center gap-2 rounded-[10px] border border-brand bg-brand px-6 py-3.5 text-base font-semibold text-white shadow-premium transition-all hover:bg-brand-dark hover:shadow-premium-hover focus:outline-none focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2 focus-visible:ring-offset-canvas"
               >
-                Run the free estimate audit
+                Show me which quote to text first
                 <ArrowRight className="h-4 w-4" aria-hidden="true" />
               </Link>
               <a

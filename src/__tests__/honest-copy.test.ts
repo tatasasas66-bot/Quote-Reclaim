@@ -26,7 +26,7 @@ describe("honest conversion copy renders on each surface", () => {
     expect(SURFACES.homepage).toMatch(
       /Buying another lead while old estimates sit untouched is an\s+expensive habit\./,
     );
-    expect(SURFACES.homepage).toMatch(/Run the free estimate audit/);
+    expect(SURFACES.homepage).toMatch(/Show me which quote to text first/);
     expect(SURFACES.homepage).toMatch(
       /The audit is the doorway\. Quote Reclaim is the recovery system\./,
     );
@@ -71,8 +71,8 @@ describe("honest conversion copy renders on each surface", () => {
   it("paywall uses Pro framing + honest value copy", () => {
     expect(SURFACES.paywall).toMatch(/QUOTE RECLAIM PRO/);
     expect(SURFACES.paywall).toMatch(/Don&apos;t let good quotes die quiet\./);
-    expect(SURFACES.paywall).toMatch(/message plan for email, phone, SMS, and WhatsApp/);
-    expect(SURFACES.paywall).toMatch(/one recovered estimate can cover it many\s+times over/i);
+    expect(SURFACES.paywall).toMatch(/tells you which quiet estimate to reopen first and\s+hands you the message to send/);
+    expect(SURFACES.paywall).toMatch(/one recovered job can cover\s+years of it/i);
     expect(SURFACES.paywall).toMatch(/No guarantee of recovered revenue/);
   });
 });

@@ -329,7 +329,10 @@ describe("Paywall component", () => {
     expect(paywall).toContain("QUOTE RECLAIM PRO");
     expect(paywall).toMatch(/Don&apos;t let good quotes die quiet\./);
     expect(paywall).not.toMatch(/follows\s+up by email automatically\./);
-    expect(paywall).toMatch(/one recovered estimate can cover it many\s+times over/i);
+    expect(paywall).toMatch(/one recovered job can cover\s+years of it/i);
+    expect(paywall).toMatch(
+      /Before buying another lead, reopen the estimates you already paid\s+to\s+create/i,
+    );
     expect(paywall).toMatch(/No guarantee of recovered revenue/i);
     expect(paywall).toContain("Unlock Silent Quote Command - ${PAYWALL_PRICE_LABEL}");
     expect(paywall).toContain("Not now");

@@ -15,9 +15,15 @@ const DEFAULT_VISIBLE_MOVES = 3;
 export function TodaysMoves({
   moves,
   streak,
+  showStreak = true,
 }: {
   moves: TodayMove[];
   streak: RecoveryStreak;
+  /**
+   * Streak chatter is hidden for brand-new contractors (dashboard focus
+   * mode) — a "0-day streak" line is noise before the first move is sent.
+   */
+  showStreak?: boolean;
 }) {
   const [copiedId, setCopiedId] = React.useState<string | null>(null);
   const [showAll, setShowAll] = React.useState(false);
@@ -60,16 +66,18 @@ export function TodaysMoves({
           </h2>
         </div>
         <div className="flex flex-wrap items-center justify-end gap-x-4 gap-y-2">
-          {streak.count > 0 ? (
-            <div className="flex items-center gap-2 text-sm font-black text-warning">
-              <Flame className="h-5 w-5" aria-hidden="true" />
-              {streak.count}-day recovery streak
-            </div>
-          ) : (
-            <p className="text-sm font-semibold text-ink-muted">
-              Your recovery streak starts with your first move.
-            </p>
-          )}
+          {showStreak ? (
+            streak.count > 0 ? (
+              <div className="flex items-center gap-2 text-sm font-black text-warning">
+                <Flame className="h-5 w-5" aria-hidden="true" />
+                {streak.count}-day recovery streak
+              </div>
+            ) : (
+              <p className="text-sm font-semibold text-ink-muted">
+                Your recovery streak starts with your first move.
+              </p>
+            )
+          ) : null}
           {moves.length > 0 ? (
             <a
               href="#silent-quote-command"

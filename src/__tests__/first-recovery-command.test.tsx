@@ -57,10 +57,10 @@ describe("FirstRecoveryCommand — fresh free user", () => {
     expect(primary.getAttribute("href")).toBe("/onboarding/reveal");
   });
 
-  it("secondary CTA adds one quote manually and links to /quotes/new", () => {
+  it("secondary CTA adds a single estimate and links to /quotes/new", () => {
     render(React.createElement(FirstRecoveryCommand, FRESH_FREE));
     const secondary = screen.getByRole("link", {
-      name: /Add one quote manually/i,
+      name: /\+ Add Estimate/i,
     });
     expect(secondary.getAttribute("href")).toBe("/quotes/new");
   });

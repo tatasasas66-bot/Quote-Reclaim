@@ -144,6 +144,17 @@ export default async function DashboardPage() {
   const showFirstRecoveryCommand = pending.length === 0;
   const hasPendingQuotes = pending.length !== 0;
 
+  // Focus mode — a contractor with fewer than 3 estimates gets ONLY what
+  // moves them through the corridor (queue → today's message → first reply).
+  // Streaks, intelligence, weekly rituals, and secondary metric cards appear
+  // once there is enough data for them to mean something. The first screen
+  // must answer one question: "Who do I follow up with, and what do I send?"
+  const focusMode = pending.length < 3 && !hasRecoveredBefore;
+  const showRecoveryReportLink =
+    !focusMode ||
+    monthlyActivity.emailFollowupsSent > 0 ||
+    wonQuotes.length > 0;
+
   // Paid-For-Itself Meter — biggest pending quote drives the months-covered
   // anchor. Real data only; the component renders nothing when the queue is
   // empty or the biggest quote is too small for the math to mean anything.
@@ -156,6 +167,7 @@ export default async function DashboardPage() {
     <main className="mx-auto flex min-h-screen w-full max-w-7xl flex-col gap-8 bg-canvas px-4 pt-5 pb-[calc(6rem+env(safe-area-inset-bottom))] sm:px-6 sm:pb-8 lg:px-8">
       <PwaInstallHint />
       <AppHeader
+        showReportLink={showRecoveryReportLink}
         upgrade={
           <UpgradeButton
             userId={user.id}
@@ -165,7 +177,7 @@ export default async function DashboardPage() {
           />
         }
       />
-      <TodaysMoves moves={todaysMoves} streak={streak} />
+      <TodaysMoves moves={todaysMoves} streak={streak} showStreak={!focusMode} />
       <section id="silent-quote-command" className="scroll-mt-4">
         <h1 className="text-3xl font-black leading-tight text-ink-strong sm:text-4xl">
           Silent Quote Command
@@ -212,7 +224,7 @@ export default async function DashboardPage() {
         priorityQuoteId={priorityQuote?.id ?? null}
       />
 
-      {hasPendingQuotes ? (
+      {hasPendingQuotes && !focusMode ? (
         <Link
           href="/crew-gap"
           data-testid="crew-gap-dashboard-entry"
@@ -233,13 +245,15 @@ export default async function DashboardPage() {
         </Link>
       ) : null}
 
-      <MetricCards
-        coldestDays={coldest ? effectiveDaysSilent(coldest) : null}
-        coldestTrade={coldest?.trade ? tradeLabel(coldest.trade) : null}
-        atRiskCount={atRiskCount}
-        jobsWonLifetime={jobsWonLifetime}
-        avgDaysToWin={avgDaysToWin}
-      />
+      {!focusMode ? (
+        <MetricCards
+          coldestDays={coldest ? effectiveDaysSilent(coldest) : null}
+          coldestTrade={coldest?.trade ? tradeLabel(coldest.trade) : null}
+          atRiskCount={atRiskCount}
+          jobsWonLifetime={jobsWonLifetime}
+          avgDaysToWin={avgDaysToWin}
+        />
+      ) : null}
 
       <div className="grid gap-8 lg:grid-cols-[minmax(0,2fr)_minmax(280px,0.85fr)]">
         <section className="min-w-0 space-y-4">
@@ -256,10 +270,12 @@ export default async function DashboardPage() {
             </div>
             {/* Desktop-only action cluster — anchors the queue section header.
                 On mobile the sticky bottom CTA below is the single source for
-                "+ Add Silent Quote" so we never render two competing buttons.
+                "+ Add Estimate" so we never render two competing buttons.
                 Bulk import sits as a secondary text link beside Add so the
                 primary action stays dominant — but a contractor with 20 more
-                old estimates always has the door right where they expect it. */}
+                old estimates always has the door right where they expect it.
+                (Voice capture lives inside the add form itself — one primary
+                door, not three.) */}
             <div className="hidden items-center gap-3 sm:flex">
               <Link
                 href="/quotes/import"
@@ -268,34 +284,16 @@ export default async function DashboardPage() {
               >
                 Paste more quotes →
               </Link>
-              <Link
-                href="/quotes/new?voice=1"
-                className="rounded text-sm font-semibold text-ink-muted hover:text-ink-strong focus:outline-none focus-visible:ring-2 focus-visible:ring-focus"
-              >
-                🎙 Add by voice
-              </Link>
               <Link href="/quotes/new">
-                <Button size="sm">+ Add Silent Quote</Button>
+                <Button size="sm">+ Add Estimate</Button>
               </Link>
             </div>
           </div>
 
           {pending.length === 0 ? (
-            // Slim, secondary hint — the First Recovery Command panel above is
-            // the single focal point on an empty dashboard, so this stays quiet
-            // and just explains what will land here.
-            <div className="rounded-2xl border border-dashed border-line-strong bg-white px-6 py-8 shadow-premium">
-              <p className="text-sm leading-6 text-ink-muted">
-                No quiet quotes yet. Add your first — amount and days quiet —
-                and we&apos;ll tell you what to text today.
-              </p>
-              <Link
-                href="/quotes/new"
-                className="mt-4 inline-flex min-h-11 items-center rounded-[10px] bg-brand px-4 py-2 text-sm font-bold text-white shadow-premium focus:outline-none focus-visible:ring-2 focus-visible:ring-focus"
-              >
-                Add Silent Quote →
-              </Link>
-            </div>
+            // The First Recovery Command panel above is the ONLY empty state —
+            // a second "nothing here" box on the same screen just dilutes it.
+            null
           ) : (
             <ul className="grid gap-3">
               {pending.map((q) => (
@@ -349,14 +347,21 @@ export default async function DashboardPage() {
               pendingCount={pending.length}
             />
           ) : null}
-          <IntelligencePanel
-            totalSequences={pending.length + jobsWonLifetime}
-            unlockAt={5}
-          />
-          <SundayNightReset
-            enabled={profile?.briefing_enabled !== false}
-          />
-          <ActivityFeed userId={user.id} />
+          {/* Intelligence, weekly ritual, and the activity feed earn their
+              screen space only once real data exists — before that they read
+              as locked doors and zeros to a brand-new contractor. */}
+          {!focusMode ? (
+            <>
+              <IntelligencePanel
+                totalSequences={pending.length + jobsWonLifetime}
+                unlockAt={5}
+              />
+              <SundayNightReset
+                enabled={profile?.briefing_enabled !== false}
+              />
+              <ActivityFeed userId={user.id} />
+            </>
+          ) : null}
         </aside>
       </div>
 
@@ -370,7 +375,7 @@ export default async function DashboardPage() {
           href="/quotes/new"
           className="inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-[10px] border border-brand bg-brand px-4 py-3 text-sm font-semibold text-white shadow-premium active:scale-[0.99]"
         >
-          + Add Silent Quote
+          + Add Estimate
         </Link>
       </div>
     </main>

@@ -63,7 +63,7 @@ describe("Homepage hero copy (honest conversion rewrite)", () => {
   });
 
   it("primary CTA runs the public free audit", () => {
-    expect(homepage).toMatch(/Run the free estimate audit/);
+    expect(homepage).toMatch(/Show me which quote to text first/);
     expect(homepage).toMatch(/href="\/audit"/);
     expect(homepage).not.toMatch(/Find Silent Money/);
   });
