@@ -20,6 +20,10 @@ export default function ContactPage() {
 
       <LegalSection heading="Support">
         <p>
+          Quote Reclaim is built and supported by its founder &mdash; support
+          email goes to the person who built the product.
+        </p>
+        <p>
           Email{" "}
           <a
             href={`mailto:${SUPPORT_EMAIL}`}

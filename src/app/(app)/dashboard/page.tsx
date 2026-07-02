@@ -249,7 +249,12 @@ export default async function DashboardPage({
         </section>
       ) : null}
 
-      <TodaysMoves moves={todaysMoves} streak={streak} showStreak={!focusMode} />
+      {focusMode && pending.length === 0 ? null : (
+        // Focus mode with an empty queue: FirstRecoveryCommand below is the
+        // single call to action — a "No moves due right now" box under the
+        // mission header would just be a zero-state stealing its space.
+        <TodaysMoves moves={todaysMoves} streak={streak} showStreak={!focusMode} />
+      )}
 
       {showFirstRecoveryCommand ? (
         <FirstRecoveryCommand

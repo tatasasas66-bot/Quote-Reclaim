@@ -282,9 +282,13 @@ describe("[8] public reply page leaks no contractor or customer private data", (
     expect(publicPage).not.toMatch(/\{quote\.user_id\}/);
   });
 
-  it("the contractor name derivation strips the @ domain and only uses the local part's first word", () => {
+  it("the contractor name derivation strips the @ domain, uses only the local part's first word, and rejects business-y local parts", () => {
     expect(publicPage).toMatch(/email\.split\("@"\)\[0\]/);
-    expect(publicPage).toMatch(/titleCaseName\(cleaned\)\.split\(\/\\s\+\/\)\[0\]/);
+    expect(publicPage).toMatch(/titleCaseName\(first\)\.split\(\/\\s\+\/\)\[0\]/);
+    // Hardened fallback: trade/role-word or non-name-shaped local parts must
+    // render "your contractor", never mush like "Azconcretepros".
+    expect(publicPage).toContain("NON_NAME_LOCAL_PART");
+    expect(publicPage).toMatch(/return "your contractor";/);
   });
 
   it("logs only error codes — never the raw token, email body, or message text", () => {

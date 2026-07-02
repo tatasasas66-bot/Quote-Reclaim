@@ -17,7 +17,7 @@ import {
 import { isReplyIntent } from "@/lib/ai/classify-reply";
 import { suggestResponse } from "@/lib/ai/suggest-response";
 import { requireUser } from "@/lib/auth/require-user";
-import { MONTHLY_PRICE_USD } from "@/lib/payments/entitlement";
+import { roiFraming } from "@/lib/utils/roi-framing";
 import {
   getLatestOneTapReply,
 } from "@/lib/quotes/one-tap-reply-server";
@@ -347,9 +347,9 @@ function QuoteSummary({
     viewModel.quote.trade,
     viewModel.quote.projectType,
   );
-  const opportunityMultiple = Math.floor(
-    viewModel.quote.amount / MONTHLY_PRICE_USD,
-  );
+  // Honest ROI phrasing via the shared helper — months stay months, and only
+  // 24+ months flips to an annual-multiple frame. Never label months "years".
+  const opportunityPhrase = roiFraming(viewModel.quote.amount);
 
   return (
     <section className="overflow-hidden rounded-2xl border border-line-subtle bg-white shadow-premium">
@@ -434,9 +434,8 @@ function QuoteSummary({
             className="mb-4 max-w-3xl text-sm font-semibold leading-6 text-ink-strong"
           >
             If this {projectNoun} comes back, that&apos;s{" "}
-            {viewModel.quote.amountLabel} / ${MONTHLY_PRICE_USD} ={" "}
-            {opportunityMultiple}x a year of Quote Reclaim. No promises
-            &mdash; just the size of the opportunity.
+            {viewModel.quote.amountLabel} &mdash; about {opportunityPhrase}.
+            No promises &mdash; just the size of the opportunity.
           </p>
           <div className="flex flex-wrap items-center gap-3">
             <QuoteActions

@@ -113,12 +113,23 @@ export default async function PublicReplyPage({ params }: PageParams) {
   );
 }
 
+// Business-y or role-mailbox local parts must never leak onto the
+// homeowner-facing page as a "name" ("Sent by Azconcretepros" reads broken).
+// Substring match on purpose: over-rejecting into "your contractor" is safe;
+// rendering mush is not.
+const NON_NAME_LOCAL_PART =
+  /(concrete|hvac|roof|paint|plumb|fence|landscap|remodel|floor|electric|garage|pool|tree|siding|drywall|window|door|pro|llc|inc|corp|service|team|crew|info|office|admin|contact|sales|support|hello|mail|quote|estimate|build|construct|company|group|home)/;
+
 function pickContractorName(email: string | null | undefined): string {
   if (!email) return "your contractor";
   const local = email.split("@")[0] ?? "";
-  const cleaned = local.replace(/[._\-+]+/g, " ").trim();
-  if (!cleaned) return "your contractor";
-  return titleCaseName(cleaned).split(/\s+/)[0] || "your contractor";
+  const first =
+    local.replace(/[._\-+0-9]+/g, " ").trim().split(/\s+/)[0] ?? "";
+  // Only accept a plausible human first name: short, purely alphabetic, and
+  // free of trade/role words. Everything else falls back to a clean generic.
+  if (!/^[a-zA-Z]{2,12}$/.test(first)) return "your contractor";
+  if (NON_NAME_LOCAL_PART.test(first.toLowerCase())) return "your contractor";
+  return titleCaseName(first).split(/\s+/)[0] || "your contractor";
 }
 
 function Unavailable() {

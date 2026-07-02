@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import { Badge, Logo, TrustStrip } from "@/components/ui";
 import { PAYWALL_PRICE_LABEL } from "@/lib/payments/entitlement";
+import { SUPPORT_EMAIL } from "@/lib/payments/disabled-provider";
 
 export const metadata: Metadata = {
   title: "Quote Reclaim - Quiet estimate recovery for contractors",
@@ -508,10 +509,16 @@ export default function HomePage() {
 
       <SectionShell id="not-crm" eyebrow="FOCUSED BY DESIGN">
         <div className="grid gap-7 lg:grid-cols-[0.78fr_1.22fr] lg:items-start">
-          <SectionHeading
-            title="Built for the part after the estimate goes quiet."
-            body="Your current system helps you create the estimate, send it, schedule jobs, and keep records. Quote Reclaim starts after that — when the homeowner goes silent and you need to know which estimate to reopen first, what to send today, and what to do next if they reply."
-          />
+          <div className="min-w-0">
+            <SectionHeading
+              title="Built for the part after the estimate goes quiet."
+              body="Your current system helps you create the estimate, send it, schedule jobs, and keep records. Quote Reclaim starts after that — when the homeowner goes silent and you need to know which estimate to reopen first, what to send today, and what to do next if they reply."
+            />
+            <p className="mt-4 text-base font-bold leading-7 text-ink-strong">
+              Keep the system you already use &mdash; Quote Reclaim starts
+              after the estimate goes quiet.
+            </p>
+          </div>
           <div className="grid gap-3 md:grid-cols-3">
             {comparison.map((column) => (
               <article
@@ -651,10 +658,21 @@ export default function HomePage() {
       </section>
 
       <footer className="mx-auto flex w-full max-w-6xl flex-wrap items-center justify-between gap-x-4 gap-y-3 border-t border-line-subtle/80 px-4 py-6 text-sm text-ink-muted sm:px-6 lg:px-8">
-        <p>
-          Quote Reclaim helps contractors work quiet estimates until they book
-          or close. Not lead generation. Not scheduling software.
-        </p>
+        <div className="max-w-xl">
+          <p>
+            Quote Reclaim helps contractors work quiet estimates until they
+            book or close. Not lead generation. Not scheduling software.
+          </p>
+          <p className="mt-2">
+            Built and supported by the Quote Reclaim founder. Questions?{" "}
+            <a
+              href={`mailto:${SUPPORT_EMAIL}`}
+              className="font-semibold text-ink hover:text-ink-strong"
+            >
+              {SUPPORT_EMAIL}
+            </a>
+          </p>
+        </div>
         <nav
           aria-label="Legal"
           className="flex flex-wrap items-center gap-x-3 gap-y-1"

@@ -148,11 +148,14 @@ describe("FIX 2 — ROI equation lives in exactly two places product-wide", () =
     expect(receiptSrc).not.toMatch(/Math\.floor/);
   });
 
-  it("no other surface in app/ or components/ imports roi-framing (the contract is two callers, exactly)", () => {
-    // The helper is used by exactly two callers. Any new caller must be
-    // justified — three repetitions of the equation in one journey reads as
-    // pleading.
+  it("no other surface in app/ or components/ imports roi-framing (the contract is three callers, exactly)", () => {
+    // The helper is used by exactly three callers. Any new caller must be
+    // justified — extra repetitions of the equation in one journey read as
+    // pleading. The quote detail page earned its slot by REPLACING a buggy
+    // inline equation (amount/79 mislabeled as "Nx a year") with the shared
+    // honest helper — same surface, correct math, no new repetition.
     const allowed = [
+      "app/(app)/quotes/[id]/page.tsx",
       "components/dashboard/PaidForItselfMeter.tsx",
       "components/dashboard/WinMomentOverlay.tsx",
     ].sort();
