@@ -155,7 +155,7 @@ export function FullAutoMarketingClient({
             <p className="mt-2 max-w-3xl text-sm leading-6 text-ink-muted">
               Apify finds public contractor leads, verification protects sender
               reputation, and Smartlead runs controlled outreach. Resend and
-              customer recovery email are not part of this pipeline.
+              customer recovery email are not part of this flow.
             </p>
             <p className="mt-1 text-xs leading-5 text-ink-muted">
               Cron-ready endpoint: /api/cron/full-auto-marketing. Authenticate
@@ -230,7 +230,7 @@ export function FullAutoMarketingClient({
 
         <section aria-labelledby="metrics-heading">
           <h2 id="metrics-heading" className="mb-3 text-lg font-black text-ink-strong">
-            Pipeline
+            Queue
           </h2>
           <div className="grid grid-cols-2 gap-px overflow-hidden border border-line-subtle bg-line-subtle sm:grid-cols-4 lg:grid-cols-6">
             <Metric label="Leads found" value={metrics.leadsFound} />

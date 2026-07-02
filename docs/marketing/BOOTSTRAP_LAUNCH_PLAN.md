@@ -1,5 +1,11 @@
 # Bootstrap launch plan — $100–$200
 
+> ⚠️ SUPERSEDED 2026-07-02 by `docs/marketing/full-auto/README.md`.
+> This plan is founder-led (manual calls/DMs/daily prospecting), which is
+> now an explicitly rejected constraint. Kept for its niche notes and
+> risk table. Note it also references the old $49 price; the product is
+> $79/month.
+
 > Last updated 2026-06-10. Founder: Quote Reclaim. Status: pre-billing
 > (Lemon rejected, future MoR review in progress). Free product fully
 > usable; manual paid activation only.
