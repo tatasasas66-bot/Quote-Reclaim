@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import Link from "next/link";
 import { BarChart3, LogOut } from "lucide-react";
 import { LogoFull } from "@/components/brand/Logo";
+import { ThemeSelector } from "@/components/app/ThemeSelector";
 import { cn } from "@/lib/utils/cn";
 
 type AppHeaderProps = {
@@ -34,6 +35,7 @@ export function AppHeader({ className, upgrade }: AppHeaderProps) {
         className="flex w-full flex-wrap items-center gap-1.5 sm:w-auto sm:justify-end sm:gap-2"
       >
         {upgrade}
+        <ThemeSelector />
         <Link
           href="/recovery-report"
           className="inline-flex min-h-10 shrink-0 items-center justify-center gap-1.5 whitespace-nowrap rounded-md px-2.5 py-2 text-xs font-semibold text-ink-muted hover:bg-surface-2 hover:text-ink-strong focus:outline-none focus-visible:ring-2 focus-visible:ring-focus"

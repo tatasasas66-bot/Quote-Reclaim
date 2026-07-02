@@ -10,6 +10,7 @@ import {
 } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { RevealClient } from "@/app/(app)/onboarding/reveal/RevealClient";
+import { AppThemeProvider } from "@/components/app/AppThemeProvider";
 import { researchSequenceMessages } from "@/lib/ai/fallback-messages";
 import { AUDIT_HANDOFF_KEY } from "@/lib/onboarding/audit-handoff";
 
@@ -51,6 +52,15 @@ beforeEach(() => {
   mocks.push.mockReset();
   mocks.skip.mockReset();
   window.sessionStorage.clear();
+  window.localStorage.clear();
+  Object.defineProperty(window, "matchMedia", {
+    configurable: true,
+    value: vi.fn().mockReturnValue({
+      matches: false,
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+    }),
+  });
   seedAuditHandoff();
   mocks.importQuotes.mockResolvedValue({
     ok: true,
@@ -64,15 +74,17 @@ beforeEach(() => {
 
 afterEach(cleanup);
 
+function renderReveal() {
+  return render(
+    <AppThemeProvider>
+      <RevealClient isPaid={false} usageCount={0} pendingCount={0} />
+    </AppThemeProvider>,
+  );
+}
+
 describe("audit reveal project type persistence", () => {
   it("submits Concrete and the typed Patio datalist value", async () => {
-    render(
-      <RevealClient
-        isPaid={false}
-        usageCount={0}
-        pendingCount={0}
-      />,
-    );
+    renderReveal();
 
     const projectType = await screen.findByLabelText(/Project type/i);
     fireEvent.change(projectType, { target: { value: "Patio" } });
@@ -104,13 +116,7 @@ describe("audit reveal project type persistence", () => {
   });
 
   it("allows an intentionally blank project type and keeps copy neutral", async () => {
-    render(
-      <RevealClient
-        isPaid={false}
-        usageCount={0}
-        pendingCount={0}
-      />,
-    );
+    renderReveal();
 
     await screen.findByLabelText(/Project type/i);
     fireEvent.click(

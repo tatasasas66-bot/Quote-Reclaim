@@ -21,6 +21,44 @@
   --qr-focus: 50 119 64;
 }
 
+.app-theme-root {
+  color-scheme: light;
+}
+
+.app-theme-root[data-app-theme="dark"] {
+  color-scheme: dark;
+  --qr-bg-canvas: 10 17 13;
+  --qr-bg-surface-1: 16 27 20;
+  --qr-bg-surface-2: 21 35 26;
+  --qr-bg-surface-3: 27 45 33;
+  --qr-border-subtle: 43 65 50;
+  --qr-border-strong: 59 84 66;
+  --qr-text-strong: 244 247 243;
+  --qr-text-default: 209 220 211;
+  --qr-text-muted: 155 173 159;
+  --qr-brand-primary: 91 184 111;
+  --qr-brand-dark: 72 157 91;
+  --qr-money-gold: 112 198 130;
+  --qr-success: 91 184 111;
+  --qr-warning: 224 172 87;
+  --qr-danger: 232 111 102;
+  --qr-focus: 111 207 132;
+}
+
+.app-theme-root[data-app-theme="dark"] .bg-white {
+  background-color: rgb(var(--qr-bg-surface-1));
+}
+
+.app-theme-root[data-app-theme="dark"] .shadow-premium {
+  box-shadow:
+    0 1px 3px rgb(0 0 0 / 0.3),
+    0 1px 2px rgb(0 0 0 / 0.38);
+}
+
+.app-theme-root[data-app-theme="dark"] .shadow-premium-hover {
+  box-shadow: 0 6px 16px rgb(0 0 0 / 0.36);
+}
+
 html {
   color-scheme: light;
   scroll-behavior: smooth;

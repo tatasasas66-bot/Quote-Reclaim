@@ -96,7 +96,9 @@ describe("Homepage hero copy (honest conversion rewrite)", () => {
     expect(homepage).toMatch(/SAMPLE PREVIEW - NOT CUSTOMER DATA/);
     expect(homepage).toMatch(/5-message sequence/);
     expect(homepage).toMatch(/Got the Job/);
-    expect(homepage).toMatch(/Not another CRM\. Not another estimating app\./);
+    expect(homepage).toMatch(
+      /Built for the part after the estimate goes quiet\./,
+    );
   });
 });
 

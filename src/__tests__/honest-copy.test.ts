@@ -30,7 +30,9 @@ describe("honest conversion copy renders on each surface", () => {
     expect(SURFACES.homepage).toMatch(
       /The audit is the doorway\. Quote Reclaim is the recovery system\./,
     );
-    expect(SURFACES.homepage).toMatch(/Not another CRM\. Not another estimating app\./);
+    expect(SURFACES.homepage).toMatch(
+      /Built for the part after the estimate goes quiet\./,
+    );
   });
 
   it("sign-in left panel reframes lead-chasing toward sent quotes", () => {
@@ -204,8 +206,7 @@ describe("banned-content audit: no false claims anywhere in the UI", () => {
     }
   });
 
-  it("mentions other tools only as non-replacement context, never as integrations", () => {
-    expect(SURFACES.homepage).toMatch(/Keep Jobber, Housecall Pro, DripJobs/);
+  it("makes no unsupported integration claims", () => {
     for (const [name, src] of Object.entries(SURFACES)) {
       expect(
         /integrates with|syncs with|imports from|connected to|works alongside/i.test(src),

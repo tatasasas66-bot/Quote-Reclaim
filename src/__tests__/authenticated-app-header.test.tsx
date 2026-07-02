@@ -2,12 +2,25 @@
  * @vitest-environment happy-dom
  */
 import { cleanup, render, screen } from "@testing-library/react";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { AppHeader } from "@/components/app/AppHeader";
+import { AppThemeProvider } from "@/components/app/AppThemeProvider";
 
 afterEach(cleanup);
+
+beforeEach(() => {
+  window.localStorage.clear();
+  Object.defineProperty(window, "matchMedia", {
+    configurable: true,
+    value: vi.fn().mockReturnValue({
+      matches: false,
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+    }),
+  });
+});
 
 function source(path: string): string {
   return readFileSync(resolve(process.cwd(), path), "utf8");
@@ -15,7 +28,11 @@ function source(path: string): string {
 
 describe("shared authenticated AppHeader", () => {
   it("keeps the dashboard, report, and existing sign-out route reachable", () => {
-    render(<AppHeader />);
+    render(
+      <AppThemeProvider>
+        <AppHeader />
+      </AppThemeProvider>,
+    );
 
     expect(
       screen
@@ -33,6 +50,7 @@ describe("shared authenticated AppHeader", () => {
       "/api/auth/sign-out",
     );
     expect(signOut.closest("form")?.getAttribute("method")).toBe("post");
+    expect(screen.getByLabelText("App theme")).toBeTruthy();
   });
 
   it("uses the warm sticky chrome and mobile-safe tap targets", () => {

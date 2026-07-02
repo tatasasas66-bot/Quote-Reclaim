@@ -115,30 +115,30 @@ const commandRows = [
 
 const comparison = [
   {
-    label: "CRM / field-service app",
+    label: "Your current system",
     points: [
-      "runs the business",
+      "creates estimates",
+      "stores customer details",
       "schedules jobs",
       "sends invoices",
-      "manages customers",
     ],
   },
   {
-    label: "Estimating app",
+    label: "The gap",
     points: [
-      "creates estimates",
-      "sends proposals",
-      "handles approvals",
-      "keeps estimate files",
+      "estimates go quiet",
+      "follow-up feels awkward",
+      "old money sits untouched",
+      "more leads get bought too soon",
     ],
   },
   {
     label: "Quote Reclaim",
     points: [
-      "ranks sent estimates",
-      "tells you who to follow up first",
-      "gives you the message to send today",
-      "helps work quiet estimates until they book or close",
+      "ranks quiet estimates",
+      "gives today’s message",
+      "maps the next follow-up",
+      "turns replies into next moves",
     ],
   },
 ] as const;
@@ -506,17 +506,12 @@ export default function HomePage() {
         </div>
       </SectionShell>
 
-      <SectionShell id="not-crm" eyebrow="Focused by design">
+      <SectionShell id="not-crm" eyebrow="FOCUSED BY DESIGN">
         <div className="grid gap-7 lg:grid-cols-[0.78fr_1.22fr] lg:items-start">
           <SectionHeading
-            title="Not another CRM. Not another estimating app."
-            body="Keep Jobber. Keep Housecall. Keep the spreadsheet. Quote Reclaim only tells you which quiet estimate to reopen today and what to send."
+            title="Built for the part after the estimate goes quiet."
+            body="Your current system helps you create the estimate, send it, schedule jobs, and keep records. Quote Reclaim starts after that — when the homeowner goes silent and you need to know which estimate to reopen first, what to send today, and what to do next if they reply."
           />
-          <p className="sr-only">
-            Keep Jobber, Housecall Pro, DripJobs, or your spreadsheet. Quote
-            Reclaim is the focused recovery layer, not an integration claim or
-            replacement.
-          </p>
           <div className="grid gap-3 md:grid-cols-3">
             {comparison.map((column) => (
               <article
