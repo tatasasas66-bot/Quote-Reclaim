@@ -140,7 +140,7 @@ export function TodaysMoves({
                           type="button"
                           aria-label={`Copy message for ${move.clientName}`}
                           onClick={() => void copyMessage(move)}
-                          className="inline-flex min-h-11 items-center justify-center gap-2 rounded-[10px] border border-line-subtle bg-white px-4 py-2 text-sm font-bold text-ink-strong shadow-premium focus:outline-none focus-visible:ring-2 focus-visible:ring-focus"
+                          className="inline-flex min-h-11 items-center justify-center gap-2 rounded-[10px] border border-brand bg-brand px-4 py-2 text-sm font-bold text-white shadow-premium transition hover:bg-brand-dark focus:outline-none focus-visible:ring-2 focus-visible:ring-focus"
                         >
                           {copiedId === move.reminderId ? (
                             <Check

@@ -96,15 +96,17 @@ describe("Sticky '+ Add Estimate' CTA", () => {
 // ---------------------------------------------------------------------------
 
 describe("Mobile header — Upgrade dominant, Sign out subtle", () => {
-  it("puts the app header and actions above Today's Moves and the command", () => {
+  it("puts the app header and actions above the mission header and Today's Moves", () => {
+    // The mission/command header now leads (focus mode's "one mission"
+    // framing), with Today's Moves directly under it.
     const headerIdx = dashboard.indexOf("<AppHeader");
     const upgradeIdx = dashboard.indexOf("<UpgradeButton");
-    const movesIdx = dashboard.indexOf("<TodaysMoves");
     const h1Idx = dashboard.indexOf("Silent Quote Command");
+    const movesIdx = dashboard.indexOf("<TodaysMoves");
     expect(headerIdx).toBeGreaterThan(0);
     expect(upgradeIdx).toBeGreaterThan(headerIdx);
-    expect(movesIdx).toBeGreaterThan(upgradeIdx);
-    expect(h1Idx).toBeGreaterThan(movesIdx);
+    expect(h1Idx).toBeGreaterThan(upgradeIdx);
+    expect(movesIdx).toBeGreaterThan(h1Idx);
   });
 
   it("Upgrade remains visible", () => {

@@ -49,11 +49,15 @@ export default async function NewQuotePage() {
                 Recovery Intake
               </p>
               <h1 className="mt-2 text-4xl font-black leading-tight text-ink-strong">
-                Add a silent quote
+                Add an estimate
               </h1>
               <p className="mt-3 text-base leading-7 text-ink-muted">
                 Turn one quiet estimate into a 6-message recovery plan in under
                 a minute.
+              </p>
+              <p className="mt-3 rounded-lg border border-brand/25 bg-brand/5 px-4 py-3 text-sm font-semibold leading-6 text-ink-strong">
+                Start with the estimate amount and days quiet. Add customer
+                details later when you&apos;re ready to send.
               </p>
               <p className="mt-3 text-sm text-ink-muted">
                 Have a stack of old estimates?{" "}

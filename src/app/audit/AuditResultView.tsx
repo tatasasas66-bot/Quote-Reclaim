@@ -196,6 +196,16 @@ export function AuditResultView({
               You already paid for the gas, drive, measure, pricing, and time
               behind these quotes.
             </p>
+            {result.totalSilentQuoteValue > 0 ? (
+              <p
+                data-testid="audit-value-bridge"
+                className="mt-3 max-w-sm text-sm font-bold leading-6 text-ink-strong"
+              >
+                {formatCurrency(result.totalSilentQuoteValue)} in quiet
+                estimates vs $79/month. Before buying another lead, reopen
+                the estimates you already paid to create.
+              </p>
+            ) : null}
           </div>
 
           {priority ? (

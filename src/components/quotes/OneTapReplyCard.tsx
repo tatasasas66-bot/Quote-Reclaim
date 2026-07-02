@@ -64,11 +64,12 @@ export function OneTapReplyCard({
             Make it easy for the homeowner to answer.
           </h3>
           <p className="mt-3 max-w-prose text-sm leading-6 text-ink">
-            Your follow-up email can include a simple reply link, so the
-            homeowner does not have to write an awkward message from scratch.
+            Homeowners answer with one tap instead of writing a full reply —
+            no awkward message to compose, no reason to keep avoiding you.
           </p>
           <p className="mt-3 text-sm font-semibold leading-6 text-ink-strong">
-            Turn silence into a yes, a question, or a clean no.
+            Each answer turns into a clear next move: a yes, a question, or a
+            clean no.
           </p>
           <p className="mt-1 text-xs leading-5 text-ink-muted">
             Five-second reply for the homeowner. Clear next move for you.
@@ -87,7 +88,7 @@ export function OneTapReplyCard({
         <button
           type="button"
           onClick={copyLink}
-          className="inline-flex min-h-10 items-center rounded-[10px] border border-line-subtle bg-white px-3 py-1.5 text-xs font-bold text-brand shadow-premium hover:border-brand/40 focus:outline-none focus-visible:ring-2 focus-visible:ring-focus"
+          className="inline-flex min-h-11 items-center rounded-[10px] border border-brand bg-brand px-4 py-2 text-sm font-bold text-white shadow-premium transition hover:bg-brand-dark focus:outline-none focus-visible:ring-2 focus-visible:ring-focus"
         >
           {linkCopied ? "Link copied" : "Copy One-Tap Reply link"}
         </button>

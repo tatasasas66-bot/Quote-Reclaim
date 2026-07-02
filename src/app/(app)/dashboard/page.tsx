@@ -29,7 +29,10 @@ import {
 import { effectiveDaysSilent } from "@/lib/recovery/effective-days";
 import { tradeLabel } from "@/lib/quotes/quote-display";
 import { getRecoveryScore } from "@/lib/quotes/recovery-score";
-import { FREE_PLAN_LIMIT } from "@/lib/payments/entitlement";
+import {
+  FREE_PLAN_LIMIT,
+  PAYWALL_PRICE_LABEL,
+} from "@/lib/payments/entitlement";
 import { paddleClientConfigured } from "@/lib/payments/paddle-provider";
 import { formatCurrency } from "@/lib/utils/currency";
 import { listAuditEvents } from "@/lib/audit-events";
@@ -45,9 +48,19 @@ import {
 export const metadata: Metadata = { title: "Dashboard – Quote Reclaim" };
 export const dynamic = "force-dynamic";
 
-export default async function DashboardPage() {
+export default async function DashboardPage({
+  searchParams,
+}: {
+  searchParams?: { [key: string]: string | string[] | undefined };
+}) {
   const { user, supabase } = await requireUser();
   if (!user || !supabase) redirect("/sign-in");
+
+  // Live test path for the two dashboard states: ?preview=focus forces the
+  // fresh-contractor focus layout, ?preview=full forces the full command
+  // center. Render-only — no data or billing behavior changes.
+  const previewParam =
+    typeof searchParams?.preview === "string" ? searchParams.preview : null;
 
   const monthStartMs = monthStartUtc();
   const nextMonthStartMs = nextMonthStartUtc();
@@ -149,7 +162,12 @@ export default async function DashboardPage() {
   // Streaks, intelligence, weekly rituals, and secondary metric cards appear
   // once there is enough data for them to mean something. The first screen
   // must answer one question: "Who do I follow up with, and what do I send?"
-  const focusMode = pending.length < 3 && !hasRecoveredBefore;
+  const focusMode =
+    previewParam === "focus"
+      ? true
+      : previewParam === "full"
+        ? false
+        : pending.length < 3 && !hasRecoveredBefore;
   const showRecoveryReportLink =
     !focusMode ||
     monthlyActivity.emailFollowupsSent > 0 ||
@@ -177,16 +195,61 @@ export default async function DashboardPage() {
           />
         }
       />
+      {focusMode ? (
+        // Fresh-contractor mission header — one job, stated plainly, before
+        // any module renders. This screen must not read like a command
+        // center yet; it reads like a checklist with one item.
+        <section
+          id="silent-quote-command"
+          data-testid="dashboard-mission-header"
+          className="scroll-mt-4 border-l-4 border-brand pl-4 sm:pl-5"
+        >
+          <p className="text-xs font-black uppercase tracking-widest text-brand">
+            Your one mission
+          </p>
+          <h1 className="mt-2 text-3xl font-black leading-tight text-ink-strong sm:text-4xl">
+            Recover the next quiet estimate.
+          </h1>
+          <p className="mt-2 max-w-2xl text-base leading-7 text-ink">
+            Add the estimate, send today&apos;s message, watch for the reply.
+            Before buying another lead, reopen the estimates you already paid
+            to create.
+          </p>
+        </section>
+      ) : (
+        <section id="silent-quote-command" className="scroll-mt-4">
+          <h1 className="text-3xl font-black leading-tight text-ink-strong sm:text-4xl">
+            Silent Quote Command
+          </h1>
+          <p className="mt-2 max-w-2xl text-base leading-7 text-ink">
+            Every quiet estimate has a dollar value, a risk level, and a next
+            move. Your queue is ranked by dollars, risk, age, and next move.
+          </p>
+        </section>
+      )}
+
+      {focusMode && stillBleeding > 0 && !isPaid ? (
+        // Value bridge — the $79 math stated before any paywall. Honest by
+        // construction: it is the contractor's own queue total, no promises.
+        <section
+          aria-label="Value check"
+          data-testid="dashboard-value-bridge"
+          className="flex flex-wrap items-baseline justify-between gap-x-6 gap-y-2 rounded-2xl border border-brand/30 bg-brand/5 px-5 py-4"
+        >
+          <p className="text-lg font-black text-ink-strong">
+            <span className="tabular-nums text-money">
+              {stillBleedingValue}
+            </span>{" "}
+            in quiet estimates vs {PAYWALL_PRICE_LABEL}.
+          </p>
+          <p className="text-xs leading-5 text-ink-muted">
+            No promises — just the size of what&apos;s already sitting in
+            your queue.
+          </p>
+        </section>
+      ) : null}
+
       <TodaysMoves moves={todaysMoves} streak={streak} showStreak={!focusMode} />
-      <section id="silent-quote-command" className="scroll-mt-4">
-        <h1 className="text-3xl font-black leading-tight text-ink-strong sm:text-4xl">
-          Silent Quote Command
-        </h1>
-        <p className="mt-2 max-w-2xl text-base leading-7 text-ink">
-          Every quiet estimate has a dollar value, a risk level, and a next
-          move. Your queue is ranked by dollars, risk, age, and next move.
-        </p>
-      </section>
 
       {showFirstRecoveryCommand ? (
         <FirstRecoveryCommand
@@ -208,21 +271,23 @@ export default async function DashboardPage() {
         />
       ) : null}
 
-      <HeroMetric
-        stillBleeding={stillBleeding}
-        pendingCount={pending.length}
-        atRiskCount={atRiskCount}
-        recoveredThisMonth={recoveredThisMonth}
-        jobsWonThisMonth={jobsWonThisMonth}
-        // "Quotes being worked" reads as a live count, so use the active
-        // pending total — never a calendar-month counter that could show 0
-        // on day 1 of a month while real recoveries are still in flight.
-        quotesBeingWorked={pending.length}
-        emailFollowupsSent={monthlyActivity.emailFollowupsSent}
-        allTimeRecovered={allTimeRecovered}
-        priorityClientName={priorityQuote?.client_name ?? null}
-        priorityQuoteId={priorityQuote?.id ?? null}
-      />
+      {!focusMode ? (
+        <HeroMetric
+          stillBleeding={stillBleeding}
+          pendingCount={pending.length}
+          atRiskCount={atRiskCount}
+          recoveredThisMonth={recoveredThisMonth}
+          jobsWonThisMonth={jobsWonThisMonth}
+          // "Quotes being worked" reads as a live count, so use the active
+          // pending total — never a calendar-month counter that could show 0
+          // on day 1 of a month while real recoveries are still in flight.
+          quotesBeingWorked={pending.length}
+          emailFollowupsSent={monthlyActivity.emailFollowupsSent}
+          allTimeRecovered={allTimeRecovered}
+          priorityClientName={priorityQuote?.client_name ?? null}
+          priorityQuoteId={priorityQuote?.id ?? null}
+        />
+      ) : null}
 
       {hasPendingQuotes && !focusMode ? (
         <Link

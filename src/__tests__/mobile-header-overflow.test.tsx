@@ -108,13 +108,14 @@ describe("Authenticated app header actions", () => {
     );
   });
 
-  it("keeps the PWA hint first, then the header, moves, and command section", () => {
+  it("keeps the PWA hint first, then the header, command section, and moves", () => {
+    // Mission/command header leads; Today's Moves renders directly under it.
     const pwaIdx = dashboard.indexOf("<PwaInstallHint");
     const headerIdx = dashboard.indexOf("<AppHeader");
-    const movesIdx = dashboard.indexOf("<TodaysMoves");
     const commandIdx = dashboard.indexOf('id="silent-quote-command"');
+    const movesIdx = dashboard.indexOf("<TodaysMoves");
     expect(headerIdx).toBeGreaterThan(pwaIdx);
-    expect(movesIdx).toBeGreaterThan(headerIdx);
-    expect(commandIdx).toBeGreaterThan(movesIdx);
+    expect(commandIdx).toBeGreaterThan(headerIdx);
+    expect(movesIdx).toBeGreaterThan(commandIdx);
   });
 });

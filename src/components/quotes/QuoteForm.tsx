@@ -83,6 +83,16 @@ export function QuoteForm({ mode, initial, defaultTrade, action }: Props) {
         </div>
       ) : null}
 
+      {mode === "create" ? (
+        <p
+          data-testid="quote-form-no-details-promise"
+          className="rounded-lg border border-brand/25 bg-brand/5 px-4 py-3 text-sm font-semibold leading-6 text-ink-strong"
+        >
+          Start with the estimate amount and days quiet. Add customer details
+          later when you&apos;re ready to send.
+        </p>
+      ) : null}
+
       {mode === "create" ? <VoiceButton onComplete={applyVoice} /> : null}
 
       {/* Same two inputs as the free audit — amount + days quiet. Identity

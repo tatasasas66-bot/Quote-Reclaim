@@ -292,7 +292,9 @@ describe("quote detail page mounts the One-Tap Reply card", () => {
 
   it("card source uses the locked vocabulary and avoids banned phrasing", () => {
     expect(card).toContain("One-Tap Reply");
-    expect(card).toContain("Turn silence into a yes, a question, or a clean no.");
+    expect(card).toContain(
+      "Each answer turns into a clear next move: a yes, a question, or a",
+    );
     expect(card).not.toMatch(/One-Tap Close/);
     expect(card).not.toMatch(/Job Booked/i);
     expect(card).not.toMatch(/guaranteed/i);
